@@ -75,6 +75,14 @@ if ($method === 'POST') {
                 $productForm[$field] = '';
             }
         }
+        foreach (['option_name', 'option_values', 'spec_name', 'spec_value',
+            'section_type', 'section_heading', 'section_body'] as $field) {
+            if (!is_array($productForm[$field])) {
+                $productForm[$field] = [];
+            }
+            $productForm[$field] = array_map(static fn ($value): string => is_string($value) ? $value : '',
+                array_values($productForm[$field]));
+        }
         $productForm['product_key'] = is_string($key) ? $key : '';
         $productForm['revision_number'] = is_string($revision) ? $revision : '';
         if (is_string($key) && preg_match('/^[a-f0-9]{32}$/D', $key) === 1 &&

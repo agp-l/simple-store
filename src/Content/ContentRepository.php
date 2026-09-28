@@ -143,6 +143,14 @@ final class ContentRepository
                 throw new RuntimeException('This document changed since you opened it. Reload before saving.');
             }
 
+            $duplicate = $this->db->queryFirstRow(
+                'SELECT document_key FROM content_revisions WHERE type=%s AND language=%s AND active_slug=%s LIMIT 1',
+                $type, $language, $slug
+            );
+            if ($duplicate !== null && $duplicate['document_key'] !== $documentKey) {
+                throw new InvalidArgumentException('Tato adresa se již používá. Zadej jiný slug.');
+            }
+
             $revision = $previous === null ? 1 : (int) $previous['revision_number'] + 1;
             if ($previous !== null) {
                 $this->db->query(

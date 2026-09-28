@@ -1,4 +1,6 @@
 <?php
+use SimpleStore\Product\ProductDetails;
+
 // This view uses a published product row from the catalog query.
 $productLink = $basePath . $language . '/produkt/' . rawurlencode($product['slug']);
 $productImage = str_starts_with($product['image_path'], 'images/')
@@ -7,6 +9,7 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
 $labels = ['batohy' => 'Batohy', 'stany' => 'Stany', 'spacaky' => 'Spacáky',
     'vybaveni' => 'Vybavení', 'obleceni' => 'Oblečení', 'boty' => 'Boty'];
 $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_stock' => 'Není skladem'];
+$hasOptions = ProductDetails::decode($product['details_json'] ?? null, $product['sizes'] ?? '')['options'] !== [];
 ?>
       <article class="product-card" data-category="<?= $escape($product['category']) ?>"
         data-subcategory="<?= $escape($product['subcategory']) ?>"
@@ -23,7 +26,11 @@ $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_s
           <?php if ($product['summary'] !== ''): ?><p><?= $escape($product['summary']) ?></p><?php endif; ?>
           <div class="product-meta"><span class="stock <?= $product['stock_status'] === 'in_stock' ? '' : 'stock-wait' ?>"><span class="stock-dot" aria-hidden="true"></span><?= $escape($stockText[$product['stock_status']] ?? '') ?></span></div>
           <div class="product-action"><strong><?= number_format((int) $product['price_czk'], 0, ',', ' ') ?> Kč</strong>
-            <button class="add-button" type="button" data-add="<?= (int) $index ?>" <?= $product['stock_status'] === 'out_of_stock' ? 'disabled' : '' ?> aria-label="Přidat <?= $escape($product['name']) ?> do ukázkového košíku"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h2l2 10h10l2-7H7M9 19h.01M18 19h.01" /></svg><span><?= $product['stock_status'] === 'out_of_stock' ? 'Není skladem' : 'Do košíku' ?></span></button>
+            <?php if ($hasOptions): ?>
+              <a class="add-button" href="<?= $escape($productLink) ?>" aria-label="Vybrat možnosti produktu <?= $escape($product['name']) ?>">Vybrat možnosti →</a>
+            <?php else: ?>
+              <button class="add-button" type="button" data-add="<?= (int) $index ?>" <?= $product['stock_status'] === 'out_of_stock' ? 'disabled' : '' ?> aria-label="Přidat <?= $escape($product['name']) ?> do ukázkového košíku"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h2l2 10h10l2-7H7M9 19h.01M18 19h.01" /></svg><span><?= $product['stock_status'] === 'out_of_stock' ? 'Není skladem' : 'Do košíku' ?></span></button>
+            <?php endif; ?>
           </div>
         </div>
       </article>

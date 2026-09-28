@@ -211,6 +211,7 @@
       font-weight: 700;
       white-space: nowrap;
       transition: background .15s;
+      text-decoration: none;
       border-color: var(--night);
     }
 
@@ -1209,6 +1210,10 @@
     .detail-gallery { position:relative; border:1px solid var(--line); border-radius:13px; background:#fff; overflow:hidden; }
     .detail-gallery img { display:block; width:100%; aspect-ratio:1/1; object-fit:contain; }
     .detail-gallery .media-label { z-index:1; }
+    .detail-thumbs { display:flex; gap:10px; margin-top:13px; overflow-x:auto; padding-bottom:4px; }
+    .detail-thumb { flex:0 0 76px; padding:3px; border:2px solid var(--line); border-radius:8px; background:white; cursor:pointer; }
+    .detail-thumb[aria-pressed="true"] { border-color:var(--forest); }
+    .detail-thumb img { display:block; width:100%; aspect-ratio:1; object-fit:contain; }
     .detail-info { padding:5px 0; }
     .detail-info .product-brand { font-size:13px; text-transform:uppercase; letter-spacing:.1em; font-weight:700; }
     .detail-info h1 { margin:8px 0 13px; font:800 clamp(28px,3.2vw,43px)/1.13 var(--font-display); letter-spacing:-.035em; color:var(--ink); }
@@ -1238,7 +1243,19 @@
     .spec-table { border-collapse:collapse; width:100%; font-size:14px; }
     .spec-table th,.spec-table td { padding:12px 4px; border-bottom:1px solid var(--line); text-align:left; }
     .spec-table th { width:42%; color:var(--muted); font-weight:500; }
-    @media(max-width:850px) { .product-detail { grid-template-columns:1fr; gap:30px; } .detail-gallery { max-width:600px; } }
+    .product-extra { display:grid; grid-template-columns:minmax(0, 1fr) minmax(240px, 340px); gap:clamp(28px,5vw,70px); align-items:start; margin-top:65px; border-top:1px solid var(--line); }
+    .product-extra .story { margin-top:0; border:0; padding-top:34px; min-width:0; }
+    .product-intro { margin-bottom:27px; }
+    .product-content-block { margin:32px 0 44px; }
+    .product-content-block h3 { margin:0 0 16px; font-size:22px; }
+    .product-content-block p { margin:0 0 16px; }
+    .product-story-image { margin:0; }
+    .product-story-image img { display:block; width:100%; height:auto; border-radius:12px; }
+    .product-specs { margin-top:34px; border-radius:12px; background:var(--moss); padding:23px; min-width:0; }
+    .product-specs h2 { margin:0 0 12px; font-size:20px; }
+    .table-scroll { width:100%; overflow-x:auto; }
+    .product-specs .spec-table th,.product-specs .spec-table td { border-color:#d9e5d2; vertical-align:top; }
+    @media(max-width:850px) { .product-detail, .product-extra { grid-template-columns:1fr; gap:30px; } .detail-gallery { max-width:600px; } .product-specs { margin-top:0; } }
     @media(max-width:620px) { .story-grid {grid-template-columns:1fr;} .detail-info h1 {font-size:30px;} .buy-row {flex-wrap:wrap;} .detail-add {min-width:185px;} }
 
 

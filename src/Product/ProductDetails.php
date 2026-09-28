@@ -89,9 +89,12 @@ final class ProductDetails
             $heading = trim($headings[$index]);
             $body = trim($bodies[$index]);
             if ($heading === '' && $body === '') continue;
-            if (!in_array($type, ['text', 'list', 'table'], true) || strlen($heading) > 255 ||
+            if (!in_array($type, ['text', 'list', 'table', 'image'], true) || strlen($heading) > 255 ||
                 $body === '' || strlen($body) > 30000) {
                 throw new InvalidArgumentException('Blok popisu potřebuje text a volitelný nadpis.');
+            }
+            if ($type === 'image' && !self::imagePath($body)) {
+                throw new InvalidArgumentException('Obrázek v popisu: použij cestu images/… nebo HTTPS adresu.');
             }
             if ($type === 'table') {
                 foreach (preg_split('/\R/u', $body) ?: [] as $line) {

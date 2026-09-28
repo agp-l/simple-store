@@ -125,6 +125,13 @@ final class ProductRepository
                 (int) $previous['revision_number'] !== $expected)) {
                 throw new RuntimeException('This product changed since you opened it. Reload before saving.');
             }
+            $duplicate = $this->db->queryFirstRow(
+                'SELECT product_key FROM product_revisions WHERE language=%s AND active_slug=%s LIMIT 1',
+                $language, $slug
+            );
+            if ($duplicate !== null && $duplicate['product_key'] !== $key) {
+                throw new InvalidArgumentException('Tato adresa produktu se již používá. Doplň do pole Adresa jiný slug.');
+            }
             $revision = $previous === null ? 1 : (int) $previous['revision_number'] + 1;
             if ($previous !== null) {
                 $this->db->query(
