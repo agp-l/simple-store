@@ -481,12 +481,6 @@
       margin-bottom: 26px;
     }
 
-    .filters {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
     .filter {
       display: inline-flex;
       align-items: center;
@@ -514,6 +508,7 @@
     .sort-wrap {
       display: flex;
       align-items: center;
+      margin-left: auto;
       gap: 10px;
       color: var(--muted);
       font-size: 12.5px;
@@ -1163,7 +1158,8 @@
       }
 
       .sort-wrap {
-        justify-content: space-between
+        justify-content: space-between;
+        margin-left: 0
       }
 
       .sort-wrap select {
@@ -1270,8 +1266,7 @@
 
 
 /* Category links share the same visual style at every tree depth. */
-.filter-groups { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
-.backpack-filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.subcategory-filters { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
 
 /* Pages and blog reuse the storefront typography and spacing. */
 .nav-inner { flex-wrap: wrap; }

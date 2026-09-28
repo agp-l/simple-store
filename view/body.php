@@ -16,18 +16,12 @@
       </div><span class="result-count" id="result-count" aria-live="polite">Zobrazeno <?= $showSamples ? '12' : count($products) ?> produktů</span>
     </div>
     <div class="tools">
-      <div class="filter-groups">
-        <nav class="filters" aria-label="Hlavní kategorie">
-          <a class="filter<?= $currentCategory === null ? ' active' : '' ?>" href="<?= $escape($siteRoot . $language) ?>#produkty" <?= $currentCategory === null ? 'aria-current="page"' : '' ?>>Vše</a>
-          <?php foreach ($primaryMenu as $link): ?><a class="filter<?= $link['active'] ? ' active' : '' ?>" href="<?= $escape($link['href']) ?>#produkty" <?= ($currentCategory['path'] ?? '') === $link['path'] ? 'aria-current="page"' : '' ?>><?= $escape($link['label']) ?></a><?php endforeach; ?>
+      <?php if ($categoryMenuRoot !== null && $categoryMenu !== []): ?>
+        <nav class="subcategory-filters" aria-label="Podkategorie <?= $escape($categoryMenuRoot['title']) ?>">
+          <?php foreach ($categoryMenu as $link): ?><a class="filter<?= $link['active'] ? ' active' : '' ?>" href="<?= $escape($link['href']) ?>#produkty" <?= ($currentCategory['path'] ?? '') === $link['path'] ? 'aria-current="page"' : '' ?>><?= $escape($link['label']) ?></a><?php endforeach; ?>
         </nav>
-        <?php if ($categoryMenuRoot !== null && $categoryMenu !== []): ?>
-          <nav class="backpack-filters" aria-label="Podkategorie <?= $escape($categoryMenuRoot['title']) ?>">
-            <a class="filter<?= $currentCategory['path'] === $categoryMenuRoot['path'] ? ' active' : '' ?>" href="<?= $escape($siteRoot . $language . '/kategorie-produktu/' . $categoryMenuRoot['path']) ?>#produkty" <?= $currentCategory['path'] === $categoryMenuRoot['path'] ? 'aria-current="page"' : '' ?>>Všechny <?= $escape($categoryMenuRoot['title']) ?></a>
-            <?php foreach ($categoryMenu as $link): ?><a class="filter<?= $link['active'] ? ' active' : '' ?>" href="<?= $escape($link['href']) ?>#produkty" <?= ($currentCategory['path'] ?? '') === $link['path'] ? 'aria-current="page"' : '' ?>><?= $escape($link['label']) ?></a><?php endforeach; ?>
-          </nav>
-        <?php endif; ?>
-      </div><label class="sort-wrap">Řadit podle
+      <?php endif; ?>
+      <label class="sort-wrap">Řadit podle
         <select id="sort">
           <option value="default">Doporučené</option>
           <option value="price-asc">Od nejlevnějšího</option>
