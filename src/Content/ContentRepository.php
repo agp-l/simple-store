@@ -25,6 +25,16 @@ final class ContentRepository
         );
     }
 
+    /** Drafts may be requested only by authenticated code in index.php. */
+    public function findCurrentBySlug(string $type, string $slug, string $language): ?array
+    {
+        return $this->db->queryFirstRow(
+            'SELECT * FROM content_revisions WHERE type=%s AND slug=%s AND language=%s
+             AND active_document_key IS NOT NULL LIMIT 1',
+            $type, $slug, $language
+        );
+    }
+
     public function publishedPosts(string $language): array
     {
         return $this->db->query(
@@ -104,7 +114,8 @@ final class ContentRepository
             throw new InvalidArgumentException('Unsupported content type or language.');
         }
         if (preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/D', $slug) !== 1 || strlen($slug) > 190 ||
-            ($type === 'page' && ($slug === 'blog' || in_array($slug, $this->languages, true)))) {
+            ($type === 'page' && (in_array($slug, ['blog', 'produkt', 'kategorie-produktu'], true) ||
+                in_array($slug, $this->languages, true)))) {
             throw new InvalidArgumentException('Invalid or reserved slug.');
         }
         if ($title === '' || preg_match('/^.{1,255}$/usD', $title) !== 1 || strlen($summary) > 65535 ||

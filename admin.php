@@ -15,12 +15,7 @@ $adminUrl = $basePath . 'admin.php';
 $adminFile = __DIR__ . '/config/admin.php';
 $screen = 'login';
 $error = '';
-$notice = '';
 $documents = [];
-$history = [];
-$current = null;
-$form = [];
-$language = $site['default_language'];
 $csrf = '';
 
 if (!is_file($adminFile)) {
@@ -48,7 +43,7 @@ $csrf = $auth->token();
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if ($method === 'POST') {
     if (!$auth->validToken($_POST['csrf'] ?? null)) {
-        if (($_POST['action'] ?? null) === 'inline-product') {
+        if (in_array($_POST['action'] ?? null, ['inline-product', 'inline-content'], true)) {
             header('Content-Type: application/json; charset=utf-8');
             http_response_code(403);
             echo json_encode(['error' => 'Platnost přihlášení vypršela. Znovu se přihlas.']);
@@ -74,11 +69,12 @@ if ($method === 'POST') {
         $auth->signOut();
         header('Location: ' . $adminUrl, true, 303);
         exit;
-    } elseif (!in_array($action, ['save', 'create-product', 'inline-product'], true) || !$auth->signedIn()) {
-        if ($action === 'inline-product') {
+    } elseif (!in_array($action, ['create-content', 'inline-content', 'create-product', 'inline-product'], true) ||
+        !$auth->signedIn()) {
+        if (in_array($action, ['inline-product', 'inline-content'], true)) {
             header('Content-Type: application/json; charset=utf-8');
             http_response_code(403);
-            echo json_encode(['error' => 'Pro úpravu produktu se přihlas do administrace.']);
+            echo json_encode(['error' => 'Pro úpravu obsahu se přihlas do administrace.']);
             exit;
         }
         http_response_code(403);
@@ -105,6 +101,10 @@ try {
         require __DIR__ . '/src/Admin/inline-product.php';
         exit;
     }
+    if ($method === 'POST' && ($_POST['action'] ?? '') === 'inline-content') {
+        require __DIR__ . '/src/Admin/inline-content.php';
+        exit;
+    }
 
     if (($method === 'POST' && ($_POST['action'] ?? '') === 'create-product') ||
         ($method !== 'POST' && ($_GET['section'] ?? '') === 'products')) {
@@ -113,92 +113,10 @@ try {
         exit;
     }
 
-    if ($method === 'POST') {
-        $key = $_POST['key'] ?? '';
-        $revision = $_POST['revision'] ?? '';
-        $language = $_POST['language'] ?? '';
-        $form = [
-            'type' => $_POST['type'] ?? '',
-            'language' => $language,
-            'slug' => $_POST['slug'] ?? '',
-            'title' => $_POST['title'] ?? '',
-            'summary' => $_POST['summary'] ?? '',
-            'body' => $_POST['body'] ?? '',
-            'menu_order' => $_POST['menu_order'] ?? 0,
-            'published' => isset($_POST['published']),
-            'visible_in_menu' => isset($_POST['visible_in_menu']),
-        ];
-        try {
-            if (!is_string($key) || !is_string($language) || !in_array($language, $site['languages'], true) ||
-                !is_string($form['type']) || !is_string($form['slug']) || !is_string($form['title']) ||
-                !is_string($form['summary']) || !is_string($form['body']) ||
-                !is_string($form['menu_order']) ||
-                !is_string($revision) || ($key !== '' && (preg_match('/^[a-f0-9]{32}$/D', $key) !== 1 ||
-                    filter_var($revision, FILTER_VALIDATE_INT) === false))) {
-                throw new InvalidArgumentException('Neplatný dokument, jazyk nebo číslo revize.');
-            }
-            $saved = $content->saveRevision($form, $key === '' ? null : $key,
-                $key === '' ? null : (int) $revision);
-            header('Location: ' . $adminUrl . '?' . http_build_query([
-                'key' => $saved['document_key'], 'language' => $saved['language'], 'saved' => 1,
-            ]), true, 303);
-            exit;
-        } catch (Throwable $exception) {
-            error_log((string) $exception);
-            $error = $exception->getMessage() === 'This document changed since you opened it. Reload before saving.'
-                ? 'Dokument se mezitím změnil. Znovu ho načti před uložením.'
-                : ($site['debug'] ? $exception->getMessage() : 'Nepodařilo se uložit obsah. Zkontroluj údaje a zkus to znovu.');
-            $form['document_key'] = is_string($key) ? $key : '';
-            $form['revision_number'] = is_string($revision) ? $revision : '';
-            if (is_string($key) && preg_match('/^[a-f0-9]{32}$/D', $key) === 1 &&
-                is_string($language) && in_array($language, $site['languages'], true)) {
-                $current = $content->currentDocument($key, $language);
-                $history = $content->history($key, $language);
-            }
-        }
-    } else {
-        $key = $_GET['key'] ?? '';
-        $language = $_GET['language'] ?? $site['default_language'];
-        if (!is_string($key) || !is_string($language) || !in_array($language, $site['languages'], true) ||
-            ($key !== '' && preg_match('/^[a-f0-9]{32}$/D', $key) !== 1)) {
-            throw new InvalidArgumentException('Neplatný dokument nebo jazyk.');
-        }
-        if ($key !== '') {
-            $current = $content->currentDocument($key, $language);
-            if ($current === null) {
-                throw new InvalidArgumentException('Dokument v tomto jazyce neexistuje.');
-            }
-            $history = $content->history($key, $language);
-            $form = $current;
-            if (isset($_GET['restore'])) {
-                $number = filter_var($_GET['restore'], FILTER_VALIDATE_INT);
-                $old = $number === false ? null : $content->revision($key, $language, (int) $number);
-                if ($old === null) {
-                    throw new InvalidArgumentException('Požadovaná revize neexistuje.');
-                }
-                $form = array_merge($old, [
-                    'document_key' => $key,
-                    'revision_number' => $current['revision_number'],
-                ]);
-                $notice = 'Zobrazuje se starší verze. Uložením vznikne nová revize; nic se nemaže.';
-            }
-        } else {
-            $type = $_GET['type'] ?? 'page';
-            if (!in_array($type, ['page', 'post'], true)) {
-                throw new InvalidArgumentException('Neplatný druh obsahu.');
-            }
-            $form = ['type' => $type, 'language' => $language, 'published' => true,
-                'visible_in_menu' => $type === 'page'];
-        }
-    }
-
-    if (isset($_GET['saved'])) {
-        $notice = 'Uloženo jako nová revize.';
-    }
-    $documents = $content->currentDocuments();
+    require __DIR__ . '/src/Admin/contents.php';
 } catch (Throwable $exception) {
     error_log((string) $exception);
-    if ($method === 'POST' && ($_POST['action'] ?? null) === 'inline-product') {
+    if ($method === 'POST' && in_array($_POST['action'] ?? null, ['inline-product', 'inline-content'], true)) {
         header('Content-Type: application/json; charset=utf-8');
         http_response_code(500);
         echo json_encode(['error' => $site['debug'] ? (string) $exception : 'Databázi se nepodařilo načíst.']);
