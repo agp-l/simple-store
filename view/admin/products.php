@@ -100,7 +100,7 @@
               <p class="admin-form-note">Cena a dostupnost zatím platí pro všechny možnosti produktu stejně; košík uchová vybranou kombinaci. Nezadávej různé ceny nebo skladové stavy jednotlivých kombinací.</p>
               <label class="admin-checkbox"><input type="checkbox" name="published" value="1" <?= !empty($productForm['published']) ? 'checked' : '' ?>> Publikovat na webu</label>
               <p class="admin-form-note">Po vydání prvního produktu se ukázkové karty nahradí zveřejněnými produkty.</p>
-              <button class="admin-button" type="submit">Uložit novou revizi</button>
+              <button class="admin-button" type="submit" <?= $productSchemaReady ? '' : 'disabled' ?>>Uložit novou revizi</button>
             </form>
           </section>
           <?php if ($editingProduct && $productHistory !== []): ?>

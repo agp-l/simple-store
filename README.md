@@ -45,6 +45,17 @@ Po této aktualizaci **znovu importuj aktuální `database/schema.sql`**. Soubor
 
 Pokud má uživatel root heslo, přidej `-p`, nebo soubor importuj přes phpMyAdmin. **Po této aktualizaci je import potřeba zopakovat i u existující instalace**: jediný `schema.sql` přidá chybějící sloupec `details_json`, revize ani produkty nemaže. Při prvním vytváření jej založí rovnou. V administraci otevři **Produkty**. Povinné jsou název, kategorie, cena a hlavní obrázek. Adresa (slug) vzniká automaticky z názvu bez diakritiky; můžeš ji ručně změnit. Při následných úpravách produktu se automaticky nepřepíše, takže staré odkazy zůstanou funkční. Stejná pravidla platí i pro nadpisy stránek a článků. Pokud už existuje stejná adresa, editor požádá o jinou.
 
+### Když při ukládání produktu chybí `details_json`
+
+V `config/database.php` zjisti název databáze v položce `database`. **V phpMyAdmin vyber právě tuto databázi**, otevři záložku SQL a pro dosavadní tabulku spusť jednou:
+
+```sql
+ALTER TABLE product_revisions
+  ADD COLUMN details_json LONGTEXT NULL AFTER description;
+```
+
+Tento příkaz zachová všechny produkty a jejich revize. Před jeho spuštěním můžeš v phpMyAdmin ověřit stav tabulky pomocí `SHOW COLUMNS FROM product_revisions LIKE 'details_json';`: prázdný výsledek znamená chybějící sloupec. Pokud sloupec již existuje, příkaz `ALTER TABLE` nespouštěj a zkontroluj, zda aplikace používá stejnou databázi, kterou jsi vybral v phpMyAdmin. Soubor `database/schema.sql` sám obsahuje opakovatelnou migraci, ale v úvodu výslovně používá databázi `simple_store`; pokud máš v konfiguraci jiné jméno, samotný import může aktualizovat jinou databázi než tu, do které se web připojuje. Po opravě obnov administraci.
+
 Do hlavního obrázku napiš např. `images/batoh.webp` (soubor nahraj do složky `images/`) nebo HTTPS adresu. Do galerie napiš další cesty, jednu na řádek. Pod cenou ve formuláři můžeš přidat libovolné skupiny výběru: název `Barva` s možnostmi `Grey / Clay` a `Black`, další skupinu `Velikost` s možnostmi `42 EU` a `43 EU`; možnosti se píšou každá na nový řádek. Funguje i `Pozice zipu`, `Délka` a další vlastní názvy. V detailu musí zákazník vybrat hodnotu v každé skupině; košík ukáže přesně tyto hodnoty. Produkt s výběrem vede z karty přímo na detail. **Cena a dostupnost jsou nyní společné pro celý produkt, nikoli pro jednotlivé kombinace**; dostupnost po konkrétních velikostech a variantách vyžaduje další krok. Košík stále funguje jen jako ukázka v prohlížeči a neposílá objednávku.
 
 Technické údaje vyplň jako dvojice názvu a hodnoty; v detailu vytvoří přehlednou tabulku. Dlouhý popis se skládá z bloků **Odstavce**, **Seznam** (každá položka na vlastní řádek), **Tabulka** (každý řádek ve tvaru `Název | Hodnota`) a **Fotografie** (cesta `images/nazev.webp` nebo HTTPS adresa). Blokům můžeš dát nadpisy a řadit je v pořadí ve formuláři. V textových blocích lze psát `**tučné**` a `[název odkazu](https://example.org)`; HTML značky se vypisují jako text. Původní produkt se starým seznamem velikostí půjde normálně otevřít i upravit; při dalším uložení se velikosti zobrazí jako volitelný výběr. Kategorie batohy má navíc objemový filtr. Po zaškrtnutí „Publikovat na webu“ se veřejně zobrazí karta a detail na `/cs/produkt/slug`. Dokud nevydáš první produkt, původní ukázkové karty zůstanou na stránce.

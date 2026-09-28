@@ -68,6 +68,15 @@ final class ProductRepository
         );
     }
 
+    public function detailsColumnExists(): bool
+    {
+        return (int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME=%s',
+            'product_revisions', 'details_json'
+        ) > 0;
+    }
+
     public function saveRevision(array $fields, ?string $key = null, ?int $expected = null): array
     {
         $language = (string) ($fields['language'] ?? '');
@@ -112,6 +121,11 @@ final class ProductRepository
         }
         if (($key === null && $expected !== null) || ($key !== null && ($expected === null || $expected < 0))) {
             throw new InvalidArgumentException('An existing product requires its last revision number.');
+        }
+        if (!$this->detailsColumnExists()) {
+            throw new RuntimeException('V databázi chybí product_revisions.details_json. '
+                . 'V phpMyAdmin vyber databázi z config/database.php a spusť: '
+                . 'ALTER TABLE product_revisions ADD COLUMN details_json LONGTEXT NULL AFTER description;');
         }
 
         $key ??= bin2hex(random_bytes(16));

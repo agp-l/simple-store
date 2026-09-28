@@ -17,6 +17,7 @@ $productHistory = [];
 $currentProduct = null;
 $productError = '';
 $productNotice = '';
+$productSchemaReady = true;
 
 if ($method === 'POST') {
     $key = $_POST['key'] ?? '';
@@ -69,7 +70,9 @@ if ($method === 'POST') {
         error_log((string) $exception);
         $productError = $exception->getMessage() === 'This product changed since you opened it. Reload before saving.'
             ? 'Produkt se mezitím změnil. Znovu ho načti před uložením.'
-            : ($site['debug'] ? $exception->getMessage() : 'Produkt se nepodařilo uložit. Zkontroluj údaje.');
+            : (str_starts_with($exception->getMessage(), 'V databázi chybí product_revisions.details_json.')
+                ? $exception->getMessage()
+                : ($site['debug'] ? $exception->getMessage() : 'Produkt se nepodařilo uložit. Zkontroluj údaje.'));
         foreach ($productForm as $field => $value) {
             if (!is_string($value) && $field !== 'published' && !is_array($value)) {
                 $productForm[$field] = '';
@@ -137,5 +140,11 @@ if ($method !== 'POST' || $productError === '') {
 
 if (isset($_GET['saved'])) {
     $productNotice = 'Produkt byl uložen jako nová revize.';
+}
+if ($method !== 'POST' && !$productRepository->detailsColumnExists()) {
+    $productSchemaReady = false;
+    $productError = 'V databázi chybí product_revisions.details_json. V phpMyAdmin vyber databázi '
+        . 'z config/database.php a spusť: ALTER TABLE product_revisions '
+        . 'ADD COLUMN details_json LONGTEXT NULL AFTER description; Potom stránku obnov.';
 }
 $productRows = $productRepository->currentProducts();
