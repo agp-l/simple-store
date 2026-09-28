@@ -5,6 +5,7 @@ use SimpleStore\Content\ContentRepository;
 use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Navigation\MenuManager;
 use SimpleStore\Navigation\UrlManager;
+use SimpleStore\Product\ProductRepository;
 use SimpleStore\Rendering\PageRenderer;
 
 $site = require __DIR__ . '/src/bootstrap.php';
@@ -48,7 +49,24 @@ try {
     $shared['menuLinks'] = (new MenuManager($contents, $url))->links();
 
     if ($segments === []) {
+        // Keep the sample catalog visible until the product table is installed and populated.
+        $hasProducts = (int) $db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
+            'product_revisions'
+        ) > 0;
+        $shared['products'] = $hasProducts
+            ? (new ProductRepository($db, $site['languages']))->published($url->getLanguage()) : [];
+        if (!$hasProducts) {
+            $shared['setupNotice'] = 'Pro správu produktů importuj aktuální database/schema.sql. Ukázkový katalog zůstává dostupný.';
+        }
         $renderer->render('catalog', $shared);
+    } elseif (count($segments) === 2 && $segments[0] === 'produkt') {
+        $item = (new ProductRepository($db, $site['languages']))
+            ->findPublished($segments[1], $url->getLanguage());
+        $renderer->render($item === null ? 'not-found' : 'product-record', $shared + [
+            'title' => $item === null ? 'Produkt nenalezen — dobrodruzi.cz' : $item['name'] . ' — dobrodruzi.cz',
+            'description' => $item['summary'] ?? '', 'product' => $item,
+        ], $item === null ? 404 : 200);
     } elseif ($segments === ['blog']) {
         $renderer->render('blog', $shared + [
             'title' => 'Blog — dobrodruzi.cz',

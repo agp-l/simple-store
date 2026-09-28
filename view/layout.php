@@ -18,6 +18,7 @@
 switch ($page) {
     case 'catalog': require __DIR__ . '/body.php'; break;
     case 'product': require __DIR__ . '/product-body.php'; break;
+    case 'product-record': require __DIR__ . '/product-record.php'; break;
     case 'page':
     case 'post': require __DIR__ . '/content-body.php'; break;
     case 'blog': require __DIR__ . '/blog-list.php'; break;

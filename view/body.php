@@ -5,7 +5,7 @@
       <div>
         <h2 id="section-title">Objevte vybavení</h2>
         <p id="section-description">Poctivý výběr pro pohodlí na stezce i mimo ni.</p>
-      </div><span class="result-count" id="result-count" aria-live="polite">Zobrazeno 12 produktů</span>
+      </div><span class="result-count" id="result-count" aria-live="polite">Zobrazeno <?= $products === [] ? '12' : count($products) ?> produktů</span>
     </div>
     <div class="tools">
       <div class="filter-groups">
@@ -32,6 +32,9 @@
         </select></label>
     </div>
     <section class="catalog" id="catalog" aria-label="Nabídka produktů">
+      <?php if ($products !== []): ?>
+        <?php foreach ($products as $index => $product): require __DIR__ . '/product-card.php'; endforeach; ?>
+      <?php else: ?>
       <!-- Backpack categories: data-subcategory="do-25", "25-50", "nad-50" or "prislusenstvi". -->
       <!-- Each product card has its own image; change its src attribute to replace the photo. -->
       <!-- Original photo: https://gramino.cz/wp-content/uploads/2026/03/Topo-Athletic-Terraventure-5-Men-Grey-Clay-02.jpg -->
@@ -235,6 +238,7 @@
               </svg><span>Do košíku</span></button></div>
         </div>
       </article>
+      <?php endif; ?>
     </section>
     <div class="empty" id="empty" hidden>V této ukázce tu zatím žádné produkty nejsou. Zkuste jiný filtr.</div>
     <section class="category-panel" id="kategorie" aria-labelledby="category-title">
