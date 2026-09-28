@@ -2,7 +2,7 @@
   <header id="nahoru">
     <div class="brand-row">
       <div class="wrap brand-inner">
-        <a class="identity" href="index.php" aria-label="Dobrodruzi.cz – nahoru">
+        <a class="identity" href="<?= $siteRoot ?>index.php" aria-label="Dobrodruzi.cz – nahoru">
           <svg class="logo-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20 10 5l3 7 2-4 6 12Z" /></svg>
           <span class="logo">dobrodruzi</span>
         </a>

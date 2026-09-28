@@ -1,6 +1,31 @@
 <?php
 declare(strict_types=1);
-$page = 'product';
-$pageTitle = "Topo Athletic Terraventure 5 Men's — dobrodruzi.cz";
-$pageDescription = "Trailové boty Topo Athletic Terraventure 5 Men's v obchodě Dobrodruzi.";
-require __DIR__ . '/view/layout.php';
+
+use SimpleStore\Content\ContentRepository;
+use SimpleStore\Navigation\MenuManager;
+use SimpleStore\Navigation\UrlManager;
+use SimpleStore\Rendering\PageRenderer;
+
+require __DIR__ . '/vendor/autoload.php';
+
+$site = require __DIR__ . '/config/site.php';
+$base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/produkt-topo-terraventure.php'), '/') . '/';
+$url = new UrlManager($base, $_SERVER['SCRIPT_NAME'] ?? '/produkt-topo-terraventure.php',
+    $site['languages'], $site['default_language']);
+$data = [
+    'title' => "Topo Athletic Terraventure 5 Men's — dobrodruzi.cz",
+    'description' => "Trailové boty Topo Athletic Terraventure 5 Men's v obchodě Dobrodruzi.",
+    'language' => $url->getLanguage(),
+    'basePath' => $url->getBasePath(),
+];
+
+if (is_file(__DIR__ . '/config/database.php')) {
+    try {
+        $database = require __DIR__ . '/config/database.php';
+        $db = new MeekroDB($database['dsn'], $database['user'], $database['password']);
+        $data['menuLinks'] = (new MenuManager(new ContentRepository($db, $site['languages']), $url))->links();
+    } catch (Throwable $error) {
+        error_log((string) $error);
+    }
+}
+(new PageRenderer(__DIR__ . '/view'))->render('product', $data);

@@ -1247,3 +1247,21 @@
 .filter-groups [hidden] { display: none; }
 .backpack-filters { display: flex; flex-wrap: wrap; gap: 8px; }
 .utility svg.bitcoin-mark { width: 22px; height: 22px; stroke: none; }
+
+/* Pages and blog reuse the storefront typography and spacing. */
+.nav-inner { flex-wrap: wrap; }
+.cms-content { min-height: 340px; padding-top: 28px; padding-bottom: 85px; }
+.cms-article { max-width: 850px; padding-top: 25px; }
+.cms-eyebrow { margin: 0 0 13px; color: var(--forest-dark); font-size: 12px; font-weight: 800; letter-spacing: .09em; text-transform: uppercase; }
+.cms-article h1 { margin: 0 0 20px; font: 800 clamp(32px, 4vw, 48px)/1.14 var(--font-display); letter-spacing: -.035em; color: var(--ink); }
+.cms-lead { max-width: 68ch; margin: 0 0 27px; color: var(--muted); font-size: 17px; line-height: 1.7; }
+.cms-text { max-width: 75ch; color: var(--ink); font-size: 16px; line-height: 1.9; overflow-wrap: anywhere; }
+.cms-article > a { color: var(--forest-dark); font-weight: 700; }
+.cms-post-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 17px; margin-top: 31px; }
+.cms-post-list article { padding: 25px; border: 1px solid var(--line); border-radius: 9px; background: white; }
+.cms-post-list time { color: var(--muted); font-size: 12px; }
+.cms-post-list h2 { margin: 12px 0 10px; font-size: 21px; line-height: 1.3; }
+.cms-post-list h2 a { color: var(--ink); text-decoration: none; }
+.cms-post-list h2 a:hover { color: var(--forest-dark); text-decoration: underline; }
+.cms-post-list p { margin: 0; color: var(--muted); line-height: 1.65; }
+@media (max-width: 760px) { .cms-post-list { grid-template-columns: 1fr; } }

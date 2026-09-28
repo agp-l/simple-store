@@ -14,24 +14,24 @@
     </svg>
     <div class="wrap footer-main">
       <div class="footer-intro">
-        <a class="logo" href="index.php"><svg class="logo-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20 10 5l3 7 2-4 6 12Z" /></svg>dobrodruzi</a>
+        <a class="logo" href="<?= $siteRoot ?>index.php"><svg class="logo-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20 10 5l3 7 2-4 6 12Z" /></svg>dobrodruzi</a>
         <p>Batohy, stany a drobnosti pro chvíle, kdy jste nejraději venku. Vybavte se a vyrazte.</p>
       </div>
       <nav aria-label="Kategorie v patičce">
         <h2>Prozkoumat</h2>
         <ul>
-          <li><a href="index.php?category=all#produkty" data-filter="all">Všechny produkty</a></li>
-          <li><a href="index.php?category=batohy#produkty" data-filter="batohy">Batohy</a></li>
-          <li><a href="index.php?category=stany#produkty" data-filter="stany">Stany</a></li>
-          <li><a href="index.php?category=spacaky#produkty" data-filter="spacaky">Spacáky</a></li>
+          <li><a href="<?= $siteRoot ?>index.php?category=all#produkty" data-filter="all">Všechny produkty</a></li>
+          <li><a href="<?= $siteRoot ?>index.php?category=batohy#produkty" data-filter="batohy">Batohy</a></li>
+          <li><a href="<?= $siteRoot ?>index.php?category=stany#produkty" data-filter="stany">Stany</a></li>
+          <li><a href="<?= $siteRoot ?>index.php?category=spacaky#produkty" data-filter="spacaky">Spacáky</a></li>
         </ul>
       </nav>
       <nav aria-label="Další odkazy v patičce">
         <h2>Na cestu</h2>
         <ul>
-          <li><a href="index.php?category=vybaveni#produkty" data-filter="vybaveni">Drobné vybavení</a></li>
-          <li><a href="index.php?category=obleceni#produkty" data-filter="obleceni">Oblečení</a></li><li><a href="index.php?category=boty#produkty" data-filter="boty">Boty</a></li>
-          <li><a href="index.php#kategorie">Kategorie</a></li>
+          <li><a href="<?= $siteRoot ?>index.php?category=vybaveni#produkty" data-filter="vybaveni">Drobné vybavení</a></li>
+          <li><a href="<?= $siteRoot ?>index.php?category=obleceni#produkty" data-filter="obleceni">Oblečení</a></li><li><a href="<?= $siteRoot ?>index.php?category=boty#produkty" data-filter="boty">Boty</a></li>
+          <li><a href="<?= $siteRoot ?>index.php#kategorie">Kategorie</a></li>
           <li><a href="#nahoru">Zpět nahoru ↑</a></li>
         </ul>
       </nav>

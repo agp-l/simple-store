@@ -1,16 +1,23 @@
-<?php
-declare(strict_types=1);
-// Údaje pro pohled předává vstupní skript; později jej může nahradit kontroler.
-?>
+<?php declare(strict_types=1); ?>
 <!doctype html>
-<html lang="cs">
+<html lang="<?= htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
 <?php require __DIR__ . '/head.php'; ?>
 <body>
 <?php require __DIR__ . '/header.php'; ?>
-<?php require __DIR__ . ($page === 'product' ? '/product-body.php' : '/body.php'); ?>
+<?php
+// Only known view names reach this switch; no URL can become a file path.
+switch ($page) {
+    case 'catalog': require __DIR__ . '/body.php'; break;
+    case 'product': require __DIR__ . '/product-body.php'; break;
+    case 'page':
+    case 'post': require __DIR__ . '/content-body.php'; break;
+    case 'blog': require __DIR__ . '/blog-list.php'; break;
+    default: require __DIR__ . '/message.php';
+}
+?>
 <?php require __DIR__ . '/footer.php'; ?>
 <?php require __DIR__ . '/cart.php'; ?>
-<script defer src="assets/app.js"></script>
-<script defer src="assets/product.js"></script>
+<script defer src="<?= $siteRoot ?>assets/app.js"></script>
+<script defer src="<?= $siteRoot ?>assets/product.js"></script>
 </body>
 </html>

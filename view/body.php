@@ -37,14 +37,14 @@
       <!-- Původní fotografie: https://gramino.cz/wp-content/uploads/2026/03/Topo-Athletic-Terraventure-5-Men-Grey-Clay-02.jpg -->
       <article class="product-card" data-category="boty" data-price="3990" data-name="topo athletic terraventure 5 men's" id="produkt-1">
         <div class="product-media">
-          <a href="produkt-topo-terraventure.php" aria-label="Zobrazit Topo Athletic Terraventure 5 Men's">
-            <img class="product-image" src="images/topo-karta.webp" alt="Trailová bota Topo Athletic Terraventure 5 v barvě Grey / Clay" decoding="async">
+          <a href="<?= $siteRoot ?>produkt-topo-terraventure.php" aria-label="Zobrazit Topo Athletic Terraventure 5 Men's">
+            <img class="product-image" src="<?= $siteRoot ?>images/topo-karta.webp" alt="Trailová bota Topo Athletic Terraventure 5 v barvě Grey / Clay" decoding="async">
           </a>
           <span class="media-label">Doprava zdarma</span>
         </div>
         <div class="product-body">
           <p class="product-brand">Topo Athletic</p>
-          <h3><a href="produkt-topo-terraventure.php">Terraventure 5 Men's</a></h3>
+          <h3><a href="<?= $siteRoot ?>produkt-topo-terraventure.php">Terraventure 5 Men's</a></h3>
           <p>Trailové boty Topo patří mezi jedny z nejoblíbenějších na dálkových trecích.</p>
           <div class="product-meta"><span class="stock"><span class="stock-dot" aria-hidden="true"></span>Skladem</span></div>
           <div class="product-action"><strong>3 990 Kč</strong><button class="add-button" type="button" data-add="0" aria-label="Přidat Topo Athletic Terraventure 5 Men's do ukázkového košíku"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h2l2 10h10l2-7H7M9 19h.01M18 19h.01" /></svg><span>Do košíku</span></button></div>
@@ -52,7 +52,7 @@
       </article>
       <article class="product-card" data-category="stany" data-price="3710" data-name="aliaska" id="produkt-2">
         <div class="product-media">
-          <img class="product-image" src="images/stan.webp" alt="Aliaska" loading="lazy" decoding="async">
+          <img class="product-image" src="<?= $siteRoot ?>images/stan.webp" alt="Aliaska" loading="lazy" decoding="async">
           <span class="media-label">Stany</span>
         </div>
         <div class="product-body">
@@ -69,7 +69,7 @@
       <article class="product-card" data-category="spacaky" data-price="1199" data-name="little star exp"
         id="produkt-3">
         <div class="product-media">
-          <img class="product-image" src="images/spacak.webp" alt="Little Star EXP" loading="lazy" decoding="async">
+          <img class="product-image" src="<?= $siteRoot ?>images/spacak.webp" alt="Little Star EXP" loading="lazy" decoding="async">
           <span class="media-label">Spacáky</span>
         </div>
         <div class="product-body">
@@ -86,7 +86,7 @@
       <article class="product-card" data-category="vybaveni" data-price="1199" data-name="křesadlo firestarter box"
         id="produkt-4">
         <div class="product-media">
-          <img class="product-image" src="images/kresadlo.webp" alt="Křesadlo Firestarter Box" loading="lazy" decoding="async">
+          <img class="product-image" src="<?= $siteRoot ?>images/kresadlo.webp" alt="Křesadlo Firestarter Box" loading="lazy" decoding="async">
           <span class="media-label">Vybavení</span>
         </div>
         <div class="product-body">
@@ -103,7 +103,7 @@
       </article>
       <article class="product-card" data-category="batohy" data-subcategory="do-25" data-price="2315" data-name="ac aera 24" id="produkt-5">
         <div class="product-media">
-          <img class="product-image" src="images/batoh.webp" alt="AC Aera 24" loading="lazy" decoding="async">
+          <img class="product-image" src="<?= $siteRoot ?>images/batoh.webp" alt="AC Aera 24" loading="lazy" decoding="async">
           <span class="media-label">Batohy</span>
         </div>
         <div class="product-body">
@@ -119,7 +119,7 @@
       </article>
       <article class="product-card" data-category="stany" data-price="3710" data-name="aliaska" id="produkt-6">
         <div class="product-media">
-          <img class="product-image" src="images/stan.webp" alt="Aliaska" loading="lazy" decoding="async">
+          <img class="product-image" src="<?= $siteRoot ?>images/stan.webp" alt="Aliaska" loading="lazy" decoding="async">
           <span class="media-label">Stany</span>
         </div>
         <div class="product-body">
@@ -136,7 +136,7 @@
       <article class="product-card" data-category="spacaky" data-price="1199" data-name="little star exp"
         id="produkt-7">
         <div class="product-media">
-          <img class="product-image" src="images/spacak.webp" alt="Little Star EXP" loading="lazy" decoding="async">
+          <img class="product-image" src="<?= $siteRoot ?>images/spacak.webp" alt="Little Star EXP" loading="lazy" decoding="async">
           <span class="media-label">Spacáky</span>
         </div>
         <div class="product-body">
@@ -153,7 +153,7 @@
       <article class="product-card" data-category="vybaveni" data-price="1199" data-name="křesadlo firestarter box"
         id="produkt-8">
         <div class="product-media">
-          <img class="product-image" src="images/kresadlo.webp" alt="Křesadlo Firestarter Box" loading="lazy" decoding="async">
+          <img class="product-image" src="<?= $siteRoot ?>images/kresadlo.webp" alt="Křesadlo Firestarter Box" loading="lazy" decoding="async">
           <span class="media-label">Vybavení</span>
         </div>
         <div class="product-body">
@@ -170,7 +170,7 @@
       </article>
       <article class="product-card" data-category="batohy" data-subcategory="do-25" data-price="2315" data-name="ac aera 24" id="produkt-9">
         <div class="product-media">
-          <img class="product-image" src="images/batoh.webp" alt="AC Aera 24" loading="lazy" decoding="async">
+          <img class="product-image" src="<?= $siteRoot ?>images/batoh.webp" alt="AC Aera 24" loading="lazy" decoding="async">
           <span class="media-label">Batohy</span>
         </div>
         <div class="product-body">
@@ -186,7 +186,7 @@
       </article>
       <article class="product-card" data-category="stany" data-price="3710" data-name="aliaska" id="produkt-10">
         <div class="product-media">
-          <img class="product-image" src="images/stan.webp" alt="Aliaska" loading="lazy" decoding="async">
+          <img class="product-image" src="<?= $siteRoot ?>images/stan.webp" alt="Aliaska" loading="lazy" decoding="async">
           <span class="media-label">Stany</span>
         </div>
         <div class="product-body">
@@ -203,7 +203,7 @@
       <article class="product-card" data-category="spacaky" data-price="1199" data-name="little star exp"
         id="produkt-11">
         <div class="product-media">
-          <img class="product-image" src="images/spacak.webp" alt="Little Star EXP" loading="lazy" decoding="async">
+          <img class="product-image" src="<?= $siteRoot ?>images/spacak.webp" alt="Little Star EXP" loading="lazy" decoding="async">
           <span class="media-label">Spacáky</span>
         </div>
         <div class="product-body">
@@ -220,7 +220,7 @@
       <article class="product-card" data-category="vybaveni" data-price="1199" data-name="křesadlo firestarter box"
         id="produkt-12">
         <div class="product-media">
-          <img class="product-image" src="images/kresadlo.webp" alt="Křesadlo Firestarter Box" loading="lazy" decoding="async">
+          <img class="product-image" src="<?= $siteRoot ?>images/kresadlo.webp" alt="Křesadlo Firestarter Box" loading="lazy" decoding="async">
           <span class="media-label">Vybavení</span>
         </div>
         <div class="product-body">
@@ -242,8 +242,8 @@
         <h2 id="category-title">Kam dál?</h2>
         <p>Zvolte si směr a vyberte výbavu pro další cestu.</p>
       </div>
-      <div class="category-list"><a href="index.php?category=batohy#produkty" data-filter="batohy">Batohy</a><a href="#produkty"
-          data-filter="stany">Stany</a><a href="index.php?category=spacaky#produkty" data-filter="spacaky">Spacáky</a><a href="#produkty"
-          data-filter="vybaveni">Drobné vybavení</a><a href="index.php?category=obleceni#produkty" data-filter="obleceni">Oblečení</a><a href="index.php?category=boty#produkty" data-filter="boty">Boty</a></div>
+      <div class="category-list"><a href="<?= $siteRoot ?>index.php?category=batohy#produkty" data-filter="batohy">Batohy</a><a href="#produkty"
+          data-filter="stany">Stany</a><a href="<?= $siteRoot ?>index.php?category=spacaky#produkty" data-filter="spacaky">Spacáky</a><a href="#produkty"
+          data-filter="vybaveni">Drobné vybavení</a><a href="<?= $siteRoot ?>index.php?category=obleceni#produkty" data-filter="obleceni">Oblečení</a><a href="<?= $siteRoot ?>index.php?category=boty#produkty" data-filter="boty">Boty</a></div>
     </section>
   </main>

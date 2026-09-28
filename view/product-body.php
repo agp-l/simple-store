@@ -1,10 +1,10 @@
   <main class="wrap detail-page" id="produkty">
-    <nav class="breadcrumbs" aria-label="Drobečková navigace"><a href="index.php">Úvod</a><span>/</span><a href="index.php#produkty">Boty</a><span>/</span><span>Terraventure 5 Men's</span></nav>
+    <nav class="breadcrumbs" aria-label="Drobečková navigace"><a href="<?= $siteRoot ?>index.php">Úvod</a><span>/</span><a href="<?= $siteRoot ?>index.php#produkty">Boty</a><span>/</span><span>Terraventure 5 Men's</span></nav>
     <div class="product-detail">
       <div class="detail-gallery">
         <span class="media-label">Doprava zdarma</span>
         <!-- Zdroj: https://gramino.cz/wp-content/uploads/2026/03/Topo-Athletic-Terraventure-5-Men-Grey-Clay-02.jpg -->
-        <img src="images/topo-terraventure.jpg" alt="Topo Athletic Terraventure 5 Men's Grey / Clay, pohled shora" width="1200" height="1200">
+        <img src="<?= $siteRoot ?>images/topo-terraventure.jpg" alt="Topo Athletic Terraventure 5 Men's Grey / Clay, pohled shora" width="1200" height="1200">
       </div>
       <div class="detail-info">
         <p class="product-brand">Topo Athletic · Trailové boty</p>
@@ -28,6 +28,6 @@
         <div id="parametry"><h3>Parametry</h3><table class="spec-table"><tbody><tr><th>Drop</th><td>3 mm</td></tr><tr><th>Tlumení pod špičkou</th><td>22 mm</td></tr><tr><th>Tlumení pod patou</th><td>25 mm</td></tr><tr><th>Hmotnost</th><td>292 g (jedna bota, 42,5 EU)</td></tr><tr><th>Podešev</th><td>Vibram® Megagrip</td></tr><tr><th>Dostupnost dopravy</th><td>Ukázka dopravy zdarma, způsob doručení bude upřesněn v e-shopu.</td></tr></tbody></table></div>
       </div>
       <h3 id="velikosti">Jak vybrat šířku</h3><p>Už standardní verze Topo Athletic nabízí více prostoru v přední části boty než běžný úzký střih. Pokud potřebujete ještě větší prostor, hledejte variantu Wide; tato ukázka zobrazuje barvu Grey / Clay ve standardní šířce. Rozměry chodidla si před nákupem ověřte v tabulce výrobce.</p>
-      <p><a href="index.php#produkty">← Zpět na všechny produkty</a></p>
+      <p><a href="<?= $siteRoot ?>index.php#produkty">← Zpět na všechny produkty</a></p>
     </section>
   </main>
