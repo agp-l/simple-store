@@ -1265,3 +1265,8 @@
 .cms-post-list h2 a:hover { color: var(--forest-dark); text-decoration: underline; }
 .cms-post-list p { margin: 0; color: var(--muted); line-height: 1.65; }
 @media (max-width: 760px) { .cms-post-list { grid-template-columns: 1fr; } }
+
+.setup-notice { margin-top: 22px; padding: 17px 20px; border: 1px solid #d7c87a; border-radius: 7px; background: #fffbe6; color: #39361e; }
+.setup-notice strong { display: block; margin-bottom: 7px; }
+.setup-notice pre, .debug-error { margin: 0; font: 13px/1.65 ui-monospace, SFMono-Regular, Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; }
+.debug-error { max-height: 440px; overflow: auto; margin: 20px 0; padding: 17px; border: 1px solid #d6a5a5; border-radius: 6px; background: #fff4f4; color: #6f2222; }

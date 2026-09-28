@@ -30,6 +30,9 @@ final class PageRenderer
         $content = $data['content'] ?? null;
         $posts = $data['posts'] ?? [];
         $backLink = (string) ($data['backLink'] ?? '');
+        $setupNotice = (string) ($data['setupNotice'] ?? '');
+        $debugError = (string) ($data['debugError'] ?? '');
+        $showErrors = (bool) ($data['showErrors'] ?? true);
         require $this->viewPath . '/layout.php';
     }
 }

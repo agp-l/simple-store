@@ -8,10 +8,20 @@ if (PHP_SAPI !== 'cli') {
     exit;
 }
 
-require dirname(__DIR__) . '/vendor/autoload.php';
-
 $root = dirname(__DIR__);
-$site = require $root . '/config/site.php';
+$site = require $root . '/src/bootstrap.php';
+$missing = [];
+if (!is_file($root . '/vendor/autoload.php')) {
+    $missing[] = 'Chybí vendor/autoload.php. V kořeni projektu spusť: composer install';
+}
+if (!is_file($root . '/config/database.php')) {
+    $missing[] = 'Chybí config/database.php. Spusť: cp config/database.example.php config/database.php a uprav přístupové údaje.';
+}
+if ($missing !== []) {
+    fwrite(STDERR, implode(PHP_EOL, $missing) . PHP_EOL);
+    exit(1);
+}
+
 $database = require $root . '/config/database.php';
 $content = new ContentRepository(
     new MeekroDB($database['dsn'], $database['user'], $database['password']),

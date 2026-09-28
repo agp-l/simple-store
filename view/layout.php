@@ -4,6 +4,15 @@
 <?php require __DIR__ . '/head.php'; ?>
 <body>
 <?php require __DIR__ . '/header.php'; ?>
+<?php if ($setupNotice !== ''): ?>
+  <aside class="wrap setup-notice" role="alert">
+    <strong>Pro dokončení nastavení</strong>
+    <pre><?= htmlspecialchars(trim($setupNotice), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></pre>
+  </aside>
+<?php endif; ?>
+<?php if ($debugError !== '' && $showErrors): ?>
+  <aside class="wrap" role="alert"><pre class="debug-error"><?= htmlspecialchars($debugError, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></pre></aside>
+<?php endif; ?>
 <?php
 // Only known view names reach this switch; no URL can become a file path.
 switch ($page) {

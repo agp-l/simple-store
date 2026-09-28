@@ -2,6 +2,15 @@
 
 První základ vlastního redakčního systému v PHP 8 a MySQL. Grafika obchodu zůstává ve `view/`. Architektura a důvody jednotlivých rozhodnutí jsou popsané v [docs/architecture.md](docs/architecture.md).
 
+**Nejdřív spusť v kořeni projektu:**
+
+```bash
+composer install
+cp config/database.example.php config/database.php
+```
+
+Pak otevři `config/database.php` a nastav své MySQL `dsn`, `user` a `password`. Příklad používá zástupné údaje, sám se k databázi nepřipojí. Pokud Composer nebo tento místní konfigurační soubor chybí, web teď ukáže konkrétní pokyny místo prázdné chyby 500 a příkazový skript vypíše chybějící kroky. Soubor `config/database.php` je schválně ignorovaný Gitem, aby se heslo nedostalo na GitHub.
+
 ## Spuštění v Apache / XAMPP / LAMPP
 
 1. Nakopíruj celý repozitář do složky, kterou obsluhuje Apache. Web nemá složku `public/`; přístup ke zdrojovým a konfiguračním souborům blokuje `.htaccess`. Apache musí mít povolené `mod_rewrite` a `AllowOverride` pro tuto složku.
@@ -9,6 +18,8 @@ První základ vlastního redakčního systému v PHP 8 a MySQL. Grafika obchodu
 3. V MySQL vytvoř tabulku importem jediného aktuálního souboru: `mysql -u root -p < database/schema.sql` nebo vlož celý soubor do phpMyAdmin. Příkazy `CREATE DATABASE IF NOT EXISTS`, `USE` a `CREATE TABLE IF NOT EXISTS` už v souboru jsou. Pokud hosting nedovolí `CREATE DATABASE`, vytvoř databázi v hostingu a v kopii importovaného SQL vynech první dva příkazy.
 4. Zkopíruj `config/database.example.php` jako `config/database.php` a uprav `dsn`, uživatele a heslo podle svého MySQL. Tento soubor je v `.gitignore` a nesmí se commitovat.
 5. Otevři adresu složky projektu v Apache. Úvod obchodu funguje i před nastavením databáze; blog a redakční stránky potřebují importovanou tabulku. Prohlížej `/cs`, `/cs/blog` a `/cs/o-nas` po založení obsahu.
+
+Pro ladění je v `config/site.php` zapnuto `'debug' => true`; PHP chyby, upozornění a zachycené výjimky se zobrazují na stránce. Až web skutečně zveřejníš, přepni jej na `false`. Pokud se stále objeví holá chyba 500 bez stránky aplikace, jde o chybu Apache ještě před spuštěním PHP; zkontroluj jeho error log a podporu `.htaccess`/`mod_rewrite`. Příkaz `ini_set()` nemůže zobrazit chybu parsování v tomtéž souboru, pokud se kvůli ní PHP vůbec nespustí.
 
 ## První stránka, článek a historie
 

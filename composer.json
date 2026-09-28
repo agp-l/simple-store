@@ -12,5 +12,10 @@
     "psr-4": {
       "SimpleStore\\": "src/"
     }
+  },
+  "config": {
+    "platform": {
+      "php": "8.0.30"
+    }
   }
 }

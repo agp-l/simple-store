@@ -6,9 +6,7 @@ use SimpleStore\Navigation\MenuManager;
 use SimpleStore\Navigation\UrlManager;
 use SimpleStore\Rendering\PageRenderer;
 
-require __DIR__ . '/vendor/autoload.php';
-
-$site = require __DIR__ . '/config/site.php';
+$site = require __DIR__ . '/src/bootstrap.php';
 $renderer = new PageRenderer(__DIR__ . '/view');
 
 try {
@@ -20,16 +18,25 @@ try {
     );
 } catch (InvalidArgumentException $error) {
     $base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/index.php'), '/') . '/';
-    $renderer->render('not-found', ['basePath' => $base], 404);
+    $renderer->render('not-found', ['basePath' => $base, 'showErrors' => $site['debug']], 404);
     exit;
 }
 
-$shared = ['language' => $url->getLanguage(), 'basePath' => $url->getBasePath()];
+$shared = ['language' => $url->getLanguage(), 'basePath' => $url->getBasePath(), 'showErrors' => $site['debug']];
 $segments = $url->getSegments();
 $databaseFile = __DIR__ . '/config/database.php';
-
+$missing = [];
+if (!is_file(__DIR__ . '/vendor/autoload.php')) {
+    $missing[] = 'Chybí knihovny Composeru. V kořeni projektu spusť: composer install';
+}
 if (!is_file($databaseFile)) {
-    $renderer->render($segments === [] ? 'catalog' : 'unavailable', $shared, $segments === [] ? 200 : 503);
+    $missing[] = 'Chybí přístup k databázi. Spusť: cp config/database.example.php config/database.php — pak v config/database.php vyplň přihlašovací údaje.';
+}
+
+if ($missing !== []) {
+    $renderer->render($segments === [] ? 'catalog' : 'unavailable', $shared + [
+        'setupNotice' => implode("\n", $missing),
+    ], $segments === [] ? 200 : 503);
     exit;
 }
 
@@ -64,5 +71,5 @@ try {
     }
 } catch (Throwable $error) {
     error_log((string) $error);
-    $renderer->render('unavailable', $shared, 503);
+    $renderer->render('unavailable', $shared + ['debugError' => (string) $error], 503);
 }
