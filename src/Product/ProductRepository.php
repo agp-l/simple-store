@@ -79,6 +79,8 @@ final class ProductRepository
         $brand = trim((string) ($fields['brand'] ?? ''));
         $summary = trim((string) ($fields['summary'] ?? ''));
         $description = (string) ($fields['description'] ?? '');
+        $details = ProductDetails::fromForm($fields);
+        $detailsJson = json_encode($details, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
         $category = (string) ($fields['category'] ?? '');
         $subcategory = (string) ($fields['subcategory'] ?? '');
         $price = filter_var($fields['price_czk'] ?? null, FILTER_VALIDATE_INT);
@@ -99,8 +101,7 @@ final class ProductRepository
             throw new InvalidArgumentException('Invalid product details. Check the name, category, price and slug.');
         }
         // An HTTPS URL or a relative path inside images/ is safe to put in an escaped img src.
-        if (!preg_match('~^images/[A-Za-z0-9_-]+\.(?:webp|jpg|jpeg|png|avif)$~iD', $image) &&
-            !(filter_var($image, FILTER_VALIDATE_URL) && parse_url($image, PHP_URL_SCHEME) === 'https')) {
+        if (!ProductDetails::imagePath($image)) {
             throw new InvalidArgumentException('Use an images/filename.webp path or an HTTPS image URL.');
         }
         if (strlen($image) > 1000) {
@@ -136,6 +137,7 @@ final class ProductRepository
                 'language' => $language, 'revision_number' => $revision,
                 'slug' => $slug, 'active_slug' => $slug,
                 'name' => $name, 'brand' => $brand, 'summary' => $summary, 'description' => $description,
+                'details_json' => $detailsJson,
                 'category' => $category, 'subcategory' => $subcategory,
                 'price_czk' => $price, 'image_path' => $image, 'sizes' => $sizes,
                 'stock_status' => $stock, 'published' => (int) $published,

@@ -3,10 +3,23 @@
   if (!form) return;
   const title = form.querySelector('[name="name"], [name="title"]');
   const slug = form.querySelector('[name="slug"]');
-  if (!title || !slug) return;
-  let automatic = !slug.value;
-  const makeSlug = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 190).replace(/-$/g, '');
-  title.addEventListener('input', () => { if (automatic) slug.value = makeSlug(title.value); });
-  slug.addEventListener('input', () => { automatic = slug.value === ''; });
+  if (title && slug) {
+    let automatic = !slug.value;
+    const makeSlug = value => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 190).replace(/-$/g, '');
+    title.addEventListener('input', () => { if (automatic) slug.value = makeSlug(title.value); });
+    slug.addEventListener('input', () => { automatic = slug.value === ''; });
+  }
+  form.addEventListener('click', event => {
+    const add = event.target.closest('[data-add-row]');
+    if (add) {
+      const group = add.dataset.addRow;
+      const template = form.querySelector(`[data-template="${group}"]`);
+      const container = form.querySelector(`[data-rows="${group}"]`);
+      container.append(template.content.cloneNode(true));
+      container.lastElementChild.querySelector('input, select').focus();
+    }
+    const remove = event.target.closest('[data-remove-row]');
+    if (remove) remove.closest('[data-row]').remove();
+  });
 })();

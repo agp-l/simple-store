@@ -30,7 +30,8 @@ CREATE TABLE IF NOT EXISTS content_revisions (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Product fields live together; saving creates a new row with all current values.
--- No foreign keys or additional category/variant tables are needed yet.
+-- Options, technical specifications, content blocks and gallery live in details_json.
+-- They are a complete snapshot, without extra tables or foreign keys.
 CREATE TABLE IF NOT EXISTS product_revisions (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
@@ -43,6 +44,7 @@ CREATE TABLE IF NOT EXISTS product_revisions (
   brand VARCHAR(120) NOT NULL DEFAULT '',
   summary TEXT NULL,
   description LONGTEXT NOT NULL,
+  details_json LONGTEXT NULL,
   category VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   subcategory VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '',
   price_czk INT UNSIGNED NOT NULL,
@@ -57,3 +59,14 @@ CREATE TABLE IF NOT EXISTS product_revisions (
   UNIQUE KEY one_product_slug (language, active_slug),
   KEY products_for_catalog (language, published, active_product_key, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Upgrade installations with products created before details_json was introduced.
+-- Prepared SQL keeps this single schema safe to re-import in both MySQL and MariaDB.
+SET @details_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product_revisions' AND COLUMN_NAME = 'details_json');
+SET @details_upgrade = IF(@details_exists = 0,
+  'ALTER TABLE product_revisions ADD COLUMN details_json LONGTEXT NULL AFTER description',
+  'SELECT 1');
+PREPARE details_statement FROM @details_upgrade;
+EXECUTE details_statement;
+DEALLOCATE PREPARE details_statement;

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use SimpleStore\Product\ProductRepository;
+use SimpleStore\Product\ProductDetails;
 
 // This controller is included only after admin.php has checked the session and CSRF token.
 if (!isset($auth) || !$auth->signedIn()) {
@@ -34,11 +35,20 @@ if ($method === 'POST') {
         'sizes' => $_POST['sizes'] ?? '',
         'stock_status' => $_POST['stock_status'] ?? '',
         'published' => isset($_POST['published']),
+        'gallery' => $_POST['gallery'] ?? '',
+        'option_name' => $_POST['option_name'] ?? [],
+        'option_values' => $_POST['option_values'] ?? [],
+        'spec_name' => $_POST['spec_name'] ?? [],
+        'spec_value' => $_POST['spec_value'] ?? [],
+        'section_type' => $_POST['section_type'] ?? [],
+        'section_heading' => $_POST['section_heading'] ?? [],
+        'section_body' => $_POST['section_body'] ?? [],
     ];
     $language = $productForm['language'];
     try {
         foreach ($productForm as $field => $value) {
-            if ($field !== 'published' && !is_string($value)) {
+            if ($field !== 'published' && !in_array($field, ['option_name', 'option_values', 'spec_name', 'spec_value',
+                'section_type', 'section_heading', 'section_body'], true) && !is_string($value)) {
                 throw new InvalidArgumentException('Neplatný údaj produktu.');
             }
         }
@@ -61,7 +71,7 @@ if ($method === 'POST') {
             ? 'Produkt se mezitím změnil. Znovu ho načti před uložením.'
             : ($site['debug'] ? $exception->getMessage() : 'Produkt se nepodařilo uložit. Zkontroluj údaje.');
         foreach ($productForm as $field => $value) {
-            if (!is_string($value) && $field !== 'published') {
+            if (!is_string($value) && $field !== 'published' && !is_array($value)) {
                 $productForm[$field] = '';
             }
         }
@@ -103,6 +113,18 @@ if ($method === 'POST') {
         $productForm = ['language' => $language, 'category' => 'batohy',
             'stock_status' => 'in_stock', 'published' => false];
     }
+}
+
+if ($method !== 'POST' || $productError === '') {
+    $details = ProductDetails::decode($productForm['details_json'] ?? null, $productForm['sizes'] ?? '');
+    $productForm['gallery'] = implode("\n", $details['gallery']);
+    $productForm['option_name'] = array_column($details['options'], 'name');
+    $productForm['option_values'] = array_map(static fn (array $group): string => implode("\n", $group['values']), $details['options']);
+    $productForm['spec_name'] = array_column($details['specifications'], 'name');
+    $productForm['spec_value'] = array_column($details['specifications'], 'value');
+    $productForm['section_type'] = array_column($details['sections'], 'type');
+    $productForm['section_heading'] = array_column($details['sections'], 'heading');
+    $productForm['section_body'] = array_column($details['sections'], 'body');
 }
 
 if (isset($_GET['saved'])) {

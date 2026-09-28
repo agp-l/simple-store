@@ -50,12 +50,13 @@
               <label>Název<input name="name" maxlength="255" value="<?= $escape($productForm['name'] ?? '') ?>" required></label>
               <div class="admin-fields-two">
                 <label>Značka<input name="brand" maxlength="120" value="<?= $escape($productForm['brand'] ?? '') ?>"></label>
-                <label>Adresa (slug)<input name="slug" maxlength="190" pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="lehky-batoh" value="<?= $escape($productForm['slug'] ?? '') ?>" required></label>
+                <label>Adresa (slug)<input name="slug" maxlength="190" pattern="[a-z0-9]+(-[a-z0-9]+)*" placeholder="Vytvoří se z názvu" value="<?= $escape($productForm['slug'] ?? '') ?>"><small>Vyplní se automaticky. Můžeš ji upravit; u existujícího produktu zůstane stejná.</small></label>
               </div>
               <label>Krátký popis<textarea name="summary" rows="3"><?= $escape($productForm['summary'] ?? '') ?></textarea></label>
-              <label>Popis produktu<textarea name="description" rows="8"><?= $escape($productForm['description'] ?? '') ?></textarea></label>
+              <label>Krátký úvodní text v detailu<textarea name="description" rows="4"><?= $escape($productForm['description'] ?? '') ?></textarea></label>
               <label>Cesta k obrázku nebo HTTPS adresa<input name="image_path" maxlength="1000" placeholder="images/batoh.webp" value="<?= $escape($productForm['image_path'] ?? '') ?>" required>
                 <small>Například <code>images/batoh.webp</code>. Obrázek nahraj do složky <code>images/</code>; cesta pak bude přímo v <code>&lt;img src&gt;</code> karty.</small></label>
+              <label>Další fotografie v galerii<textarea name="gallery" rows="3" placeholder="images/batoh-bok.webp&#10;images/batoh-zada.webp"><?= $escape($productForm['gallery'] ?? '') ?></textarea><small>Každá adresa na samostatný řádek; první hlavní fotografie se zadává nahoře.</small></label>
               <div class="admin-fields-two">
                 <label>Cena v Kč<input type="number" name="price_czk" min="1" max="10000000" value="<?= $escape($productForm['price_czk'] ?? '') ?>" required></label>
                 <label>Dostupnost<select name="stock_status"><option value="in_stock" <?= ($productForm['stock_status'] ?? '') === 'in_stock' ? 'selected' : '' ?>>Skladem</option><option value="on_order" <?= ($productForm['stock_status'] ?? '') === 'on_order' ? 'selected' : '' ?>>Na objednávku</option><option value="out_of_stock" <?= ($productForm['stock_status'] ?? '') === 'out_of_stock' ? 'selected' : '' ?>>Není skladem</option></select></label>
@@ -68,8 +69,35 @@
                     <?php endforeach; ?>
                   </select><small>Pro ostatní kategorie ponech „Bez podkategorie“.</small>
                 </label>
-                <label>Velikosti<input name="sizes" maxlength="255" placeholder="42 EU, 43 EU, 44 EU" value="<?= $escape($productForm['sizes'] ?? '') ?>"><small>Volitelné; více velikostí odděl čárkou.</small></label>
               </div>
+              <section class="admin-builder" aria-labelledby="options-title">
+                <div class="admin-builder-title"><div><h3 id="options-title">Výběr při nákupu</h3><p>Vytvoř třeba Barva, Velikost, Pozice zipu nebo Délka. Každý produkt může mít jiné položky.</p></div><button type="button" class="admin-small-button" data-add-row="options">+ Přidat výběr</button></div>
+                <div data-rows="options">
+                  <?php foreach (($productForm['option_name'] ?: ['']) as $i => $optionName): ?>
+                    <div class="admin-builder-row" data-row><label>Název výběru<input name="option_name[]" placeholder="Barva" value="<?= $escape($optionName) ?>"></label><label>Možnosti (každá na nový řádek)<textarea name="option_values[]" rows="3" placeholder="Grey / Clay&#10;Black / Grey"><?= $escape($productForm['option_values'][$i] ?? '') ?></textarea></label><button type="button" class="admin-remove" data-remove-row>Odebrat</button></div>
+                  <?php endforeach; ?>
+                </div>
+              </section>
+              <section class="admin-builder" aria-labelledby="specs-title">
+                <div class="admin-builder-title"><div><h3 id="specs-title">Technické parametry</h3><p>Údaje pro přehlednou tabulku pod produktem (hmotnost, materiál, drop…).</p></div><button type="button" class="admin-small-button" data-add-row="specs">+ Přidat parametr</button></div>
+                <div data-rows="specs">
+                  <?php foreach (($productForm['spec_name'] ?: ['']) as $i => $specName): ?>
+                    <div class="admin-builder-row admin-pair" data-row><label>Parametr<input name="spec_name[]" placeholder="Hmotnost" value="<?= $escape($specName) ?>"></label><label>Hodnota<input name="spec_value[]" placeholder="292 g" value="<?= $escape($productForm['spec_value'][$i] ?? '') ?>"></label><button type="button" class="admin-remove" data-remove-row>Odebrat</button></div>
+                  <?php endforeach; ?>
+                </div>
+              </section>
+              <section class="admin-builder" aria-labelledby="sections-title">
+                <div class="admin-builder-title"><div><h3 id="sections-title">Obsah produktu</h3><p>Skládej odstavce, seznamy a tabulky v pořadí, v jakém se mají zobrazit.</p></div><button type="button" class="admin-small-button" data-add-row="sections">+ Přidat blok</button></div>
+                <div data-rows="sections">
+                  <?php foreach (($productForm['section_type'] ?: ['text']) as $i => $sectionType): ?>
+                    <div class="admin-builder-row" data-row><div class="admin-fields-two"><label>Typ bloku<select name="section_type[]"><option value="text" <?= $sectionType === 'text' ? 'selected' : '' ?>>Odstavce</option><option value="list" <?= $sectionType === 'list' ? 'selected' : '' ?>>Seznam</option><option value="table" <?= $sectionType === 'table' ? 'selected' : '' ?>>Tabulka</option></select></label><label>Nadpis (volitelný)<input name="section_heading[]" placeholder="Vlastnosti" value="<?= $escape($productForm['section_heading'][$i] ?? '') ?>"></label></div><label>Text bloku<textarea name="section_body[]" rows="5" placeholder="Odstavce odděl prázdným řádkem. U seznamu jedna položka na řádek. V tabulce: Název | Hodnota."><?= $escape($productForm['section_body'][$i] ?? '') ?></textarea></label><button type="button" class="admin-remove" data-remove-row>Odebrat</button></div>
+                  <?php endforeach; ?>
+                </div>
+              </section>
+              <template data-template="options"><div class="admin-builder-row" data-row><label>Název výběru<input name="option_name[]" placeholder="Velikost"></label><label>Možnosti (každá na nový řádek)<textarea name="option_values[]" rows="3" placeholder="42 EU&#10;43 EU"></textarea></label><button type="button" class="admin-remove" data-remove-row>Odebrat</button></div></template>
+              <template data-template="specs"><div class="admin-builder-row admin-pair" data-row><label>Parametr<input name="spec_name[]" placeholder="Hmotnost"></label><label>Hodnota<input name="spec_value[]" placeholder="292 g"></label><button type="button" class="admin-remove" data-remove-row>Odebrat</button></div></template>
+              <template data-template="sections"><div class="admin-builder-row" data-row><div class="admin-fields-two"><label>Typ bloku<select name="section_type[]"><option value="text">Odstavce</option><option value="list">Seznam</option><option value="table">Tabulka</option></select></label><label>Nadpis (volitelný)<input name="section_heading[]" placeholder="Vlastnosti"></label></div><label>Text bloku<textarea name="section_body[]" rows="5" placeholder="Odstavce, položky seznamu nebo Název | Hodnota"></textarea></label><button type="button" class="admin-remove" data-remove-row>Odebrat</button></div></template>
+              <p class="admin-form-note">Cena a dostupnost zatím platí pro všechny možnosti produktu stejně; košík uchová vybranou kombinaci. Nezadávej různé ceny nebo skladové stavy jednotlivých kombinací.</p>
               <label class="admin-checkbox"><input type="checkbox" name="published" value="1" <?= !empty($productForm['published']) ? 'checked' : '' ?>> Publikovat na webu</label>
               <p class="admin-form-note">Po vydání prvního produktu se ukázkové karty nahradí zveřejněnými produkty.</p>
               <button class="admin-button" type="submit">Uložit novou revizi</button>
