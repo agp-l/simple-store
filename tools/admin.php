@@ -33,5 +33,9 @@ if ($temporary === false || file_put_contents($temporary, $contents, LOCK_EX) ==
     fwrite(STDERR, "Could not write config/admin.php. Check the config directory permissions.\n");
     exit(1);
 }
+if (!chmod($file, 0644)) {
+    fwrite(STDERR, "Could not make config/admin.php readable by Apache. Check its permissions.\n");
+    exit(1);
+}
 
 echo "Username: admin\nPassword: {$password}\nSave the password now; it will not be displayed again.\n";

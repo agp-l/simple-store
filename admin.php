@@ -24,7 +24,21 @@ $language = $site['default_language'];
 $csrf = '';
 
 if (!is_file($adminFile)) {
-    $screen = 'setup';
+    if (!is_executable(dirname($adminFile))) {
+        http_response_code(503);
+        $screen = 'error';
+        $error = 'Apache nemůže procházet adresář config/. Zkontroluj jeho přístupová práva.';
+    } else {
+        $screen = 'setup';
+    }
+    require __DIR__ . '/view/admin/layout.php';
+    exit;
+}
+
+if (!is_readable($adminFile)) {
+    http_response_code(503);
+    $screen = 'error';
+    $error = 'Apache nemůže číst config/admin.php. V terminálu spusť: chmod 644 config/admin.php';
     require __DIR__ . '/view/admin/layout.php';
     exit;
 }

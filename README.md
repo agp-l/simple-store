@@ -31,6 +31,8 @@ Administrace je na `http://localhost/simple-store/admin.php`. Jednoho administr�
 
 Příkaz jednou vypíše jméno `admin` a náhodně vygenerované heslo. Ulož si je; konfigurace ukládá jen jeho hash do `config/admin.php`, který se nesmí nahrávat na GitHub. Pro změnu hesla spusť `/opt/lampp/bin/php tools/admin.php --reset` a přihlas se novým heslem. Administrace umožňuje založit, upravit a publikovat stránku či článek. Obsahuje seznam aktuálních dokumentů a historii verzí; načtení starší verze do formuláře a její uložení vytvoří **další nový řádek**, nepřepíše historii. Přihlášení chrání PHP session, formuláře mají CSRF token. Před zveřejněním webu vypni režim `debug`.
 
+Pokud administrace hlásí `Permission denied` při čtení `config/admin.php`, spusť v kořeni projektu `chmod 644 config/admin.php`. Apache obvykle běží pod jiným uživatelem než tvůj terminál; soubor musí být pro Apache čitelný. Přímé stažení souborů ze složky `config/` zakazuje `.htaccess`.
+
 Po aktualizaci projektu můžeš znovu importovat aktuální `database/schema.sql`: `/opt/lampp/bin/mysql -u root < database/schema.sql` (při nastaveném hesle přidej `-p`). Import existující obsah nemaže. Administrace žádné další SQL tabulky nepotřebuje. Rychlé kontroly: `/opt/lampp/bin/php tests/admin-auth.php`, `/opt/lampp/bin/php tests/database-connection.php` a `/opt/lampp/bin/php tests/url-manager.php`.
 
 ## První stránka, článek a historie
