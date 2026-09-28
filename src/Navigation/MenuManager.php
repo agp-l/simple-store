@@ -60,9 +60,11 @@ final class MenuManager
         $links = [];
         $current = $this->url->categoryPath();
         foreach ($rows as $row) {
-            $links[] = $this->item($row['title'], $this->url->category($row['path']),
+            $link = $this->item($row['title'], $this->url->category($row['path']),
                 $current !== null && CategoryPath::contains($row['path'], $current),
                 $this->categoryLinks($row['children']));
+            $link['path'] = $row['path'];
+            $links[] = $link;
         }
         return $links;
     }

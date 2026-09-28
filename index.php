@@ -40,6 +40,7 @@ if (!is_file($databaseFile)) {
 if ($missing !== []) {
     $renderer->render($segments === [] ? 'catalog' : 'unavailable', $shared + [
         'setupNotice' => implode("\n", $missing),
+        'showSamples' => $segments === [],
     ], $segments === [] ? 200 : 503);
     exit;
 }
@@ -50,8 +51,12 @@ try {
     $contents = new ContentRepository($db, $site['languages']);
     $categories = new CategoryRepository($db);
     $menus = new MenuManager($contents, $categories, $url, require __DIR__ . '/config/menus.php');
+    $hasContent = (int) $db->queryFirstField(
+        'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
+        'content_revisions'
+    ) > 0;
     $shared['primaryMenu'] = $menus->links('primary');
-    $shared['utilityMenu'] = $menus->links('utility');
+    $shared['utilityMenu'] = $hasContent ? $menus->links('utility') : [];
     $shared['footerMenu'] = $menus->links('footer');
     $shared['categoryLabels'] = array_column($categories->all($url->getLanguage()), 'title', 'path');
 
@@ -84,6 +89,8 @@ try {
             $shared['setupNotice'] = 'Pro správu produktů importuj aktuální database/schema.sql. Ukázkový katalog zůstává dostupný.';
         } elseif (!$categories->installed()) {
             $shared['setupNotice'] = 'Pro načtení kategorií znovu importuj aktuální database/schema.sql.';
+        } elseif (!$hasContent) {
+            $shared['setupNotice'] = 'Pro blog a stránky importuj aktuální database/schema.sql.';
         }
         if ($selected !== null) {
             $shared['title'] = $selected['title'] . ' — dobrodruzi.cz';

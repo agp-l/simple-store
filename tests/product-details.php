@@ -38,7 +38,10 @@ $product = [
     'stock_status' => 'in_stock', 'description' => 'Pohodlná bota.',
 ];
 $basePath = '/simple-store/';
-$siteRoot = '/simple-store/cs/';
+$siteRoot = $basePath;
+$language = 'cs';
+$categoryTrail = [['path' => 'boty', 'title' => 'Boty']];
+$categoryLabels = ['boty' => 'Boty'];
 ob_start();
 require dirname(__DIR__) . '/view/product-record.php';
 $html = ob_get_clean();

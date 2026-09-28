@@ -75,13 +75,14 @@ if ($method === 'POST') {
             : (str_starts_with($exception->getMessage(), 'V databázi chybí product_revisions.details_json.')
                 ? $exception->getMessage()
                 : ($site['debug'] ? $exception->getMessage() : 'Produkt se nepodařilo uložit. Zkontroluj údaje.'));
+        $repeatable = ['option_name', 'option_values', 'spec_name', 'spec_value',
+            'section_type', 'section_heading', 'section_body'];
         foreach ($productForm as $field => $value) {
-            if (!is_string($value) && $field !== 'published' && !is_array($value)) {
+            if ($field !== 'published' && !in_array($field, $repeatable, true) && !is_string($value)) {
                 $productForm[$field] = '';
             }
         }
-        foreach (['option_name', 'option_values', 'spec_name', 'spec_value',
-            'section_type', 'section_heading', 'section_body'] as $field) {
+        foreach ($repeatable as $field) {
             if (!is_array($productForm[$field])) {
                 $productForm[$field] = [];
             }

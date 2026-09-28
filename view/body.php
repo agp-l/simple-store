@@ -19,12 +19,12 @@
       <div class="filter-groups">
         <nav class="filters" aria-label="Hlavní kategorie">
           <a class="filter<?= $currentCategory === null ? ' active' : '' ?>" href="<?= $escape($siteRoot . $language) ?>#produkty" <?= $currentCategory === null ? 'aria-current="page"' : '' ?>>Vše</a>
-          <?php foreach ($primaryMenu as $link): ?><a class="filter<?= $link['active'] ? ' active' : '' ?>" href="<?= $escape($link['href']) ?>#produkty" <?= $link['active'] ? 'aria-current="page"' : '' ?>><?= $escape($link['label']) ?></a><?php endforeach; ?>
+          <?php foreach ($primaryMenu as $link): ?><a class="filter<?= $link['active'] ? ' active' : '' ?>" href="<?= $escape($link['href']) ?>#produkty" <?= ($currentCategory['path'] ?? '') === $link['path'] ? 'aria-current="page"' : '' ?>><?= $escape($link['label']) ?></a><?php endforeach; ?>
         </nav>
         <?php if ($categoryMenuRoot !== null && $categoryMenu !== []): ?>
           <nav class="backpack-filters" aria-label="Podkategorie <?= $escape($categoryMenuRoot['title']) ?>">
-            <a class="filter<?= $currentCategory['path'] === $categoryMenuRoot['path'] ? ' active' : '' ?>" href="<?= $escape($siteRoot . $language . '/kategorie-produktu/' . $categoryMenuRoot['path']) ?>#produkty">Všechny <?= $escape($categoryMenuRoot['title']) ?></a>
-            <?php foreach ($categoryMenu as $link): ?><a class="filter<?= $link['active'] ? ' active' : '' ?>" href="<?= $escape($link['href']) ?>#produkty" <?= $link['active'] ? 'aria-current="page"' : '' ?>><?= $escape($link['label']) ?></a><?php endforeach; ?>
+            <a class="filter<?= $currentCategory['path'] === $categoryMenuRoot['path'] ? ' active' : '' ?>" href="<?= $escape($siteRoot . $language . '/kategorie-produktu/' . $categoryMenuRoot['path']) ?>#produkty" <?= $currentCategory['path'] === $categoryMenuRoot['path'] ? 'aria-current="page"' : '' ?>>Všechny <?= $escape($categoryMenuRoot['title']) ?></a>
+            <?php foreach ($categoryMenu as $link): ?><a class="filter<?= $link['active'] ? ' active' : '' ?>" href="<?= $escape($link['href']) ?>#produkty" <?= ($currentCategory['path'] ?? '') === $link['path'] ? 'aria-current="page"' : '' ?>><?= $escape($link['label']) ?></a><?php endforeach; ?>
           </nav>
         <?php endif; ?>
       </div><label class="sort-wrap">Řadit podle
@@ -56,7 +56,7 @@
           <div class="product-action"><strong>3 990 Kč</strong><button class="add-button" type="button" data-add="0" aria-label="Přidat Topo Athletic Terraventure 5 Men's do ukázkového košíku"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h2l2 10h10l2-7H7M9 19h.01M18 19h.01" /></svg><span>Do košíku</span></button></div>
         </div>
       </article>
-      <article class="product-card" data-category="stany" data-price="3710" data-name="aliaska" id="produkt-2">
+      <article class="product-card" data-category="spani/stany" data-price="3710" data-name="aliaska" id="produkt-2">
         <div class="product-media">
           <img class="product-image" src="<?= $siteRoot ?>images/stan.webp" alt="Aliaska" loading="lazy" decoding="async">
           <span class="media-label">Stany</span>
@@ -72,7 +72,7 @@
               </svg><span>Do košíku</span></button></div>
         </div>
       </article>
-      <article class="product-card" data-category="spacaky" data-price="1199" data-name="little star exp"
+      <article class="product-card" data-category="spani/spacaky" data-price="1199" data-name="little star exp"
         id="produkt-3">
         <div class="product-media">
           <img class="product-image" src="<?= $siteRoot ?>images/spacak.webp" alt="Little Star EXP" loading="lazy" decoding="async">
@@ -107,7 +107,7 @@
               </svg><span>Do košíku</span></button></div>
         </div>
       </article>
-      <article class="product-card" data-category="batohy" data-subcategory="do-25" data-price="2315" data-name="ac aera 24" id="produkt-5">
+      <article class="product-card" data-category="batohy/batohy-do-25-l" data-price="2315" data-name="ac aera 24" id="produkt-5">
         <div class="product-media">
           <img class="product-image" src="<?= $siteRoot ?>images/batoh.webp" alt="AC Aera 24" loading="lazy" decoding="async">
           <span class="media-label">Batohy</span>
@@ -123,7 +123,7 @@
               </svg><span>Do košíku</span></button></div>
         </div>
       </article>
-      <article class="product-card" data-category="stany" data-price="3710" data-name="aliaska" id="produkt-6">
+      <article class="product-card" data-category="spani/stany" data-price="3710" data-name="aliaska" id="produkt-6">
         <div class="product-media">
           <img class="product-image" src="<?= $siteRoot ?>images/stan.webp" alt="Aliaska" loading="lazy" decoding="async">
           <span class="media-label">Stany</span>
@@ -139,7 +139,7 @@
               </svg><span>Do košíku</span></button></div>
         </div>
       </article>
-      <article class="product-card" data-category="spacaky" data-price="1199" data-name="little star exp"
+      <article class="product-card" data-category="spani/spacaky" data-price="1199" data-name="little star exp"
         id="produkt-7">
         <div class="product-media">
           <img class="product-image" src="<?= $siteRoot ?>images/spacak.webp" alt="Little Star EXP" loading="lazy" decoding="async">
@@ -174,7 +174,7 @@
               </svg><span>Do košíku</span></button></div>
         </div>
       </article>
-      <article class="product-card" data-category="batohy" data-subcategory="do-25" data-price="2315" data-name="ac aera 24" id="produkt-9">
+      <article class="product-card" data-category="batohy/batohy-do-25-l" data-price="2315" data-name="ac aera 24" id="produkt-9">
         <div class="product-media">
           <img class="product-image" src="<?= $siteRoot ?>images/batoh.webp" alt="AC Aera 24" loading="lazy" decoding="async">
           <span class="media-label">Batohy</span>
@@ -190,7 +190,7 @@
               </svg><span>Do košíku</span></button></div>
         </div>
       </article>
-      <article class="product-card" data-category="stany" data-price="3710" data-name="aliaska" id="produkt-10">
+      <article class="product-card" data-category="spani/stany" data-price="3710" data-name="aliaska" id="produkt-10">
         <div class="product-media">
           <img class="product-image" src="<?= $siteRoot ?>images/stan.webp" alt="Aliaska" loading="lazy" decoding="async">
           <span class="media-label">Stany</span>
@@ -206,7 +206,7 @@
               </svg><span>Do košíku</span></button></div>
         </div>
       </article>
-      <article class="product-card" data-category="spacaky" data-price="1199" data-name="little star exp"
+      <article class="product-card" data-category="spani/spacaky" data-price="1199" data-name="little star exp"
         id="produkt-11">
         <div class="product-media">
           <img class="product-image" src="<?= $siteRoot ?>images/spacak.webp" alt="Little Star EXP" loading="lazy" decoding="async">

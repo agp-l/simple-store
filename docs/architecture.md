@@ -8,8 +8,8 @@ CMS řeší stránky, blog a nyní také produktové karty a detail. Produkty ma
 
 1. Apache ponechá obrázky a CSS jako soubory. Ostatní URL předá do `index.php`.
 2. `UrlManager` rozdělí cestu na úseky, určí jazyk a udrží správný prefix, pokud je projekt v podsložce.
-3. `index.php` rozhodne, zda zobrazit obchod, seznam článků, článek, stránku, nebo 404.
-4. `ContentRepository` načte jen aktuální publikovanou revizi. `MenuManager` sestaví odkazy z publikovaných stránek označených pro menu.
+3. `index.php` rozhodne, zda zobrazit obchod, kategorii, produkt, seznam článků, článek, stránku, nebo 404.
+4. `CategoryRepository` načte strom kategorií a `ContentRepository` aktuální publikovanou revizi. `MenuManager` sestaví pojmenovaná menu pro jednotlivá místa šablony.
 5. `PageRenderer` pošle data do stávajících PHP pohledů ve `view/`. Nepoužívá Twig ani databázi.
 
 ## Složky a názvy
@@ -17,7 +17,10 @@ CMS řeší stránky, blog a nyní také produktové karty a detail. Produkty ma
 | Cesta | Úkol |
 | --- | --- |
 | `src/Navigation/UrlManager.php` | Jen adresa, jazyk a lokální odkazy. Zachovává název a metodu `getSegment()` ze starého CMS. |
-| `src/Navigation/MenuManager.php` | Vytvoří pole odkazů pro hlavičku, žádné HTML uvnitř třídy. |
+| `src/Navigation/MenuManager.php` | Vytvoří pojmenované stromy odkazů pro libovolná místa šablony, žádné HTML uvnitř třídy. |
+| `src/Category/CategoryRepository.php` | Jeden SQL zdroj pro kořeny, přímé děti, strom a drobečkovou navigaci. |
+| `src/Category/CategoryPath.php` | Ověření cesty, její rodič, podstrom a převod starých kódů produktů při čtení. |
+| `config/menus.php` | Přiřazuje zdroj a kořen kategorického stromu ke jménu každého menu. |
 | `src/Navigation/Slugger.php` | Navrhne adresu z českého nadpisu; ruční slug má přednost. |
 | `src/Content/ContentRepository.php` | SQL dotazy, publikovaný obsah a ukládání revizí. |
 | `src/Rendering/PageRenderer.php` | Vybere schválený PHP pohled a předá mu data. |
@@ -36,7 +39,15 @@ Jeden `document_key` je trvalá identita stránky nebo článku. `language` je j
 
 Produkty používají obdobnou tabulku `product_revisions`, protože jejich cena, kategorie, dostupnost a cesta k obrázku nejsou vlastnosti článků. Všechny údaje produktu jsou na jednom řádku a jeho změna vloží nový řádek; stará revize zůstane k nahlédnutí. Sloupec `details_json` je snímek skupin výběru (název a seznam možností), technických údajů (název a hodnota), galerie a seřazených bloků obsahu. Kód čte staré `sizes` jako skupinu Velikost, pokud produkt dosud nemá `details_json`. Tyto možnosti jsou **společné pro produkt s jednou cenou a dostupností**; systém zatím nespravuje samostatné skladové kusy pro kombinace. Dokud nejsou žádné publikované produkty, web používá původní statické ukázky.
 
-Základní cesty jsou `/`, `/cs`, `/cs/blog`, `/cs/blog/nazev-clanku`, `/cs/o-nas`. Jazyk vybírá výhradně URL, nikoli cookie nebo session. Nyní je zapnutá jen čeština; další jazyk vyžaduje také přeložené texty rozhraní. Chybějící překlad zobrazí 404, aby se potichu nepodstrčil obsah v jiném jazyce.
+Základní cesty jsou `/`, `/cs`, `/cs/kategorie-produktu/spani/spacaky`, `/cs/produkt/nazev`, `/cs/blog`, `/cs/blog/nazev-clanku`, `/cs/o-nas`. Jazyk vybírá výhradně URL, nikoli cookie nebo session. Nyní je zapnutá jen čeština; další jazyk vyžaduje také přeložené texty rozhraní a řádky se stejnými cestami v `catalog_categories`. Chybějící překlad zobrazí 404, aby se potichu nepodstrčil obsah v jiném jazyce.
+
+## Kategorie bez dalších vztahových tabulek
+
+`catalog_categories` ukládá `language`, stabilní `path`, čitelný `title`, pořadí a příznak `enabled`. Cesta `obleceni/muzi/bundy` sama určuje rodiče `obleceni/muzi`, proto není potřeba `parent_id` ani spojování tabulek. `CategoryRepository::tree()` zahrne jen povolené větve, kterým existují všechny rodičovské cesty. Ruční přidání potomka znamená vložení jednoho řádku. Po změně `path` musíš opravit i cesty potomků a přiřazení produktu; proto je `path` trvalý identifikátor a pro změnu nápisu uprav pouze `title`.
+
+Produktová revize nadále ukládá kořen do `category` a zbytek cesty do `subcategory`. Editor ukazuje jedno pole celé cesty a repository ji při ukládání rozdělí; celá historie výrobku tak zůstává v jedné produktové tabulce. Původní `spacaky`, `stany` a objemové kódy batohů se na veřejném webu převádějí při čtení, bez zpětného přepsání revizí. Kořenová kategorie zahrnuje produkty všech podkategorií, podsekce pouze svůj podstrom. Filtrování katalogu probíhá nad publikovanými produkty daného jazyka v PHP; pokud katalog vyroste na desetitisíce položek, můžeme přidat pomocný index pro serverové filtrování.
+
+`MenuManager::links()` bere jméno místa z `config/menus.php`. `categories` vrací děti zadaného rodiče, `content` publikované stránky označené pro menu a případně Blog, `manual` ručně zapsaný strom odkazů. Každá položka má `label`, `href`, `active`, `children` a u kategorií také `path`. Hlavička vykreslí jen vrchní úroveň; vnořené položky může později zobrazit například rozbalovací menu bez zásahu do modelu. `category_tabs` ukazuje aktuální děti nebo sourozence listové kategorie a tím zpřístupňuje i hluboké větve.
 
 ## Hranice zabezpečení
 
