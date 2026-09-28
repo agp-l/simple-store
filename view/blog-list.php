@@ -1,5 +1,5 @@
   <main class="wrap cms-content" id="produkty">
-    <nav class="breadcrumbs" aria-label="Drobečková navigace"><a href="<?= $siteRoot ?>index.php">Úvod</a><span aria-hidden="true">/</span><span>Blog</span></nav>
+    <nav class="breadcrumbs" aria-label="Drobečková navigace"><a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">Úvod</a><span aria-hidden="true">/</span><span>Blog</span></nav>
     <div class="cms-article">
       <p class="cms-eyebrow">Příběhy na cestu</p>
       <h1>Blog</h1>

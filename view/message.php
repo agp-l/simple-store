@@ -9,6 +9,6 @@
         <h1>Stránku se teď nepodařilo načíst</h1>
         <p class="cms-lead">Zkuste to prosím později.</p>
       <?php endif; ?>
-      <a href="<?= $siteRoot ?>index.php">Zpět na úvod</a>
+      <a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">Zpět na úvod</a>
     </div>
   </main>

@@ -41,7 +41,6 @@ if (!is_file($databaseFile)) {
 if ($missing !== []) {
     $renderer->render($segments === [] ? 'catalog' : 'unavailable', $shared + [
         'setupNotice' => implode("\n", $missing),
-        'showSamples' => $segments === [],
     ], $segments === [] ? 200 : 503);
     exit;
 }
@@ -74,7 +73,6 @@ try {
         $shared['categoryTrail'] = $path === null ? [] : $categories->trail($url->getLanguage(), $path);
         $shared['categoryMenuRoot'] = $menuRoot === '' ? null : $categories->find($url->getLanguage(), $menuRoot);
         $shared['categoryMenu'] = $path === null ? [] : $menus->links('category_tabs', $menuRoot);
-        // Keep the sample catalog visible until the product table is installed and populated.
         $hasProducts = (int) $db->queryFirstField(
             'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
             'product_revisions'
@@ -85,9 +83,8 @@ try {
             $published,
             static fn (array $row): bool => CategoryPath::contains($path, CategoryPath::fromProduct($row))
         ));
-        $shared['showSamples'] = $path === null && $published === [];
         if (!$hasProducts) {
-            $shared['setupNotice'] = 'Pro správu produktů importuj aktuální database/schema.sql. Ukázkový katalog zůstává dostupný.';
+            $shared['setupNotice'] = 'Pro správu produktů importuj aktuální database/schema.sql.';
         } elseif (!$categories->installed()) {
             $shared['setupNotice'] = 'Pro načtení kategorií znovu importuj aktuální database/schema.sql.';
         } elseif (!$hasContent) {

@@ -41,7 +41,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
       </div>
     <?php endif; ?>
     <nav class="breadcrumbs" aria-label="Drobečková navigace">
-      <a href="<?= $siteRoot ?>index.php">Úvod</a><span aria-hidden="true">/</span>
+      <a href="<?= $siteRoot . $escape($language) ?>">Úvod</a><span aria-hidden="true">/</span>
       <?php if ($page === 'post'): ?>
         <a href="<?= $escape($backLink) ?>">Blog</a><span aria-hidden="true">/</span>
       <?php endif; ?>

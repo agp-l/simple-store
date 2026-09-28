@@ -98,8 +98,8 @@
     ordered.forEach(card => catalog.append(card));
   });
   document.querySelectorAll('[data-add]').forEach(button => button.addEventListener('click', () => {
-    const card = cards[Number(button.dataset.add)];
-    window.DobrodruziCart.add({ name: card.querySelector('h3').textContent, price: Number(card.dataset.price) });
+    const card = button.closest('.product-card');
+    window.DobrodruziCart.add({ name: card.dataset.name, price: Number(card.dataset.price) });
   }));
   const params = new URLSearchParams(location.search);
   if (params.has('search')) { search.value = params.get('search'); update(); }

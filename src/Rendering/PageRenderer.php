@@ -8,7 +8,7 @@ use InvalidArgumentException;
 /** Pass explicit data to PHP views without embedding SQL or Twig in templates. */
 final class PageRenderer
 {
-    private const PAGES = ['catalog', 'product', 'product-record', 'page', 'blog', 'post', 'not-found', 'unavailable'];
+    private const PAGES = ['catalog', 'product-record', 'page', 'blog', 'post', 'not-found', 'unavailable'];
 
     public function __construct(private string $viewPath)
     {
@@ -34,7 +34,6 @@ final class PageRenderer
         $currentCategory = $data['currentCategory'] ?? null;
         $categoryTrail = $data['categoryTrail'] ?? [];
         $categoryLabels = $data['categoryLabels'] ?? [];
-        $showSamples = (bool) ($data['showSamples'] ?? false);
         $content = $data['content'] ?? null;
         $posts = $data['posts'] ?? [];
         $products = $data['products'] ?? [];

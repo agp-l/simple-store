@@ -16,19 +16,17 @@
   document.getElementById('detail-add').addEventListener('click', () => {
     const button = document.getElementById('detail-add');
     const options = [...document.querySelectorAll('.product-option')];
-    const sizeField = document.getElementById('shoe-size');
-    const missing = options.find(field => !field.value) || (sizeField && !sizeField.value ? sizeField : null);
+    const missing = options.find(field => !field.value);
     if (missing) {
       document.getElementById('detail-feedback').textContent = 'Nejdřív vyberte ' +
-        (missing.dataset.optionName || 'velikost') + '.';
+        missing.dataset.optionName + '.';
       missing.focus();
       return;
     }
     document.getElementById('detail-feedback').textContent = '';
     const name = button.dataset.name || document.querySelector('.detail-info h1').textContent.trim();
-    const price = Number(button.dataset.price || 3990);
+    const price = Number(button.dataset.price);
     const selected = options.map(field => `${field.dataset.optionName}: ${field.value}`);
-    if (sizeField) selected.push(`Velikost: ${sizeField.value}`);
     window.DobrodruziCart.add({ name: selected.length ? `${name} · ${selected.join(' · ')}` : name, price },
       Number(quantity.value));
   });

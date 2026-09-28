@@ -17,7 +17,6 @@
 // Only known view names reach this switch; no URL can become a file path.
 switch ($page) {
     case 'catalog': require __DIR__ . '/body.php'; break;
-    case 'product': require __DIR__ . '/product-body.php'; break;
     case 'product-record': require __DIR__ . '/product-record.php'; break;
     case 'page':
     case 'post': require __DIR__ . '/content-body.php'; break;
@@ -28,7 +27,7 @@ switch ($page) {
 <?php require __DIR__ . '/footer.php'; ?>
 <?php require __DIR__ . '/cart.php'; ?>
 <script defer src="<?= $siteRoot ?>assets/app.js"></script>
-<script defer src="<?= $siteRoot ?>assets/product.js"></script>
+<?php if ($page === 'product-record'): ?><script defer src="<?= $siteRoot ?>assets/product.js"></script><?php endif; ?>
 <?php if ($editMode): ?><script defer src="<?= $siteRoot ?>assets/inline-editor.js"></script><?php endif; ?>
 <?php if ($contentEditMode): ?><script defer src="<?= $siteRoot ?>assets/content-editor.js"></script><?php endif; ?>
 </body>

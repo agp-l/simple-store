@@ -5,9 +5,9 @@ RewriteEngine On
 # Keep source code, credentials, SQL and local HTML previews off the web.
 RewriteRule (^|/)\. - [F,END]
 RewriteRule ^(?:src|config|database|docs|tools|tests|view|vendor)(?:/|$) - [F,END,NC]
-RewriteRule ^(?:README\.md|composer\.(?:json|lock)|index\.html|produkt-topo-terraventure\.html)$ - [F,END,NC]
+RewriteRule ^(?:README\.md|composer\.(?:json|lock))$ - [F,END,NC]
 
-# Existing assets and legacy PHP entry points remain directly accessible.
+# Existing assets and PHP entry points remain directly accessible.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteRule ^ index.php [QSA,END]
