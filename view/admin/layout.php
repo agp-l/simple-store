@@ -17,7 +17,7 @@ $editing = ($form['document_key'] ?? '') !== '';
   <header class="admin-header">
     <div class="admin-wrap admin-header-inner">
       <a class="admin-brand" href="<?= $escape($adminUrl) ?>">dobrodruzi<span class="admin-brand-label"> / redakce</span></a>
-      <?php if ($screen === 'editor'): ?>
+      <?php if ($screen === 'editor' || $screen === 'products'): ?>
         <div class="admin-header-actions">
           <a href="<?= $escape($basePath) ?>index.php">Zobrazit obchod</a>
           <form method="post" action="<?= $escape($adminUrl) ?>">
@@ -49,10 +49,12 @@ $editing = ($form['document_key'] ?? '') !== '';
           <button class="admin-button" name="action" value="login">Přihlásit se</button>
         </form>
       </section>
+    <?php elseif ($screen === 'products'): ?>
+      <?php require __DIR__ . '/products.php'; ?>
     <?php else: ?>
       <div class="admin-intro"><div><p class="admin-eyebrow">Obsah webu</p><h1>Stránky a články</h1>
         <p>Každé uložení vytvoří novou revizi. Starší text najdeš u dokumentu v historii.</p></div>
-        <div class="admin-quick"><a href="<?= $escape($adminUrl . '?type=page') ?>">+ Nová stránka</a><a href="<?= $escape($adminUrl . '?type=post') ?>">+ Nový článek</a></div>
+        <div class="admin-quick"><a href="<?= $escape($adminUrl . '?section=products') ?>">Produkty</a><a href="<?= $escape($adminUrl . '?type=page') ?>">+ Nová stránka</a><a href="<?= $escape($adminUrl . '?type=post') ?>">+ Nový článek</a></div>
       </div>
       <?php if ($notice !== ''): ?><p class="admin-notice" role="status"><?= $escape($notice) ?></p><?php endif; ?>
       <?php if ($error !== ''): ?><p class="admin-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>

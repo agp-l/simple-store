@@ -33,7 +33,19 @@ Příkaz jednou vypíše jméno `admin` a náhodně vygenerované heslo. Ulož s
 
 Pokud administrace hlásí `Permission denied` při čtení `config/admin.php`, spusť v kořeni projektu `chmod 644 config/admin.php`. Apache obvykle běží pod jiným uživatelem než tvůj terminál; soubor musí být pro Apache čitelný. Přímé stažení souborů ze složky `config/` zakazuje `.htaccess`.
 
-Po aktualizaci projektu můžeš znovu importovat aktuální `database/schema.sql`: `/opt/lampp/bin/mysql -u root < database/schema.sql` (při nastaveném hesle přidej `-p`). Import existující obsah nemaže. Administrace žádné další SQL tabulky nepotřebuje. Rychlé kontroly: `/opt/lampp/bin/php tests/admin-auth.php`, `/opt/lampp/bin/php tests/database-connection.php` a `/opt/lampp/bin/php tests/url-manager.php`.
+Po aktualizaci můžeš bezpečně znovu importovat aktuální `database/schema.sql`; import existující obsah nemaže. Stránky a články žádné další tabulky nepotřebují. Rychlé kontroly: `/opt/lampp/bin/php tests/admin-auth.php`, `/opt/lampp/bin/php tests/database-connection.php` a `/opt/lampp/bin/php tests/url-manager.php`.
+
+## Produkty
+
+Po této aktualizaci **znovu importuj aktuální `database/schema.sql`**. Soubor přidá `product_revisions` a stávající stránky ani historii nemaže:
+
+```bash
+/opt/lampp/bin/mysql -u root < database/schema.sql
+```
+
+Pokud má uživatel root heslo, přidej `-p`, nebo soubor importuj přes phpMyAdmin. V administraci otevři **Produkty** a založ nový produkt. Povinné jsou název, slug, kategorie, cena a obrázek. Do pole obrázku napiš např. `images/batoh.webp` (soubor nahraj do složky `images/`) nebo HTTPS adresu obrázku. V HTML produktu se použije obyčejné `<img src="…">`. Velikosti lze uvést jako seznam oddělený čárkami, kategorie batohy má navíc objemový filtr. Po zaškrtnutí „Publikovat na webu“ se veřejně zobrazí karta a detail na `/cs/produkt/slug`. Dokud nevydáš první produkt, původní ukázkové karty zůstanou na stránce. Košík je stále jen ukázkou v prohlížeči.
+
+Při každém uložení se do tabulky vloží nová revize se všemi údaji včetně ceny a cesty k obrázku. Historie umožňuje načíst starší verzi do editoru a znovu ji uložit. Kategorie a velikosti jsou zatím obyčejné hodnoty v řádku produktu; neexistují mezi nimi vztahy přes další tabulky.
 
 ## První stránka, článek a historie
 
@@ -63,9 +75,10 @@ Webové adresy pak budou `/cs/o-nas` a `/cs/blog/prvni-vyprava`. Všechny publik
 | `src/Navigation/MenuManager.php` | Odkazy publikovaných stránek a blogu. |
 | `src/Database/ConnectionFactory.php` | Vytvoření připojení MeekroDB z lokální konfigurace. |
 | `src/Admin/AdminAuth.php` | Přihlášení jediného administrátora, session a CSRF token. |
+| `src/Product/ProductRepository.php` | Katalog, detail a každá revize produktu. |
 | `src/Content/ContentRepository.php` | Čtení obsahu, historie a uložení nového řádku v transakci. |
 | `src/Rendering/PageRenderer.php` | PHP pohledy bez Twig. |
 | `database/schema.sql` | Vždy aktuální úplné schéma. |
 | `view/` | HTML pro obchod, blog, stránky, `<head>`, hlavičku, menu a patičku. |
 
-Produkty a košík jsou stále **ukázkou v prohlížeči**; nákup ani úpravy produktů přes administraci zatím nefungují. Karty batohů používají `data-category="batohy"` a `data-subcategory="do-25"`, `"25-50"`, `"nad-50"` nebo `"prislusenstvi"`. HTML soubory v kořeni jsou starší statické náhledy vzhledu a nespouštějí CMS; Apache je blokuje.
+Košík a placení jsou stále **ukázkou v prohlížeči**; nevyřizují objednávky. Karty batohů používají `data-category="batohy"` a `data-subcategory="do-25"`, `"25-50"`, `"nad-50"` nebo `"prislusenstvi"`. HTML soubory v kořeni jsou starší statické náhledy vzhledu a nespouštějí CMS; Apache je blokuje.

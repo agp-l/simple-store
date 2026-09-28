@@ -23,7 +23,7 @@ $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_s
         <?php endif; ?>
         <div class="detail-price"><strong><?= number_format((int) $product['price_czk'], 0, ',', ' ') ?> Kč</strong><span class="stock <?= $product['stock_status'] === 'in_stock' ? '' : 'stock-wait' ?>"><span class="stock-dot" aria-hidden="true"></span><?= $escape($stockText[$product['stock_status']] ?? '') ?></span></div>
         <div class="buy-row"><div class="quantity" aria-label="Počet kusů"><button type="button" id="minus" aria-label="Ubrat kus">−</button><output id="qty">1</output><button type="button" id="plus" aria-label="Přidat kus">+</button></div>
-          <button class="detail-add" type="button" id="detail-add" data-name="<?= $escape($product['name']) ?>" data-price="<?= (int) $product['price_czk'] ?>" <?= $product['stock_status'] === 'out_of_stock' ? 'disabled' : '' ?>>Přidat do košíku</button></div>
+          <button class="detail-add" type="button" id="detail-add" data-name="<?= $escape($product['name']) ?>" data-price="<?= (int) $product['price_czk'] ?>" <?= $product['stock_status'] === 'out_of_stock' ? 'disabled' : '' ?>><?= $product['stock_status'] === 'out_of_stock' ? 'Není skladem' : 'Přidat do košíku' ?></button></div>
         <p class="detail-feedback" id="detail-feedback" role="status" aria-live="polite"></p>
       </div>
     </div>

@@ -48,5 +48,6 @@ h2 { margin: 0 0 22px; font-size: 21px; letter-spacing: -.025em; }
 .admin-centered h1 { margin-bottom: 20px; }
 .admin-centered p { line-height: 1.6; }
 .admin-centered code { overflow-wrap: anywhere; }
+.admin-form-note { margin: 0; color: #566057; font-size: 13px; line-height: 1.5; }
 @media (max-width: 800px) { .admin-grid { grid-template-columns: 1fr; } .admin-intro { align-items: start; flex-direction: column; } .admin-list { max-height: 320px; overflow-y: auto; } }
 @media (max-width: 520px) { .admin-wrap { width: min(100% - 24px, 1160px); } .admin-panel { padding: 18px; } .admin-brand { font-size: 19px; } .admin-brand-label { font-size: 12px; } .admin-header-actions { gap: 8px; } .admin-fields-two { grid-template-columns: 1fr; } .admin-quick { flex-wrap: wrap; } }

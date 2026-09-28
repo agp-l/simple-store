@@ -99,6 +99,9 @@ final class ProductRepository
             !(filter_var($image, FILTER_VALIDATE_URL) && parse_url($image, PHP_URL_SCHEME) === 'https')) {
             throw new InvalidArgumentException('Use an images/filename.webp path or an HTTPS image URL.');
         }
+        if (strlen($image) > 1000) {
+            throw new InvalidArgumentException('The image path is too long.');
+        }
         if ($key !== null && preg_match('/^[a-f0-9]{32}$/D', $key) !== 1) {
             throw new InvalidArgumentException('Invalid product key.');
         }

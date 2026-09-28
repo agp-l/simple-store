@@ -23,7 +23,7 @@ $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_s
           <?php if ($product['summary'] !== ''): ?><p><?= $escape($product['summary']) ?></p><?php endif; ?>
           <div class="product-meta"><span class="stock <?= $product['stock_status'] === 'in_stock' ? '' : 'stock-wait' ?>"><span class="stock-dot" aria-hidden="true"></span><?= $escape($stockText[$product['stock_status']] ?? '') ?></span></div>
           <div class="product-action"><strong><?= number_format((int) $product['price_czk'], 0, ',', ' ') ?> Kč</strong>
-            <button class="add-button" type="button" data-add="<?= (int) $index ?>" <?= $product['stock_status'] === 'out_of_stock' ? 'disabled' : '' ?> aria-label="Přidat <?= $escape($product['name']) ?> do ukázkového košíku"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h2l2 10h10l2-7H7M9 19h.01M18 19h.01" /></svg><span>Do košíku</span></button>
+            <button class="add-button" type="button" data-add="<?= (int) $index ?>" <?= $product['stock_status'] === 'out_of_stock' ? 'disabled' : '' ?> aria-label="Přidat <?= $escape($product['name']) ?> do ukázkového košíku"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h2l2 10h10l2-7H7M9 19h.01M18 19h.01" /></svg><span><?= $product['stock_status'] === 'out_of_stock' ? 'Není skladem' : 'Do košíku' ?></span></button>
           </div>
         </div>
       </article>

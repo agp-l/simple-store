@@ -4,6 +4,7 @@ declare(strict_types=1);
 use SimpleStore\Admin\AdminAuth;
 use SimpleStore\Content\ContentRepository;
 use SimpleStore\Database\ConnectionFactory;
+use SimpleStore\Product\ProductRepository;
 
 $site = require __DIR__ . '/src/bootstrap.php';
 header('Cache-Control: no-store');
@@ -68,7 +69,7 @@ if ($method === 'POST') {
         $auth->signOut();
         header('Location: ' . $adminUrl, true, 303);
         exit;
-    } elseif ($action !== 'save' || !$auth->signedIn()) {
+    } elseif (!in_array($action, ['save', 'save-product'], true) || !$auth->signedIn()) {
         http_response_code(403);
         $screen = 'forbidden';
         require __DIR__ . '/view/admin/layout.php';
@@ -88,6 +89,13 @@ try {
     $db = ConnectionFactory::create(require __DIR__ . '/config/database.php');
     $content = new ContentRepository($db, $site['languages']);
     $screen = 'editor';
+
+    if (($method === 'POST' && ($_POST['action'] ?? '') === 'save-product') ||
+        ($method !== 'POST' && ($_GET['section'] ?? '') === 'products')) {
+        require __DIR__ . '/src/Admin/product-editor.php';
+        require __DIR__ . '/view/admin/layout.php';
+        exit;
+    }
 
     if ($method === 'POST') {
         $key = $_POST['key'] ?? '';
