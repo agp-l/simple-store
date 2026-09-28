@@ -1,28 +1,32 @@
+<?php $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>
   <main class="wrap" id="produkty">
-    <nav class="breadcrumbs" aria-label="Drobečková navigace"><a href="#nahoru">Úvod</a><span
-        aria-hidden="true">/</span><span id="breadcrumb-category">Vybavení do přírody</span></nav>
+    <nav class="breadcrumbs" aria-label="Drobečková navigace">
+      <a href="<?= $escape($siteRoot . $language) ?>">Úvod</a>
+      <?php foreach ($categoryTrail as $i => $crumb): ?>
+        <span aria-hidden="true">/</span>
+        <?php if ($i === count($categoryTrail) - 1): ?><span><?= $escape($crumb['title']) ?></span>
+        <?php else: ?><a href="<?= $escape($siteRoot . $language . '/kategorie-produktu/' . $crumb['path']) ?>"><?= $escape($crumb['title']) ?></a><?php endif; ?>
+      <?php endforeach; ?>
+      <?php if ($categoryTrail === []): ?><span aria-hidden="true">/</span><span>Vybavení do přírody</span><?php endif; ?>
+    </nav>
     <div class="section-heading">
       <div>
-        <h2 id="section-title">Objevte vybavení</h2>
-        <p id="section-description">Poctivý výběr pro pohodlí na stezce i mimo ni.</p>
-      </div><span class="result-count" id="result-count" aria-live="polite">Zobrazeno <?= $products === [] ? '12' : count($products) ?> produktů</span>
+        <h2 id="section-title"><?= $escape($currentCategory['title'] ?? 'Objevte vybavení') ?></h2>
+        <p id="section-description"><?= $currentCategory === null ? 'Poctivý výběr pro pohodlí na stezce i mimo ni.' : 'Vybavení na každou cestu. Vyberte si z nabídky níže.' ?></p>
+      </div><span class="result-count" id="result-count" aria-live="polite">Zobrazeno <?= $showSamples ? '12' : count($products) ?> produktů</span>
     </div>
     <div class="tools">
       <div class="filter-groups">
-      <div class="filters" role="group" aria-label="Filtrovat podle kategorie"><button class="filter active"
-          type="button" data-filter="all" aria-pressed="true">Vše</button><button class="filter" type="button"
-          data-filter="batohy" aria-pressed="false">Batohy</button><button class="filter" type="button"
-          data-filter="stany" aria-pressed="false">Stany</button><button class="filter" type="button"
-          data-filter="spacaky" aria-pressed="false">Spacáky</button><button class="filter" type="button"
-          data-filter="vybaveni" aria-pressed="false">Vybavení</button><button class="filter" type="button"
-          data-filter="obleceni" aria-pressed="false">Oblečení</button><button class="filter" type="button" data-filter="boty" aria-pressed="false">Boty</button></div>
-      <div class="backpack-filters" id="backpack-filters" role="group" aria-label="Filtrovat batohy podle objemu" hidden>
-        <button class="filter active" type="button" data-subcategory="all" aria-pressed="true">Všechny batohy</button>
-        <button class="filter" type="button" data-subcategory="do-25" aria-pressed="false">Batohy do 25 l</button>
-        <button class="filter" type="button" data-subcategory="25-50" aria-pressed="false">Batohy 25–50 l</button>
-        <button class="filter" type="button" data-subcategory="nad-50" aria-pressed="false">Batohy nad 50 l</button>
-        <button class="filter" type="button" data-subcategory="prislusenstvi" aria-pressed="false">Příslušenství k batohům</button>
-      </div>
+        <nav class="filters" aria-label="Hlavní kategorie">
+          <a class="filter<?= $currentCategory === null ? ' active' : '' ?>" href="<?= $escape($siteRoot . $language) ?>#produkty" <?= $currentCategory === null ? 'aria-current="page"' : '' ?>>Vše</a>
+          <?php foreach ($primaryMenu as $link): ?><a class="filter<?= $link['active'] ? ' active' : '' ?>" href="<?= $escape($link['href']) ?>#produkty" <?= $link['active'] ? 'aria-current="page"' : '' ?>><?= $escape($link['label']) ?></a><?php endforeach; ?>
+        </nav>
+        <?php if ($categoryMenuRoot !== null && $categoryMenu !== []): ?>
+          <nav class="backpack-filters" aria-label="Podkategorie <?= $escape($categoryMenuRoot['title']) ?>">
+            <a class="filter<?= $currentCategory['path'] === $categoryMenuRoot['path'] ? ' active' : '' ?>" href="<?= $escape($siteRoot . $language . '/kategorie-produktu/' . $categoryMenuRoot['path']) ?>#produkty">Všechny <?= $escape($categoryMenuRoot['title']) ?></a>
+            <?php foreach ($categoryMenu as $link): ?><a class="filter<?= $link['active'] ? ' active' : '' ?>" href="<?= $escape($link['href']) ?>#produkty" <?= $link['active'] ? 'aria-current="page"' : '' ?>><?= $escape($link['label']) ?></a><?php endforeach; ?>
+          </nav>
+        <?php endif; ?>
       </div><label class="sort-wrap">Řadit podle
         <select id="sort">
           <option value="default">Doporučené</option>
@@ -34,8 +38,7 @@
     <section class="catalog" id="catalog" aria-label="Nabídka produktů">
       <?php if ($products !== []): ?>
         <?php foreach ($products as $index => $product): require __DIR__ . '/product-card.php'; endforeach; ?>
-      <?php else: ?>
-      <!-- Backpack categories: data-subcategory="do-25", "25-50", "nad-50" or "prislusenstvi". -->
+      <?php elseif ($showSamples): ?>
       <!-- Each product card has its own image; change its src attribute to replace the photo. -->
       <!-- Original photo: https://gramino.cz/wp-content/uploads/2026/03/Topo-Athletic-Terraventure-5-Men-Grey-Clay-02.jpg -->
       <article class="product-card" data-category="boty" data-price="3990" data-name="topo athletic terraventure 5 men's" id="produkt-1">
@@ -240,14 +243,12 @@
       </article>
       <?php endif; ?>
     </section>
-    <div class="empty" id="empty" hidden>V této ukázce tu zatím žádné produkty nejsou. Zkuste jiný filtr.</div>
+    <div class="empty" id="empty" <?= $products !== [] || $showSamples ? 'hidden' : '' ?>>Zatím tu nejsou žádné produkty. Zkuste jinou kategorii.</div>
     <section class="category-panel" id="kategorie" aria-labelledby="category-title">
       <div class="category-panel-copy">
         <h2 id="category-title">Kam dál?</h2>
         <p>Zvolte si směr a vyberte výbavu pro další cestu.</p>
       </div>
-      <div class="category-list"><a href="<?= $siteRoot ?>index.php?category=batohy#produkty" data-filter="batohy">Batohy</a><a href="#produkty"
-          data-filter="stany">Stany</a><a href="<?= $siteRoot ?>index.php?category=spacaky#produkty" data-filter="spacaky">Spacáky</a><a href="#produkty"
-          data-filter="vybaveni">Drobné vybavení</a><a href="<?= $siteRoot ?>index.php?category=obleceni#produkty" data-filter="obleceni">Oblečení</a><a href="<?= $siteRoot ?>index.php?category=boty#produkty" data-filter="boty">Boty</a></div>
+      <div class="category-list"><?php foreach ($primaryMenu as $link): ?><a href="<?= $escape($link['href']) ?>#produkty"><?= $escape($link['label']) ?></a><?php endforeach; ?></div>
     </section>
   </main>

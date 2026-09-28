@@ -1,5 +1,6 @@
 <?php
 use SimpleStore\Product\ProductDetails;
+use SimpleStore\Category\CategoryPath;
 use SimpleStore\Product\ProductText;
 
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
@@ -7,12 +8,14 @@ $image = str_starts_with($product['image_path'], 'images/')
     ? $basePath . $product['image_path'] : $product['image_path'];
 $details = ProductDetails::decode($product['details_json'] ?? null, $product['sizes'] ?? '');
 $imageUrl = static fn (string $path): string => str_starts_with($path, 'images/') ? $basePath . $path : $path;
-$labels = ['batohy' => 'Batohy', 'stany' => 'Stany', 'spacaky' => 'Spacáky',
-    'vybaveni' => 'Vybavení', 'obleceni' => 'Oblečení', 'boty' => 'Boty'];
+$categoryPath = CategoryPath::fromProduct($product);
+$categoryLabel = $categoryLabels[$categoryPath] ?? $categoryLabels[explode('/', $categoryPath)[0]] ?? 'Vybavení';
 $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_stock' => 'Není skladem'];
 ?>
   <main class="wrap detail-page" id="produkty">
-    <nav class="breadcrumbs" aria-label="Drobečková navigace"><a href="<?= $siteRoot ?>index.php">Úvod</a><span>/</span><a href="<?= $siteRoot ?>index.php?category=<?= $escape($product['category']) ?>#produkty"><?= $escape($labels[$product['category']] ?? 'Vybavení') ?></a><span>/</span><span><?= $escape($product['name']) ?></span></nav>
+    <nav class="breadcrumbs" aria-label="Drobečková navigace"><a href="<?= $escape($siteRoot . $language) ?>">Úvod</a>
+      <?php foreach ($categoryTrail as $crumb): ?><span>/</span><a href="<?= $escape($siteRoot . $language . '/kategorie-produktu/' . $crumb['path']) ?>"><?= $escape($crumb['title']) ?></a><?php endforeach; ?>
+      <span>/</span><span><?= $escape($product['name']) ?></span></nav>
     <div class="product-detail">
       <div class="detail-media"><div class="detail-gallery<?= $product['category'] === 'boty' ? ' detail-gallery--footwear' : '' ?>"><img id="detail-image" src="<?= $escape($image) ?>" alt="<?= $escape($product['name']) ?>" width="1200" height="1200"></div>
         <?php if ($details['gallery'] !== []): ?><div class="detail-thumbs" aria-label="Fotografie produktu">
@@ -20,7 +23,7 @@ $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_s
             <button type="button" class="detail-thumb" data-gallery-image="<?= $escape($imageUrl($path)) ?>" aria-label="Zobrazit fotografii <?= $i + 1 ?>" aria-pressed="<?= $i === 0 ? 'true' : 'false' ?>"><img src="<?= $escape($imageUrl($path)) ?>" alt="" loading="lazy"></button>
           <?php endforeach; ?></div><?php endif; ?></div>
       <div class="detail-info">
-        <p class="product-brand"><?= $escape($product['brand']) ?> · <?= $escape($labels[$product['category']] ?? 'Vybavení') ?></p>
+        <p class="product-brand"><?= $escape($product['brand']) ?> · <?= $escape($categoryLabel) ?></p>
         <h1><?= $escape($product['name']) ?></h1>
         <?php if ($product['summary'] !== ''): ?><p class="detail-lead"><?= $escape($product['summary']) ?></p><?php endif; ?>
         <?php foreach ($details['options'] as $i => $group): ?>
@@ -65,5 +68,5 @@ $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_s
         <?php foreach ($details['specifications'] as $spec): ?><tr><th scope="row"><?= $escape($spec['name']) ?></th><td><?= $escape($spec['value']) ?></td></tr><?php endforeach; ?>
       </tbody></table></div></aside><?php endif; ?></div>
     <?php endif; ?>
-    <p><a href="<?= $siteRoot ?>index.php#produkty">← Zpět na všechny produkty</a></p>
+    <p><a href="<?= $escape($siteRoot . $language . ($categoryTrail !== [] ? '/kategorie-produktu/' . $categoryPath : '')) ?>#produkty">← Zpět na produkty</a></p>
   </main>

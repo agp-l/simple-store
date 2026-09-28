@@ -275,11 +275,16 @@
     .utility .utility-right {
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 17px;
+      flex-wrap: wrap;
       color: #f1f3ee;
       font-size: 12.5px;
       font-weight: 600;
     }
+
+    .utility-right a { color: inherit; text-decoration: none; }
+    .utility-right a:hover, .utility-right a:focus-visible,
+    .utility-right a[aria-current="page"] { color: var(--lime); text-decoration: underline; text-underline-offset: 4px; }
 
     .utility svg {
       width: 15px;
@@ -353,7 +358,7 @@
       background: rgba(255,255,255,.2);
     }
 
-    .nav-inner a:hover::after, .nav-inner a:focus-visible::after {
+    .nav-inner a:hover::after, .nav-inner a:focus-visible::after, .nav-inner a.active::after {
       transform: scaleX(1);
     }
 
@@ -483,6 +488,9 @@
     }
 
     .filter {
+      display: inline-flex;
+      align-items: center;
+      text-decoration: none;
       padding: 9px 16px;
       border: 1px solid var(--line);
       border-radius: 9px;
@@ -1261,11 +1269,9 @@
     @media(max-width:620px) { .story-grid {grid-template-columns:1fr;} .detail-info h1 {font-size:30px;} .buy-row {flex-wrap:wrap;} .detail-add {min-width:185px;} }
 
 
-/* Backpack category filter. */
-.filter-groups { min-width: 0; }
-.filter-groups [hidden] { display: none; }
+/* Category links share the same visual style at every tree depth. */
+.filter-groups { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
 .backpack-filters { display: flex; flex-wrap: wrap; gap: 8px; }
-.utility svg.bitcoin-mark { width: 22px; height: 22px; stroke: none; }
 
 /* Pages and blog reuse the storefront typography and spacing. */
 .nav-inner { flex-wrap: wrap; }

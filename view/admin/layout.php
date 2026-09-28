@@ -111,7 +111,7 @@ $editing = ($form['document_key'] ?? '') !== '';
               <label>Text<textarea name="body" rows="14"><?= $escape($form['body'] ?? '') ?></textarea><small>Prozatím prostý text; na webu se bezpečně zobrazí s odstavci.</small></label>
               <div class="admin-fields-two">
                 <label class="admin-checkbox"><input type="checkbox" name="published" value="1" <?= !empty($form['published']) ? 'checked' : '' ?>> Publikovat</label>
-                <label class="admin-checkbox"><input type="checkbox" name="visible_in_menu" value="1" <?= !empty($form['visible_in_menu']) ? 'checked' : '' ?>> Zobrazit v menu</label>
+                <label class="admin-checkbox"><input type="checkbox" name="visible_in_menu" value="1" <?= !empty($form['visible_in_menu']) ? 'checked' : '' ?>> Zobrazit v horních odkazech (Blog, O nás…)</label>
               </div>
               <label>Pořadí v menu<input type="number" name="menu_order" min="0" max="65535" value="<?= $escape($form['menu_order'] ?? 0) ?>"></label>
               <button class="admin-button" type="submit">Uložit novou revizi</button>

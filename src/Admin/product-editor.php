@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 use SimpleStore\Product\ProductRepository;
 use SimpleStore\Product\ProductDetails;
+use SimpleStore\Category\CategoryPath;
+use SimpleStore\Category\CategoryRepository;
 
 // This controller is included only after admin.php has checked the session and CSRF token.
 if (!isset($auth) || !$auth->signedIn()) {
@@ -11,7 +13,8 @@ if (!isset($auth) || !$auth->signedIn()) {
 }
 
 $screen = 'products';
-$productRepository = new ProductRepository($db, $site['languages']);
+$categories = new CategoryRepository($db);
+$productRepository = new ProductRepository($db, $site['languages'], $categories);
 $productForm = [];
 $productHistory = [];
 $currentProduct = null;
@@ -29,8 +32,7 @@ if ($method === 'POST') {
         'brand' => $_POST['brand'] ?? '',
         'summary' => $_POST['summary'] ?? '',
         'description' => $_POST['description'] ?? '',
-        'category' => $_POST['category'] ?? '',
-        'subcategory' => $_POST['subcategory'] ?? '',
+        'category_path' => $_POST['category_path'] ?? '',
         'price_czk' => $_POST['price_czk'] ?? '',
         'image_path' => $_POST['image_path'] ?? '',
         'sizes' => $_POST['sizes'] ?? '',
@@ -108,6 +110,7 @@ if ($method === 'POST') {
         }
         $productHistory = $productRepository->history($key, $language);
         $productForm = $currentProduct;
+        $productForm['category_path'] = CategoryPath::fromProduct($productForm);
         if (isset($_GET['restore'])) {
             $number = filter_var($_GET['restore'], FILTER_VALIDATE_INT);
             $old = $number === false ? null : $productRepository->revision($key, $language, (int) $number);
@@ -118,10 +121,11 @@ if ($method === 'POST') {
                 'product_key' => $key,
                 'revision_number' => $currentProduct['revision_number'],
             ]);
+            $productForm['category_path'] = CategoryPath::fromProduct($productForm);
             $productNotice = 'Zobrazuje se starší verze. Uložením vznikne nová revize.';
         }
     } else {
-        $productForm = ['language' => $language, 'category' => 'batohy',
+        $productForm = ['language' => $language, 'category_path' => 'batohy',
             'stock_status' => 'in_stock', 'published' => false];
     }
 }
@@ -147,4 +151,17 @@ if ($method !== 'POST' && !$productRepository->detailsColumnExists()) {
         . 'z config/database.php a spusť: ALTER TABLE product_revisions '
         . 'ADD COLUMN details_json LONGTEXT NULL AFTER description; Potom stránku obnov.';
 }
+if (!$categories->installed()) {
+    $productSchemaReady = false;
+    $productError = 'Chybí tabulka katalogu kategorií. Znovu importuj aktuální database/schema.sql do databáze z config/database.php.';
+}
+$categoryOptions = [];
+$appendCategories = static function (array $nodes, int $depth) use (&$appendCategories, &$categoryOptions): void {
+    foreach ($nodes as $node) {
+        $categoryOptions[] = ['path' => $node['path'], 'title' => str_repeat('— ', $depth) . $node['title']];
+        $appendCategories($node['children'], $depth + 1);
+    }
+};
+$appendCategories($categories->tree(is_string($language) && in_array($language, $site['languages'], true)
+    ? $language : $site['default_language']), 0);
 $productRows = $productRepository->currentProducts();

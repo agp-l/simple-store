@@ -26,7 +26,15 @@ final class PageRenderer
         $language = (string) ($data['language'] ?? 'cs');
         $basePath = (string) ($data['basePath'] ?? '/');
         $siteRoot = htmlspecialchars($basePath, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-        $menuLinks = $data['menuLinks'] ?? [];
+        $primaryMenu = $data['primaryMenu'] ?? [];
+        $utilityMenu = $data['utilityMenu'] ?? [];
+        $footerMenu = $data['footerMenu'] ?? [];
+        $categoryMenu = $data['categoryMenu'] ?? [];
+        $categoryMenuRoot = $data['categoryMenuRoot'] ?? null;
+        $currentCategory = $data['currentCategory'] ?? null;
+        $categoryTrail = $data['categoryTrail'] ?? [];
+        $categoryLabels = $data['categoryLabels'] ?? [];
+        $showSamples = (bool) ($data['showSamples'] ?? false);
         $content = $data['content'] ?? null;
         $posts = $data['posts'] ?? [];
         $products = $data['products'] ?? [];

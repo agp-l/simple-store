@@ -22,10 +22,12 @@
     <div class="masthead">
       <div class="wrap utility">
         <p class="hero-tag">Paralelní společnost</p>
-        <span class="utility-right"><svg class="bitcoin-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
-  <circle cx="32" cy="32" r="32" fill="#F7931A"/>
-  <path d="M44.6 26.8c.5-3.6-2.2-5.5-6-6.8l1.2-5-3-0.7-1.2 4.9c-.8-.2-1.6-.4-2.4-.6l1.2-5-3-.7-1.2 4.9c-.7-.2-1.3-.3-2-.5l0 0-4.2-1-0.8 3.3s2.3.5 2.2.6c1.2.3 1.5 1.1 1.4 1.8l-1.4 5.6c.1 0 .2.2.3.2l-0.3-.1-2.2 9c-.2.4-.5 1.1-1.4.9 0 0-2.2-.6-2.2-.6l-1.5 3.5 4 1c.7.2 1.5.4 2.2.6l-1.3 5.1 3 .7 1.2-5c.8.2 1.6.4 2.4.6l-1.2 5 3 .7 1.2-5.1c5.1 1 9 0.6 10.6-4 1.3-3.8-.1-5.9-2.8-7.3 2-0.5 3.5-1.9 3.9-4.8zm-7 10.5c-1 3.9-7.4 1.8-9.4 1.3l1.7-6.7c2 .5 8.7 1.5 7.7 5.4zm1-10.6c-.9 3.6-6.2 1.8-7.9 1.3l1.5-6.1c1.7.4 7.3 1.3 6.4 4.8z" fill="#FFF"/>
-</svg>Přijímáme pouze bitcoin</span></div>
+        <nav class="utility-right" aria-label="Stránky a blog">
+          <?php foreach ($utilityMenu as $link): ?>
+            <a href="<?= htmlspecialchars($link['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" <?= $link['active'] ? 'aria-current="page"' : '' ?>><?= htmlspecialchars($link['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a>
+          <?php endforeach; ?>
+        </nav>
+      </div>
       <?php require __DIR__ . '/menu.php'; ?>
       <div class="wrap hero">
         <div class="hero-copy">

@@ -20,18 +20,19 @@
       <nav aria-label="Kategorie v patičce">
         <h2>Prozkoumat</h2>
         <ul>
-          <li><a href="<?= $siteRoot ?>index.php?category=all#produkty" data-filter="all">Všechny produkty</a></li>
-          <li><a href="<?= $siteRoot ?>index.php?category=batohy#produkty" data-filter="batohy">Batohy</a></li>
-          <li><a href="<?= $siteRoot ?>index.php?category=stany#produkty" data-filter="stany">Stany</a></li>
-          <li><a href="<?= $siteRoot ?>index.php?category=spacaky#produkty" data-filter="spacaky">Spacáky</a></li>
+          <li><a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>#produkty">Všechny produkty</a></li>
+          <?php foreach (array_slice($footerMenu, 0, 3) as $link): ?>
+            <li><a href="<?= htmlspecialchars($link['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>#produkty"><?= htmlspecialchars($link['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a></li>
+          <?php endforeach; ?>
         </ul>
       </nav>
       <nav aria-label="Další odkazy v patičce">
         <h2>Na cestu</h2>
         <ul>
-          <li><a href="<?= $siteRoot ?>index.php?category=vybaveni#produkty" data-filter="vybaveni">Drobné vybavení</a></li>
-          <li><a href="<?= $siteRoot ?>index.php?category=obleceni#produkty" data-filter="obleceni">Oblečení</a></li><li><a href="<?= $siteRoot ?>index.php?category=boty#produkty" data-filter="boty">Boty</a></li>
-          <li><a href="<?= $siteRoot ?>index.php#kategorie">Kategorie</a></li>
+          <?php foreach (array_slice($footerMenu, 3) as $link): ?>
+            <li><a href="<?= htmlspecialchars($link['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>#produkty"><?= htmlspecialchars($link['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a></li>
+          <?php endforeach; ?>
+          <li><a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>#kategorie">Kategorie</a></li>
           <li><a href="#nahoru">Zpět nahoru ↑</a></li>
         </ul>
       </nav>

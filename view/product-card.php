@@ -1,24 +1,24 @@
 <?php
 use SimpleStore\Product\ProductDetails;
+use SimpleStore\Category\CategoryPath;
 
 // This view uses a published product row from the catalog query.
 $productLink = $basePath . $language . '/produkt/' . rawurlencode($product['slug']);
 $productImage = str_starts_with($product['image_path'], 'images/')
     ? $basePath . $product['image_path'] : $product['image_path'];
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-$labels = ['batohy' => 'Batohy', 'stany' => 'Stany', 'spacaky' => 'Spacáky',
-    'vybaveni' => 'Vybavení', 'obleceni' => 'Oblečení', 'boty' => 'Boty'];
+$categoryPath = CategoryPath::fromProduct($product);
+$categoryLabel = $categoryLabels[$categoryPath] ?? $categoryLabels[explode('/', $categoryPath)[0]] ?? 'Vybavení';
 $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_stock' => 'Není skladem'];
 $hasOptions = ProductDetails::decode($product['details_json'] ?? null, $product['sizes'] ?? '')['options'] !== [];
 ?>
-      <article class="product-card" data-category="<?= $escape($product['category']) ?>"
-        data-subcategory="<?= $escape($product['subcategory']) ?>"
+      <article class="product-card" data-category="<?= $escape($categoryPath) ?>"
         data-price="<?= (int) $product['price_czk'] ?>" data-name="<?= $escape($product['name']) ?>">
         <div class="product-media">
           <a href="<?= $escape($productLink) ?>" aria-label="Zobrazit <?= $escape($product['name']) ?>">
             <img class="product-image" src="<?= $escape($productImage) ?>" alt="<?= $escape($product['name']) ?>" loading="lazy" decoding="async">
           </a>
-          <span class="media-label"><?= $escape($labels[$product['category']] ?? 'Vybavení') ?></span>
+          <span class="media-label"><?= $escape($categoryLabel) ?></span>
         </div>
         <div class="product-body">
           <p class="product-brand"><?= $escape($product['brand']) ?></p>

@@ -40,9 +40,9 @@
                   <?php endif; ?>
                 </label>
                 <label>Kategorie
-                  <select name="category" required>
-                    <?php foreach (['batohy' => 'Batohy', 'stany' => 'Stany', 'spacaky' => 'Spacáky', 'vybaveni' => 'Vybavení', 'obleceni' => 'Oblečení', 'boty' => 'Boty'] as $code => $label): ?>
-                      <option value="<?= $escape($code) ?>" <?= ($productForm['category'] ?? '') === $code ? 'selected' : '' ?>><?= $label ?></option>
+                  <select name="category_path" required>
+                    <?php foreach ($categoryOptions as $option): ?>
+                      <option value="<?= $escape($option['path']) ?>" <?= ($productForm['category_path'] ?? '') === $option['path'] ? 'selected' : '' ?>><?= $escape($option['title']) ?></option>
                     <?php endforeach; ?>
                   </select>
                 </label>
@@ -60,15 +60,6 @@
               <div class="admin-fields-two">
                 <label>Cena v Kč<input type="number" name="price_czk" min="1" max="10000000" value="<?= $escape($productForm['price_czk'] ?? '') ?>" required></label>
                 <label>Dostupnost<select name="stock_status"><option value="in_stock" <?= ($productForm['stock_status'] ?? '') === 'in_stock' ? 'selected' : '' ?>>Skladem</option><option value="on_order" <?= ($productForm['stock_status'] ?? '') === 'on_order' ? 'selected' : '' ?>>Na objednávku</option><option value="out_of_stock" <?= ($productForm['stock_status'] ?? '') === 'out_of_stock' ? 'selected' : '' ?>>Není skladem</option></select></label>
-              </div>
-              <div class="admin-fields-two">
-                <label>Batohy: objemová skupina
-                  <select name="subcategory"><option value="">Bez podkategorie</option>
-                    <?php foreach (['do-25' => 'Batohy do 25 l', '25-50' => 'Batohy 25–50 l', 'nad-50' => 'Batohy nad 50 l', 'prislusenstvi' => 'Příslušenství'] as $code => $label): ?>
-                      <option value="<?= $escape($code) ?>" <?= ($productForm['subcategory'] ?? '') === $code ? 'selected' : '' ?>><?= $label ?></option>
-                    <?php endforeach; ?>
-                  </select><small>Pro ostatní kategorie ponech „Bez podkategorie“.</small>
-                </label>
               </div>
               <section class="admin-builder" aria-labelledby="options-title">
                 <div class="admin-builder-title"><div><h3 id="options-title">Výběr při nákupu</h3><p>Vytvoř třeba Barva, Velikost, Pozice zipu nebo Délka. Každý produkt může mít jiné položky.</p></div><button type="button" class="admin-small-button" data-add-row="options">+ Přidat výběr</button></div>

@@ -2,6 +2,8 @@
 declare(strict_types=1);
 
 use SimpleStore\Content\ContentRepository;
+use SimpleStore\Category\CategoryPath;
+use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Navigation\MenuManager;
 use SimpleStore\Navigation\UrlManager;
@@ -46,18 +48,45 @@ try {
     $database = require $databaseFile;
     $db = ConnectionFactory::create($database);
     $contents = new ContentRepository($db, $site['languages']);
-    $shared['menuLinks'] = (new MenuManager($contents, $url))->links();
+    $categories = new CategoryRepository($db);
+    $menus = new MenuManager($contents, $categories, $url, require __DIR__ . '/config/menus.php');
+    $shared['primaryMenu'] = $menus->links('primary');
+    $shared['utilityMenu'] = $menus->links('utility');
+    $shared['footerMenu'] = $menus->links('footer');
+    $shared['categoryLabels'] = array_column($categories->all($url->getLanguage()), 'title', 'path');
 
-    if ($segments === []) {
+    if ($segments === [] || $url->categoryPath() !== null) {
+        $path = $url->categoryPath();
+        $selected = $path === null ? null : $categories->find($url->getLanguage(), $path);
+        if ($path !== null && $selected === null) {
+            $renderer->render('not-found', $shared, 404);
+            exit;
+        }
+        $menuRoot = $path === null ? '' :
+            ($categories->children($url->getLanguage(), $path) !== [] ? $path : CategoryPath::parent($path));
+        $shared['currentCategory'] = $selected;
+        $shared['categoryTrail'] = $path === null ? [] : $categories->trail($url->getLanguage(), $path);
+        $shared['categoryMenuRoot'] = $menuRoot === '' ? null : $categories->find($url->getLanguage(), $menuRoot);
+        $shared['categoryMenu'] = $path === null ? [] : $menus->links('category_tabs', $menuRoot);
         // Keep the sample catalog visible until the product table is installed and populated.
         $hasProducts = (int) $db->queryFirstField(
             'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
             'product_revisions'
         ) > 0;
-        $shared['products'] = $hasProducts
+        $published = $hasProducts
             ? (new ProductRepository($db, $site['languages']))->published($url->getLanguage()) : [];
+        $shared['products'] = $path === null ? $published : array_values(array_filter(
+            $published,
+            static fn (array $row): bool => CategoryPath::contains($path, CategoryPath::fromProduct($row))
+        ));
+        $shared['showSamples'] = $path === null && $published === [];
         if (!$hasProducts) {
             $shared['setupNotice'] = 'Pro správu produktů importuj aktuální database/schema.sql. Ukázkový katalog zůstává dostupný.';
+        } elseif (!$categories->installed()) {
+            $shared['setupNotice'] = 'Pro načtení kategorií znovu importuj aktuální database/schema.sql.';
+        }
+        if ($selected !== null) {
+            $shared['title'] = $selected['title'] . ' — dobrodruzi.cz';
         }
         $renderer->render('catalog', $shared);
     } elseif (count($segments) === 2 && $segments[0] === 'produkt') {
@@ -66,6 +95,9 @@ try {
         $renderer->render($item === null ? 'not-found' : 'product-record', $shared + [
             'title' => $item === null ? 'Produkt nenalezen — dobrodruzi.cz' : $item['name'] . ' — dobrodruzi.cz',
             'description' => $item['summary'] ?? '', 'product' => $item,
+            'categoryTrail' => $item === null ? [] : $categories->trail(
+                $url->getLanguage(), CategoryPath::fromProduct($item)
+            ),
         ], $item === null ? 404 : 200);
     } elseif ($segments === ['blog']) {
         $renderer->render('blog', $shared + [
