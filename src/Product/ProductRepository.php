@@ -5,6 +5,8 @@ namespace SimpleStore\Product;
 
 use InvalidArgumentException;
 use MeekroDB;
+use SimpleStore\Category\CategoryPath;
+use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Navigation\Slugger;
 use RuntimeException;
 use Throwable;
@@ -12,11 +14,13 @@ use Throwable;
 /** Store each product edit as a new complete snapshot. */
 final class ProductRepository
 {
-    private const CATEGORIES = ['batohy', 'stany', 'spacaky', 'vybaveni', 'obleceni', 'boty'];
-    private const BACKPACK_TYPES = ['do-25', '25-50', 'nad-50', 'prislusenstvi'];
     private const STOCK = ['in_stock', 'on_order', 'out_of_stock'];
 
-    public function __construct(private MeekroDB $db, private array $languages = ['cs'])
+    public function __construct(
+        private MeekroDB $db,
+        private array $languages = ['cs'],
+        private ?CategoryRepository $categories = null
+    )
     {
     }
 
@@ -90,8 +94,11 @@ final class ProductRepository
         $description = (string) ($fields['description'] ?? '');
         $details = ProductDetails::fromForm($fields);
         $detailsJson = json_encode($details, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
-        $category = (string) ($fields['category'] ?? '');
-        $subcategory = (string) ($fields['subcategory'] ?? '');
+        $categoryPath = (string) ($fields['category_path'] ?? '');
+        if (!CategoryPath::valid($categoryPath)) {
+            throw new InvalidArgumentException('Vyber kategorii ze seznamu.');
+        }
+        [$category, $subcategory] = CategoryPath::forStorage($categoryPath);
         $price = filter_var($fields['price_czk'] ?? null, FILTER_VALIDATE_INT);
         $image = trim((string) ($fields['image_path'] ?? ''));
         $sizes = trim((string) ($fields['sizes'] ?? ''));
@@ -103,11 +110,12 @@ final class ProductRepository
             $name === '' || preg_match('/^.{1,255}$/usD', $name) !== 1 ||
             preg_match('/^.{0,120}$/usD', $brand) !== 1 ||
             strlen($summary) > 65535 || strlen($sizes) > 255 ||
-            !in_array($category, self::CATEGORIES, true) ||
-            ($category === 'batohy' ? ($subcategory !== '' && !in_array($subcategory, self::BACKPACK_TYPES, true)) : $subcategory !== '') ||
             $price === false || $price < 1 || $price > 10000000 ||
             !in_array($stock, self::STOCK, true)) {
             throw new InvalidArgumentException('Invalid product details. Check the name, category, price and slug.');
+        }
+        if ($this->categories === null || $this->categories->find($language, $categoryPath) === null) {
+            throw new InvalidArgumentException('Vybraná kategorie v tomto jazyce neexistuje nebo není zapnutá.');
         }
         // An HTTPS URL or a relative path inside images/ is safe to put in an escaped img src.
         if (!ProductDetails::imagePath($image)) {

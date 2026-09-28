@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace SimpleStore\Navigation;
 
 use InvalidArgumentException;
+use SimpleStore\Category\CategoryPath;
 
 /** Parse local paths without trusting the Host header or server protocol. */
 final class UrlManager
@@ -67,6 +68,23 @@ final class UrlManager
     public function getSegments(): array
     {
         return $this->segments;
+    }
+
+    public function categoryPath(): ?string
+    {
+        if (($this->segments[0] ?? '') !== 'kategorie-produktu' || count($this->segments) < 2) {
+            return null;
+        }
+        $path = implode('/', array_slice($this->segments, 1));
+        return CategoryPath::valid($path) ? $path : null;
+    }
+
+    public function category(string $path, ?string $language = null): string
+    {
+        if (!CategoryPath::valid($path)) {
+            throw new InvalidArgumentException('Invalid category path.');
+        }
+        return $this->path('kategorie-produktu/' . $path, $language);
     }
 
     public function getLanguage(): string

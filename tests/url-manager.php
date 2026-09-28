@@ -4,6 +4,7 @@ declare(strict_types=1);
 use SimpleStore\Navigation\UrlManager;
 
 require dirname(__DIR__) . '/src/Navigation/UrlManager.php';
+require dirname(__DIR__) . '/src/Category/CategoryPath.php';
 
 function check(bool $condition, string $label): void
 {
@@ -21,6 +22,10 @@ $nested = new UrlManager('/shop/cs/blog/na-ceste?x=1', '/shop/index.php', ['cs',
 check($nested->getLanguage() === 'cs', 'Locale prefix');
 check($nested->getSegment(0) === 'blog' && $nested->getSegment(1) === 'na-ceste', 'URL segments');
 check($nested->path('o-nas', 'en') === '/shop/en/o-nas', 'Nested localized path');
+
+$category = new UrlManager('/shop/cs/kategorie-produktu/obleceni/muzi/bundy/', '/shop/index.php');
+check($category->categoryPath() === 'obleceni/muzi/bundy', 'Nested category route');
+check($category->category('spani/spacaky') === '/shop/cs/kategorie-produktu/spani/spacaky', 'Category link');
 
 foreach (['/shop/cs/%2e%2e/config', '/shop/cs/blog%2ftest', '/shop/cs//blog', '/shop2/cs/blog'] as $bad) {
     try {
