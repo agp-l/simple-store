@@ -31,6 +31,12 @@ $roundTrip = ProductDetails::decode(json_encode($details, JSON_UNESCAPED_UNICODE
 $check($roundTrip === $details, 'The product details snapshot did not round-trip.');
 $check(ProductDetails::decode(null, '42 EU, 43 EU')['options'][0]['values'] === ['42 EU', '43 EU'],
     'Old product sizes are missing.');
+$damaged = $details;
+$damaged['sections'][0] = ['type' => 'image', 'heading' => 'Foto', 'body' => 'javascript:alert(1)'];
+$check(ProductDetails::decode(json_encode($damaged, JSON_THROW_ON_ERROR), '42 EU')['sections'] === [],
+    'A damaged snapshot must not render an unsafe image URL.');
+$check(ProductDetails::decode('{"options":"not an array","specifications":[],"sections":[],"gallery":[]}')['options'] === [],
+    'A malformed snapshot should safely fall back to empty details.');
 $product = [
     'image_path' => 'images/bota.webp', 'details_json' => json_encode($details, JSON_UNESCAPED_UNICODE),
     'sizes' => '', 'category' => 'boty', 'name' => 'Bota <script>alert(1)</script>',

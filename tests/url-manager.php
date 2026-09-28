@@ -17,15 +17,41 @@ $home = new UrlManager('/index.php?category=batohy', '/index.php');
 check($home->getSegment(0) === null, 'Root catalog');
 check($home->getBasePath() === '/', 'Root base path');
 check($home->path('blog') === '/cs/blog', 'Blog link');
+check($home->route() === ['name' => 'catalog'], 'Catalog route');
 
 $nested = new UrlManager('/shop/cs/blog/na-ceste?x=1', '/shop/index.php', ['cs', 'en'], 'cs');
 check($nested->getLanguage() === 'cs', 'Locale prefix');
 check($nested->getSegment(0) === 'blog' && $nested->getSegment(1) === 'na-ceste', 'URL segments');
 check($nested->path('o-nas', 'en') === '/shop/en/o-nas', 'Nested localized path');
+check($nested->route() === ['name' => 'post', 'slug' => 'na-ceste'], 'Blog post route');
 
 $category = new UrlManager('/shop/cs/kategorie-produktu/obleceni/muzi/bundy/', '/shop/index.php');
 check($category->categoryPath() === 'obleceni/muzi/bundy', 'Nested category route');
 check($category->category('spani/spacaky') === '/shop/cs/kategorie-produktu/spani/spacaky', 'Category link');
+check($category->route() === ['name' => 'category', 'path' => 'obleceni/muzi/bundy'], 'Category route');
+
+$routes = [
+    '/shop/en' => ['name' => 'catalog'],
+    '/shop/en/blog' => ['name' => 'blog'],
+    '/shop/en/produkt/bota' => ['name' => 'product', 'slug' => 'bota'],
+    '/shop/en/o-nas' => ['name' => 'page', 'slug' => 'o-nas'],
+    '/shop/en/kategorie-produktu' => ['name' => 'not-found'],
+    '/shop/en/produkt' => ['name' => 'not-found'],
+    '/shop/en/blog/dva/tri' => ['name' => 'not-found'],
+    '/shop/en/produkt/bota/dalsi' => ['name' => 'not-found'],
+];
+foreach ($routes as $request => $expected) {
+    $actual = (new UrlManager($request, '/shop/index.php', ['cs', 'en']))->route();
+    check($actual === $expected, 'Incorrect route for ' . $request);
+}
+
+foreach ([['cs', 'cs'], ['czech'], ['cs', 'en-GB']] as $invalidLanguages) {
+    try {
+        new UrlManager('/shop/', '/shop/index.php', $invalidLanguages);
+        throw new RuntimeException('Unsupported language settings were accepted.');
+    } catch (InvalidArgumentException $expected) {
+    }
+}
 
 foreach (['/shop/cs/%2e%2e/config', '/shop/cs/blog%2ftest', '/shop/cs//blog', '/shop2/cs/blog'] as $bad) {
     try {

@@ -58,5 +58,13 @@ if (array_column($menus->links('utility'), 'label') !== ['Blog', 'O nás']) {
 if (!$menus->links('custom')[0]['children'][0]['active']) {
     throw new RuntimeException('Manual menus lost their nested category links.');
 }
+if (!$menus->links('custom')[0]['active']) {
+    throw new RuntimeException('A parent menu item should show when its child is active.');
+}
+$blogUrl = new UrlManager('/shop/cs/blog/na-ceste', '/shop/index.php');
+$blogMenu = new MenuManager(new ContentRepository($db), new CategoryRepository($db), $blogUrl, $settings);
+if (!$blogMenu->links('utility')[0]['active'] || !$blogMenu->links('custom')[0]['active']) {
+    throw new RuntimeException('Blog navigation must remain active on an article.');
+}
 
 echo "Menu manager tests passed.\n";

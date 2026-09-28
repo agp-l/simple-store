@@ -28,7 +28,7 @@ try {
 }
 
 $shared = ['language' => $url->getLanguage(), 'basePath' => $url->getBasePath(), 'showErrors' => $site['debug']];
-$segments = $url->getSegments();
+$route = $url->route();
 $databaseFile = __DIR__ . '/config/database.php';
 $missing = [];
 if (!is_file(__DIR__ . '/vendor/autoload.php')) {
@@ -39,9 +39,9 @@ if (!is_file($databaseFile)) {
 }
 
 if ($missing !== []) {
-    $renderer->render($segments === [] ? 'catalog' : 'unavailable', $shared + [
+    $renderer->render($route['name'] === 'catalog' ? 'catalog' : 'unavailable', $shared + [
         'setupNotice' => implode("\n", $missing),
-    ], $segments === [] ? 200 : 503);
+    ], $route['name'] === 'catalog' ? 200 : 503);
     exit;
 }
 
@@ -60,8 +60,8 @@ try {
     $shared['footerMenu'] = $menus->links('footer');
     $shared['categoryLabels'] = array_column($categories->all($url->getLanguage()), 'title', 'path');
 
-    if ($segments === [] || $url->categoryPath() !== null) {
-        $path = $url->categoryPath();
+    if ($route['name'] === 'catalog' || $route['name'] === 'category') {
+        $path = $route['path'] ?? null;
         $selected = $path === null ? null : $categories->find($url->getLanguage(), $path);
         if ($path !== null && $selected === null) {
             $renderer->render('not-found', $shared, 404);
@@ -94,7 +94,7 @@ try {
             $shared['title'] = $selected['title'] . ' — dobrodruzi.cz';
         }
         $renderer->render('catalog', $shared);
-    } elseif (count($segments) === 2 && $segments[0] === 'produkt') {
+    } elseif ($route['name'] === 'product') {
         $editRequested = ($_GET['edit'] ?? '') === '1';
         $adminFile = __DIR__ . '/config/admin.php';
         $auth = null;
@@ -107,8 +107,8 @@ try {
         }
         $repository = new ProductRepository($db, $site['languages']);
         $item = $editRequested && $canEdit
-            ? $repository->findCurrentBySlug($segments[1], $url->getLanguage())
-            : $repository->findPublished($segments[1], $url->getLanguage());
+            ? $repository->findCurrentBySlug($route['slug'], $url->getLanguage())
+            : $repository->findPublished($route['slug'], $url->getLanguage());
         $editMode = $editRequested && $canEdit && $item !== null;
         if ($editMode) {
             $rows = [];
@@ -131,14 +131,14 @@ try {
                 $url->getLanguage(), CategoryPath::fromProduct($item)
             ),
         ], $item === null ? 404 : 200);
-    } elseif ($segments === ['blog']) {
+    } elseif ($route['name'] === 'blog') {
         $renderer->render('blog', $shared + [
             'title' => 'Blog — dobrodruzi.cz',
             'posts' => $contents->publishedPosts($url->getLanguage()),
         ]);
-    } elseif (count($segments) === 1 || (count($segments) === 2 && $segments[0] === 'blog')) {
-        $type = count($segments) === 1 ? 'page' : 'post';
-        $slug = $type === 'page' ? $segments[0] : $segments[1];
+    } elseif ($route['name'] === 'page' || $route['name'] === 'post') {
+        $type = $route['name'];
+        $slug = $route['slug'];
         $editRequested = ($_GET['edit'] ?? '') === '1';
         $adminFile = __DIR__ . '/config/admin.php';
         $auth = null;

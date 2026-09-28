@@ -148,6 +148,11 @@ final class ProductRepository
         $key ??= bin2hex(random_bytes(16));
         $this->db->startTransaction();
         try {
+            if ($expected === 0 && $this->db->queryFirstRow(
+                'SELECT product_key FROM product_revisions WHERE product_key=%s LIMIT 1 FOR UPDATE', $key
+            ) === null) {
+                throw new InvalidArgumentException('Nelze vytvořit překlad: původní produkt neexistuje.');
+            }
             $previous = $this->db->queryFirstRow(
                 'SELECT id, revision_number FROM product_revisions WHERE product_key=%s
                  AND language=%s AND active_product_key IS NOT NULL LIMIT 1 FOR UPDATE', $key, $language

@@ -19,12 +19,46 @@ final class ProductDetails
     public static function decode(?string $json, string $legacySizes = ''): array
     {
         $data = json_decode($json ?? '', true);
-        if (!is_array($data) || !isset($data['options'], $data['specifications'], $data['sections'], $data['gallery'])) {
+        if (!self::validSnapshot($data)) {
             $sizes = array_values(array_filter(array_map('trim', explode(',', $legacySizes)), 'strlen'));
             return ['options' => $sizes ? [['name' => 'Velikost', 'values' => $sizes]] : [],
                 'specifications' => [], 'sections' => [], 'gallery' => []];
         }
-        return $data;
+        return ['options' => array_values($data['options']),
+            'specifications' => array_values($data['specifications']),
+            'sections' => array_values($data['sections']),
+            'gallery' => array_values($data['gallery'])];
+    }
+
+    /** Imported or damaged JSON must not break public views or introduce unsafe image URLs. */
+    private static function validSnapshot(mixed $data): bool
+    {
+        if (!is_array($data) || !isset($data['options'], $data['specifications'], $data['sections'], $data['gallery'])) {
+            return false;
+        }
+        foreach (['options', 'specifications', 'sections', 'gallery'] as $key) {
+            if (!is_array($data[$key])) return false;
+        }
+        foreach ($data['options'] as $option) {
+            if (!is_array($option) || !is_string($option['name'] ?? null) ||
+                !is_array($option['values'] ?? null) || $option['values'] === []) return false;
+            foreach ($option['values'] as $value) {
+                if (!is_string($value)) return false;
+            }
+        }
+        foreach ($data['specifications'] as $specification) {
+            if (!is_array($specification) || !is_string($specification['name'] ?? null) ||
+                !is_string($specification['value'] ?? null)) return false;
+        }
+        foreach ($data['sections'] as $section) {
+            if (!is_array($section) || !in_array($section['type'] ?? null, ['text', 'list', 'table', 'image'], true) ||
+                !is_string($section['heading'] ?? null) || !is_string($section['body'] ?? null) ||
+                ($section['type'] === 'image' && !self::imagePath($section['body']))) return false;
+        }
+        foreach ($data['gallery'] as $path) {
+            if (!is_string($path) || !self::imagePath($path)) return false;
+        }
+        return true;
     }
 
     public static function fromForm(array $form): array

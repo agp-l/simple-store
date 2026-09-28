@@ -41,7 +41,7 @@ final class MenuManager
             $links = [];
             if ($settings['include_blog'] ?? false) {
                 $links[] = $this->item('Blog', $this->url->path('blog'),
-                    $this->url->getSegment(0) === 'blog');
+                    in_array($this->url->route()['name'], ['blog', 'post'], true));
             }
             foreach ($this->content->menuPages($this->url->getLanguage()) as $page) {
                 $links[] = $this->item($page['title'], $this->url->path($page['slug']),
@@ -84,12 +84,15 @@ final class MenuManager
                     CategoryPath::contains($category, $this->url->categoryPath());
             } elseif (is_string($path)) {
                 $href = $this->url->path($path);
-                $active = implode('/', $this->url->getSegments()) === trim($path, '/');
+                $requestedPath = implode('/', $this->url->getSegments());
+                $active = $requestedPath === trim($path, '/') ||
+                    (trim($path, '/') === 'blog' && str_starts_with($requestedPath, 'blog/'));
             } else {
                 throw new InvalidArgumentException('A manual menu item needs a path or category.');
             }
-            $links[] = $this->item($item['label'], $href, $active,
-                $this->manualLinks($item['children'] ?? []));
+            $children = $this->manualLinks($item['children'] ?? []);
+            $active = $active || in_array(true, array_column($children, 'active'), true);
+            $links[] = $this->item($item['label'], $href, $active, $children);
         }
         return $links;
     }

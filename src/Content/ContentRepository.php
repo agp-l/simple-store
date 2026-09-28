@@ -139,6 +139,9 @@ final class ContentRepository
                 'SELECT type FROM content_revisions WHERE document_key=%s LIMIT 1 FOR UPDATE',
                 $documentKey
             );
+            if ($expectedRevision === 0 && $document === null) {
+                throw new InvalidArgumentException('Nelze založit překlad: původní dokument neexistuje.');
+            }
             if ($document !== null && $document['type'] !== $type) {
                 throw new InvalidArgumentException('A translation must keep the document type.');
             }

@@ -20,8 +20,17 @@ final class UrlManager
         array $languages = ['cs'],
         string $defaultLanguage = 'cs'
     ) {
-        if (!in_array($defaultLanguage, $languages, true)) {
+        if ($languages === [] || !in_array($defaultLanguage, $languages, true)) {
             throw new InvalidArgumentException('Default language must be supported.');
+        }
+        $seen = [];
+        foreach ($languages as $language) {
+            // The schema stores ISO 639-1 codes in CHAR(2).
+            if (!is_string($language) || preg_match('/^[a-z]{2}$/D', $language) !== 1 ||
+                isset($seen[$language])) {
+                throw new InvalidArgumentException('Languages must use distinct two-letter lowercase codes.');
+            }
+            $seen[$language] = true;
         }
 
         $this->languages = $languages;
@@ -72,11 +81,33 @@ final class UrlManager
 
     public function categoryPath(): ?string
     {
-        if (($this->segments[0] ?? '') !== 'kategorie-produktu' || count($this->segments) < 2) {
-            return null;
+        $route = $this->route();
+        return $route['name'] === 'category' ? $route['path'] : null;
+    }
+
+    /** Keep the public URL grammar in one place; index.php chooses the data source. */
+    public function route(): array
+    {
+        $parts = $this->segments;
+        if ($parts === []) {
+            return ['name' => 'catalog'];
         }
-        $path = implode('/', array_slice($this->segments, 1));
-        return CategoryPath::valid($path) ? $path : null;
+        if ($parts[0] === 'kategorie-produktu') {
+            $path = implode('/', array_slice($parts, 1));
+            return count($parts) >= 2 && CategoryPath::valid($path)
+                ? ['name' => 'category', 'path' => $path] : ['name' => 'not-found'];
+        }
+        if ($parts[0] === 'produkt') {
+            return count($parts) === 2
+                ? ['name' => 'product', 'slug' => $parts[1]] : ['name' => 'not-found'];
+        }
+        if ($parts[0] === 'blog') {
+            if (count($parts) === 1) return ['name' => 'blog'];
+            return count($parts) === 2
+                ? ['name' => 'post', 'slug' => $parts[1]] : ['name' => 'not-found'];
+        }
+        return count($parts) === 1
+            ? ['name' => 'page', 'slug' => $parts[0]] : ['name' => 'not-found'];
     }
 
     public function category(string $path, ?string $language = null): string
