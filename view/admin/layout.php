@@ -106,7 +106,7 @@ $editing = ($form['document_key'] ?? '') !== '';
                 </label>
               </div>
               <label>Nadpis<input name="title" maxlength="255" value="<?= $escape($form['title'] ?? '') ?>" required></label>
-              <label>Adresa (slug)<input name="slug" maxlength="190" pattern="[a-z0-9]+(-[a-z0-9]+)*" value="<?= $escape($form['slug'] ?? '') ?>" placeholder="o-nas" required><small>Malá písmena bez diakritiky, číslice a spojovníky.</small></label>
+              <label>Adresa (slug)<input name="slug" maxlength="190" pattern="[a-z0-9]+(-[a-z0-9]+)*" value="<?= $escape($form['slug'] ?? '') ?>" placeholder="Vytvoří se z nadpisu"><small>Vyplní se z nadpisu. Můžeš ji ručně upravit; u existující stránky zůstane stejná.</small></label>
               <label>Krátký úvod<textarea name="summary" rows="3"><?= $escape($form['summary'] ?? '') ?></textarea></label>
               <label>Text<textarea name="body" rows="14"><?= $escape($form['body'] ?? '') ?></textarea><small>Prozatím prostý text; na webu se bezpečně zobrazí s odstavci.</small></label>
               <div class="admin-fields-two">
@@ -133,5 +133,6 @@ $editing = ($form['document_key'] ?? '') !== '';
       </div>
     <?php endif; ?>
   </main>
+  <?php if ($screen === 'editor' || $screen === 'products'): ?><script src="<?= $escape($basePath) ?>assets/admin-editor.js" defer></script><?php endif; ?>
 </body>
 </html>

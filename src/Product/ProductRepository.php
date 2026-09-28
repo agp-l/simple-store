@@ -5,6 +5,7 @@ namespace SimpleStore\Product;
 
 use InvalidArgumentException;
 use MeekroDB;
+use SimpleStore\Navigation\Slugger;
 use RuntimeException;
 use Throwable;
 
@@ -70,8 +71,11 @@ final class ProductRepository
     public function saveRevision(array $fields, ?string $key = null, ?int $expected = null): array
     {
         $language = (string) ($fields['language'] ?? '');
-        $slug = (string) ($fields['slug'] ?? '');
         $name = trim((string) ($fields['name'] ?? ''));
+        $slug = trim((string) ($fields['slug'] ?? ''));
+        if ($slug === '' && $name !== '') {
+            $slug = Slugger::fromTitle($name);
+        }
         $brand = trim((string) ($fields['brand'] ?? ''));
         $summary = trim((string) ($fields['summary'] ?? ''));
         $description = (string) ($fields['description'] ?? '');

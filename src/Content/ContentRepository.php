@@ -5,6 +5,7 @@ namespace SimpleStore\Content;
 
 use InvalidArgumentException;
 use MeekroDB;
+use SimpleStore\Navigation\Slugger;
 use RuntimeException;
 use Throwable;
 
@@ -88,8 +89,11 @@ final class ContentRepository
     {
         $type = (string) ($fields['type'] ?? '');
         $language = (string) ($fields['language'] ?? '');
-        $slug = (string) ($fields['slug'] ?? '');
         $title = trim((string) ($fields['title'] ?? ''));
+        $slug = trim((string) ($fields['slug'] ?? ''));
+        if ($slug === '' && $title !== '') {
+            $slug = Slugger::fromTitle($title);
+        }
         $summary = trim((string) ($fields['summary'] ?? ''));
         $body = (string) ($fields['body'] ?? '');
         $published = (bool) ($fields['published'] ?? false);
