@@ -28,3 +28,32 @@ CREATE TABLE IF NOT EXISTS content_revisions (
   KEY published_content (type, language, published, active_document_key),
   KEY menu_content (type, language, published, visible_in_menu, menu_order)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Product fields live together; saving creates a new row with all current values.
+-- No foreign keys or additional category/variant tables are needed yet.
+CREATE TABLE IF NOT EXISTS product_revisions (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  active_product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  language CHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  revision_number INT UNSIGNED NOT NULL,
+  slug VARCHAR(190) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  active_slug VARCHAR(190) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  name VARCHAR(255) NOT NULL,
+  brand VARCHAR(120) NOT NULL DEFAULT '',
+  summary TEXT NULL,
+  description LONGTEXT NOT NULL,
+  category VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  subcategory VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '',
+  price_czk INT UNSIGNED NOT NULL,
+  image_path VARCHAR(1000) NOT NULL,
+  sizes VARCHAR(255) NOT NULL DEFAULT '',
+  stock_status VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'in_stock',
+  published TINYINT(1) NOT NULL DEFAULT 0,
+  saved_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY one_product_revision (product_key, language, revision_number),
+  UNIQUE KEY one_current_product (active_product_key, language),
+  UNIQUE KEY one_product_slug (language, active_slug),
+  KEY products_for_catalog (language, published, active_product_key, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
