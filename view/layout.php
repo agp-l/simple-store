@@ -29,5 +29,6 @@ switch ($page) {
 <?php require __DIR__ . '/cart.php'; ?>
 <script defer src="<?= $siteRoot ?>assets/app.js"></script>
 <script defer src="<?= $siteRoot ?>assets/product.js"></script>
+<?php if ($editMode): ?><script defer src="<?= $siteRoot ?>assets/inline-editor.js"></script><?php endif; ?>
 </body>
 </html>

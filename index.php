@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use SimpleStore\Content\ContentRepository;
+use SimpleStore\Admin\AdminAuth;
 use SimpleStore\Category\CategoryPath;
 use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Database\ConnectionFactory;
@@ -97,11 +98,38 @@ try {
         }
         $renderer->render('catalog', $shared);
     } elseif (count($segments) === 2 && $segments[0] === 'produkt') {
-        $item = (new ProductRepository($db, $site['languages']))
-            ->findPublished($segments[1], $url->getLanguage());
+        $editRequested = ($_GET['edit'] ?? '') === '1';
+        $adminFile = __DIR__ . '/config/admin.php';
+        $auth = null;
+        if (is_readable($adminFile) && ($editRequested || isset($_COOKIE['simple_store_admin']))) {
+            $auth = new AdminAuth(require $adminFile, $url->getBasePath());
+        }
+        $canEdit = $auth !== null && $auth->signedIn();
+        if ($canEdit) {
+            header('Cache-Control: private, no-store');
+        }
+        $repository = new ProductRepository($db, $site['languages']);
+        $item = $editRequested && $canEdit
+            ? $repository->findCurrentBySlug($segments[1], $url->getLanguage())
+            : $repository->findPublished($segments[1], $url->getLanguage());
+        $editMode = $editRequested && $canEdit && $item !== null;
+        if ($editMode) {
+            $rows = [];
+            $addCategories = static function (array $nodes, int $depth) use (&$addCategories, &$rows): void {
+                foreach ($nodes as $node) {
+                    $rows[] = ['path' => $node['path'], 'title' => str_repeat('— ', $depth) . $node['title']];
+                    $addCategories($node['children'], $depth + 1);
+                }
+            };
+            $addCategories($categories->tree($url->getLanguage()), 0);
+            $shared['editorCategories'] = $rows;
+            $shared['productHistory'] = $repository->history($item['product_key'], $url->getLanguage());
+            $shared['editToken'] = $auth->token();
+        }
         $renderer->render($item === null ? 'not-found' : 'product-record', $shared + [
             'title' => $item === null ? 'Produkt nenalezen — dobrodruzi.cz' : $item['name'] . ' — dobrodruzi.cz',
             'description' => $item['summary'] ?? '', 'product' => $item,
+            'canEditProduct' => $canEdit, 'editMode' => $editMode,
             'categoryTrail' => $item === null ? [] : $categories->trail(
                 $url->getLanguage(), CategoryPath::fromProduct($item)
             ),

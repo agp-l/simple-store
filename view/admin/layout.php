@@ -133,6 +133,6 @@ $editing = ($form['document_key'] ?? '') !== '';
       </div>
     <?php endif; ?>
   </main>
-  <?php if ($screen === 'editor' || $screen === 'products'): ?><script src="<?= $escape($basePath) ?>assets/admin-editor.js" defer></script><?php endif; ?>
+  <?php if ($screen === 'editor'): ?><script src="<?= $escape($basePath) ?>assets/admin-editor.js" defer></script><?php endif; ?>
 </body>
 </html>

@@ -48,6 +48,12 @@ $csrf = $auth->token();
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if ($method === 'POST') {
     if (!$auth->validToken($_POST['csrf'] ?? null)) {
+        if (($_POST['action'] ?? null) === 'inline-product') {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(403);
+            echo json_encode(['error' => 'Platnost přihlášení vypršela. Znovu se přihlas.']);
+            exit;
+        }
         http_response_code(403);
         $screen = 'forbidden';
         require __DIR__ . '/view/admin/layout.php';
@@ -68,7 +74,13 @@ if ($method === 'POST') {
         $auth->signOut();
         header('Location: ' . $adminUrl, true, 303);
         exit;
-    } elseif (!in_array($action, ['save', 'save-product'], true) || !$auth->signedIn()) {
+    } elseif (!in_array($action, ['save', 'create-product', 'inline-product'], true) || !$auth->signedIn()) {
+        if ($action === 'inline-product') {
+            header('Content-Type: application/json; charset=utf-8');
+            http_response_code(403);
+            echo json_encode(['error' => 'Pro úpravu produktu se přihlas do administrace.']);
+            exit;
+        }
         http_response_code(403);
         $screen = 'forbidden';
         require __DIR__ . '/view/admin/layout.php';
@@ -89,9 +101,14 @@ try {
     $content = new ContentRepository($db, $site['languages']);
     $screen = 'editor';
 
-    if (($method === 'POST' && ($_POST['action'] ?? '') === 'save-product') ||
+    if ($method === 'POST' && ($_POST['action'] ?? '') === 'inline-product') {
+        require __DIR__ . '/src/Admin/inline-product.php';
+        exit;
+    }
+
+    if (($method === 'POST' && ($_POST['action'] ?? '') === 'create-product') ||
         ($method !== 'POST' && ($_GET['section'] ?? '') === 'products')) {
-        require __DIR__ . '/src/Admin/product-editor.php';
+        require __DIR__ . '/src/Admin/products.php';
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }

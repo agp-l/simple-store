@@ -10,16 +10,4 @@
     title.addEventListener('input', () => { if (automatic) slug.value = makeSlug(title.value); });
     slug.addEventListener('input', () => { automatic = slug.value === ''; });
   }
-  form.addEventListener('click', event => {
-    const add = event.target.closest('[data-add-row]');
-    if (add) {
-      const group = add.dataset.addRow;
-      const template = form.querySelector(`[data-template="${group}"]`);
-      const container = form.querySelector(`[data-rows="${group}"]`);
-      container.append(template.content.cloneNode(true));
-      container.lastElementChild.querySelector('input, select').focus();
-    }
-    const remove = event.target.closest('[data-remove-row]');
-    if (remove) remove.closest('[data-row]').remove();
-  });
 })();

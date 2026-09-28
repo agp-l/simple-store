@@ -39,6 +39,11 @@ final class PageRenderer
         $posts = $data['posts'] ?? [];
         $products = $data['products'] ?? [];
         $product = $data['product'] ?? null;
+        $canEditProduct = (bool) ($data['canEditProduct'] ?? false);
+        $editMode = (bool) ($data['editMode'] ?? false);
+        $editToken = (string) ($data['editToken'] ?? '');
+        $editorCategories = $data['editorCategories'] ?? [];
+        $productHistory = $data['productHistory'] ?? [];
         $backLink = (string) ($data['backLink'] ?? '');
         $setupNotice = (string) ($data['setupNotice'] ?? '');
         $debugError = (string) ($data['debugError'] ?? '');

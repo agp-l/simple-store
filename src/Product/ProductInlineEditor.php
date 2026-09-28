@@ -74,10 +74,16 @@ final class ProductInlineEditor
         string $value = '', ?int $index = null): array
     {
         if ($operation === 'set' && in_array($field, self::FIELDS, true)) {
+            if ($field === 'published' && !in_array($value, ['0', '1'], true)) {
+                throw new InvalidArgumentException('Neplatný stav publikování.');
+            }
             $form[$field] = $field === 'published' ? $value === '1' : trim($value);
             return $form;
         }
         if ($operation === 'gallery.add' || $operation === 'gallery.set' || $operation === 'gallery.remove') {
+            if ($operation !== 'gallery.remove' && !ProductDetails::imagePath(trim($value))) {
+                throw new InvalidArgumentException('Fotografie potřebuje cestu images/… nebo HTTPS adresu.');
+            }
             $gallery = $form['gallery'] === '' ? [] : explode("\n", $form['gallery']);
             if ($operation === 'gallery.add') {
                 $gallery[] = $value;

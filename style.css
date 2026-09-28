@@ -1264,6 +1264,46 @@
     @media(max-width:850px) { .product-detail, .product-extra { grid-template-columns:1fr; gap:30px; } .detail-gallery { max-width:600px; } .product-specs { margin-top:0; } }
     @media(max-width:620px) { .story-grid {grid-template-columns:1fr;} .detail-info h1 {font-size:30px;} .buy-row {flex-wrap:wrap;} .detail-add {min-width:185px;} }
 
+/* On-page editing appears only in authenticated product previews. */
+.inline-entry a { display:inline-flex; margin-bottom:14px; color:var(--forest-dark); font-weight:700; }
+.inline-toolbar { display:flex; flex-wrap:wrap; align-items:center; gap:10px 18px; padding:15px 18px; margin-bottom:18px; border:1px solid #b4d9ac; border-radius:8px; background:var(--moss); }
+.inline-toolbar > div:first-child { flex:1 1 245px; }
+.inline-toolbar strong { color:var(--ink); font-size:15px; }
+.inline-toolbar p { margin:3px 0 0; font-size:12px; color:var(--muted); }
+.inline-toolbar a { color:var(--forest-dark); font-size:13px; font-weight:700; }
+.inline-status { color:var(--forest-dark); font-size:13px; font-weight:700; }
+.inline-status.inline-error { color:#a42b24; }
+.inline-settings { display:flex; align-items:center; flex-wrap:wrap; gap:10px 18px; padding:0 0 22px; font-size:13px; }
+.inline-settings label { display:flex; align-items:center; gap:8px; color:var(--muted); }
+.inline-settings select, .inline-block-controls select { max-width:225px; padding:8px; border:1px solid var(--line); border-radius:5px; background:white; color:var(--ink); font:inherit; }
+.inline-slug { font-weight:700; color:var(--ink); }
+.inline-small, .inline-tiny { display:inline-flex; align-items:center; justify-content:center; min-height:32px; padding:5px 10px; border:1px solid #b8d2b2; border-radius:5px; background:#fff; color:var(--forest-dark); font:700 12px var(--font-body); cursor:pointer; }
+.inline-small:hover, .inline-tiny:hover { border-color:var(--forest); background:var(--moss); }
+.inline-tiny { min-height:28px; padding:3px 7px; }
+.inline-small:disabled, .inline-tiny:disabled { opacity:.45; cursor:not-allowed; }
+.inline-image-actions, .inline-option-tools, .inline-block-controls { display:flex; flex-wrap:wrap; gap:7px; align-items:center; margin:10px 0; }
+.inline-thumb { position:relative; display:inline-flex; flex-direction:column; gap:3px; align-items:center; }
+.inline-option-tools { margin:6px 0 12px; }
+.inline-choices { width:min(100%,320px); padding:10px; border:1px solid var(--forest); border-radius:5px; background:#fff; white-space:pre-wrap; }
+.inline-block-controls { padding:7px 0; border-top:1px dashed var(--line); }
+.inline-block-controls label { display:inline-flex; align-items:center; gap:8px; color:var(--muted); font-size:12px; }
+.inline-insert { display:flex; align-items:center; flex-wrap:wrap; gap:7px; margin:14px 0 21px; }
+.inline-block-types { display:inline-flex; flex-wrap:wrap; gap:5px; }
+.inline-block-types[hidden], .inline-choices[hidden] { display:none; }
+.is-editing .product-content-block { margin:18px 0 22px; }
+.is-editing .product-content-block h3 { margin-top:9px; }
+.is-editing .product-specs .inline-small { margin-top:14px; }
+.is-editing [data-edit-operation] { min-width:1.5em; border-radius:4px; outline:1px dashed transparent; outline-offset:3px; cursor:text; }
+.is-editing [data-edit-operation]:hover { outline-color:#9dc899; background:rgba(189,225,141,.15); }
+.is-editing [data-edit-operation]:focus { outline:2px solid var(--forest); background:#fff; color:var(--ink); white-space:pre-wrap; }
+.is-editing [data-edit-field="section_body"], .is-editing [data-edit-field="description"] { min-height:2em; }
+.is-editing .detail-lead:empty, .is-editing .product-intro:empty { min-height:2em; }
+.inline-history { margin:38px 0 24px; padding:16px; border:1px solid var(--line); border-radius:7px; }
+.inline-history summary { cursor:pointer; font-weight:750; }
+.inline-history > p { color:var(--muted); font-size:13px; }
+.inline-revision { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; padding:11px 0; border-top:1px solid var(--line); font-size:13px; }
+@media(max-width:620px) { .inline-toolbar, .inline-settings { align-items:flex-start; } .inline-settings label { flex-wrap:wrap; } .inline-settings select { max-width:100%; } }
+
 
 /* Category links share the same visual style at every tree depth. */
 .subcategory-filters { display: flex; flex-wrap: wrap; gap: 8px; min-width: 0; }
