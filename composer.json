@@ -1,0 +1,15 @@
+{
+  "name": "agp-l/simple-store",
+  "description": "A small PHP storefront with simple content management",
+  "type": "project",
+  "require": {
+    "php": "^8.0",
+    "ext-pdo": "*",
+    "sergeytsalkov/meekrodb": "^2.5"
+  },
+  "autoload": {
+    "psr-4": {
+      "SimpleStore\\": "src/"
+    }
+  }
+}
