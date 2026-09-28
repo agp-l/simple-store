@@ -69,7 +69,7 @@ if ($method === 'POST') {
         $auth->signOut();
         header('Location: ' . $adminUrl, true, 303);
         exit;
-    } elseif (!in_array($action, ['create-content', 'inline-content', 'create-product', 'inline-product'], true) ||
+    } elseif (!in_array($action, ['create-content', 'create-translation', 'inline-content', 'create-product', 'inline-product'], true) ||
         !$auth->signedIn()) {
         if (in_array($action, ['inline-product', 'inline-content'], true)) {
             header('Content-Type: application/json; charset=utf-8');
