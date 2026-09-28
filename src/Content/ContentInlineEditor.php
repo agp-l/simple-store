@@ -61,6 +61,12 @@ final class ContentInlineEditor
                     throw new InvalidArgumentException('Neplatné nastavení publikování nebo menu.');
                 }
                 $form[$field] = $value === '1';
+            } elseif ($field === 'menu_order') {
+                if ($form['type'] !== 'page' || preg_match('/^[0-9]+$/D', $value) !== 1 ||
+                    (int) $value > 65535) {
+                    throw new InvalidArgumentException('Pořadí v menu musí být celé číslo od 0 do 65535.');
+                }
+                $form[$field] = (int) $value;
             } else {
                 $form[$field] = trim($value);
                 if ($field === 'slug' && $form[$field] === '') {

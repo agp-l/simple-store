@@ -52,5 +52,11 @@ h2 { margin: 0 0 22px; font-size: 21px; letter-spacing: -.025em; }
 .admin-start-product { display:grid; gap:16px; justify-items:start; margin-top:18px; }
 .admin-start-product label { display:grid; gap:7px; font-weight:650; }
 .admin-start-product select { padding:10px; border:1px solid #bbc8b9; background:white; }
+.admin-create-content { border-top:1px solid #e0e5de; padding-top:18px; }
+.admin-create-content:last-child .admin-button { background:#e1c01f; }
+.admin-translate { display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:0 0 12px; font-size:12px; }
+.admin-translate label { display:flex; align-items:center; gap:7px; }
+.admin-translate select { padding:5px; border:1px solid #bbc8b9; background:white; }
+.admin-translate button { padding:6px 9px; border:1px solid #b8d2b2; background:white; cursor:pointer; }
 @media (max-width: 800px) { .admin-grid { grid-template-columns: 1fr; } .admin-intro { align-items: start; flex-direction: column; } .admin-list { max-height: 320px; overflow-y: auto; } }
 @media (max-width: 520px) { .admin-wrap { width: min(100% - 24px, 1160px); } .admin-panel { padding: 18px; } .admin-brand { font-size: 19px; } .admin-brand-label { font-size: 12px; } .admin-header-actions { gap: 8px; } .admin-fields-two { grid-template-columns: 1fr; } .admin-quick { flex-wrap: wrap; } }

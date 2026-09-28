@@ -41,6 +41,9 @@ final class PageRenderer
         $product = $data['product'] ?? null;
         $canEditProduct = (bool) ($data['canEditProduct'] ?? false);
         $editMode = (bool) ($data['editMode'] ?? false);
+        $contentEditMode = (bool) ($data['contentEditMode'] ?? false);
+        $canEditContent = (bool) ($data['canEditContent'] ?? false);
+        $contentHistory = $data['contentHistory'] ?? [];
         $editToken = (string) ($data['editToken'] ?? '');
         $editorCategories = $data['editorCategories'] ?? [];
         $productHistory = $data['productHistory'] ?? [];

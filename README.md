@@ -29,11 +29,21 @@ Administrace je na `http://localhost/simple-store/admin.php`. Jednoho administr�
 /opt/lampp/bin/php tools/admin.php
 ```
 
-Příkaz jednou vypíše jméno `admin` a náhodně vygenerované heslo. Ulož si je; konfigurace ukládá jen jeho hash do `config/admin.php`, který se nesmí nahrávat na GitHub. Pro změnu hesla spusť `/opt/lampp/bin/php tools/admin.php --reset` a přihlas se novým heslem. Administrace umožňuje založit, upravit a publikovat stránku či článek. Obsahuje seznam aktuálních dokumentů a historii verzí; načtení starší verze do formuláře a její uložení vytvoří **další nový řádek**, nepřepíše historii. Přihlášení chrání PHP session, formuláře mají CSRF token. Před zveřejněním webu vypni režim `debug`.
+Příkaz jednou vypíše jméno `admin` a náhodně vygenerované heslo. Ulož si je; konfigurace ukládá jen jeho hash do `config/admin.php`, který se nesmí nahrávat na GitHub. Pro změnu hesla spusť `/opt/lampp/bin/php tools/admin.php --reset` a přihlas se novým heslem. Administrace obsahuje seznam aktuálních dokumentů, jejich založení a odkazy na přímou úpravu stránky či článku. Přihlášení chrání PHP session, zápisy ověřuje CSRF token. Před zveřejněním webu vypni režim `debug`.
 
 Pokud administrace hlásí `Permission denied` při čtení `config/admin.php`, spusť v kořeni projektu `chmod 644 config/admin.php`. Apache obvykle běží pod jiným uživatelem než tvůj terminál; soubor musí být pro Apache čitelný. Přímé stažení souborů ze složky `config/` zakazuje `.htaccess`.
 
 Po aktualizaci můžeš bezpečně znovu importovat aktuální `database/schema.sql`; import existující obsah nemaže. Stránky a články žádné další tabulky nepotřebují. Rychlé kontroly: `/opt/lampp/bin/php tests/admin-auth.php`, `/opt/lampp/bin/php tests/database-connection.php` a `/opt/lampp/bin/php tests/url-manager.php`.
+
+### Stránky a články: úpravy přímo na stránce
+
+V `admin.php` klikni na **Vytvořit stránku** nebo **Vytvořit článek**. Vznikne neveřejný koncept s ukázkovým úvodem, odstavcem, seznamem, tabulkou a fotografií. Kliknutím do textu jej přepíšeš, po opuštění pole se automaticky uloží a stránka se obnoví. Mezi bloky přidáš další text, seznam, tabulku či fotografii; blok lze přesunout, přepnout jeho typ nebo odebrat. Fotografii zadáš jako cestu `images/nazev.webp` k již uloženému souboru nebo pomocí HTTPS adresy. V textu funguje `**tučné**` a `[odkaz](https://example.org)`, řádky tabulky odděluje `|`.
+
+Při první změně předvyplněného nadpisu se vytvoří i adresa (slug) z názvu; pozdější změny nadpisu adresu nepřepisují. Slug můžeš upravit ručně nahoře. Stránce lze nastavit zobrazení v horních odkazech a pořadí v menu; článek po publikování patří na `/cs/blog`. **Publikovat** zobrazí obsah návštěvníkům. Otevření publikované stránky přihlášeným správcem nabídne odkaz **Upravit přímo na stránce**; neveřejný koncept se načte pouze přihlášenému přes `?edit=1`. Každé uložení vytvoří nový řádek v `content_revisions`. Rozbalená historie umožní vrátit libovolnou starší verzi jako další revizi.
+
+Existující stránky psané prostým textem zůstávají čitelné a při prvním přímém uložení se převedou na jeden textový blok. Staré revize se nepřepisují. **Žádné nové SQL není potřeba:** pokud už máš tabulku `content_revisions`, stačí `git pull`. Kontrolní test bez databáze: `/opt/lampp/bin/php tests/content-editor.php`.
+
+Pokud v `config/site.php` později povolíš další jazyky, u dokumentu v administraci se objeví **Nový překlad**. Vytvoří samostatný neveřejný koncept ve vybraném jazyce pod stejným `document_key`. Jeho nadpis, adresu a bloky pak přepíšeš přímo na stránce překladu.
 
 ## Produkty: úpravy přímo na stránce
 
@@ -112,6 +122,9 @@ Webové adresy pak budou `/cs/o-nas` a `/cs/blog/prvni-vyprava`. Všechny publik
 | `src/Product/ProductInlineEditor.php` | Vzor konceptu a převod jedné přímé úpravy na celou produktovou revizi. |
 | `src/Admin/inline-product.php` | Zabezpečené uložení a obnova revize při úpravě na stránce. |
 | `src/Content/ContentRepository.php` | Čtení obsahu, historie a uložení nového řádku v transakci. |
+| `src/Content/ContentBody.php` | Bloky ve stávajícím sloupci body a čtení původního prostého textu. |
+| `src/Content/ContentInlineEditor.php` | Předvyplněný koncept a skládání nových kompletních revizí ze změn na stránce. |
+| `src/Admin/inline-content.php` | Kontrolovaný zápis a obnova stránek a článků po přihlášení. |
 | `src/Rendering/PageRenderer.php` | PHP pohledy bez Twig. |
 | `database/schema.sql` | Vždy aktuální úplné schéma. |
 | `view/` | HTML pro obchod, blog, stránky, `<head>`, hlavičku, menu a patičku. |

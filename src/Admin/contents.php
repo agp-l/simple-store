@@ -6,14 +6,32 @@ use SimpleStore\Content\ContentInlineEditor;
 // This controller is reached only after admin.php has checked the administrator session.
 $screen = 'editor';
 if ($method === 'POST') {
-    $type = $_POST['type'] ?? null;
     $language = $_POST['language'] ?? null;
-    if (!in_array($type, ['page', 'post'], true) ||
-        !is_string($language) || !in_array($language, $site['languages'], true)) {
-        throw new InvalidArgumentException('Vyberte stránku nebo článek a platný jazyk.');
+    if (!is_string($language) || !in_array($language, $site['languages'], true)) {
+        throw new InvalidArgumentException('Vyberte platný jazyk.');
+    }
+    if (($_POST['action'] ?? '') === 'create-translation') {
+        $key = $_POST['key'] ?? null;
+        $sourceLanguage = $_POST['source_language'] ?? null;
+        if (!is_string($key) || preg_match('/^[a-f0-9]{32}$/D', $key) !== 1 ||
+            !is_string($sourceLanguage) || !in_array($sourceLanguage, $site['languages'], true) ||
+            $sourceLanguage === $language) {
+            throw new InvalidArgumentException('Neplatný dokument pro překlad.');
+        }
+        $source = $content->currentDocument($key, $sourceLanguage);
+        if ($source === null || $content->currentDocument($key, $language) !== null) {
+            throw new InvalidArgumentException('Překlad už existuje nebo původní dokument nebyl nalezen.');
+        }
+        $type = $source['type'];
+    } else {
+        $type = $_POST['type'] ?? null;
+        $key = null;
+        if (!in_array($type, ['page', 'post'], true)) {
+            throw new InvalidArgumentException('Vyberte stránku nebo článek.');
+        }
     }
     $starter = ContentInlineEditor::starter($type, $language);
-    $content->saveRevision($starter);
+    $content->saveRevision($starter, $key, $key === null ? null : 0);
     header('Location: ' . $basePath . $language . ($type === 'post' ? '/blog' : '') .
         '/' . $starter['slug'] . '?edit=1', true, 303);
     exit;
@@ -37,3 +55,7 @@ if (isset($_GET['key'])) {
 }
 
 $documents = $content->currentDocuments();
+$translations = [];
+foreach ($documents as $document) {
+    $translations[$document['document_key']][] = $document['language'];
+}

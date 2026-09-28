@@ -139,19 +139,33 @@ try {
             'title' => 'Blog — dobrodruzi.cz',
             'posts' => $contents->publishedPosts($url->getLanguage()),
         ]);
-    } elseif (count($segments) === 2 && $segments[0] === 'blog') {
-        $post = $contents->findPublished('post', $segments[1], $url->getLanguage());
-        $renderer->render($post === null ? 'not-found' : 'post', $shared + [
-            'title' => $post === null ? 'Stránka nenalezena — dobrodruzi.cz' : $post['title'] . ' — dobrodruzi.cz',
-            'description' => $post['summary'] ?? '', 'content' => $post,
-            'backLink' => $url->path('blog'),
-        ], $post === null ? 404 : 200);
-    } elseif (count($segments) === 1) {
-        $page = $contents->findPublished('page', $segments[0], $url->getLanguage());
-        $renderer->render($page === null ? 'not-found' : 'page', $shared + [
-            'title' => $page === null ? 'Stránka nenalezena — dobrodruzi.cz' : $page['title'] . ' — dobrodruzi.cz',
-            'description' => $page['summary'] ?? '', 'content' => $page,
-        ], $page === null ? 404 : 200);
+    } elseif (count($segments) === 1 || (count($segments) === 2 && $segments[0] === 'blog')) {
+        $type = count($segments) === 1 ? 'page' : 'post';
+        $slug = $type === 'page' ? $segments[0] : $segments[1];
+        $editRequested = ($_GET['edit'] ?? '') === '1';
+        $adminFile = __DIR__ . '/config/admin.php';
+        $auth = null;
+        if (is_readable($adminFile) && ($editRequested || isset($_COOKIE['simple_store_admin']))) {
+            $auth = new AdminAuth(require $adminFile, $url->getBasePath());
+        }
+        $canEdit = $auth !== null && $auth->signedIn();
+        if ($canEdit) {
+            header('Cache-Control: private, no-store');
+        }
+        $item = $editRequested && $canEdit
+            ? $contents->findCurrentBySlug($type, $slug, $url->getLanguage())
+            : $contents->findPublished($type, $slug, $url->getLanguage());
+        $contentEditMode = $editRequested && $canEdit && $item !== null;
+        if ($contentEditMode) {
+            $shared['contentHistory'] = $contents->history($item['document_key'], $url->getLanguage());
+            $shared['editToken'] = $auth->token();
+        }
+        $renderer->render($item === null ? 'not-found' : $type, $shared + [
+            'title' => $item === null ? 'Stránka nenalezena — dobrodruzi.cz' : $item['title'] . ' — dobrodruzi.cz',
+            'description' => $item['summary'] ?? '', 'content' => $item,
+            'canEditContent' => $canEdit, 'contentEditMode' => $contentEditMode,
+            'backLink' => $type === 'post' ? $url->path('blog') : '',
+        ], $item === null ? 404 : 200);
     } else {
         $renderer->render('not-found', $shared, 404);
     }

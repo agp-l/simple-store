@@ -30,5 +30,6 @@ switch ($page) {
 <script defer src="<?= $siteRoot ?>assets/app.js"></script>
 <script defer src="<?= $siteRoot ?>assets/product.js"></script>
 <?php if ($editMode): ?><script defer src="<?= $siteRoot ?>assets/inline-editor.js"></script><?php endif; ?>
+<?php if ($contentEditMode): ?><script defer src="<?= $siteRoot ?>assets/content-editor.js"></script><?php endif; ?>
 </body>
 </html>
