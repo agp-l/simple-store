@@ -4,7 +4,6 @@ declare(strict_types=1);
 use SimpleStore\Admin\AdminAuth;
 use SimpleStore\Content\ContentRepository;
 use SimpleStore\Database\ConnectionFactory;
-use SimpleStore\Product\ProductRepository;
 
 $site = require __DIR__ . '/src/bootstrap.php';
 header('Cache-Control: no-store');

@@ -1,4 +1,8 @@
 <?php
+declare(strict_types=1);
+
+use SimpleStore\Product\ProductRepository;
+
 // This controller is included only after admin.php has checked the session and CSRF token.
 if (!isset($auth) || !$auth->signedIn()) {
     http_response_code(403);
