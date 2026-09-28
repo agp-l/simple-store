@@ -40,6 +40,15 @@ final class ProductRepository
         );
     }
 
+    /** This lookup is for authenticated preview and never belongs on a public route. */
+    public function findCurrentBySlug(string $slug, string $language): ?array
+    {
+        return $this->db->queryFirstRow(
+            'SELECT * FROM product_revisions WHERE active_slug=%s AND language=%s
+             AND active_product_key IS NOT NULL LIMIT 1', $slug, $language
+        );
+    }
+
     public function currentProducts(): array
     {
         return $this->db->query(
