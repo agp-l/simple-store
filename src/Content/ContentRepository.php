@@ -45,6 +45,34 @@ final class ContentRepository
         );
     }
 
+    /** List current versions, including drafts, for the editor only. */
+    public function currentDocuments(): array
+    {
+        return $this->db->query(
+            'SELECT document_key, language, type, slug, title, revision_number, published, saved_at
+             FROM content_revisions WHERE active_document_key IS NOT NULL
+             ORDER BY saved_at DESC, id DESC'
+        );
+    }
+
+    public function currentDocument(string $documentKey, string $language): ?array
+    {
+        return $this->db->queryFirstRow(
+            'SELECT * FROM content_revisions
+             WHERE document_key=%s AND language=%s AND active_document_key IS NOT NULL LIMIT 1',
+            $documentKey, $language
+        );
+    }
+
+    public function revision(string $documentKey, string $language, int $number): ?array
+    {
+        return $this->db->queryFirstRow(
+            'SELECT * FROM content_revisions
+             WHERE document_key=%s AND language=%s AND revision_number=%i LIMIT 1',
+            $documentKey, $language, $number
+        );
+    }
+
     /** The history method is for trusted administrative code, never a public route. */
     public function history(string $documentKey, string $language): array
     {
