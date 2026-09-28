@@ -35,4 +35,4 @@ Základní cesty jsou `/`, `/cs`, `/cs/blog`, `/cs/blog/nazev-clanku`, `/cs/o-na
 
 ## Hranice zabezpečení
 
-Pro běžný hosting zůstává kořen projektu také kořenem webu. `.htaccess` na Apache blokuje `src/`, `config/`, `database/`, `view/`, `vendor/` a další neveřejné soubory ještě před pravidlem pro směrování. Na jiném serveru je potřeba odpovídající zákaz v jeho nastavení. Přihlášení administrátora používá silné náhodné heslo, PHP session a kontrolu CSRF tokenu u každého POST; původní hodnoty z formuláře se používají jen po ověření přístupu. Administraci na veřejné doméně provozuj pouze přes HTTPS a s vypnutým ladicím výpisem chyb.
+Pro běžný hosting zůstává kořen projektu také kořenem webu. `.htaccess` na Apache blokuje `src/`, `config/`, `database/`, `view/`, `vendor/` a další neveřejné soubory ještě před pravidlem pro směrování. Na jiném serveru je potřeba odpovídající zákaz v jeho nastavení. Přihlášení administrátora používá silné náhodné heslo, PHP session a kontrolu CSRF tokenu u každého POST; editor přistupuje k databázi až po přihlášení. Administraci na veřejné doméně provozuj pouze přes HTTPS a s vypnutým ladicím výpisem chyb.

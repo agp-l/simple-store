@@ -24,8 +24,9 @@ $settings = ['username' => 'admin', 'password_hash' => password_hash($password, 
 $contents = "<?php\ndeclare(strict_types=1);\n\n// Local administrator credentials. Never commit this file.\nreturn "
     . var_export($settings, true) . ";\n";
 $temporary = tempnam($root . '/config', '.admin-');
+// Apache may run under another user; config/ is blocked from direct HTTP access.
 if ($temporary === false || file_put_contents($temporary, $contents, LOCK_EX) === false ||
-    !chmod($temporary, 0600) || !rename($temporary, $file)) {
+    !chmod($temporary, 0644) || !rename($temporary, $file)) {
     if ($temporary !== false && is_file($temporary)) {
         unlink($temporary);
     }
