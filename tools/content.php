@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use SimpleStore\Content\ContentRepository;
+use SimpleStore\Database\ConnectionFactory;
 
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
@@ -24,7 +25,7 @@ if ($missing !== []) {
 
 $database = require $root . '/config/database.php';
 $content = new ContentRepository(
-    new MeekroDB($database['dsn'], $database['user'], $database['password']),
+    ConnectionFactory::create($database),
     $site['languages']
 );
 

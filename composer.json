@@ -4,9 +4,8 @@
   "type": "project",
   "require": {
     "php": "^8.0",
-    "ext-pdo": "*",
-    "ext-pdo_mysql": "*",
-    "sergeytsalkov/meekrodb": "^2.5"
+    "ext-mysqli": "*",
+    "sergeytsalkov/meekrodb": "2.5.2"
   },
   "autoload": {
     "psr-4": {

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use SimpleStore\Content\ContentRepository;
+use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Navigation\MenuManager;
 use SimpleStore\Navigation\UrlManager;
 use SimpleStore\Rendering\PageRenderer;
@@ -42,7 +43,7 @@ if ($missing !== []) {
 
 try {
     $database = require $databaseFile;
-    $db = new MeekroDB($database['dsn'], $database['user'], $database['password']);
+    $db = ConnectionFactory::create($database);
     $contents = new ContentRepository($db, $site['languages']);
     $shared['menuLinks'] = (new MenuManager($contents, $url))->links();
 

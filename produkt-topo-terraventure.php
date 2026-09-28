@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use SimpleStore\Content\ContentRepository;
+use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Navigation\MenuManager;
 use SimpleStore\Navigation\UrlManager;
 use SimpleStore\Rendering\PageRenderer;
@@ -26,7 +27,7 @@ if (!is_file(__DIR__ . '/config/database.php')) {
 } elseif (is_file(__DIR__ . '/vendor/autoload.php')) {
     try {
         $database = require __DIR__ . '/config/database.php';
-        $db = new MeekroDB($database['dsn'], $database['user'], $database['password']);
+        $db = ConnectionFactory::create($database);
         $data['menuLinks'] = (new MenuManager(new ContentRepository($db, $site['languages']), $url))->links();
     } catch (Throwable $error) {
         error_log((string) $error);
