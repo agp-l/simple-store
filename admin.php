@@ -198,6 +198,12 @@ try {
     $documents = $content->currentDocuments();
 } catch (Throwable $exception) {
     error_log((string) $exception);
+    if ($method === 'POST' && ($_POST['action'] ?? null) === 'inline-product') {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(500);
+        echo json_encode(['error' => $site['debug'] ? (string) $exception : 'Databázi se nepodařilo načíst.']);
+        exit;
+    }
     http_response_code(500);
     $screen = 'error';
     $error = $site['debug'] ? (string) $exception : 'Administraci se nepodařilo načíst.';

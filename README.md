@@ -35,32 +35,23 @@ Pokud administrace hlásí `Permission denied` při čtení `config/admin.php`, 
 
 Po aktualizaci můžeš bezpečně znovu importovat aktuální `database/schema.sql`; import existující obsah nemaže. Stránky a články žádné další tabulky nepotřebují. Rychlé kontroly: `/opt/lampp/bin/php tests/admin-auth.php`, `/opt/lampp/bin/php tests/database-connection.php` a `/opt/lampp/bin/php tests/url-manager.php`.
 
-## Produkty
+## Produkty: úpravy přímo na stránce
 
-Po této aktualizaci **znovu importuj aktuální `database/schema.sql`**. Soubor přidá `product_revisions` a stávající stránky ani historii nemaže:
+Po přihlášení otevři v `admin.php` sekci **Produkty**. Tlačítko **Vytvořit produkt** založí neveřejný koncept a ihned otevře jeho stránku s ukázkovým obsahem: název, úvod, fotografie, varianty, technické údaje, odstavec, seznam, tabulka a fotografický blok. Před zveřejněním nahraď ukázkové údaje svými. Další produkt můžeš založit i tlačítkem nad editovaným detailem.
 
-```bash
-/opt/lampp/bin/mysql -u root < database/schema.sql
-```
+Úpravy probíhají v náhledu detailu na `/cs/produkt/slug?edit=1`. Klikni přímo na nadpis, cenu, popis, nadpisy bloků, seznam, tabulku nebo technické údaje a přepiš je. Po odchodu z textu se změna sama uloží a stránka se obnoví s výsledným vzhledem. Klávesa Escape během psaní vrátí původní obsah. Pokud se uložení nezdaří, zobrazí se chyba u horní lišty; stránku obnov až po přečtení chyby. Každé úspěšné uložení vytvoří **novou kompletní revizi** v `product_revisions`, žádná starší verze se nemaže.
 
-Pokud má uživatel root heslo, přidej `-p`, nebo soubor importuj přes phpMyAdmin. **Po této aktualizaci je import potřeba zopakovat i u existující instalace**: jediný `schema.sql` přidá chybějící sloupec `details_json`, revize ani produkty nemaže. Při prvním vytváření jej založí rovnou. V administraci otevři **Produkty**. Povinné jsou název, kategorie, cena a hlavní obrázek. Adresa (slug) vzniká automaticky z názvu bez diakritiky; můžeš ji ručně změnit. Při následných úpravách produktu se automaticky nepřepíše, takže staré odkazy zůstanou funkční. Stejná pravidla platí i pro nadpisy stránek a článků. Pokud už existuje stejná adresa, editor požádá o jinou.
+Malými tlačítky mezi bloky vložíš text, seznam, tabulku nebo fotografii; bloky můžeš přesouvat, měnit jejich typ a odebírat. V detailu lze stejným způsobem přidat nebo odebrat variantu, technický parametr či fotografii v galerii. U položky **Upravit možnosti** napiš každou barvu, velikost nebo jinou možnost na nový řádek. Kategorie a dostupnost se vybírají v horní liště, adresu (slug) upravíš kliknutím. Při změně slugu se změní i adresa produktu; název se mění samostatně a slug sám nepřepisuje. Předchozí podobu lze načíst z rozbalené **Historie úprav** jako další novou revizi.
 
-### Když při ukládání produktu chybí `details_json`
+Fotografii změníš malým tlačítkem u obrázku: zadáš HTTPS adresu nebo cestu `images/nazev.webp`. Soubor pro lokální cestu musí být již nahraný do složky `images/`. V textových blocích lze psát `**tučné**` a `[název odkazu](https://example.org)`; po uložení se zobrazí výsledné formátování. Typ bloku **Tabulka** používá na každém řádku zápis `Název | Hodnota`. Produktové varianty mají zatím společnou cenu a dostupnost a košík je pouze ukázkou v prohlížeči.
 
-V `config/database.php` zjisti název databáze v položce `database`. **V phpMyAdmin vyber právě tuto databázi**, otevři záložku SQL a pro dosavadní tabulku spusť jednou:
+**Publikovat produkt** zveřejní kartu a detail až po tvém výslovném potvrzení; do té doby koncept uvidí jen přihlášený správce. Na veřejně přístupném produktu uvidí správce odkaz **Upravit tento produkt**, návštěvník žádné editační prvky ani CSRF token nedostane. `admin.php` ověřuje přihlášení a token při každém zápisu. Při souběžných úpravách editor odmítne zastaralou revizi, aby nedošlo k přepsání novější práce.
 
-```sql
-ALTER TABLE product_revisions
-  ADD COLUMN details_json LONGTEXT NULL AFTER description;
-```
+Tento krok **nemění databázové schéma**. Pokud již máš importované aktuální `database/schema.sql` z předchozí aktualizace, stačí `git pull`. Pro kontrolu bez databáze spusť `/opt/lampp/bin/php tests/inline-editor.php` a `/opt/lampp/bin/php tests/product-details.php`. Po importu zůstává platný i test kategorií `/opt/lampp/bin/php tests/category-navigation.php`.
 
-Tento příkaz zachová všechny produkty a jejich revize. Před jeho spuštěním můžeš v phpMyAdmin ověřit stav tabulky pomocí `SHOW COLUMNS FROM product_revisions LIKE 'details_json';`: prázdný výsledek znamená chybějící sloupec. Pokud sloupec již existuje, příkaz `ALTER TABLE` nespouštěj a zkontroluj, zda aplikace používá stejnou databázi, kterou jsi vybral v phpMyAdmin. Soubor `database/schema.sql` sám obsahuje opakovatelnou migraci, ale v úvodu výslovně používá databázi `simple_store`; pokud máš v konfiguraci jiné jméno, samotný import může aktualizovat jinou databázi než tu, do které se web připojuje. Po opravě obnov administraci.
+### Když chybí `details_json`
 
-Do hlavního obrázku napiš např. `images/batoh.webp` (soubor nahraj do složky `images/`) nebo HTTPS adresu. Do galerie napiš další cesty, jednu na řádek. Pod cenou ve formuláři můžeš přidat libovolné skupiny výběru: název `Barva` s možnostmi `Grey / Clay` a `Black`, další skupinu `Velikost` s možnostmi `42 EU` a `43 EU`; možnosti se píšou každá na nový řádek. Funguje i `Pozice zipu`, `Délka` a další vlastní názvy. V detailu musí zákazník vybrat hodnotu v každé skupině; košík ukáže přesně tyto hodnoty. Produkt s výběrem vede z karty přímo na detail. **Cena a dostupnost jsou nyní společné pro celý produkt, nikoli pro jednotlivé kombinace**; dostupnost po konkrétních velikostech a variantách vyžaduje další krok. Košík stále funguje jen jako ukázka v prohlížeči a neposílá objednávku.
-
-Technické údaje vyplň jako dvojice názvu a hodnoty; v detailu vytvoří přehlednou tabulku. Dlouhý popis se skládá z bloků **Odstavce**, **Seznam** (každá položka na vlastní řádek), **Tabulka** (každý řádek ve tvaru `Název | Hodnota`) a **Fotografie** (cesta `images/nazev.webp` nebo HTTPS adresa). Blokům můžeš dát nadpisy a řadit je v pořadí ve formuláři. V textových blocích lze psát `**tučné**` a `[název odkazu](https://example.org)`; HTML značky se vypisují jako text. Původní produkt se starým seznamem velikostí půjde normálně otevřít i upravit; při dalším uložení se velikosti zobrazí jako volitelný výběr. V editoru vybereš libovolnou hloubku kategorie z jednoho přehledného seznamu. Po zaškrtnutí „Publikovat na webu“ se veřejně zobrazí karta a detail na `/cs/produkt/slug`. Dokud nevydáš první produkt, původní ukázkové karty zůstanou na úvodní stránce.
-
-Při každém uložení se do tabulky vloží nová revize se všemi údaji včetně ceny, kategorie, cest k obrázkům, výběru a všech bloků. Historie umožňuje načíst starší verzi do editoru a znovu ji uložit. Tyto údaje se ukládají čitelně jako JSON ve sloupci `details_json` stejného řádku; neexistují další provázané tabulky. Rychlá kontrola po importu: `/opt/lampp/bin/php tests/product-details.php`.
+`config/database.php` určuje databázi, do které se web připojuje. V phpMyAdmin vyber právě ji a importuj aktuální `database/schema.sql`; obsahuje opakovatelnou migraci sloupce `details_json` a existující produkty ani revize nemaže. Soubor na začátku používá databázi `simple_store`, takže pokud máš v konfiguraci jiný název, změň jej v lokální kopii SQL před importem.
 
 ## Kategorie a menu
 
@@ -118,6 +109,8 @@ Webové adresy pak budou `/cs/o-nas` a `/cs/blog/prvni-vyprava`. Všechny publik
 | `src/Database/ConnectionFactory.php` | Vytvoření připojení MeekroDB z lokální konfigurace. |
 | `src/Admin/AdminAuth.php` | Přihlášení jediného administrátora, session a CSRF token. |
 | `src/Product/ProductRepository.php` | Katalog, detail a každá revize produktu. |
+| `src/Product/ProductInlineEditor.php` | Vzor konceptu a převod jedné přímé úpravy na celou produktovou revizi. |
+| `src/Admin/inline-product.php` | Zabezpečené uložení a obnova revize při úpravě na stránce. |
 | `src/Content/ContentRepository.php` | Čtení obsahu, historie a uložení nového řádku v transakci. |
 | `src/Rendering/PageRenderer.php` | PHP pohledy bez Twig. |
 | `database/schema.sql` | Vždy aktuální úplné schéma. |

@@ -26,6 +26,8 @@ CMS řeší stránky, blog a nyní také produktové karty a detail. Produkty ma
 | `src/Rendering/PageRenderer.php` | Vybere schválený PHP pohled a předá mu data. |
 | `src/Product/ProductRepository.php` | Produkty, publikovaný katalog a revize v jedné produktové tabulce. |
 | `src/Product/ProductDetails.php` | Ověří a připraví volitelné výběry, technické údaje, galerii a bloky obsahu. |
+| `src/Product/ProductInlineEditor.php` | Výchozí koncept a převod jedné malé úpravy na kompletní ověřený snímek. |
+| `src/Admin/inline-product.php` | Přijme ověřený požadavek z náhledu, uloží revizi a vrátí její číslo. |
 | `config/site.php` | Výchozí a podporované jazyky. |
 | `config/database.php` | Místní údaje k DB, není ve verzovacím systému. |
 | `config/admin.php` | Místní jméno a hash hesla administrátora; není ve verzovacím systému. |
@@ -38,6 +40,12 @@ CMS řeší stránky, blog a nyní také produktové karty a detail. Produkty ma
 Jeden `document_key` je trvalá identita stránky nebo článku. `language` je jazyk konkrétního textu; překlady stejného obsahu sdílejí `document_key`, ale každý mají vlastní revize a URL. Každé uložení přidá **nový řádek** do `content_revisions`. Původní text, titulek, slug, stav i nastavení menu zůstanou na starém řádku. Dvě pomocná pole `active_document_key` a `active_slug` mají hodnotu pouze na současné revizi: díky unikátním indexům může být pro každý dokument a jazyk právě jedna současná revize a každá publikovaná URL může patřit nejvýše jednomu dokumentu. Změna současné revize v transakci vynuluje tato dvě pole na starém řádku a vloží nový řádek. Starý obsah se nikdy nepřepisuje.
 
 Produkty používají obdobnou tabulku `product_revisions`, protože jejich cena, kategorie, dostupnost a cesta k obrázku nejsou vlastnosti článků. Všechny údaje produktu jsou na jednom řádku a jeho změna vloží nový řádek; stará revize zůstane k nahlédnutí. Sloupec `details_json` je snímek skupin výběru (název a seznam možností), technických údajů (název a hodnota), galerie a seřazených bloků obsahu. Kód čte staré `sizes` jako skupinu Velikost, pokud produkt dosud nemá `details_json`. Tyto možnosti jsou **společné pro produkt s jednou cenou a dostupností**; systém zatím nespravuje samostatné skladové kusy pro kombinace. Dokud nejsou žádné publikované produkty, web používá původní statické ukázky.
+
+## Úprava produktu v jeho náhledu
+
+Administrace ukazuje seznam produktů a tlačítko pro založení neveřejného konceptu se čtyřmi ukázkovými bloky. Detail `/cs/produkt/slug?edit=1` může načíst i neveřejný produkt, ale jen pokud má návštěvník platné přihlášení správce. Běžná adresa produktu čte pouze publikovanou revizi. Neveřejný náhled má `noindex` a odpověď `Cache-Control: private, no-store`.
+
+`assets/inline-editor.js` po opuštění textového pole odešle jednu změnu spolu s CSRF tokenem a očekávaným číslem revize do `admin.php`. Editor řadí požadavky za sebe, aby rychlé úpravy používaly správné číslo revize. `ProductInlineEditor` vezme aktuální kompletní revizi, změní jen povolené pole nebo jeden blok a připraví původní všechna ostatní data k uložení. `ProductRepository::saveRevision()` ověří obsah i původní číslo revize a vloží nový řádek v transakci. Obnova starší verze používá stejný zápis a vytváří další revizi. Při chybě se editor zastaví a zobrazí chybu, takže další zápisy nevycházejí ze zastaralého stavu.
 
 Základní cesty jsou `/`, `/cs`, `/cs/kategorie-produktu/spani/spacaky`, `/cs/produkt/nazev`, `/cs/blog`, `/cs/blog/nazev-clanku`, `/cs/o-nas`. Jazyk vybírá výhradně URL, nikoli cookie nebo session. Nyní je zapnutá jen čeština; další jazyk vyžaduje také přeložené texty rozhraní a řádky se stejnými cestami v `catalog_categories`. Chybějící překlad zobrazí 404, aby se potichu nepodstrčil obsah v jiném jazyce.
 

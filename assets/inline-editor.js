@@ -97,7 +97,9 @@
     }
     const original = target.dataset.editValue;
     let value = (target.innerText || target.textContent || '').replace(/\r/g, '').trim();
-    if (target.dataset.editField === 'price_czk') value = value.replace(/[^0-9]/g, '');
+    if (target.dataset.editField === 'price_czk') {
+      value = value.replace(/[\s\u00a0]/g, '').replace(/Kč$/i, '').trim();
+    }
     if (value === original || failed) {
       target.innerHTML = previousHtml.get(target);
       return;
