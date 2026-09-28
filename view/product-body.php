@@ -1,7 +1,7 @@
   <main class="wrap detail-page" id="produkty">
     <nav class="breadcrumbs" aria-label="Drobečková navigace"><a href="<?= $siteRoot ?>index.php">Úvod</a><span>/</span><a href="<?= $siteRoot ?>index.php#produkty">Boty</a><span>/</span><span>Terraventure 5 Men's</span></nav>
     <div class="product-detail">
-      <div class="detail-gallery">
+      <div class="detail-gallery detail-gallery--footwear">
         <span class="media-label">Doprava zdarma</span>
         <!-- Photo source: https://gramino.cz/wp-content/uploads/2026/03/Topo-Athletic-Terraventure-5-Men-Grey-Clay-02.jpg -->
         <img src="<?= $siteRoot ?>images/topo-terraventure.jpg" alt="Topo Athletic Terraventure 5 Men's Grey / Clay, pohled shora" width="1200" height="1200">

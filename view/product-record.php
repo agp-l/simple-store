@@ -14,7 +14,7 @@ $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_s
   <main class="wrap detail-page" id="produkty">
     <nav class="breadcrumbs" aria-label="Drobečková navigace"><a href="<?= $siteRoot ?>index.php">Úvod</a><span>/</span><a href="<?= $siteRoot ?>index.php?category=<?= $escape($product['category']) ?>#produkty"><?= $escape($labels[$product['category']] ?? 'Vybavení') ?></a><span>/</span><span><?= $escape($product['name']) ?></span></nav>
     <div class="product-detail">
-      <div class="detail-media"><div class="detail-gallery"><img id="detail-image" src="<?= $escape($image) ?>" alt="<?= $escape($product['name']) ?>" width="1200" height="1200"></div>
+      <div class="detail-media"><div class="detail-gallery<?= $product['category'] === 'boty' ? ' detail-gallery--footwear' : '' ?>"><img id="detail-image" src="<?= $escape($image) ?>" alt="<?= $escape($product['name']) ?>" width="1200" height="1200"></div>
         <?php if ($details['gallery'] !== []): ?><div class="detail-thumbs" aria-label="Fotografie produktu">
           <?php foreach (array_merge([$product['image_path']], $details['gallery']) as $i => $path): ?>
             <button type="button" class="detail-thumb" data-gallery-image="<?= $escape($imageUrl($path)) ?>" aria-label="Zobrazit fotografii <?= $i + 1 ?>" aria-pressed="<?= $i === 0 ? 'true' : 'false' ?>"><img src="<?= $escape($imageUrl($path)) ?>" alt="" loading="lazy"></button>
