@@ -32,9 +32,9 @@
         </select></label>
     </div>
     <section class="catalog" id="catalog" aria-label="Nabídka produktů">
-      <!-- U batohů: data-subcategory="do-25", "25-50", "nad-50" nebo "prislusenstvi". -->
-      <!-- Každá karta má vlastní <img src="...">. Fotku lze změnit úpravou atributu src. -->
-      <!-- Původní fotografie: https://gramino.cz/wp-content/uploads/2026/03/Topo-Athletic-Terraventure-5-Men-Grey-Clay-02.jpg -->
+      <!-- Backpack categories: data-subcategory="do-25", "25-50", "nad-50" or "prislusenstvi". -->
+      <!-- Each product card has its own image; change its src attribute to replace the photo. -->
+      <!-- Original photo: https://gramino.cz/wp-content/uploads/2026/03/Topo-Athletic-Terraventure-5-Men-Grey-Clay-02.jpg -->
       <article class="product-card" data-category="boty" data-price="3990" data-name="topo athletic terraventure 5 men's" id="produkt-1">
         <div class="product-media">
           <a href="<?= $siteRoot ?>produkt-topo-terraventure.php" aria-label="Zobrazit Topo Athletic Terraventure 5 Men's">

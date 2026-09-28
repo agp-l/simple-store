@@ -3,7 +3,7 @@
     <div class="product-detail">
       <div class="detail-gallery">
         <span class="media-label">Doprava zdarma</span>
-        <!-- Zdroj: https://gramino.cz/wp-content/uploads/2026/03/Topo-Athletic-Terraventure-5-Men-Grey-Clay-02.jpg -->
+        <!-- Photo source: https://gramino.cz/wp-content/uploads/2026/03/Topo-Athletic-Terraventure-5-Men-Grey-Clay-02.jpg -->
         <img src="<?= $siteRoot ?>images/topo-terraventure.jpg" alt="Topo Athletic Terraventure 5 Men's Grey / Clay, pohled shora" width="1200" height="1200">
       </div>
       <div class="detail-info">

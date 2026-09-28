@@ -1242,7 +1242,7 @@
     @media(max-width:620px) { .story-grid {grid-template-columns:1fr;} .detail-info h1 {font-size:30px;} .buy-row {flex-wrap:wrap;} .detail-add {min-width:185px;} }
 
 
-/* Kontextový filtr batohů. */
+/* Backpack category filter. */
 .filter-groups { min-width: 0; }
 .filter-groups [hidden] { display: none; }
 .backpack-filters { display: flex; flex-wrap: wrap; gap: 8px; }
