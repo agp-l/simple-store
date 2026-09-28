@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "cb7034ea922bcccc294b754908d42e34",
+    "content-hash": "465c11cd4aa2f0e1041fce7180173e06",
     "packages": [
         {
             "name": "sergeytsalkov/meekrodb",
@@ -63,8 +63,7 @@
     "prefer-lowest": false,
     "platform": {
         "php": "^8.0",
-        "ext-pdo": "*",
-        "ext-pdo_mysql": "*"
+        "ext-mysqli": "*"
     },
     "platform-dev": [],
     "platform-overrides": {

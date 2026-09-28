@@ -19,11 +19,23 @@ Pak otevři `config/database.php` a nastav `host`, `port`, `database`, `user` a 
 4. Pokud ještě nemáš `config/database.php`, zkopíruj `config/database.example.php` do `config/database.php` a vyplň přístupové údaje. Tento soubor je v `.gitignore` a nesmí se commitovat.
 5. Otevři adresu složky projektu v Apache. Úvod obchodu funguje i před nastavením databáze; blog a redakční stránky potřebují importovanou tabulku. Prohlížej `/cs`, `/cs/blog` a `/cs/o-nas` po založení obsahu.
 
-Pro ladění je v `config/site.php` zapnuto `'debug' => true`; PHP chyby, upozornění a zachycené výjimky se zobrazují na stránce. Až web skutečně zveřejníš, přepni jej na `false`. Pokud se stále objeví holá chyba 500 bez stránky aplikace, jde o chybu Apache ještě před spuštěním PHP; zkontroluj jeho error log a podporu `.htaccess`/`mod_rewrite`. Příkaz `ini_set()` nemůže zobrazit chybu parsování v tomtéž souboru, pokud se kvůli ní PHP vůbec nespustí.
+Konfigurace databáze je obyčejný PHP soubor, který `return [...]` vrací pojmenované hodnoty. Aplikace jej načítá jen při připojení k databázi; nepoužívá globální proměnné. Původní zápis s `dsn` také funguje. Při vývoji je v `config/site.php` zapnuto `'debug' => true`; PHP chyby, upozornění a zachycené výjimky se zobrazují na stránce. Až web skutečně zveřejníš, přepni jej na `false`. Pokud se stále objeví holá chyba 500 bez stránky aplikace, zkontroluj Apache error log a podporu `.htaccess`/`mod_rewrite`. Příkaz `ini_set()` nemůže zobrazit chybu parsování v tomtéž souboru, pokud se kvůli ní PHP vůbec nespustí.
+
+## Administrace obsahu
+
+Administrace je na `http://localhost/simple-store/admin.php`. Jednoho administrátora vytvoříš příkazem v kořeni projektu:
+
+```bash
+/opt/lampp/bin/php tools/admin.php
+```
+
+Příkaz jednou vypíše jméno `admin` a náhodně vygenerované heslo. Ulož si je; konfigurace ukládá jen jeho hash do `config/admin.php`, který se nesmí nahrávat na GitHub. Pro změnu hesla spusť `/opt/lampp/bin/php tools/admin.php --reset` a přihlas se novým heslem. Administrace umožňuje založit, upravit a publikovat stránku či článek. Obsahuje seznam aktuálních dokumentů a historii verzí; načtení starší verze do formuláře a její uložení vytvoří **další nový řádek**, nepřepíše historii. Přihlášení chrání PHP session, formuláře mají CSRF token. Před zveřejněním webu vypni režim `debug`.
+
+Po aktualizaci projektu můžeš znovu importovat aktuální `database/schema.sql`: `/opt/lampp/bin/mysql -u root < database/schema.sql` (při nastaveném hesle přidej `-p`). Import existující obsah nemaže. Administrace žádné další SQL tabulky nepotřebuje. Rychlé kontroly: `/opt/lampp/bin/php tests/admin-auth.php`, `/opt/lampp/bin/php tests/database-connection.php` a `/opt/lampp/bin/php tests/url-manager.php`.
 
 ## První stránka, článek a historie
 
-Zatím není administrační přihlášení ani formulář pro editaci. Pro vyzkoušení jádra je připravený příkazový skript, který **funguje pouze z terminálu**:
+Pro práci bez prohlížeče je také připravený příkazový skript, který **funguje pouze z terminálu**:
 
 ```bash
 php tools/content.php create page cs o-nas 'O nás' 'Zde je náš příběh.'
@@ -48,9 +60,10 @@ Webové adresy pak budou `/cs/o-nas` a `/cs/blog/prvni-vyprava`. Všechny publik
 | `src/Navigation/UrlManager.php` | Části URL, jazyk a odkazy při instalaci v podsložce. |
 | `src/Navigation/MenuManager.php` | Odkazy publikovaných stránek a blogu. |
 | `src/Database/ConnectionFactory.php` | Vytvoření připojení MeekroDB z lokální konfigurace. |
+| `src/Admin/AdminAuth.php` | Přihlášení jediného administrátora, session a CSRF token. |
 | `src/Content/ContentRepository.php` | Čtení obsahu, historie a uložení nového řádku v transakci. |
 | `src/Rendering/PageRenderer.php` | PHP pohledy bez Twig. |
 | `database/schema.sql` | Vždy aktuální úplné schéma. |
 | `view/` | HTML pro obchod, blog, stránky, `<head>`, hlavičku, menu a patičku. |
 
-Produkty a košík jsou stále **ukázkou v prohlížeči**; nákup ani úpravy přes administraci zatím nefungují. Karty batohů používají `data-category="batohy"` a `data-subcategory="do-25"`, `"25-50"`, `"nad-50"` nebo `"prislusenstvi"`. HTML soubory v kořeni jsou starší statické náhledy vzhledu a nespouštějí CMS; Apache je blokuje. Příští etapou bude jednoduché přihlášení a formulář stránek/článků s výběrem a obnovou revizí.
+Produkty a košík jsou stále **ukázkou v prohlížeči**; nákup ani úpravy produktů přes administraci zatím nefungují. Karty batohů používají `data-category="batohy"` a `data-subcategory="do-25"`, `"25-50"`, `"nad-50"` nebo `"prislusenstvi"`. HTML soubory v kořeni jsou starší statické náhledy vzhledu a nespouštějí CMS; Apache je blokuje.

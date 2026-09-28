@@ -2,7 +2,7 @@
 
 ## Smysl první etapy
 
-Katalog zůstává současnou ukázkou. Nové CMS řeší stránky a blog, tedy obsah, který může mít více verzí. Produkty, sklad, platby, uživatelé a administrační přihlášení budou samostatné další etapy; nepřidáváme teď tabulky, které žádný kód nepoužívá.
+Katalog zůstává současnou ukázkou. Nové CMS řeší stránky a blog, tedy obsah, který může mít více verzí. Produkty, sklad a platby budou samostatné další etapy; nepřidáváme teď tabulky, které žádný kód nepoužívá. Jediný administrátor má jméno a hash hesla v místním `config/admin.php`, vytvořeném příkazem v terminálu. To nepotřebuje další tabulku ani vztahy mezi tabulkami.
 
 ## Jak jde požadavek aplikací
 
@@ -22,6 +22,8 @@ Katalog zůstává současnou ukázkou. Nové CMS řeší stránky a blog, tedy 
 | `src/Rendering/PageRenderer.php` | Vybere schválený PHP pohled a předá mu data. |
 | `config/site.php` | Výchozí a podporované jazyky. |
 | `config/database.php` | Místní údaje k DB, není ve verzovacím systému. |
+| `config/admin.php` | Místní jméno a hash hesla administrátora; není ve verzovacím systému. |
+| `admin.php`, `view/admin/` | Přihlášení a úpravy obsahu, bez zásahu do veřejného vzhledu. |
 | `database/schema.sql` | Jediný aktuální soubor pro vytvoření celé databáze. |
 | `view/` | HTML a malé výpisy proměnných; současná grafika obchodu. |
 
@@ -33,4 +35,4 @@ Základní cesty jsou `/`, `/cs`, `/cs/blog`, `/cs/blog/nazev-clanku`, `/cs/o-na
 
 ## Hranice zabezpečení
 
-Pro běžný hosting zůstává kořen projektu také kořenem webu. `.htaccess` na Apache blokuje `src/`, `config/`, `database/`, `view/`, `vendor/` a další neveřejné soubory ještě před pravidlem pro směrování. Na jiném serveru je potřeba odpovídající zákaz v jeho nastavení. Budoucí administraci, přihlašování a editaci nelze veřejně zpřístupnit, dokud nebude hotové ověření přístupu a ochrana proti CSRF.
+Pro běžný hosting zůstává kořen projektu také kořenem webu. `.htaccess` na Apache blokuje `src/`, `config/`, `database/`, `view/`, `vendor/` a další neveřejné soubory ještě před pravidlem pro směrování. Na jiném serveru je potřeba odpovídající zákaz v jeho nastavení. Přihlášení administrátora používá silné náhodné heslo, PHP session a kontrolu CSRF tokenu u každého POST; původní hodnoty z formuláře se používají jen po ověření přístupu. Administraci na veřejné doméně provozuj pouze přes HTTPS a s vypnutým ladicím výpisem chyb.
