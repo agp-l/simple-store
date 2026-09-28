@@ -5,6 +5,7 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 
 use SimpleStore\Navigation\Slugger;
 use SimpleStore\Product\ProductDetails;
+use SimpleStore\Product\ProductText;
 
 $check = static function (bool $condition, string $message): void {
     if (!$condition) throw new RuntimeException($message);
@@ -45,6 +46,10 @@ $check(str_contains($html, 'product-option-2') && str_contains($html, 'Technick�
     'The product detail did not render choices and specifications.');
 $check(!str_contains($html, '<script>alert(1)</script>') && str_contains($html, '&lt;script&gt;'),
     'The product title was not escaped.');
+$formatted = ProductText::inline('**Skvělé** <script> [více](https://example.org/?q=1&v=2)');
+$check(str_contains($formatted, '<strong>Skvělé</strong>') &&
+    str_contains($formatted, '&lt;script&gt;') && str_contains($formatted, 'q=1&amp;v=2'),
+    'Safe formatting failed.');
 try {
     ProductDetails::fromForm(['option_name' => ['Barva'], 'option_values' => ["Černá\nČerná"]]);
     throw new RuntimeException('Duplicate choices were accepted.');

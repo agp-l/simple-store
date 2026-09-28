@@ -1,5 +1,6 @@
 <?php
 use SimpleStore\Product\ProductDetails;
+use SimpleStore\Product\ProductText;
 
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $image = str_starts_with($product['image_path'], 'images/')
@@ -35,30 +36,31 @@ $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_s
       </div>
     </div>
     <?php if ($product['description'] !== '' || $details['sections'] !== [] || $details['specifications'] !== []): ?>
-      <div class="product-extra"><section class="story" aria-label="Popis produktu"><h2>O produktu</h2>
+      <div class="product-extra<?= $product['description'] === '' && $details['sections'] === [] ? ' specs-only' : '' ?>">
+        <?php if ($product['description'] !== '' || $details['sections'] !== []): ?><section class="story" aria-label="Popis produktu"><h2>O produktu</h2>
         <?php if ($product['description'] !== ''): ?><div class="cms-text product-intro"><?= nl2br($escape($product['description'])) ?></div><?php endif; ?>
         <?php foreach ($details['sections'] as $section): ?>
           <section class="product-content-block">
             <?php if ($section['heading'] !== ''): ?><h3><?= $escape($section['heading']) ?></h3><?php endif; ?>
             <?php if ($section['type'] === 'list'): ?><ul class="feature-list">
               <?php foreach (preg_split('/\R/u', $section['body']) ?: [] as $line): ?>
-                <?php if (trim($line) !== ''): ?><li><?= $escape(trim($line)) ?></li><?php endif; ?>
+                <?php if (trim($line) !== ''): ?><li><?= ProductText::inline(trim($line)) ?></li><?php endif; ?>
               <?php endforeach; ?></ul>
             <?php elseif ($section['type'] === 'table'): ?><div class="table-scroll"><table class="spec-table"><tbody>
               <?php foreach (preg_split('/\R/u', $section['body']) ?: [] as $line): ?>
                 <?php if (trim($line) !== ''): ?>
                   <?php [$label, $value] = array_map('trim', explode('|', $line, 2)); ?>
-                  <tr><th scope="row"><?= $escape($label) ?></th><td><?= $escape($value) ?></td></tr>
+                  <tr><th scope="row"><?= $escape($label) ?></th><td><?= ProductText::inline($value) ?></td></tr>
                 <?php endif; ?>
               <?php endforeach; ?></tbody></table></div>
             <?php elseif ($section['type'] === 'image'): ?>
               <figure class="product-story-image"><img src="<?= $escape($imageUrl($section['body'])) ?>" alt="<?= $escape($section['heading'] !== '' ? $section['heading'] : $product['name']) ?>" loading="lazy"></figure>
             <?php else: ?>
-              <?php foreach (preg_split('/\R\s*\R/u', $section['body']) ?: [] as $paragraph): ?><p><?= nl2br($escape(trim($paragraph))) ?></p><?php endforeach; ?>
+              <?php foreach (preg_split('/\R\s*\R/u', $section['body']) ?: [] as $paragraph): ?><p><?= nl2br(ProductText::inline(trim($paragraph))) ?></p><?php endforeach; ?>
             <?php endif; ?>
           </section>
         <?php endforeach; ?>
-      </section>
+      </section><?php endif; ?>
       <?php if ($details['specifications'] !== []): ?><aside class="product-specs"><h2>Technické údaje</h2><div class="table-scroll"><table class="spec-table"><tbody>
         <?php foreach ($details['specifications'] as $spec): ?><tr><th scope="row"><?= $escape($spec['name']) ?></th><td><?= $escape($spec['value']) ?></td></tr><?php endforeach; ?>
       </tbody></table></div></aside><?php endif; ?></div>

@@ -27,7 +27,7 @@ $hasOptions = ProductDetails::decode($product['details_json'] ?? null, $product[
           <div class="product-meta"><span class="stock <?= $product['stock_status'] === 'in_stock' ? '' : 'stock-wait' ?>"><span class="stock-dot" aria-hidden="true"></span><?= $escape($stockText[$product['stock_status']] ?? '') ?></span></div>
           <div class="product-action"><strong><?= number_format((int) $product['price_czk'], 0, ',', ' ') ?> Kč</strong>
             <?php if ($hasOptions): ?>
-              <a class="add-button" href="<?= $escape($productLink) ?>" aria-label="Vybrat možnosti produktu <?= $escape($product['name']) ?>">Vybrat možnosti →</a>
+              <a class="add-button" href="<?= $escape($productLink) ?>" aria-label="Zobrazit produkt <?= $escape($product['name']) ?>"><?= $product['stock_status'] === 'out_of_stock' ? 'Zobrazit detail →' : 'Vybrat možnosti →' ?></a>
             <?php else: ?>
               <button class="add-button" type="button" data-add="<?= (int) $index ?>" <?= $product['stock_status'] === 'out_of_stock' ? 'disabled' : '' ?> aria-label="Přidat <?= $escape($product['name']) ?> do ukázkového košíku"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h2l2 10h10l2-7H7M9 19h.01M18 19h.01" /></svg><span><?= $product['stock_status'] === 'out_of_stock' ? 'Není skladem' : 'Do košíku' ?></span></button>
             <?php endif; ?>

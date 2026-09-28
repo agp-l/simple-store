@@ -1244,6 +1244,7 @@
     .spec-table th,.spec-table td { padding:12px 4px; border-bottom:1px solid var(--line); text-align:left; }
     .spec-table th { width:42%; color:var(--muted); font-weight:500; }
     .product-extra { display:grid; grid-template-columns:minmax(0, 1fr) minmax(240px, 340px); gap:clamp(28px,5vw,70px); align-items:start; margin-top:65px; border-top:1px solid var(--line); }
+    .product-extra.specs-only { display:block; }
     .product-extra .story { margin-top:0; border:0; padding-top:34px; min-width:0; }
     .product-intro { margin-bottom:27px; }
     .product-content-block { margin:32px 0 44px; }

@@ -18,9 +18,11 @@ CMS řeší stránky, blog a nyní také produktové karty a detail. Produkty ma
 | --- | --- |
 | `src/Navigation/UrlManager.php` | Jen adresa, jazyk a lokální odkazy. Zachovává název a metodu `getSegment()` ze starého CMS. |
 | `src/Navigation/MenuManager.php` | Vytvoří pole odkazů pro hlavičku, žádné HTML uvnitř třídy. |
+| `src/Navigation/Slugger.php` | Navrhne adresu z českého nadpisu; ruční slug má přednost. |
 | `src/Content/ContentRepository.php` | SQL dotazy, publikovaný obsah a ukládání revizí. |
 | `src/Rendering/PageRenderer.php` | Vybere schválený PHP pohled a předá mu data. |
 | `src/Product/ProductRepository.php` | Produkty, publikovaný katalog a revize v jedné produktové tabulce. |
+| `src/Product/ProductDetails.php` | Ověří a připraví volitelné výběry, technické údaje, galerii a bloky obsahu. |
 | `config/site.php` | Výchozí a podporované jazyky. |
 | `config/database.php` | Místní údaje k DB, není ve verzovacím systému. |
 | `config/admin.php` | Místní jméno a hash hesla administrátora; není ve verzovacím systému. |
@@ -32,7 +34,7 @@ CMS řeší stránky, blog a nyní také produktové karty a detail. Produkty ma
 
 Jeden `document_key` je trvalá identita stránky nebo článku. `language` je jazyk konkrétního textu; překlady stejného obsahu sdílejí `document_key`, ale každý mají vlastní revize a URL. Každé uložení přidá **nový řádek** do `content_revisions`. Původní text, titulek, slug, stav i nastavení menu zůstanou na starém řádku. Dvě pomocná pole `active_document_key` a `active_slug` mají hodnotu pouze na současné revizi: díky unikátním indexům může být pro každý dokument a jazyk právě jedna současná revize a každá publikovaná URL může patřit nejvýše jednomu dokumentu. Změna současné revize v transakci vynuluje tato dvě pole na starém řádku a vloží nový řádek. Starý obsah se nikdy nepřepisuje.
 
-Produkty používají obdobnou tabulku `product_revisions`, protože jejich cena, kategorie, dostupnost a cesta k obrázku nejsou vlastnosti článků. Všechny údaje produktu jsou na jednom řádku a jeho změna vloží nový řádek; stará revize zůstane k nahlédnutí. Kategorie a velikosti jsou zatím přímo v produktu, bez propojených tabulek. Dokud nejsou žádné publikované produkty, web používá původní statické ukázky.
+Produkty používají obdobnou tabulku `product_revisions`, protože jejich cena, kategorie, dostupnost a cesta k obrázku nejsou vlastnosti článků. Všechny údaje produktu jsou na jednom řádku a jeho změna vloží nový řádek; stará revize zůstane k nahlédnutí. Sloupec `details_json` je snímek skupin výběru (název a seznam možností), technických údajů (název a hodnota), galerie a seřazených bloků obsahu. Kód čte staré `sizes` jako skupinu Velikost, pokud produkt dosud nemá `details_json`. Tyto možnosti jsou **společné pro produkt s jednou cenou a dostupností**; systém zatím nespravuje samostatné skladové kusy pro kombinace. Dokud nejsou žádné publikované produkty, web používá původní statické ukázky.
 
 Základní cesty jsou `/`, `/cs`, `/cs/blog`, `/cs/blog/nazev-clanku`, `/cs/o-nas`. Jazyk vybírá výhradně URL, nikoli cookie nebo session. Nyní je zapnutá jen čeština; další jazyk vyžaduje také přeložené texty rozhraní. Chybějící překlad zobrazí 404, aby se potichu nepodstrčil obsah v jiném jazyce.
 
