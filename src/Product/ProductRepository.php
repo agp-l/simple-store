@@ -27,7 +27,9 @@ final class ProductRepository
     public function published(string $language): array
     {
         return $this->db->query(
-            'SELECT * FROM product_revisions WHERE language=%s AND published=1
+            'SELECT slug, name, brand, summary, details_json, category, subcategory,
+                    price_czk, image_path, sizes, stock_status
+             FROM product_revisions WHERE language=%s AND published=1
              AND active_product_key IS NOT NULL ORDER BY id DESC', $language
         );
     }
@@ -69,6 +71,16 @@ final class ProductRepository
     {
         return $this->db->query(
             'SELECT * FROM product_revisions WHERE product_key=%s AND language=%s
+             ORDER BY revision_number DESC', $key, $language
+        );
+    }
+
+    /** Preview the history without loading every past description and gallery. */
+    public function historySummary(string $key, string $language): array
+    {
+        return $this->db->query(
+            'SELECT revision_number, name, saved_at, active_product_key
+             FROM product_revisions WHERE product_key=%s AND language=%s
              ORDER BY revision_number DESC', $key, $language
         );
     }

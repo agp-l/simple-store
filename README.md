@@ -17,7 +17,7 @@ Pak otevři `config/database.php` a nastav `host`, `port`, `database`, `user` a 
 2. Ve složce projektu spusť `composer install`. Composer načítá třídy ze `src/` přes namespace `SimpleStore\` a nainstaluje MeekroDB 2.5.2. PHP potřebuje rozšíření `mysqli`. Pokud používáš LAMPP, spouštěj příkazový skript přes stejné PHP jako web: `/opt/lampp/bin/php tools/content.php …`.
 3. V MySQL vytvoř tabulku importem jediného aktuálního souboru. V LAMPP použij `/opt/lampp/bin/mysql -u root < database/schema.sql` (pokud má root heslo, přidej `-p`); když na této cestě klient není, zkus `/opt/lampp/bin/mariadb` nebo import souboru v phpMyAdmin. Samotné `mysql` může chybět v systémové proměnné PATH, i když je MySQL součástí LAMPP. Příkazy `CREATE DATABASE IF NOT EXISTS`, `USE` a `CREATE TABLE IF NOT EXISTS` už v souboru jsou. Pokud hosting nedovolí `CREATE DATABASE`, vytvoř databázi v hostingu a v kopii importovaného SQL vynech první dva příkazy.
 4. Pokud ještě nemáš `config/database.php`, zkopíruj `config/database.example.php` do `config/database.php` a vyplň přístupové údaje. Tento soubor je v `.gitignore` a nesmí se commitovat.
-5. Otevři adresu složky projektu v Apache. Úvod obchodu funguje i před nastavením databáze; blog, menu a redakční stránky potřebují importované tabulky. Prohlížej `/cs`, `/cs/kategorie-produktu/spani/spacaky`, `/cs/blog` a `/cs/o-nas` po založení obsahu.
+5. Otevři adresu složky projektu v Apache. Úvod bez databáze zobrazí pokyny k nastavení, ale nevydává ukázkové produkty za skutečné. Blog, menu, redakční stránky a produkty potřebují importované tabulky. Prohlížej `/cs`, `/cs/kategorie-produktu/spani/spacaky`, `/cs/blog` a `/cs/o-nas` po založení obsahu.
 
 Konfigurace databáze je obyčejný PHP soubor, který `return [...]` vrací pojmenované hodnoty. Aplikace jej načítá jen při připojení k databázi; nepoužívá globální proměnné. Původní zápis s `dsn` také funguje. Při vývoji je v `config/site.php` zapnuto `'debug' => true`; PHP chyby, upozornění a zachycené výjimky se zobrazují na stránce. Až web skutečně zveřejníš, přepni jej na `false`. Pokud se stále objeví holá chyba 500 bez stránky aplikace, zkontroluj Apache error log a podporu `.htaccess`/`mod_rewrite`. Příkaz `ini_set()` nemůže zobrazit chybu parsování v tomtéž souboru, pokud se kvůli ní PHP vůbec nespustí.
 
@@ -129,4 +129,14 @@ Webové adresy pak budou `/cs/o-nas` a `/cs/blog/prvni-vyprava`. Všechny publik
 | `database/schema.sql` | Vždy aktuální úplné schéma. |
 | `view/` | HTML pro obchod, blog, stránky, `<head>`, hlavičku, menu a patičku. |
 
-Košík a placení jsou stále **ukázkou v prohlížeči**; nevyřizují objednávky. HTML soubory v kořeni jsou starší statické náhledy vzhledu a nespouštějí CMS; Apache je blokuje.
+Košík a placení jsou stále **ukázkou v prohlížeči**; nevyřizují objednávky. Katalog teď vypisuje jen publikované produkty z databáze. Tlačítko pro vytvoření produktu v administraci připraví neveřejný koncept s ukázkovými texty; žádný koncept se veřejně neukáže před publikováním.
+
+## Kontrola jádra a další hranice
+
+`UrlManager::route()` rozpoznává jednotlivé typy adres a `index.php` k nim přiřazuje databázový obsah. Menu čte kategorie a stránky v PHP; JavaScript necháváme pro mobilní hamburger, hledání, řazení a ukázkový košík. Původní statické HTML náhledy a zkušební PHP detail byly odstraněny. Domovský odkaz i hledání zachovávají jazyk v URL.
+
+Revize v `content_revisions` a `product_revisions` zůstávají celé v jednom řádku. Při uložení se v transakci označí stará revize jako neaktivní a vloží nová; unikátní indexy hlídají jednu současnou revizi a adresu. Editor při zápisu posílá očekávané číslo revize a odmítne zastaralou změnu. Při zakládání překladu se ověřuje existence původního dokumentu. V administraci se z historie načítají jen nadpisy a čísla revizí; úplná starší verze se načte až při obnově.
+
+Tohle je rozumná podoba pro **verzovaný obsah**, ale neznamená to, že každou budoucí tabulku lze držet bez vztahů. Objednávky, platby a skladové pohyby budou potřebovat trvalé identifikátory produktů, pravidla konzistence a pravděpodobně i vztahy mezi záznamy. Katalog zatím načítá všechny publikované produkty a kategorii filtruje v PHP. Pokud jich budou tisíce, bude vhodné přidat databázové filtrování a stránkování. Přidání dalšího jazyka vyžaduje přeložit i texty rozhraní; sloupec `language` počítá s dvoupísmenným kódem.
+
+Tento úklid **nemění databázové schéma**. Po `git pull` není potřeba žádný SQL příkaz. Kontroly bez databáze: `/opt/lampp/bin/php tests/url-manager.php`, `/opt/lampp/bin/php tests/menu-manager.php`, `/opt/lampp/bin/php tests/revision-guards.php` a `/opt/lampp/bin/php tests/catalog-render.php`.

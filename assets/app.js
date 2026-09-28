@@ -80,7 +80,7 @@
       if (!card.hidden) count++;
     });
     document.getElementById('result-count').textContent =
-      `Zobrazeny ${count} ${count === 1 ? 'produkt' : count > 1 && count < 5 ? 'produkty' : 'produktů'}`;
+      `Zobrazeno ${count} ${count === 1 ? 'produkt' : count > 1 && count < 5 ? 'produkty' : 'produktů'}`;
     document.getElementById('empty').hidden = count !== 0;
   }
   form.addEventListener('submit', event => {

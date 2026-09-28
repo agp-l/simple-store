@@ -94,6 +94,16 @@ final class ContentRepository
         );
     }
 
+    /** Preview the history without loading the body of every old revision. */
+    public function historySummary(string $documentKey, string $language): array
+    {
+        return $this->db->query(
+            'SELECT revision_number, title, saved_at, active_document_key
+             FROM content_revisions WHERE document_key=%s AND language=%s
+             ORDER BY revision_number DESC', $documentKey, $language
+        );
+    }
+
     /** Insert a snapshot; the previous snapshot remains available in history(). */
     public function saveRevision(array $fields, ?string $documentKey = null, ?int $expectedRevision = null): array
     {

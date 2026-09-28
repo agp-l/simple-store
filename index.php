@@ -60,6 +60,20 @@ try {
     $shared['footerMenu'] = $menus->links('footer');
     $shared['categoryLabels'] = array_column($categories->all($url->getLanguage()), 'title', 'path');
 
+    // An authenticated preview may read drafts; ordinary routes never start an admin session.
+    $editRequested = ($_GET['edit'] ?? '') === '1';
+    $auth = null;
+    if (in_array($route['name'], ['product', 'page', 'post'], true)) {
+        $adminFile = __DIR__ . '/config/admin.php';
+        if (is_readable($adminFile) && ($editRequested || isset($_COOKIE['simple_store_admin']))) {
+            $auth = new AdminAuth(require $adminFile, $url->getBasePath());
+        }
+    }
+    $canEdit = $auth !== null && $auth->signedIn();
+    if ($canEdit) {
+        header('Cache-Control: private, no-store');
+    }
+
     if ($route['name'] === 'catalog' || $route['name'] === 'category') {
         $path = $route['path'] ?? null;
         $selected = $path === null ? null : $categories->find($url->getLanguage(), $path);
@@ -95,16 +109,6 @@ try {
         }
         $renderer->render('catalog', $shared);
     } elseif ($route['name'] === 'product') {
-        $editRequested = ($_GET['edit'] ?? '') === '1';
-        $adminFile = __DIR__ . '/config/admin.php';
-        $auth = null;
-        if (is_readable($adminFile) && ($editRequested || isset($_COOKIE['simple_store_admin']))) {
-            $auth = new AdminAuth(require $adminFile, $url->getBasePath());
-        }
-        $canEdit = $auth !== null && $auth->signedIn();
-        if ($canEdit) {
-            header('Cache-Control: private, no-store');
-        }
         $repository = new ProductRepository($db, $site['languages']);
         $item = $editRequested && $canEdit
             ? $repository->findCurrentBySlug($route['slug'], $url->getLanguage())
@@ -120,7 +124,7 @@ try {
             };
             $addCategories($categories->tree($url->getLanguage()), 0);
             $shared['editorCategories'] = $rows;
-            $shared['productHistory'] = $repository->history($item['product_key'], $url->getLanguage());
+            $shared['productHistory'] = $repository->historySummary($item['product_key'], $url->getLanguage());
             $shared['editToken'] = $auth->token();
         }
         $renderer->render($item === null ? 'not-found' : 'product-record', $shared + [
@@ -139,22 +143,12 @@ try {
     } elseif ($route['name'] === 'page' || $route['name'] === 'post') {
         $type = $route['name'];
         $slug = $route['slug'];
-        $editRequested = ($_GET['edit'] ?? '') === '1';
-        $adminFile = __DIR__ . '/config/admin.php';
-        $auth = null;
-        if (is_readable($adminFile) && ($editRequested || isset($_COOKIE['simple_store_admin']))) {
-            $auth = new AdminAuth(require $adminFile, $url->getBasePath());
-        }
-        $canEdit = $auth !== null && $auth->signedIn();
-        if ($canEdit) {
-            header('Cache-Control: private, no-store');
-        }
         $item = $editRequested && $canEdit
             ? $contents->findCurrentBySlug($type, $slug, $url->getLanguage())
             : $contents->findPublished($type, $slug, $url->getLanguage());
         $contentEditMode = $editRequested && $canEdit && $item !== null;
         if ($contentEditMode) {
-            $shared['contentHistory'] = $contents->history($item['document_key'], $url->getLanguage());
+            $shared['contentHistory'] = $contents->historySummary($item['document_key'], $url->getLanguage());
             $shared['editToken'] = $auth->token();
         }
         $renderer->render($item === null ? 'not-found' : $type, $shared + [

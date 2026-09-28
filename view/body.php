@@ -1,4 +1,8 @@
-<?php $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); ?>
+<?php
+$escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+$productCount = count($products);
+$productWord = $productCount === 1 ? 'produkt' : ($productCount >= 2 && $productCount <= 4 ? 'produkty' : 'produktů');
+?>
   <main class="wrap" id="produkty">
     <nav class="breadcrumbs" aria-label="Drobečková navigace">
       <a href="<?= $escape($siteRoot . $language) ?>">Úvod</a>
@@ -13,7 +17,7 @@
       <div>
         <h2 id="section-title"><?= $escape($currentCategory['title'] ?? 'Objevte vybavení') ?></h2>
         <p id="section-description"><?= $currentCategory === null ? 'Poctivý výběr pro pohodlí na stezce i mimo ni.' : 'Vybavení na každou cestu. Vyberte si z nabídky níže.' ?></p>
-      </div><span class="result-count" id="result-count" aria-live="polite">Zobrazeno <?= count($products) ?> produktů</span>
+      </div><span class="result-count" id="result-count" aria-live="polite">Zobrazeno <?= $productCount . ' ' . $productWord ?></span>
     </div>
     <div class="tools">
       <?php if ($categoryMenuRoot !== null && $categoryMenu !== []): ?>
