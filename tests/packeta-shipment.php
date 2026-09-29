@@ -159,6 +159,26 @@ if (function_exists('simplexml_load_string')) {
             }
         }
     }
+    $restFault = new PacketaApiClient('secret-password', static fn (): array => [
+        'status' => 200, 'body' => '<response><status>fault</status>' .
+            '<fault>PacketAttributesFault</fault><string>Invalid packet attributes</string>' .
+            '<detail><attributes><fault><name>eshop</name><fault>Sender does not exist</fault></fault>' .
+            '<fault><name>weight</name><fault>Weight is required</fault></fault></attributes></detail>' .
+            '</response>']);
+    try {
+        $restFault->createPacket($pickup['attributes']);
+        throw new RuntimeException('A REST validation fault was accepted.');
+    } catch (PacketaRejectedException $expected) {
+        foreach (['(PacketAttributesFault)', 'eshop: Sender does not exist',
+            'weight: Weight is required', 'Invalid packet attributes'] as $detail) {
+            if (!str_contains($expected->getMessage(), $detail)) {
+                throw new RuntimeException('The REST fault detail was lost: ' . $detail);
+            }
+        }
+        if (str_contains($expected->getMessage(), '(HTTP 200)')) {
+            throw new RuntimeException('HTTP status was mistaken for the REST fault code.');
+        }
+    }
     $nestedFault = new PacketaApiClient('secret-password', static fn (): array => [
         'status' => 422, 'body' => '<response><status>fault</status><fault><detail>' .
             '<PacketAttributesFault><attributes><fault><name>phone</name>' .

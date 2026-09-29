@@ -124,7 +124,13 @@ final class PacketaApiClient
     {
         $fault = $response->fault;
         $code = '';
+        $faultName = trim((string) $fault);
+        if (!str_contains($faultName, $this->password) &&
+            preg_match('/^[A-Za-z][A-Za-z0-9_]{0,63}$/D', $faultName) === 1) {
+            $code = $faultName;
+        }
         foreach (['faultCode', 'code', 'type'] as $key) {
+            if ($code !== '') break;
             $candidate = trim((string) $fault->{$key});
             if (!str_contains($candidate, $this->password) &&
                 preg_match('/^[A-Za-z][A-Za-z0-9_]{0,63}$/D', $candidate) === 1) {
@@ -134,7 +140,7 @@ final class PacketaApiClient
         }
         // Some responses put the fault type in a named detail element.
         if ($code === '') {
-            foreach ($fault->xpath('.//*[local-name()="detail"]/*') ?: [] as $detail) {
+            foreach ($response->xpath('.//*[local-name()="detail"]/*') ?: [] as $detail) {
                 if (preg_match('/^[A-Za-z][A-Za-z0-9_]*Fault$/D', $detail->getName()) === 1 ||
                     $detail->getName() === 'SenderNotExists') {
                     $code = $detail->getName();
@@ -143,20 +149,22 @@ final class PacketaApiClient
             }
         }
 
-        $messages = [];
-        foreach (['faultString', 'string', 'message', 'description', 'reason'] as $key) {
-            $message = $this->safeFaultText((string) $fault->{$key});
-            if ($message !== '') $messages[] = $message;
-        }
-        $plain = $this->safeFaultText((string) $fault);
-        if ($plain !== '') $messages[] = $plain;
-
         // Packeta's PacketAttributesFault contains one name/fault pair per invalid field.
-        foreach ($fault->xpath('.//*[local-name()="attributes"]/*[local-name()="fault"]') ?: [] as $field) {
+        // REST returns <fault>, <string> and <detail> beside each other under <response>.
+        $messages = [];
+        foreach ($response->xpath('.//*[local-name()="attributes"]/*[local-name()="fault"]') ?: [] as $field) {
             $name = $this->safeFaultText((string) $field->name);
             $reason = $this->safeFaultText((string) $field->fault);
             if ($reason !== '') $messages[] = ($name !== '' ? $name . ': ' : '') . $reason;
         }
+        foreach ([$response, $fault] as $container) {
+            foreach (['faultString', 'string', 'message', 'description', 'reason'] as $key) {
+                $message = $this->safeFaultText((string) $container->{$key});
+                if ($message !== '') $messages[] = $message;
+            }
+        }
+        $plain = $this->safeFaultText((string) $fault);
+        if ($plain !== '' && $plain !== $code) $messages[] = $plain;
         $messages = array_values(array_unique($messages));
         if ($messages === []) {
             $messages[] = match ($code) {
