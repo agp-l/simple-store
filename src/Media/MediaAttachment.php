@@ -32,19 +32,27 @@ final class MediaAttachment
 
     public static function product(array $current, array $paths): array
     {
-        self::capacity($current, 'product', count($paths));
+        if (count($paths) < 1 || count($paths) > 12) {
+            throw new InvalidArgumentException('Vyber 1 až 12 fotografií.');
+        }
         $form = ProductInlineEditor::fromRevision($current);
         $gallery = $form['gallery'] === '' ? [] : explode("\n", $form['gallery']);
-        if ($form['image_path'] !== 'images/batoh.webp') {
+        $newMain = array_shift($paths);
+        $gallery = array_values(array_filter($gallery, static fn (string $path): bool => $path !== $newMain));
+        if ($form['image_path'] !== 'images/batoh.webp' && $form['image_path'] !== $newMain) {
             $gallery[] = $form['image_path'];
         }
-        $form['image_path'] = array_shift($paths);
+        $form['image_path'] = $newMain;
         foreach ($form['section_type'] as $index => $sectionType) {
             if ($sectionType === 'image' && $form['section_body'][$index] === 'images/batoh.webp') {
                 $form['section_body'][$index] = $form['image_path'];
             }
         }
-        $form['gallery'] = implode("\n", array_merge($gallery, $paths));
+        $gallery = array_values(array_unique(array_merge($gallery, $paths)));
+        if (count($gallery) > 12) {
+            throw new InvalidArgumentException('Galerie může mít nejvýše 12 dalších fotografií. Některé nejdřív odeber.');
+        }
+        $form['gallery'] = implode("\n", $gallery);
         return $form;
     }
 

@@ -37,6 +37,13 @@ $attached = MediaAttachment::product($product, [$path]);
 if ($attached['gallery'] !== 'images/stara.webp') {
     throw new RuntimeException('Původní hlavní obrázek se ztratil.');
 }
+$product['image_path'] = 'images/stara.webp';
+$product['details_json'] = json_encode(['gallery' => [$path],
+    'sections' => [], 'specifications' => [], 'options' => []], JSON_THROW_ON_ERROR);
+$attached = MediaAttachment::product($product, [$path]);
+if ($attached['gallery'] !== 'images/stara.webp') {
+    throw new RuntimeException('Přepnutí fotografie z galerie vytvořilo duplicitu.');
+}
 $product['details_json'] = json_encode(['gallery' => array_fill(0, 12, $path),
     'sections' => [], 'specifications' => [], 'options' => []], JSON_THROW_ON_ERROR);
 try {

@@ -55,6 +55,13 @@ try {
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 try {
     $csrf = $auth->token();
+    if ($method === 'POST' && $_POST === [] && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0 &&
+        str_starts_with((string) ($_SERVER['CONTENT_TYPE'] ?? ''), 'multipart/form-data')) {
+        header('Content-Type: application/json; charset=utf-8');
+        http_response_code(413);
+        echo json_encode(['error' => 'Dávka přesahuje limit PHP post_max_size. Zmenši výběr nebo zvyš limit v php.ini.']);
+        exit;
+    }
     if ($method === 'POST') {
         if (!$auth->validToken($_POST['csrf'] ?? null)) {
             if (in_array($_POST['action'] ?? null, ['inline-product', 'inline-content', 'media-upload', 'media-attach'], true)) {

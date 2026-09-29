@@ -72,8 +72,9 @@ try {
     ], JSON_THROW_ON_ERROR);
 } catch (Throwable $error) {
     error_log((string) $error);
-    http_response_code($error instanceof InvalidArgumentException ? 422 :
-        (str_contains($error->getMessage(), 'mezi') ? 409 : 500));
+    $conflict = str_contains($error->getMessage(), 'mezi') ||
+        str_contains($error->getMessage(), 'changed since');
+    http_response_code($error instanceof InvalidArgumentException ? 422 : ($conflict ? 409 : 500));
     echo json_encode(['error' => $error instanceof InvalidArgumentException || $site['debug']
         ? $error->getMessage() : 'Fotografie se nepodařilo uložit. Zkontroluj oprávnění a nastavení PHP.'], JSON_THROW_ON_ERROR);
 }
