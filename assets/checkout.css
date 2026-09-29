@@ -71,7 +71,7 @@
 .checkout-shipping-option + .checkout-shipping-option { margin-top: 9px; }
 .checkout-shipping-option > a { display: inline-block; margin: 7px 0 4px 17px; color: var(--forest-dark); font-size: 13px; font-weight: 700; }
 .checkout-form:has(input[name="method"][value$="_pickup"]:checked) .checkout-home-fields { display: none; }
-.checkout-form:has(input[name="method"][value$="_home"]:checked) .checkout-pickup-fields { display: none; }
+.checkout-form:not(:has(input[name="method"][value$="_pickup"]:checked)) .checkout-pickup-fields { display: none; }
 .checkout-choice:has(input:checked) { border-color: var(--forest); background: #f5faf1; }
 .checkout-choice input { flex: none; margin-top: 4px; accent-color: var(--forest-dark); }
 .checkout-choice > span:not(.checkout-payment-mark):not(.checkout-selected) { min-width: 0; flex: 1; }

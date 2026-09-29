@@ -37,7 +37,8 @@ use SimpleStore\Checkout\LocalCheckoutPreview;
 use SimpleStore\Checkout\ShippingPolicy;
 
 $example = require dirname(__DIR__) . '/config/checkout.example.php';
-$repo = new CheckoutSettingsRepository(new MeekroDB());
+$db = new MeekroDB();
+$repo = new CheckoutSettingsRepository($db);
 $old = ['bank_transfer' => ['iban' => '', 'account_display' => '', 'recipient' => ''],
     'shipping_methods' => [], 'terms_url' => ''];
 $fallback = CheckoutSettingsRepository::withDefaults($old, $example);
@@ -84,6 +85,15 @@ $disabled = $repo->save(array_replace($input, [
 if ((new ShippingPolicy($disabled['shipping_methods']))->quote('gls_pickup') !== null ||
     (new ShippingPolicy($disabled['shipping_methods']))->quote('ppl_home') !== 120) {
     throw new RuntimeException('Disabled carrier remained available or edited price was lost.');
+}
+$db->json = json_encode(['shipping_methods' => ['home' => [
+    'label' => 'Starý kurýr', 'price_czk' => 149, 'requires_address' => true,
+]]], JSON_THROW_ON_ERROR);
+$migrated = $repo->load($fallback);
+if (count($migrated['shipping_methods']) !== 9 ||
+    isset($migrated['shipping_methods']['home']) ||
+    $migrated['shipping_methods']['ppl_home']['price_czk'] !== 149) {
+    throw new RuntimeException('Older saved courier price was not preserved.');
 }
 $local = ['REMOTE_ADDR' => '127.0.0.1', 'HTTP_HOST' => 'localhost:8080'];
 if (!LocalCheckoutPreview::available($local, true) ||
