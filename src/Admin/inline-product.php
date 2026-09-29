@@ -25,7 +25,7 @@ try {
     }
 
     $categories = new CategoryRepository($db);
-    $repository = new ProductRepository($db, $site['languages'], $categories);
+    $repository = new ProductRepository($db, $site['languages'], $categories, $site['revision_limit']);
     $current = $repository->current($key, $language);
     if ($current === null) {
         throw new InvalidArgumentException('Produkt neexistuje.');

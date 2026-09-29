@@ -46,6 +46,22 @@ final class CategoryPath
         return $child === '' ? $root : $root . '/' . $child;
     }
 
+    /** Older product rows use these storage values for a canonical category. */
+    public static function legacyProductPaths(string $path): array
+    {
+        if ($path === 'spani') {
+            return [['stany', null], ['spacaky', null]];
+        }
+        if ($path === 'spani/stany' || $path === 'spani/spacaky') {
+            return [[substr($path, strlen('spani/')), null]];
+        }
+        if (str_starts_with($path, 'batohy/')) {
+            $old = array_search(substr($path, strlen('batohy/')), self::OLD_BACKPACKS, true);
+            return $old === false ? [] : [['batohy', $old]];
+        }
+        return [];
+    }
+
     public static function forStorage(string $path): array
     {
         if (!self::valid($path)) {

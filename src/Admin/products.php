@@ -8,7 +8,7 @@ use SimpleStore\Product\ProductRepository;
 // This controller is reached only after admin.php has checked the session and CSRF token.
 $screen = 'products';
 $categories = new CategoryRepository($db);
-$repository = new ProductRepository($db, $site['languages'], $categories);
+$repository = new ProductRepository($db, $site['languages'], $categories, $site['revision_limit']);
 $productError = '';
 $productSchemaReady = $categories->installed() && $repository->detailsColumnExists();
 if ($method === 'POST') {

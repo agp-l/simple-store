@@ -17,10 +17,7 @@
     if (event.matches) closeMenu();
   });
 
-  const cards = [...document.querySelectorAll('.product-card')];
   const catalog = document.getElementById('catalog');
-  const search = document.getElementById('search-input');
-  const form = document.getElementById('search-form');
   const format = n => new Intl.NumberFormat('cs-CZ').format(n) + ' Kč';
   const dialog = document.getElementById('cart-dialog');
   let cart = [];
@@ -62,45 +59,28 @@
   dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
   drawCart();
 
-  if (!catalog) {
-    form.addEventListener('submit', event => {
-      event.preventDefault();
-      const catalogUrl = document.querySelector('.identity').getAttribute('href');
-      location.href = catalogUrl + '?search=' + encodeURIComponent(search.value.trim()) + '#produkty';
-    });
-    return;
-  }
+  if (!catalog) return;
 
   const sort = document.getElementById('sort');
-  function update() {
-    const term = search.value.trim().toLocaleLowerCase('cs');
-    let count = 0;
-    cards.forEach(card => {
-      card.hidden = Boolean(term) && !card.textContent.toLocaleLowerCase('cs').includes(term);
-      if (!card.hidden) count++;
-    });
+  function updateCount() {
+    const count = catalog.querySelectorAll('.product-card').length;
     document.getElementById('result-count').textContent =
-      `Zobrazeno ${count} ${count === 1 ? 'produkt' : count > 1 && count < 5 ? 'produkty' : 'produktů'}`;
+      `Načteno ${count} ${count === 1 ? 'produkt' : count > 1 && count < 5 ? 'produkty' : 'produktů'}`;
     document.getElementById('empty').hidden = count !== 0;
   }
-  form.addEventListener('submit', event => {
-    event.preventDefault();
-    document.getElementById('produkty').scrollIntoView({ behavior: 'smooth' });
-    update();
-  });
-  search.addEventListener('input', update);
   sort.addEventListener('change', () => {
-    const ordered = [...cards];
-    if (sort.value === 'price-asc') ordered.sort((a, b) => +a.dataset.price - +b.dataset.price);
-    else if (sort.value === 'price-desc') ordered.sort((a, b) => +b.dataset.price - +a.dataset.price);
-    else if (sort.value === 'name') ordered.sort((a, b) => a.dataset.name.localeCompare(b.dataset.name, 'cs'));
-    else ordered.sort((a, b) => cards.indexOf(a) - cards.indexOf(b));
-    ordered.forEach(card => catalog.append(card));
+    const next = new URL(location.href);
+    next.searchParams.delete('offset');
+    if (sort.value === 'default') next.searchParams.delete('sort');
+    else next.searchParams.set('sort', sort.value);
+    next.hash = 'produkty';
+    location.assign(next.href);
   });
-  document.querySelectorAll('[data-add]').forEach(button => button.addEventListener('click', () => {
+  catalog.addEventListener('click', event => {
+    const button = event.target.closest('[data-add]');
+    if (!button || button.disabled) return;
     const card = button.closest('.product-card');
     window.DobrodruziCart.add({ name: card.dataset.name, price: Number(card.dataset.price) });
-  }));
-  const params = new URLSearchParams(location.search);
-  if (params.has('search')) { search.value = params.get('search'); update(); }
+  });
+  catalog.addEventListener('catalog:more', updateCount);
 })();

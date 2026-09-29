@@ -7,14 +7,9 @@
         <p class="cms-lead">Zatím zde nejsou zveřejněné články.</p>
       <?php else: ?>
         <div class="cms-post-list">
-          <?php foreach ($posts as $post): ?>
-            <article>
-              <time datetime="<?= htmlspecialchars(str_replace(' ', 'T', $post['saved_at']), ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars(date('j. n. Y', strtotime($post['saved_at'])), ENT_QUOTES, 'UTF-8') ?></time>
-              <h2><a href="<?= $siteRoot . $language ?>/blog/<?= rawurlencode($post['slug']) ?>"><?= htmlspecialchars($post['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a></h2>
-              <p><?= htmlspecialchars($post['summary'] ?? '', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
-            </article>
-          <?php endforeach; ?>
+          <?php foreach ($posts as $post): require __DIR__ . '/blog-card.php'; endforeach; ?>
         </div>
+        <?php if ($nextUrl !== ''): ?><div class="load-more-wrap"><a class="load-more" data-load-more data-target="cms-post-list" href="<?= htmlspecialchars($nextUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">Načíst další články</a></div><?php endif; ?>
       <?php endif; ?>
     </div>
   </main>

@@ -48,7 +48,7 @@ if ($missing !== []) {
 try {
     $database = require $databaseFile;
     $db = ConnectionFactory::create($database);
-    $contents = new ContentRepository($db, $site['languages']);
+    $contents = new ContentRepository($db, $site['languages'], $site['revision_limit']);
     $categories = new CategoryRepository($db);
     $menus = new MenuManager($contents, $categories, $url, require __DIR__ . '/config/menus.php');
     $hasContent = (int) $db->queryFirstField(
@@ -91,12 +91,38 @@ try {
             'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
             'product_revisions'
         ) > 0;
-        $published = $hasProducts
-            ? (new ProductRepository($db, $site['languages']))->published($url->getLanguage()) : [];
-        $shared['products'] = $path === null ? $published : array_values(array_filter(
-            $published,
-            static fn (array $row): bool => CategoryPath::contains($path, CategoryPath::fromProduct($row))
-        ));
+        $offset = filter_var($_GET['offset'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 100000]]);
+        $rawSearch = $_GET['search'] ?? '';
+        if ($offset === false || !is_string($rawSearch) || strlen($rawSearch) > 200) {
+            $renderer->render('not-found', $shared, 400);
+            exit;
+        }
+        $search = trim($rawSearch);
+        $sort = $_GET['sort'] ?? 'default';
+        if (!is_string($sort) || !in_array($sort, ['default', 'price-asc', 'price-desc', 'name'], true)) {
+            $sort = 'default';
+        }
+        $batch = $hasProducts
+            ? (new ProductRepository($db, $site['languages']))->publishedPage(
+                $url->getLanguage(), $path, $search, $sort, $offset
+            ) : ['items' => [], 'nextOffset' => null];
+        $shared['products'] = $batch['items'];
+        $shared['searchTerm'] = $search;
+        $shared['sortChoice'] = $sort;
+        $shared['searchAction'] = $path === null ? $url->path() : $url->category($path);
+        $nextUrl = $batch['nextOffset'] === null ? '' : $shared['searchAction'] . '?' . http_build_query(
+            array_filter(['search' => $search, 'sort' => $sort === 'default' ? '' : $sort,
+                'offset' => $batch['nextOffset']], static fn (mixed $value): bool => $value !== '')
+        );
+        $shared['nextUrl'] = $nextUrl;
+        if (($_GET['partial'] ?? '') === '1') {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'html' => $renderer->cards('product', $batch['items'], $shared),
+                'nextUrl' => $nextUrl,
+            ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+            exit;
+        }
         if (!$hasProducts) {
             $shared['setupNotice'] = 'Pro správu produktů importuj aktuální database/schema.sql.';
         } elseif (!$categories->installed()) {
@@ -136,9 +162,25 @@ try {
             ),
         ], $item === null ? 404 : 200);
     } elseif ($route['name'] === 'blog') {
+        $offset = filter_var($_GET['offset'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 100000]]);
+        if ($offset === false) {
+            $renderer->render('not-found', $shared, 400);
+            exit;
+        }
+        $batch = $hasContent ? $contents->publishedPostsPage($url->getLanguage(), $offset)
+            : ['items' => [], 'nextOffset' => null];
+        $nextUrl = $batch['nextOffset'] === null ? '' : $url->path('blog') . '?offset=' . $batch['nextOffset'];
+        if (($_GET['partial'] ?? '') === '1') {
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'html' => $renderer->cards('post', $batch['items'], $shared),
+                'nextUrl' => $nextUrl,
+            ], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+            exit;
+        }
         $renderer->render('blog', $shared + [
             'title' => 'Blog — dobrodruzi.cz',
-            'posts' => $contents->publishedPosts($url->getLanguage()),
+            'posts' => $batch['items'], 'nextUrl' => $nextUrl,
         ]);
     } elseif ($route['name'] === 'page' || $route['name'] === 'post') {
         $type = $route['name'];

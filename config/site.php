@@ -7,4 +7,6 @@ return [
     'default_language' => 'cs',
     // Add another language only after its interface texts have been translated.
     'languages' => ['cs'],
+    // Keep the newest 50 snapshots per product/page/post and language.
+    'revision_limit' => 50,
 ];

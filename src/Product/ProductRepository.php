@@ -19,19 +19,70 @@ final class ProductRepository
     public function __construct(
         private MeekroDB $db,
         private array $languages = ['cs'],
-        private ?CategoryRepository $categories = null
+        private ?CategoryRepository $categories = null,
+        private int $revisionLimit = 50
     )
     {
+        if ($revisionLimit < 1) {
+            throw new InvalidArgumentException('The revision limit must be positive.');
+        }
     }
 
-    public function published(string $language): array
+    /** Fetch one SQL-filtered slice; the extra row tells the UI whether more exists. */
+    public function publishedPage(
+        string $language,
+        ?string $category = null,
+        string $search = '',
+        string $sort = 'default',
+        int $offset = 0,
+        int $limit = 12
+    ): array
     {
-        return $this->db->query(
+        if ($offset < 0 || $offset > 100000 || $limit < 1 || $limit > 48) {
+            throw new InvalidArgumentException('Invalid catalog page.');
+        }
+        $where = 'language=%s AND published=1 AND active_product_key IS NOT NULL';
+        $values = [$language];
+        if ($category !== null) {
+            if (!CategoryPath::valid($category)) {
+                throw new InvalidArgumentException('Invalid category path.');
+            }
+            [$root, $child] = CategoryPath::forStorage($category);
+            $parts = [];
+            if ($child === '') {
+                $parts[] = 'category=%s';
+                $values[] = $root;
+            } else {
+                $parts[] = '(category=%s AND (subcategory=%s OR subcategory LIKE %s))';
+                array_push($values, $root, $child, $child . '/%');
+            }
+            foreach (CategoryPath::legacyProductPaths($category) as [$oldRoot, $oldChild]) {
+                $parts[] = $oldChild === null ? 'category=%s' : '(category=%s AND subcategory=%s)';
+                $values[] = $oldRoot;
+                if ($oldChild !== null) $values[] = $oldChild;
+            }
+            $where .= ' AND (' . implode(' OR ', $parts) . ')';
+        }
+        $search = trim($search);
+        if ($search !== '') {
+            $where .= ' AND (LOCATE(%s, name)>0 OR LOCATE(%s, brand)>0 OR LOCATE(%s, summary)>0)';
+            array_push($values, $search, $search, $search);
+        }
+        $order = match ($sort) {
+            'price-asc' => 'price_czk ASC, id DESC',
+            'price-desc' => 'price_czk DESC, id DESC',
+            'name' => 'name ASC, id DESC',
+            default => 'id DESC',
+        };
+        array_push($values, $limit + 1, $offset);
+        $rows = $this->db->query(
             'SELECT slug, name, brand, summary, details_json, category, subcategory,
                     price_czk, image_path, sizes, stock_status
-             FROM product_revisions WHERE language=%s AND published=1
-             AND active_product_key IS NOT NULL ORDER BY id DESC', $language
+             FROM product_revisions WHERE ' . $where . ' ORDER BY ' . $order . ' LIMIT %i OFFSET %i',
+            ...$values
         );
+        $hasMore = count($rows) > $limit;
+        return ['items' => array_slice($rows, 0, $limit), 'nextOffset' => $hasMore ? $offset + $limit : null];
     }
 
     public function findPublished(string $slug, string $language): ?array
@@ -198,6 +249,13 @@ final class ProductRepository
                 'stock_status' => $stock, 'published' => (int) $published,
             ]);
             $id = $this->db->insertId();
+            if ($revision > $this->revisionLimit) {
+                $this->db->query(
+                    'DELETE FROM product_revisions WHERE product_key=%s AND language=%s
+                     AND active_product_key IS NULL AND revision_number<=%i',
+                    $key, $language, $revision - $this->revisionLimit
+                );
+            }
             $this->db->commit();
             return ['id' => $id, 'product_key' => $key, 'language' => $language, 'revision_number' => $revision];
         } catch (Throwable $error) {

@@ -8,6 +8,7 @@ class MeekroDB
     public ?int $currentRevision = null;
     public array $inserted = [];
     public bool $rolledBack = false;
+    public array $deletions = [];
 
     public function queryFirstField(string $sql, mixed ...$values): int
     {
@@ -16,6 +17,9 @@ class MeekroDB
 
     public function query(string $sql, mixed ...$values): array
     {
+        if (str_contains($sql, 'DELETE FROM')) {
+            $this->deletions[] = [$sql, $values];
+        }
         if (str_contains($sql, 'FROM catalog_categories')) {
             return [['path' => 'boty', 'title' => 'Boty', 'sort_order' => 1]];
         }
@@ -33,12 +37,16 @@ class MeekroDB
         if (str_contains($sql, 'SELECT type FROM content_revisions')) {
             return $this->sourceType === null ? null : ['type' => $this->sourceType];
         }
-        if (str_contains($sql, 'SELECT product_key FROM product_revisions')) {
+        if (str_contains($sql, 'SELECT product_key FROM product_revisions WHERE product_key=%s')) {
             return $this->sourceType === null ? null : ['product_key' => $values[0]];
         }
         if (str_contains($sql, 'SELECT id, type, revision_number FROM content_revisions') &&
             $this->currentRevision !== null) {
             return ['id' => 1, 'type' => 'page', 'revision_number' => $this->currentRevision];
+        }
+        if (str_contains($sql, 'SELECT id, revision_number FROM product_revisions') &&
+            $this->currentRevision !== null) {
+            return ['id' => 1, 'revision_number' => $this->currentRevision];
         }
         return null;
     }
@@ -93,6 +101,28 @@ try {
     if (!$db->rolledBack || $db->inserted !== []) {
         throw new RuntimeException('An invalid product translation inserted a revision.');
     }
+}
+
+$db = new MeekroDB();
+$db->sourceType = 'page';
+$db->currentRevision = 2;
+$content = new ContentRepository($db, ['cs', 'en'], 2);
+$saved = $content->saveRevision($page, $key, 2);
+if ($saved['revision_number'] !== 3 || count($db->deletions) !== 1 ||
+    !str_contains($db->deletions[0][0], 'active_document_key IS NULL') ||
+    $db->deletions[0][1] !== [$key, 'en', 1]) {
+    throw new RuntimeException('Content pruning must only remove inactive old revisions in the same language.');
+}
+
+$db = new MeekroDB();
+$db->sourceType = 'product';
+$db->currentRevision = 2;
+$products = new ProductRepository($db, ['cs'], new CategoryRepository($db), 2);
+$saved = $products->saveRevision($product, $key, 2);
+if ($saved['revision_number'] !== 3 || count($db->deletions) !== 1 ||
+    !str_contains($db->deletions[0][0], 'active_product_key IS NULL') ||
+    $db->deletions[0][1] !== [$key, 'cs', 1]) {
+    throw new RuntimeException('Product pruning must only remove inactive old revisions in the same language.');
 }
 
 echo "Revision guard tests passed.\n";

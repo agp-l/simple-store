@@ -10,7 +10,7 @@ ob_start();
 $renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs']);
 $html = ob_get_clean();
 
-if (!str_contains($html, 'Zobrazeno 0 produktů') ||
+if (!str_contains($html, 'Načteno 0 produktů') ||
     !str_contains($html, 'Zatím tu nejsou zveřejněné produkty') ||
     !str_contains($html, 'href="/shop/cs"') ||
     str_contains($html, 'produkt-topo-terraventure.php') ||
@@ -29,7 +29,7 @@ $html = ob_get_clean();
 if (!str_contains($html, '/shop/cs/produkt/bota') ||
     !str_contains($html, 'data-name="Lehká bota"') ||
     !str_contains($html, 'data-add') ||
-    !str_contains($html, 'Zobrazeno 1 produkt')) {
+    !str_contains($html, 'Načteno 1 produkt')) {
     throw new RuntimeException('Published database rows must render as usable product cards.');
 }
 

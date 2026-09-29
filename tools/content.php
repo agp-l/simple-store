@@ -26,7 +26,8 @@ if ($missing !== []) {
 $database = require $root . '/config/database.php';
 $content = new ContentRepository(
     ConnectionFactory::create($database),
-    $site['languages']
+    $site['languages'],
+    $site['revision_limit']
 );
 
 $command = $argv[1] ?? '';

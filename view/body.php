@@ -17,7 +17,7 @@ $productWord = $productCount === 1 ? 'produkt' : ($productCount >= 2 && $product
       <div>
         <h2 id="section-title"><?= $escape($currentCategory['title'] ?? 'Objevte vybavení') ?></h2>
         <p id="section-description"><?= $currentCategory === null ? 'Poctivý výběr pro pohodlí na stezce i mimo ni.' : 'Vybavení na každou cestu. Vyberte si z nabídky níže.' ?></p>
-      </div><span class="result-count" id="result-count" aria-live="polite">Zobrazeno <?= $productCount . ' ' . $productWord ?></span>
+      </div><span class="result-count" id="result-count" aria-live="polite">Načteno <?= $productCount . ' ' . $productWord ?></span>
     </div>
     <div class="tools">
       <?php if ($categoryMenuRoot !== null && $categoryMenu !== []): ?>
@@ -26,11 +26,11 @@ $productWord = $productCount === 1 ? 'produkt' : ($productCount >= 2 && $product
         </nav>
       <?php endif; ?>
       <label class="sort-wrap">Řadit podle
-        <select id="sort">
-          <option value="default">Doporučené</option>
-          <option value="price-asc">Od nejlevnějšího</option>
-          <option value="price-desc">Od nejdražšího</option>
-          <option value="name">Podle názvu</option>
+        <select id="sort" aria-label="Řadit produkty">
+          <option value="default" <?= $sortChoice === 'default' ? 'selected' : '' ?>>Nejnovější</option>
+          <option value="price-asc" <?= $sortChoice === 'price-asc' ? 'selected' : '' ?>>Od nejlevnějšího</option>
+          <option value="price-desc" <?= $sortChoice === 'price-desc' ? 'selected' : '' ?>>Od nejdražšího</option>
+          <option value="name" <?= $sortChoice === 'name' ? 'selected' : '' ?>>Podle názvu</option>
         </select></label>
     </div>
     <section class="catalog" id="catalog" aria-label="Nabídka produktů">
@@ -38,7 +38,8 @@ $productWord = $productCount === 1 ? 'produkt' : ($productCount >= 2 && $product
         <?php foreach ($products as $product): require __DIR__ . '/product-card.php'; endforeach; ?>
       <?php endif; ?>
     </section>
-    <div class="empty" id="empty" <?= $products !== [] ? 'hidden' : '' ?>>Zatím tu nejsou zveřejněné produkty. Nabídku připravujeme.</div>
+    <div class="empty" id="empty" <?= $products !== [] ? 'hidden' : '' ?>><?= $searchTerm !== '' ? 'Pro zadaný výraz jsme nic nenašli.' : 'Zatím tu nejsou zveřejněné produkty. Nabídku připravujeme.' ?></div>
+    <?php if ($nextUrl !== ''): ?><div class="load-more-wrap"><a class="load-more" data-load-more data-target="catalog" href="<?= $escape($nextUrl) ?>">Načíst další produkty</a></div><?php endif; ?>
     <section class="category-panel" id="kategorie" aria-labelledby="category-title">
       <div class="category-panel-copy">
         <h2 id="category-title">Kam dál?</h2>

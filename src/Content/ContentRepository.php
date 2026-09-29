@@ -9,11 +9,14 @@ use SimpleStore\Navigation\Slugger;
 use RuntimeException;
 use Throwable;
 
-/** Read current content and keep every earlier revision in the same table. */
+/** Read current content and keep a bounded history of earlier revisions. */
 final class ContentRepository
 {
-    public function __construct(private MeekroDB $db, private array $languages = ['cs'])
+    public function __construct(private MeekroDB $db, private array $languages = ['cs'], private int $revisionLimit = 50)
     {
+        if ($revisionLimit < 1) {
+            throw new InvalidArgumentException('The revision limit must be positive.');
+        }
     }
 
     public function findPublished(string $type, string $slug, string $language): ?array
@@ -35,15 +38,20 @@ final class ContentRepository
         );
     }
 
-    public function publishedPosts(string $language): array
+    public function publishedPostsPage(string $language, int $offset = 0, int $limit = 6): array
     {
-        return $this->db->query(
+        if ($offset < 0 || $offset > 100000 || $limit < 1 || $limit > 48) {
+            throw new InvalidArgumentException('Invalid blog page.');
+        }
+        $rows = $this->db->query(
             'SELECT document_key, language, slug, title, summary, saved_at
              FROM content_revisions WHERE type=%s AND language=%s
              AND active_document_key IS NOT NULL AND published=1
-             ORDER BY saved_at DESC, id DESC',
-            'post', $language
+             ORDER BY id DESC LIMIT %i OFFSET %i',
+            'post', $language, $limit + 1, $offset
         );
+        $hasMore = count($rows) > $limit;
+        return ['items' => array_slice($rows, 0, $limit), 'nextOffset' => $hasMore ? $offset + $limit : null];
     }
 
     public function menuPages(string $language): array
@@ -104,7 +112,7 @@ final class ContentRepository
         );
     }
 
-    /** Insert a snapshot; the previous snapshot remains available in history(). */
+    /** Insert a snapshot and retain the configured number of revisions. */
     public function saveRevision(array $fields, ?string $documentKey = null, ?int $expectedRevision = null): array
     {
         $type = (string) ($fields['type'] ?? '');
@@ -198,6 +206,13 @@ final class ContentRepository
                 'menu_order' => $menuOrder,
             ]);
             $id = $this->db->insertId();
+            if ($revision > $this->revisionLimit) {
+                $this->db->query(
+                    'DELETE FROM content_revisions WHERE document_key=%s AND language=%s
+                     AND active_document_key IS NULL AND revision_number<=%i',
+                    $documentKey, $language, $revision - $this->revisionLimit
+                );
+            }
             $this->db->commit();
             return ['id' => $id, 'document_key' => $documentKey, 'language' => $language, 'revision_number' => $revision];
         } catch (Throwable $error) {

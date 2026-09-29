@@ -4,7 +4,7 @@ CREATE DATABASE IF NOT EXISTS simple_store
 USE simple_store;
 
 -- Each save inserts a complete snapshot of a page or blog post.
--- Only the active_* columns on the previous row are cleared when saving.
+-- Older inactive snapshots are pruned to config/site.php revision_limit after saving.
 CREATE TABLE IF NOT EXISTS content_revisions (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   document_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,

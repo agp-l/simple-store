@@ -94,7 +94,7 @@ try {
         throw new RuntimeException('Nejdřív nastav databázi a spusť composer install.');
     }
     $db = ConnectionFactory::create(require __DIR__ . '/config/database.php');
-    $content = new ContentRepository($db, $site['languages']);
+    $content = new ContentRepository($db, $site['languages'], $site['revision_limit']);
     $screen = 'editor';
 
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'inline-product') {

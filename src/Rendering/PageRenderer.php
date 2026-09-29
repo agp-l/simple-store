@@ -37,6 +37,10 @@ final class PageRenderer
         $content = $data['content'] ?? null;
         $posts = $data['posts'] ?? [];
         $products = $data['products'] ?? [];
+        $nextUrl = (string) ($data['nextUrl'] ?? '');
+        $searchTerm = (string) ($data['searchTerm'] ?? '');
+        $searchAction = (string) ($data['searchAction'] ?? $basePath . $language);
+        $sortChoice = (string) ($data['sortChoice'] ?? 'default');
         $product = $data['product'] ?? null;
         $canEditProduct = (bool) ($data['canEditProduct'] ?? false);
         $editMode = (bool) ($data['editMode'] ?? false);
@@ -51,5 +55,33 @@ final class PageRenderer
         $debugError = (string) ($data['debugError'] ?? '');
         $showErrors = (bool) ($data['showErrors'] ?? true);
         require $this->viewPath . '/layout.php';
+    }
+
+    /** Reuse the same card templates for the first page and additional batches. */
+    public function cards(string $kind, array $items, array $data): string
+    {
+        if (!in_array($kind, ['product', 'post'], true)) {
+            throw new InvalidArgumentException('Unknown card type.');
+        }
+        $basePath = (string) $data['basePath'];
+        $language = (string) $data['language'];
+        $siteRoot = htmlspecialchars($basePath, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $categoryLabels = $data['categoryLabels'] ?? [];
+        ob_start();
+        try {
+            foreach ($items as $item) {
+                if ($kind === 'product') {
+                    $product = $item;
+                    require $this->viewPath . '/product-card.php';
+                } else {
+                    $post = $item;
+                    require $this->viewPath . '/blog-card.php';
+                }
+            }
+            return (string) ob_get_clean();
+        } catch (\Throwable $error) {
+            ob_end_clean();
+            throw $error;
+        }
     }
 }

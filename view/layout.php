@@ -27,6 +27,7 @@ switch ($page) {
 <?php require __DIR__ . '/footer.php'; ?>
 <?php require __DIR__ . '/cart.php'; ?>
 <script defer src="<?= $siteRoot ?>assets/app.js"></script>
+<?php if ($page === 'catalog' || $page === 'blog'): ?><script defer src="<?= $siteRoot ?>assets/load-more.js"></script><?php endif; ?>
 <?php if ($page === 'product-record'): ?><script defer src="<?= $siteRoot ?>assets/product.js"></script><?php endif; ?>
 <?php if ($editMode): ?><script defer src="<?= $siteRoot ?>assets/inline-editor.js"></script><?php endif; ?>
 <?php if ($contentEditMode): ?><script defer src="<?= $siteRoot ?>assets/content-editor.js"></script><?php endif; ?>
