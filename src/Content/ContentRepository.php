@@ -64,6 +64,43 @@ final class ContentRepository
         );
     }
 
+    /** Include drafts and hidden pages for the menu editor. */
+    public function pagesForMenu(string $language): array
+    {
+        return $this->db->query(
+            'SELECT document_key, language, slug, title, published, visible_in_menu,
+                    menu_order, revision_number
+             FROM content_revisions WHERE type=%s AND language=%s
+             AND active_document_key IS NOT NULL ORDER BY menu_order ASC, title ASC',
+            'page', $language
+        );
+    }
+
+    /** Changing menu visibility or order is another complete document revision. */
+    public function saveMenuPosition(string $key, string $language, int $expected, bool $visible, int $order): void
+    {
+        if ($order < 0 || $order > 65535) {
+            throw new InvalidArgumentException('Pořadí v menu musí být mezi 0 a 65535.');
+        }
+        $current = $this->currentDocument($key, $language);
+        if ($current === null || $current['type'] !== 'page') {
+            throw new InvalidArgumentException('Stránka neexistuje.');
+        }
+        if ((int) $current['revision_number'] !== $expected) {
+            throw new RuntimeException('This document changed since you opened it. Reload before saving.');
+        }
+        if ((bool) $current['visible_in_menu'] === $visible && (int) $current['menu_order'] === $order) {
+            return;
+        }
+        $this->saveRevision([
+            'type' => 'page', 'language' => $language,
+            'slug' => $current['slug'], 'title' => $current['title'],
+            'summary' => $current['summary'], 'body' => $current['body'],
+            'published' => (bool) $current['published'],
+            'visible_in_menu' => $visible, 'menu_order' => $order,
+        ], $key, $expected);
+    }
+
     /** List current versions, including drafts, for the editor only. */
     public function currentDocuments(): array
     {

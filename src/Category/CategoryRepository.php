@@ -3,7 +3,9 @@ declare(strict_types=1);
 
 namespace SimpleStore\Category;
 
+use InvalidArgumentException;
 use MeekroDB;
+use SimpleStore\Navigation\Slugger;
 
 /** Read a small tree of paths from one table; no parent IDs or joins. */
 final class CategoryRepository
@@ -96,5 +98,83 @@ final class CategoryRepository
             $path = CategoryPath::parent($path);
         } while ($path !== '');
         return $trail;
+    }
+
+    /** Include hidden categories so an editor can turn them back on. */
+    public function allForAdmin(string $language): array
+    {
+        $rows = $this->db->query(
+            'SELECT path, title, sort_order, enabled FROM catalog_categories WHERE language=%s', $language
+        );
+        $children = [];
+        foreach ($rows as $row) {
+            $children[CategoryPath::parent($row['path'])][] = $row;
+        }
+        $ordered = [];
+        $visit = static function (string $parent, int $depth) use (&$visit, &$ordered, $children): void {
+            $siblings = $children[$parent] ?? [];
+            usort($siblings, static fn (array $a, array $b): int =>
+                ((int) $a['sort_order'] <=> (int) $b['sort_order']) ?: strcmp($a['title'], $b['title']));
+            foreach ($siblings as $row) {
+                $row['depth'] = $depth;
+                $ordered[] = $row;
+                $visit($row['path'], $depth + 1);
+            }
+        };
+        $visit('', 0);
+        return $ordered;
+    }
+
+    public function findForAdmin(string $language, string $path): ?array
+    {
+        if (!CategoryPath::valid($path)) return null;
+        return $this->db->queryFirstRow(
+            'SELECT path, title, sort_order, enabled FROM catalog_categories
+             WHERE language=%s AND path=%s LIMIT 1', $language, $path
+        );
+    }
+
+    public function create(string $language, string $parent, string $slug, string $title, int $order): string
+    {
+        $title = trim($title);
+        $slug = trim($slug) === '' ? Slugger::fromTitle($title) : trim($slug);
+        $path = $parent === '' ? $slug : $parent . '/' . $slug;
+        $this->validate($language, $path, $title, $order);
+        if (str_contains($slug, '/') || ($parent !== '' && $this->find($language, $parent) === null)) {
+            throw new InvalidArgumentException('Vyber existující zapnutou nadřazenou kategorii.');
+        }
+        if ($this->findForAdmin($language, $path) !== null) {
+            throw new InvalidArgumentException('Tato adresa kategorie se už používá.');
+        }
+        $this->db->insert('catalog_categories', [
+            'language' => $language, 'path' => $path, 'title' => $title,
+            'sort_order' => $order, 'enabled' => 1,
+        ]);
+        unset($this->cache[$language]);
+        return $path;
+    }
+
+    public function update(string $language, string $path, string $title, int $order, bool $enabled): void
+    {
+        $title = trim($title);
+        $this->validate($language, $path, $title, $order);
+        if ($this->findForAdmin($language, $path) === null) {
+            throw new InvalidArgumentException('Kategorie neexistuje.');
+        }
+        $this->db->query(
+            'UPDATE catalog_categories SET title=%s, sort_order=%i, enabled=%i
+             WHERE language=%s AND path=%s',
+            $title, $order, (int) $enabled, $language, $path
+        );
+        unset($this->cache[$language]);
+    }
+
+    private function validate(string $language, string $path, string $title, int $order): void
+    {
+        if (preg_match('/^[a-z]{2}$/D', $language) !== 1 || !CategoryPath::valid($path) ||
+            $title === '' || preg_match('/^.{1,160}$/usD', $title) !== 1 ||
+            $order < 0 || $order > 65535) {
+            throw new InvalidArgumentException('Zkontroluj název, adresu a pořadí kategorie.');
+        }
     }
 }
