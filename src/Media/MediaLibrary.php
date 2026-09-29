@@ -159,11 +159,13 @@ final class MediaLibrary
     private function prepareDirectory(string $relative): void
     {
         $folder = $this->root;
+        $path = '';
         foreach (explode('/', $relative) as $part) {
+            $path .= ($path === '' ? '' : '/') . $part;
             $folder .= '/' . $part;
             if (is_link($folder)) throw new RuntimeException('Složka fotografií nesmí být symbolický odkaz.');
-            if (!is_dir($folder) && !mkdir($folder, 0775) && !is_dir($folder)) {
-                throw new RuntimeException('Složku fotografií nelze vytvořit. Zkontroluj práva k images/.');
+            if (!is_dir($folder) && !@mkdir($folder, 0775) && !is_dir($folder)) {
+                throw new RuntimeException('Složku ' . $path . '/ nelze vytvořit. Zkontroluj práva k její nadřazené složce.');
             }
         }
     }
