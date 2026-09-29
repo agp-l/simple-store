@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+require dirname(__DIR__) . '/src/bootstrap.php';
 
 $basePath = '/shop/';
 $adminUrl = $basePath . 'admin.php';
@@ -123,7 +124,9 @@ if (!str_contains($html, 'DB-20260929-1') ||
 
 $screen = 'settings';
 $settingsError = '';
-$form = ['home_label' => 'Kurýr', 'home_price_czk' => '120',
+$shippingCatalog = \SimpleStore\Checkout\ShippingPolicy::defaults();
+$form = ['shipping_price' => array_fill_keys(array_keys($shippingCatalog), '120'),
+    'shipping_enabled' => array_fill_keys(array_keys($shippingCatalog), '1'),
     'account_display' => '123456/0100', 'iban' => '', 'recipient' => 'Test',
     'payment_due_days' => '7', 'terms_url' => '', 'local_test_checkout' => '1'];
 ob_start();
@@ -132,8 +135,27 @@ $html = ob_get_clean();
 if (!str_contains($html, 'Nastavení obchodu') ||
     !str_contains($html, 'value="save-checkout-settings"') ||
     !str_contains($html, 'value="123456/0100"') ||
+    !str_contains($html, 'name="shipping_price[gls_pickup]"') ||
     !str_contains($html, 'name="csrf" value="test-token"')) {
     throw new RuntimeException('Authenticated checkout settings form is missing.');
+}
+
+$screen = 'users';
+$usersError = '';
+$search = '';
+$offset = 0;
+$usersPage = ['items' => [['id' => 7, 'display_name' => 'Eva <script>',
+    'email' => 'eva@example.org', 'is_active' => 1, 'order_count' => 2]], 'nextOffset' => null];
+$customer = $usersPage['items'][0] + ['phone' => '', 'address_count' => 1];
+$customerOrders = [];
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'Zákazníci') || !str_contains($html, 'name="action" value="customer-update"') ||
+    !str_contains($html, 'name="action" value="customer-active"') ||
+    !str_contains($html, 'name="action" value="customer-create"') ||
+    !str_contains($html, 'Eva &lt;script&gt;') || str_contains($html, 'Eva <script>')) {
+    throw new RuntimeException('Customer administration is missing or exposes unescaped data.');
 }
 
 echo "Admin rendering tests passed.\n";

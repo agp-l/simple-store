@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use SimpleStore\Checkout\CheckoutSettingsRepository;
+use SimpleStore\Checkout\ShippingPolicy;
 
 // admin.php has already verified the administrator session and form token.
 $screen = 'settings';
@@ -12,9 +13,10 @@ $fallback = CheckoutSettingsRepository::withDefaults(
     is_file($localFile) ? require $localFile : $example, $example);
 $repository = new CheckoutSettingsRepository($db);
 $settings = $repository->load($fallback);
+$shippingCatalog = ShippingPolicy::defaults();
 $form = [
-    'home_label' => $settings['shipping_methods']['home']['label'] ?? 'Doručení na adresu',
-    'home_price_czk' => (string) ($settings['shipping_methods']['home']['price_czk'] ?? 99),
+    'shipping_price' => [],
+    'shipping_enabled' => [],
     'account_display' => $settings['bank_transfer']['account_display'] ?? '',
     'iban' => $settings['bank_transfer']['iban'] ?? '',
     'recipient' => $settings['bank_transfer']['recipient'] ?? '',
@@ -22,6 +24,11 @@ $form = [
     'terms_url' => $settings['terms_url'] ?? '',
     'local_test_checkout' => ($settings['local_test_checkout'] ?? true) === true ? '1' : '0',
 ];
+foreach ($shippingCatalog as $code => $definition) {
+    $saved = $settings['shipping_methods'][$code] ?? $definition;
+    $form['shipping_price'][$code] = (string) ($saved['price_czk'] ?? $definition['price_czk']);
+    $form['shipping_enabled'][$code] = ($saved['enabled'] ?? true) === true ? '1' : '0';
+}
 if ($method === 'POST') {
     try {
         $repository->save($_POST, $basePath);
@@ -36,5 +43,11 @@ if ($method === 'POST') {
             }
         }
         $form['local_test_checkout'] = ($_POST['local_test_checkout'] ?? null) === '1' ? '1' : '0';
+        foreach ($shippingCatalog as $code => $definition) {
+            if (is_string($_POST['shipping_price'][$code] ?? null)) {
+                $form['shipping_price'][$code] = $_POST['shipping_price'][$code];
+            }
+            $form['shipping_enabled'][$code] = ($_POST['shipping_enabled'][$code] ?? null) === '1' ? '1' : '0';
+        }
     }
 }

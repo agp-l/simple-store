@@ -24,6 +24,14 @@ if (substr_count($html, '<footer class="foot">') !== 1 ||
     !str_contains($html, 'href="/simple-store/account.php"')) {
     throw new RuntimeException('Registration must reuse the store shell and provide an account form.');
 }
+$checkoutReturn = '/simple-store/cs/pokladna?step=shipping';
+ob_start();
+require dirname(__DIR__) . '/view/account/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'action="/simple-store/account.php?mode=register&amp;checkout=1"') ||
+    !str_contains($html, '/simple-store/account.php?checkout=1')) {
+    throw new RuntimeException('Registration during checkout lost its return destination.');
+}
 
 $screen = 'account';
 $section = 'addresses';

@@ -32,4 +32,11 @@ $testOrder = ($order['payment_method'] ?? '') === 'test';
     </aside>
     <?php else: ?><section class="checkout-panel"><h2>Platba přijata</h2><p>Za tuto objednávku už neplaťte znovu.</p><a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a></section><?php endif; ?>
   </div>
+  <?php if (isset($order['subtotal_czk'], $order['shipping_czk'], $order['total_czk'])): ?>
+  <section class="checkout-panel checkout-receipt"><h2>Souhrn nákupu</h2><dl>
+    <div><dt>Produkty</dt><dd><?= $checkoutMoney((int) $order['subtotal_czk']) ?></dd></div>
+    <div><dt><?= $checkoutEscape($order['shipping']['label'] ?? 'Doprava') ?></dt><dd><?= $checkoutMoney((int) $order['shipping_czk']) ?></dd></div>
+    <div><dt>Celkem</dt><dd><strong><?= $checkoutMoney((int) $order['total_czk']) ?></strong></dd></div>
+  </dl><?php if (!empty($order['shipping']['pickup_point'])): ?><p>Výdejní místo: <?= $checkoutEscape($order['shipping']['pickup_point']) ?>, <?= $checkoutEscape($order['shipping']['pickup_address'] ?? '') ?></p><?php endif; ?></section>
+  <?php endif; ?>
 </main>

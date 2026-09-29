@@ -1052,6 +1052,7 @@
       }
       .account-desktop { display: none; }
       .account-mobile { display: inline; }
+      .header-actions .account-register { display: none; }
 
       .utility {
         height: auto;

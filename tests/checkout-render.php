@@ -8,8 +8,12 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 
 $config = require dirname(__DIR__) . '/config/checkout.example.php';
 $options = (new ShippingPolicy($config['shipping_methods']))->options();
-if (count($options) !== 1 || $options[0]['code'] !== 'home' || $options[0]['price_czk'] !== 99) {
-    throw new RuntimeException('Default checkout must offer home delivery at its documented price.');
+if (count($options) !== 9 ||
+    !in_array(['code' => 'gls_pickup', 'price_czk' => 59],
+        array_map(static fn (array $row): array => ['code' => $row['code'], 'price_czk' => $row['price_czk']], $options), true) ||
+    !in_array(['code' => 'ppl_home', 'price_czk' => 99],
+        array_map(static fn (array $row): array => ['code' => $row['code'], 'price_czk' => $row['price_czk']], $options), true)) {
+    throw new RuntimeException('All nine carrier methods must be offered at documented defaults.');
 }
 
 $renderer = new PageRenderer(dirname(__DIR__) . '/view');
@@ -37,9 +41,11 @@ if (!str_contains($cart, 'href="/simple-store/cs/pokladna?step=shipping"') ||
 ob_start();
 $renderer->render('shipping', $data);
 $shipping = ob_get_clean();
-if (!str_contains($shipping, 'value="home"') || !str_contains($shipping, '99 Kč') ||
+if (!str_contains($shipping, 'value="ppl_home"') || !str_contains($shipping, '99 Kč') ||
+    !str_contains($shipping, 'value="gls_pickup"') || !str_contains($shipping, '59 Kč') ||
+    !str_contains($shipping, 'Vybrat adresu výdejního místa') ||
     !str_contains($shipping, 'Pokračovat k platbě')) {
-    throw new RuntimeException('Home delivery form must show the configured price and continue action.');
+    throw new RuntimeException('Carrier choices, pickup map and prices are missing.');
 }
 $data['customerAddresses'] = [['id' => 4, 'label' => 'Domů', 'street' => 'Polní 1',
     'city' => 'Brno', 'country' => 'CZ']];
@@ -59,7 +65,7 @@ if (!str_contains($payment, 'Bankovní převod není nastavený') ||
     throw new RuntimeException('Checkout without bank settings must explain what to configure.');
 }
 
-$bankData = $data + ['delivery' => ['method' => 'home', 'name' => 'Eva Nová',
+$bankData = $data + ['delivery' => ['method' => 'ppl_home', 'name' => 'Eva Nová',
     'street' => 'Polní 1', 'postal_code' => '11000', 'city' => 'Praha',
     'email' => 'eva@example.org', 'phone' => '123'], 'selectedShippingPrice' => 99];
 $bankData['bankConfigured'] = true;
@@ -80,7 +86,7 @@ if (!str_contains($review, 'Objednat s povinností platby') ||
     throw new RuntimeException('Bank checkout without a terms page must submit as a real order.');
 }
 
-$testData = $data + ['delivery' => ['method' => 'home', 'name' => 'Eva Nová',
+$testData = $data + ['delivery' => ['method' => 'ppl_home', 'name' => 'Eva Nová',
     'street' => 'Polní 1', 'postal_code' => '11000', 'city' => 'Praha',
     'email' => 'eva@example.org', 'phone' => '123'], 'selectedShippingPrice' => 99];
 $testData['testCheckout'] = true;

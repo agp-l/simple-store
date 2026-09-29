@@ -8,9 +8,12 @@ declare(strict_types=1);
 <form class="panel-panel panel-form" method="post" action="<?= $escape($adminUrl . '?section=settings') ?>">
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
   <input type="hidden" name="action" value="save-checkout-settings">
-  <h2>Doprava na adresu</h2>
-  <label>Název dopravy<input name="home_label" value="<?= $escape($form['home_label']) ?>" maxlength="100" required></label>
-  <label>Cena dopravy v Kč<input type="number" name="home_price_czk" value="<?= $escape($form['home_price_czk']) ?>" min="0" max="100000" required></label>
+  <h2>Výdejní místa a boxy</h2>
+  <p class="panel-help">U výdejního místa zákazník vybere bod na mapě dopravce a opíše jeho název a adresu do objednávky. Přepravu a štítek zatím zadáváš ručně.</p>
+  <?php foreach ($shippingCatalog as $code => $definition): ?>
+    <?php if (str_ends_with($code, '_home') && $code === 'gls_home'): ?><h2>Na adresu</h2><?php endif; ?>
+    <div class="panel-shipping-row"><strong><?= $escape($definition['label']) ?></strong><label>Cena v Kč<input type="number" name="shipping_price[<?= $escape($code) ?>]" value="<?= $escape($form['shipping_price'][$code]) ?>" min="0" max="100000" required></label><label class="panel-check"><input type="checkbox" name="shipping_enabled[<?= $escape($code) ?>]" value="1" <?= $form['shipping_enabled'][$code] === '1' ? 'checked' : '' ?>> Nabízet</label></div>
+  <?php endforeach; ?>
   <h2>Bankovní převod</h2>
   <label>Číslo účtu<input name="account_display" value="<?= $escape($form['account_display']) ?>" placeholder="číslo/kód banky" autocomplete="off"></label>
   <label>IBAN (nepovinný, z čísla účtu se dopočítá)<input name="iban" value="<?= $escape($form['iban']) ?>" autocomplete="off"></label>

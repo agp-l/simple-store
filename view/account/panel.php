@@ -62,8 +62,10 @@ $checkoutReturn = $checkoutReturn ?? $accountUrl;
             <?php foreach ($orderDetail['items'] as $item): ?><?php if (!is_array($item)) continue; ?>
               <div class="panel-order-line"><span><?= $escape($item['name'] ?? 'Položka') ?> · <?= (int) ($item['quantity'] ?? 0) ?> ks</span><strong><?= number_format((int) ($item['unit_price_czk'] ?? 0) * (int) ($item['quantity'] ?? 0), 0, ',', ' ') ?> Kč</strong></div>
             <?php endforeach; ?>
+            <p>Produkty: <?= number_format((int) $orderDetail['subtotal_czk'], 0, ',', ' ') ?> Kč · <?= $escape($orderDetail['shipping']['label'] ?? 'Doprava') ?>: <?= number_format((int) $orderDetail['shipping_czk'], 0, ',', ' ') ?> Kč</p>
             <p><strong>Celkem <?= number_format((int) $orderDetail['total_czk'], 0, ',', ' ') ?> Kč</strong></p>
-            <p>Doručení: <?= $escape($orderDetail['shipping']['recipient'] ?? $orderDetail['shipping']['name'] ?? '') ?>, <?= $escape($orderDetail['shipping']['street'] ?? '') ?>, <?= $escape($orderDetail['shipping']['postal_code'] ?? '') ?> <?= $escape($orderDetail['shipping']['city'] ?? '') ?></p>
+            <?php if (!empty($orderDetail['shipping']['pickup_point'])): ?><p>Výdejní místo: <?= $escape($orderDetail['shipping']['pickup_point']) ?>, <?= $escape($orderDetail['shipping']['pickup_address'] ?? '') ?></p>
+            <?php else: ?><p>Doručení: <?= $escape($orderDetail['shipping']['recipient'] ?? $orderDetail['shipping']['name'] ?? '') ?>, <?= $escape($orderDetail['shipping']['street'] ?? '') ?>, <?= $escape($orderDetail['shipping']['postal_code'] ?? '') ?> <?= $escape($orderDetail['shipping']['city'] ?? '') ?></p><?php endif; ?>
             <?php if (!empty($orderDetail['order_token'])): ?><a class="panel-text-link" href="<?= $escape($basePath . $language . '/objednavka/' . $orderDetail['order_token']) ?>">Zobrazit platební údaje →</a><?php endif; ?>
           </section>
           <?php endif; ?>

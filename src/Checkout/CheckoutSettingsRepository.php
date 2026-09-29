@@ -15,9 +15,8 @@ final class CheckoutSettingsRepository
 
     public static function withDefaults(array $local, array $example): array
     {
-        if (($local['shipping_methods'] ?? []) === []) {
-            $local['shipping_methods'] = $example['shipping_methods'];
-        }
+        $local['shipping_methods'] = self::normalizedMethods($local['shipping_methods'] ?? [],
+            $example['shipping_methods']);
         if (($local['bank_transfer']['account_display'] ?? '') === '' &&
             ($local['bank_transfer']['recipient'] ?? '') === '') {
             $local['bank_transfer'] = $example['bank_transfer'];
@@ -38,19 +37,34 @@ final class CheckoutSettingsRepository
         if (!is_array($saved)) {
             throw new InvalidArgumentException('Uložené nastavení objednávek není platné.');
         }
-        return array_replace_recursive($fallback, $saved);
+        $result = array_replace_recursive($fallback, $saved);
+        $result['shipping_methods'] = self::normalizedMethods($saved['shipping_methods'] ?? [],
+            $fallback['shipping_methods']);
+        return $result;
     }
 
     public function save(array $input, string $basePath): array
     {
-        $label = self::value($input, 'home_label');
-        $price = filter_var(self::value($input, 'home_price_czk'), FILTER_VALIDATE_INT,
-            ['options' => ['min_range' => 0, 'max_range' => 100000]]);
-        if ($price === false) {
-            throw new InvalidArgumentException('Cena dopravy musí být celé číslo od 0 do 100 000 Kč.');
+        $prices = $input['shipping_price'] ?? null;
+        $enabled = $input['shipping_enabled'] ?? [];
+        if (!is_array($prices) || !is_array($enabled)) {
+            throw new InvalidArgumentException('Zkontroluj ceny a dostupnost doprav.');
         }
-        $shipping = ['home' => ['label' => $label, 'price_czk' => $price, 'requires_address' => true]];
-        new ShippingPolicy($shipping);
+        $shipping = ShippingPolicy::defaults();
+        foreach ($shipping as $code => &$method) {
+            $raw = $prices[$code] ?? null;
+            $price = is_string($raw) ? filter_var($raw, FILTER_VALIDATE_INT,
+                ['options' => ['min_range' => 0, 'max_range' => 100000]]) : false;
+            if ($price === false) {
+                throw new InvalidArgumentException('Cena dopravy musí být celé číslo od 0 do 100 000 Kč.');
+            }
+            $method['price_czk'] = $price;
+            $method['enabled'] = ($enabled[$code] ?? null) === '1';
+        }
+        unset($method);
+        if ((new ShippingPolicy($shipping))->options() === []) {
+            throw new InvalidArgumentException('Zapni alespoň jeden způsob dopravy.');
+        }
 
         $account = self::value($input, 'account_display');
         $iban = self::value($input, 'iban');
@@ -104,6 +118,19 @@ final class CheckoutSettingsRepository
             settings_json LONGTEXT NOT NULL,
             updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci');
+    }
+
+    /** Old one-method settings map onto PPL while exposing the new catalog. */
+    private static function normalizedMethods(mixed $methods, array $defaults): array
+    {
+        if (!is_array($methods)) return $defaults;
+        if (isset($methods['home']) && !isset($methods['ppl_home']) &&
+            is_array($methods['home'])) {
+            $defaults['ppl_home']['price_czk'] = $methods['home']['price_czk'] ??
+                $defaults['ppl_home']['price_czk'];
+        }
+        unset($methods['home'], $methods['pickup']);
+        return array_replace_recursive($defaults, $methods);
     }
 
     private static function value(array $input, string $key): string

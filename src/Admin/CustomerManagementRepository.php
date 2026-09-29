@@ -40,6 +40,13 @@ final class CustomerManagementRepository
             FROM users WHERE id=%i AND role=%s LIMIT 1', $id, 'customer');
     }
 
+    public function recentOrders(int $id): array
+    {
+        if ($this->find($id) === null) return [];
+        return $this->db->query('SELECT id, order_number, total_czk, status, payment_status, created_at
+            FROM shop_orders WHERE user_id=%i ORDER BY id DESC LIMIT 10', $id);
+    }
+
     public function create(string $email, string $name, string $password): void
     {
         (new CustomerRepository($this->db))->register($email, $password, $name);

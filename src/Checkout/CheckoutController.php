@@ -32,10 +32,7 @@ final class CheckoutController
     ) {
         $this->cartUrl = $url->path('kosik');
         $this->checkoutUrl = $url->path('pokladna');
-        // A pickup point needs a real selector and verified address. The first checkout
-        // offers only the configured home method, even if a pickup price is present.
-        $this->shippingOptions = array_values(array_filter($shipping->options(),
-            static fn (array $option): bool => $option['code'] === 'home'));
+        $this->shippingOptions = $shipping->options();
         $termsUrl = trim($termsUrl);
         $this->termsUrl = str_starts_with($termsUrl, $url->getBasePath()) &&
             preg_match('~^/(?:[a-z0-9]+(?:-[a-z0-9]+)*)(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*/?$~D', $termsUrl) === 1
@@ -155,13 +152,19 @@ final class CheckoutController
             throw new InvalidArgumentException('Před pokračováním zkontrolujte košík.');
         }
         $method = self::field('method');
-        if ($method !== 'home' || $this->shipping->quote($method) === null ||
-            $this->shippingOptions === []) {
+        if ($this->shipping->method($method) === null) {
             throw new InvalidArgumentException('Vybraný způsob dopravy není dostupný.');
         }
         $fields = [];
-        foreach (['method', 'name', 'email', 'phone', 'street', 'city', 'postal_code', 'country'] as $field) {
-            $fields[$field] = self::field($field);
+        foreach (['method', 'name', 'email', 'phone', 'street', 'city', 'postal_code', 'country',
+            'pickup_point', 'pickup_address', 'pickup_code'] as $field) {
+            $fields[$field] = str_starts_with($field, 'pickup_') && !isset($_POST[$field])
+                ? '' : self::field($field);
+        }
+        if (ShippingPolicy::isPickup($method)) {
+            $fields['street'] = $fields['city'] = $fields['postal_code'] = '';
+        } else {
+            $fields['pickup_point'] = $fields['pickup_address'] = $fields['pickup_code'] = '';
         }
         $this->cart->setDelivery($fields);
     }
@@ -174,8 +177,9 @@ final class CheckoutController
         }
         $summary = $this->cartService->summary($this->cart);
         $delivery = $this->cart->state()['delivery'];
-        $price = is_array($delivery) && ($delivery['method'] ?? '') === 'home'
-            ? $this->shipping->quote('home') : null;
+        $methodCode = is_array($delivery) ? (string) ($delivery['method'] ?? '') : '';
+        $selected = ShippingPolicy::known($methodCode) ? $this->shipping->method($methodCode) : null;
+        $price = $selected['price_czk'] ?? null;
         if (!$summary['can_continue'] || !is_array($delivery) || $price === null ||
             (!$testOrder && $this->bank === null) ||
             !$this->orders->installed()) {
@@ -184,7 +188,7 @@ final class CheckoutController
         if ($summary['subtotal_czk'] + $price > 9999999) {
             throw new InvalidArgumentException('Celková částka objednávky přesahuje dostupný limit.');
         }
-        $label = $this->shippingOptions[0]['label'] ?? null;
+        $label = $selected['label'] ?? null;
         if (!is_string($label)) {
             throw new InvalidArgumentException('Doprava není dostupná.');
         }
@@ -224,11 +228,14 @@ final class CheckoutController
         }
         if ($step === 'shipping' && $error !== '' && is_array($_POST)) {
             // Keep submitted contact details visible after a validation error.
-            foreach (['method', 'name', 'email', 'phone', 'street', 'city', 'postal_code', 'country'] as $field) {
+            foreach (['method', 'name', 'email', 'phone', 'street', 'city', 'postal_code', 'country',
+                'pickup_point', 'pickup_address', 'pickup_code'] as $field) {
                 if (is_string($_POST[$field] ?? null)) $delivery[$field] = $_POST[$field];
             }
         }
-        $price = ($delivery['method'] ?? '') === 'home' ? $this->shipping->quote('home') : null;
+        $methodCode = (string) ($delivery['method'] ?? '');
+        $selected = ShippingPolicy::known($methodCode) ? $this->shipping->method($methodCode) : null;
+        $price = $selected['price_czk'] ?? null;
         if ($price !== null && $summary['subtotal_czk'] !== null &&
             $summary['subtotal_czk'] + $price > 9999999 && $error === '') {
             $error = 'Celková částka včetně dopravy přesahuje limit objednávky. Uprav počet kusů v košíku.';

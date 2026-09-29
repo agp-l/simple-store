@@ -14,7 +14,7 @@ require __DIR__ . '/common.php';
       </ul></section>
       <section class="checkout-panel"><div class="checkout-panel-title"><h2>Doprava a kontakt</h2><a href="<?= $checkoutEscape($checkoutUrl . '?step=shipping') ?>">Upravit údaje</a></div>
         <p><strong><?= $checkoutEscape($chosenShipping['label'] ?? '') ?></strong></p>
-        <address><?= $checkoutEscape($delivery['name'] ?? '') ?><br><?= $checkoutEscape($delivery['street'] ?? '') ?><br><?= $checkoutEscape($delivery['postal_code'] ?? '') ?> <?= $checkoutEscape($delivery['city'] ?? '') ?><br>Česká republika</address>
+        <address><?= $checkoutEscape($delivery['name'] ?? '') ?><br><?php if (($chosenShipping['group'] ?? '') === 'pickup'): ?>Výdejní místo: <?= $checkoutEscape($delivery['pickup_point'] ?? '') ?><br><?= $checkoutEscape($delivery['pickup_address'] ?? '') ?><?php if (!empty($delivery['pickup_code'])): ?><br>Kód místa: <?= $checkoutEscape($delivery['pickup_code']) ?><?php endif; ?><?php else: ?><?= $checkoutEscape($delivery['street'] ?? '') ?><br><?= $checkoutEscape($delivery['postal_code'] ?? '') ?> <?= $checkoutEscape($delivery['city'] ?? '') ?><?php endif; ?><br>Česká republika</address>
         <p><?= $checkoutEscape($delivery['email'] ?? '') ?><br><?= $checkoutEscape($delivery['phone'] ?? '') ?></p>
       </section>
       <section class="checkout-panel"><div class="checkout-panel-title"><h2>Platba</h2><a href="<?= $checkoutEscape($checkoutUrl . '?step=payment') ?>">Zpět k platbě</a></div><p><?= ($testCheckout ?? false) ? 'Místní testovací objednávka. Platba se neprovádí.' : 'Bankovní převod. Platební údaje a QR kód se zobrazí po vytvoření objednávky.' ?></p></section>

@@ -21,7 +21,11 @@ jobs:
           tools: none
           coverage: none
       - name: Check PHP syntax
-        run: find src view tests -name '*.php' -print0 | xargs -0 -n1 php -l
+        run: |
+          find src view tests -name '*.php' -print0 | xargs -0 -n1 php -l
+          php -l account.php
+          php -l admin.php
+          php -l index.php
       - name: Test checkout and shared views
         run: |
           php tests/checkout-cart.php
@@ -38,6 +42,7 @@ jobs:
           php tests/account-render.php
           php tests/customer-account.php
           php tests/customer-orders.php
+          php tests/admin-customers.php
           php tests/admin-render.php
           php tests/admin-auth.php
       - name: Test cart cookie across HTTP requests

@@ -8,6 +8,7 @@ $screen = 'users';
 $usersError = '';
 $manager = new CustomerManagementRepository($db);
 $customer = null;
+$customerOrders = [];
 $search = $_GET['search'] ?? '';
 $rawOffset = $_GET['offset'] ?? '0';
 $offset = is_string($rawOffset) ? filter_var($rawOffset, FILTER_VALIDATE_INT,
@@ -57,6 +58,8 @@ if ($userId !== false) {
     if ($customer === null) {
         $usersError = 'Zákazník nebyl nalezen.';
         http_response_code(404);
+    } else {
+        $customerOrders = $manager->recentOrders($userId);
     }
 }
 try {

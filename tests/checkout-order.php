@@ -225,4 +225,14 @@ try {
     $rejected = true;
 }
 if (!$rejected) throw new RuntimeException('Checkout without bank settings was accepted.');
+$pickupShipping = ['method' => 'gls_pickup', 'label' => 'GLS – ParcelShop',
+    'name' => 'Eva Nová', 'pickup_point' => 'ParcelShop Brno',
+    'pickup_address' => 'Nádražní 1, 602 00 Brno', 'pickup_code' => '123'];
+$pickupOrder = $repository->create(7, 'eva@example.org', $items, $pickupShipping, 59,
+    str_repeat('f', 64));
+if ($pickupOrder['shipping_czk'] !== 59 || $pickupOrder['total_czk'] !== 1059 ||
+    $pickupOrder['user_id'] !== 7 ||
+    $pickupOrder['shipping']['pickup_address'] !== 'Nádražní 1, 602 00 Brno') {
+    throw new RuntimeException('Pickup point, customer and shipping price were not captured in the order.');
+}
 echo "Checkout order and bank transfer tests passed.\n";

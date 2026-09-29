@@ -12,7 +12,7 @@ $checkoutOtherIssues = array_values(array_diff($checkoutIssues, $lineIssues));
 $checkoutCanContinue = (bool) ($checkout['can_continue'] ?? false);
 $checkoutSubtotal = isset($checkout['subtotal_czk']) ? (int) $checkout['subtotal_czk'] : null;
 $availableShippingOptions = array_values(array_filter($shippingOptions ?? [], static fn (array $option): bool =>
-    ($option['code'] ?? '') === 'home' && isset($option['price_czk']) && is_int($option['price_czk'])));
+    isset($option['code'], $option['price_czk']) && is_int($option['price_czk'])));
 $chosenShipping = null;
 foreach ($availableShippingOptions as $option) {
     if ($option['code'] === ($delivery['method'] ?? '')) {

@@ -144,6 +144,14 @@ $check($cart->state()['delivery']['street'] === 'Ulice 1' &&
     $cart->checkoutKey() !== $beforeDeliveryKey, 'Delivery details did not rotate submission identity.');
 $invalid(static fn () => $cart->setDelivery(['method' => 'home', 'email' => 'invalid']));
 $check($cart->state()['delivery']['street'] === 'Ulice 1', 'Invalid delivery replaced valid details.');
+$pickup = ['method' => 'gls_pickup', 'name' => 'A G', 'email' => 'ag@example.com',
+    'phone' => '+420 123 456 789', 'country' => 'CZ', 'pickup_point' => 'GLS ParcelShop Brno',
+    'pickup_address' => 'Nádražní 1, 602 00 Brno', 'pickup_code' => 'BRN1'];
+$invalid(static fn () => $cart->setDelivery(array_replace($pickup, ['pickup_address' => ''])));
+$cart->setDelivery($pickup);
+$check($cart->state()['delivery']['pickup_address'] === 'Nádražní 1, 602 00 Brno' &&
+    $cart->state()['delivery']['method'] === 'gls_pickup',
+    'Pickup point name, address and carrier must survive checkout.');
 
 $policy = new ShippingPolicy();
 $check($policy->options() === [] && $policy->quote('home') === null && $policy->quote('pickup') === null,
@@ -158,6 +166,11 @@ $invalid(static fn () => new ShippingPolicy(['home' => [
     'label' => 'Doručení na adresu', 'price_czk' => -1, 'requires_address' => true,
 ]]));
 $invalid(static fn () => $policy->quote('express'));
+$allCarriers = new ShippingPolicy(ShippingPolicy::defaults());
+$check(count($allCarriers->options()) === 9 && $allCarriers->quote('gls_pickup') === 59 &&
+    $allCarriers->quote('balikovna_pickup') === 120 && $allCarriers->quote('gls_home') === 79 &&
+    $allCarriers->quote('ceska_posta_home') === 121,
+    'Configured carrier prices differ from the nine requested defaults.');
 
 $cart->clear();
 $check($cart->count() === 0 && $cart->state()['delivery'] === null && $cart->validToken($token) &&
