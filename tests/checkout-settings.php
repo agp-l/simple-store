@@ -55,7 +55,7 @@ $input = ['home_label' => 'Kurýr', 'home_price_czk' => '120',
     'local_test_checkout' => '1'];
 $saved = $repo->save($input, '/simple-store/');
 $loaded = $repo->load($fallback);
-if ($loaded !== $saved || $saved['bank_transfer']['iban'] !== $generated->snapshot()['iban'] ||
+if ($loaded != $saved || $saved['bank_transfer']['iban'] !== $generated->snapshot()['iban'] ||
     $saved['shipping_methods']['home']['price_czk'] !== 120 ||
     $saved['terms_url'] !== '/simple-store/cs/obchodni-podminky') {
     throw new RuntimeException('Checkout settings were not validated and loaded from the database.');
@@ -66,7 +66,7 @@ foreach ([['home_price_czk' => '-1'], ['terms_url' => 'https://other.test/terms'
         $repo->save(array_replace($input, $change), '/simple-store/');
         throw new RuntimeException('Invalid settings were accepted.');
     } catch (InvalidArgumentException $expected) {
-        if ($repo->load($fallback) !== $saved) {
+        if ($repo->load($fallback) != $saved) {
             throw new RuntimeException('Invalid settings overwrote the saved configuration.');
         }
     }
