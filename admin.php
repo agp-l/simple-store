@@ -5,6 +5,7 @@ use SimpleStore\Admin\AdminAuth;
 use SimpleStore\Admin\AdminUserRepository;
 use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Content\ContentRepository;
+use SimpleStore\Checkout\CartSession;
 use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Navigation\StorefrontMenus;
 use SimpleStore\Navigation\UrlManager;
@@ -27,6 +28,7 @@ $error = '';
 $documents = [];
 $csrf = '';
 $chrome = [];
+$cartCount = 0;
 
 if (!is_file(__DIR__ . '/config/database.php') || !is_file(__DIR__ . '/vendor/autoload.php')) {
     http_response_code(503);
@@ -43,6 +45,7 @@ try {
     $chrome = StorefrontMenus::load($db, $menuUrl,
         new ContentRepository($db, $site['languages'], $site['revision_limit']),
         new CategoryRepository($db));
+    $cartCount = (new CartSession($basePath))->count();
     $users = new AdminUserRepository($db);
     if (!$users->installed() || !$users->hasAdmin()) {
         $screen = 'setup';
@@ -98,7 +101,8 @@ try {
             exit;
         } elseif (!in_array($action, ['create-content', 'create-translation', 'inline-content', 'create-product',
             'inline-product', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
-            'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product'], true) ||
+            'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product',
+            'mark-order-paid'], true) ||
             !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach'], true)) {
                 header('Content-Type: application/json; charset=utf-8');
@@ -161,6 +165,11 @@ try {
 
     if ($action === 'create-product' || ($method !== 'POST' && $section === 'products')) {
         require __DIR__ . '/src/Admin/products.php';
+        require __DIR__ . '/view/admin/layout.php';
+        exit;
+    }
+    if ($action === 'mark-order-paid' || ($method !== 'POST' && $section === 'orders')) {
+        require __DIR__ . '/src/Admin/orders.php';
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }

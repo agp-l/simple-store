@@ -34,11 +34,16 @@ $routes = [
     '/shop/en' => ['name' => 'catalog'],
     '/shop/en/blog' => ['name' => 'blog'],
     '/shop/en/produkt/bota' => ['name' => 'product', 'slug' => 'bota'],
+    '/shop/en/kosik' => ['name' => 'cart'],
+    '/shop/en/pokladna' => ['name' => 'checkout'],
+    '/shop/en/objednavka/' . str_repeat('a', 64) => ['name' => 'order', 'token' => str_repeat('a', 64)],
     '/shop/en/o-nas' => ['name' => 'page', 'slug' => 'o-nas'],
     '/shop/en/kategorie-produktu' => ['name' => 'not-found'],
     '/shop/en/produkt' => ['name' => 'not-found'],
     '/shop/en/blog/dva/tri' => ['name' => 'not-found'],
     '/shop/en/produkt/bota/dalsi' => ['name' => 'not-found'],
+    '/shop/en/kosik/abc' => ['name' => 'not-found'],
+    '/shop/en/objednavka/test' => ['name' => 'not-found'],
 ];
 foreach ($routes as $request => $expected) {
     $actual = (new UrlManager($request, '/shop/index.php', ['cs', 'en']))->route();

@@ -9,6 +9,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="<?= $siteRoot ?>style.css?v=<?= filemtime(__DIR__ . '/../style.css') ?>">
+  <?php if (in_array($page ?? '', ['cart', 'shipping', 'payment', 'review', 'complete'], true)): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/checkout.css?v=<?= filemtime(__DIR__ . '/../assets/checkout.css') ?>"><?php endif; ?>
   <?php if ($editMode || $contentEditMode || ($mediaManager ?? false)): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/media.css?v=<?= filemtime(__DIR__ . '/../assets/media.css') ?>"><?php endif; ?>
-  <?php if ($panelStylesheet): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/panel.css"><?php endif; ?>
+  <?php if ($panelStylesheet): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/panel.css?v=<?= filemtime(__DIR__ . '/../assets/panel.css') ?>"><?php endif; ?>
 </head>

@@ -2,11 +2,19 @@
 declare(strict_types=1);
 
 use SimpleStore\Content\ContentRepository;
+use SimpleStore\Checkout\BankTransferPayment;
+use SimpleStore\Checkout\CartService;
+use SimpleStore\Checkout\CartSession;
+use SimpleStore\Checkout\CheckoutController;
+use SimpleStore\Checkout\OrderRepository;
+use SimpleStore\Checkout\ShippingPolicy;
 use SimpleStore\Admin\AdminAuth;
 use SimpleStore\Admin\AdminUserRepository;
 use SimpleStore\Category\CategoryPath;
 use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Database\ConnectionFactory;
+use SimpleStore\Customer\CustomerAuth;
+use SimpleStore\Customer\CustomerRepository;
 use SimpleStore\Navigation\StorefrontMenus;
 use SimpleStore\Navigation\UrlManager;
 use SimpleStore\Product\ProductRepository;
@@ -56,6 +64,48 @@ try {
     $hasContent = $navigation['hasContent'];
     unset($navigation['manager'], $navigation['hasContent']);
     $shared = array_merge($shared, $navigation);
+
+    // Cart sessions are short-lived and separate from administrator/customer login.
+    // Read and close the cart session before opening either account session.
+    $cart = new CartSession($url->getBasePath());
+    $shared['cartUrl'] = $url->path('kosik');
+    $shared['checkoutUrl'] = $url->path('pokladna');
+    $shared['cartToken'] = $cart->token();
+    $shared['cartCount'] = $cart->count();
+
+    if (in_array($route['name'], ['cart', 'checkout', 'order'], true)) {
+        $checkoutFile = __DIR__ . '/config/checkout.php';
+        $checkoutConfig = $route['name'] === 'order'
+            ? ['bank_transfer' => [], 'shipping_methods' => [], 'terms_url' => '']
+            : (require (is_file($checkoutFile) ? $checkoutFile : __DIR__ . '/config/checkout.example.php'));
+        $bankSettings = $checkoutConfig['bank_transfer'] ?? [];
+        $bank = null;
+        if (is_array($bankSettings) &&
+            ($bankSettings['iban'] ?? '') !== '' && ($bankSettings['account_display'] ?? '') !== '' &&
+            ($bankSettings['recipient'] ?? '') !== '') {
+            $bank = new BankTransferPayment((string) $bankSettings['iban'],
+                (string) $bankSettings['account_display'], (string) $bankSettings['recipient']);
+        }
+        $shipping = new ShippingPolicy($checkoutConfig['shipping_methods'] ?? []);
+        $dueDays = $bankSettings['payment_due_days'] ?? 7;
+        $orders = new OrderRepository($db, $bank, $dueDays);
+        $customerId = null;
+        if ($route['name'] !== 'order' && isset($_COOKIE['simple_store_customer'])) {
+            $customers = new CustomerRepository($db);
+            if ($customers->installed()) {
+                $customerAuth = new CustomerAuth($customers, $url->getBasePath());
+                $customerId = $customerAuth->user()['id'] ?? null;
+                $customerId = $customerId === null ? null : (int) $customerId;
+                session_write_close();
+                session_id('');
+            }
+        }
+        $controller = new CheckoutController($url, $renderer, $shared, $cart,
+            new CartService(new ProductRepository($db, $site['languages']), $site['languages']),
+            $shipping, $orders, $bank, $customerId, (string) ($checkoutConfig['terms_url'] ?? ''));
+        $controller->handle($route);
+        exit;
+    }
 
     // An authenticated preview may read drafts; ordinary routes never start an admin session.
     $editRequested = ($_GET['edit'] ?? '') === '1';

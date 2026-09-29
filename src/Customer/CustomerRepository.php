@@ -143,8 +143,14 @@ final class CustomerRepository
 
     public function orders(int $userId): array
     {
+        $checkoutColumns = (int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME IN (%s, %s)',
+            'shop_orders', 'order_token', 'payment_status'
+        ) === 2;
         return $this->db->query(
-            'SELECT order_number, status, total_czk, created_at FROM shop_orders
+            'SELECT order_number, status, total_czk, created_at' .
+            ($checkoutColumns ? ', order_token, payment_status' : '') . ' FROM shop_orders
              WHERE user_id=%i ORDER BY id DESC LIMIT 50', $userId
         );
     }

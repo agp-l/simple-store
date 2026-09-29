@@ -70,20 +70,189 @@ CREATE TABLE IF NOT EXISTS customer_addresses (
   KEY addresses_for_customer (user_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Future checkout will write immutable order snapshots; customers only read their own rows.
+-- Checkout keeps immutable prices, recipient, delivery and bank details at the time of purchase.
+-- Existing customer history continues to work; a guest order has no user_id.
 CREATE TABLE IF NOT EXISTS shop_orders (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  user_id BIGINT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NULL DEFAULT NULL,
   order_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  order_token CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL,
   status VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  customer_email VARCHAR(254) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL,
+  subtotal_czk INT UNSIGNED NULL DEFAULT NULL,
+  shipping_czk INT UNSIGNED NULL DEFAULT NULL,
   total_czk INT UNSIGNED NOT NULL,
   items_json LONGTEXT NOT NULL,
   shipping_json LONGTEXT NOT NULL,
+  payment_method VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'legacy',
+  payment_status VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'unknown',
+  payment_details_json LONGTEXT NULL,
+  payment_due_at DATETIME NULL DEFAULT NULL,
+  payment_paid_at DATETIME NULL DEFAULT NULL,
+  payment_verified_by BIGINT UNSIGNED NULL DEFAULT NULL,
+  provider_reference VARCHAR(190) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL,
+  variable_symbol VARCHAR(10) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL,
+  idempotency_key CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
   UNIQUE KEY order_number (order_number),
-  KEY orders_for_customer (user_id, id)
+  UNIQUE KEY orders_token (order_token),
+  UNIQUE KEY orders_variable_symbol (variable_symbol),
+  UNIQUE KEY orders_idempotency_key (idempotency_key),
+  KEY orders_for_customer (user_id, id),
+  KEY orders_payment_status (payment_status, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Additive upgrade for installations with the older customer order placeholder.
+-- Nullable new columns preserve historical rows without inventing payment details.
+SET @order_user_nullable = (SELECT IS_NULLABLE FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='user_id');
+SET @order_user_upgrade = IF(@order_user_nullable='NO',
+  'ALTER TABLE shop_orders MODIFY COLUMN user_id BIGINT UNSIGNED NULL DEFAULT NULL', 'SELECT 1');
+PREPARE order_user_statement FROM @order_user_upgrade;
+EXECUTE order_user_statement;
+DEALLOCATE PREPARE order_user_statement;
+
+SET @order_token_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='order_token');
+SET @order_token_upgrade = IF(@order_token_exists=0,
+  'ALTER TABLE shop_orders ADD COLUMN order_token CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL AFTER order_number', 'SELECT 1');
+PREPARE order_token_statement FROM @order_token_upgrade;
+EXECUTE order_token_statement;
+DEALLOCATE PREPARE order_token_statement;
+
+SET @order_email_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='customer_email');
+SET @order_email_upgrade = IF(@order_email_exists=0,
+  'ALTER TABLE shop_orders ADD COLUMN customer_email VARCHAR(254) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL AFTER status', 'SELECT 1');
+PREPARE order_email_statement FROM @order_email_upgrade;
+EXECUTE order_email_statement;
+DEALLOCATE PREPARE order_email_statement;
+
+SET @order_subtotal_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='subtotal_czk');
+SET @order_subtotal_upgrade = IF(@order_subtotal_exists=0,
+  'ALTER TABLE shop_orders ADD COLUMN subtotal_czk INT UNSIGNED NULL DEFAULT NULL AFTER customer_email', 'SELECT 1');
+PREPARE order_subtotal_statement FROM @order_subtotal_upgrade;
+EXECUTE order_subtotal_statement;
+DEALLOCATE PREPARE order_subtotal_statement;
+
+SET @order_shipping_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='shipping_czk');
+SET @order_shipping_upgrade = IF(@order_shipping_exists=0,
+  'ALTER TABLE shop_orders ADD COLUMN shipping_czk INT UNSIGNED NULL DEFAULT NULL AFTER subtotal_czk', 'SELECT 1');
+PREPARE order_shipping_statement FROM @order_shipping_upgrade;
+EXECUTE order_shipping_statement;
+DEALLOCATE PREPARE order_shipping_statement;
+
+SET @order_method_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='payment_method');
+SET @order_method_upgrade = IF(@order_method_exists=0,
+  'ALTER TABLE shop_orders ADD COLUMN payment_method VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT ''legacy'' AFTER shipping_json', 'SELECT 1');
+PREPARE order_method_statement FROM @order_method_upgrade;
+EXECUTE order_method_statement;
+DEALLOCATE PREPARE order_method_statement;
+
+SET @order_payment_status_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='payment_status');
+SET @order_payment_status_upgrade = IF(@order_payment_status_exists=0,
+  'ALTER TABLE shop_orders ADD COLUMN payment_status VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT ''unknown'' AFTER payment_method', 'SELECT 1');
+PREPARE order_payment_status_statement FROM @order_payment_status_upgrade;
+EXECUTE order_payment_status_statement;
+DEALLOCATE PREPARE order_payment_status_statement;
+
+SET @order_payment_details_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='payment_details_json');
+SET @order_payment_details_upgrade = IF(@order_payment_details_exists=0,
+  'ALTER TABLE shop_orders ADD COLUMN payment_details_json LONGTEXT NULL AFTER payment_status', 'SELECT 1');
+PREPARE order_payment_details_statement FROM @order_payment_details_upgrade;
+EXECUTE order_payment_details_statement;
+DEALLOCATE PREPARE order_payment_details_statement;
+
+SET @order_due_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='payment_due_at');
+SET @order_due_upgrade = IF(@order_due_exists=0,
+  'ALTER TABLE shop_orders ADD COLUMN payment_due_at DATETIME NULL DEFAULT NULL AFTER payment_details_json', 'SELECT 1');
+PREPARE order_due_statement FROM @order_due_upgrade;
+EXECUTE order_due_statement;
+DEALLOCATE PREPARE order_due_statement;
+
+SET @order_paid_at_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='payment_paid_at');
+SET @order_paid_at_upgrade = IF(@order_paid_at_exists=0,
+  'ALTER TABLE shop_orders ADD COLUMN payment_paid_at DATETIME NULL DEFAULT NULL AFTER payment_due_at', 'SELECT 1');
+PREPARE order_paid_at_statement FROM @order_paid_at_upgrade;
+EXECUTE order_paid_at_statement;
+DEALLOCATE PREPARE order_paid_at_statement;
+
+SET @order_verified_by_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='payment_verified_by');
+SET @order_verified_by_upgrade = IF(@order_verified_by_exists=0,
+  'ALTER TABLE shop_orders ADD COLUMN payment_verified_by BIGINT UNSIGNED NULL DEFAULT NULL AFTER payment_paid_at', 'SELECT 1');
+PREPARE order_verified_by_statement FROM @order_verified_by_upgrade;
+EXECUTE order_verified_by_statement;
+DEALLOCATE PREPARE order_verified_by_statement;
+
+SET @order_reference_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='provider_reference');
+SET @order_reference_upgrade = IF(@order_reference_exists=0,
+  'ALTER TABLE shop_orders ADD COLUMN provider_reference VARCHAR(190) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL AFTER payment_verified_by', 'SELECT 1');
+PREPARE order_reference_statement FROM @order_reference_upgrade;
+EXECUTE order_reference_statement;
+DEALLOCATE PREPARE order_reference_statement;
+
+SET @order_vs_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='variable_symbol');
+SET @order_vs_upgrade = IF(@order_vs_exists=0,
+  'ALTER TABLE shop_orders ADD COLUMN variable_symbol VARCHAR(10) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL AFTER provider_reference', 'SELECT 1');
+PREPARE order_vs_statement FROM @order_vs_upgrade;
+EXECUTE order_vs_statement;
+DEALLOCATE PREPARE order_vs_statement;
+
+SET @order_idempotency_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='idempotency_key');
+SET @order_idempotency_upgrade = IF(@order_idempotency_exists=0,
+  'ALTER TABLE shop_orders ADD COLUMN idempotency_key CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL AFTER variable_symbol', 'SELECT 1');
+PREPARE order_idempotency_statement FROM @order_idempotency_upgrade;
+EXECUTE order_idempotency_statement;
+DEALLOCATE PREPARE order_idempotency_statement;
+
+-- Historical placeholder rows predate checkout and cannot be reconciled as bank transfers.
+UPDATE shop_orders SET payment_method='legacy', payment_status='unknown'
+  WHERE order_token IS NULL AND variable_symbol IS NULL AND payment_details_json IS NULL
+    AND (payment_method<>'legacy' OR payment_status<>'unknown');
+
+SET @order_token_index = (SELECT COUNT(*) FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND INDEX_NAME='orders_token');
+SET @order_token_index_upgrade = IF(@order_token_index=0,
+  'ALTER TABLE shop_orders ADD UNIQUE KEY orders_token (order_token)', 'SELECT 1');
+PREPARE order_token_index_statement FROM @order_token_index_upgrade;
+EXECUTE order_token_index_statement;
+DEALLOCATE PREPARE order_token_index_statement;
+
+SET @order_vs_index = (SELECT COUNT(*) FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND INDEX_NAME='orders_variable_symbol');
+SET @order_vs_index_upgrade = IF(@order_vs_index=0,
+  'ALTER TABLE shop_orders ADD UNIQUE KEY orders_variable_symbol (variable_symbol)', 'SELECT 1');
+PREPARE order_vs_index_statement FROM @order_vs_index_upgrade;
+EXECUTE order_vs_index_statement;
+DEALLOCATE PREPARE order_vs_index_statement;
+
+SET @order_idempotency_index = (SELECT COUNT(*) FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND INDEX_NAME='orders_idempotency_key');
+SET @order_idempotency_index_upgrade = IF(@order_idempotency_index=0,
+  'ALTER TABLE shop_orders ADD UNIQUE KEY orders_idempotency_key (idempotency_key)', 'SELECT 1');
+PREPARE order_idempotency_index_statement FROM @order_idempotency_index_upgrade;
+EXECUTE order_idempotency_index_statement;
+DEALLOCATE PREPARE order_idempotency_index_statement;
+
+SET @order_status_index = (SELECT COUNT(*) FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND INDEX_NAME='orders_payment_status');
+SET @order_status_index_upgrade = IF(@order_status_index=0,
+  'ALTER TABLE shop_orders ADD KEY orders_payment_status (payment_status, id)', 'SELECT 1');
+PREPARE order_status_index_statement FROM @order_status_index_upgrade;
+EXECUTE order_status_index_statement;
+DEALLOCATE PREPARE order_status_index_statement;
 
 -- Each save inserts a complete snapshot of a page or blog post.
 -- Older inactive snapshots are pruned to config/site.php revision_limit after saving.

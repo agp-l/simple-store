@@ -106,6 +106,15 @@ final class UrlManager
             return count($parts) === 2
                 ? ['name' => 'post', 'slug' => $parts[1]] : ['name' => 'not-found'];
         }
+        if ($parts[0] === 'kosik' || $parts[0] === 'pokladna') {
+            return count($parts) === 1
+                ? ['name' => $parts[0] === 'kosik' ? 'cart' : 'checkout']
+                : ['name' => 'not-found'];
+        }
+        if ($parts[0] === 'objednavka') {
+            return count($parts) === 2 && preg_match('/^[a-f0-9]{64}$/D', $parts[1]) === 1
+                ? ['name' => 'order', 'token' => $parts[1]] : ['name' => 'not-found'];
+        }
         return count($parts) === 1
             ? ['name' => 'page', 'slug' => $parts[0]] : ['name' => 'not-found'];
     }

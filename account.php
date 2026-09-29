@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Content\ContentRepository;
+use SimpleStore\Checkout\CartSession;
 use SimpleStore\Customer\CustomerAuth;
 use SimpleStore\Customer\CustomerRepository;
 use SimpleStore\Database\ConnectionFactory;
@@ -19,6 +20,7 @@ $accountUrl = $basePath . 'account.php';
 $screen = 'login';
 $error = '';
 $chrome = [];
+$cartCount = 0;
 $csrf = '';
 $user = null;
 $addresses = [];
@@ -47,6 +49,7 @@ try {
     $chrome = StorefrontMenus::load($db, $menuUrl,
         new ContentRepository($db, $site['languages'], $site['revision_limit']),
         new CategoryRepository($db));
+    $cartCount = (new CartSession($basePath))->count();
     $customers = new CustomerRepository($db);
     if (!$customers->installed()) {
         http_response_code(503);

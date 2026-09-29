@@ -19,6 +19,9 @@ abstract class RoleAuth
             throw new RuntimeException('Only one account session may be active in a request.');
         }
         ini_set('session.use_strict_mode', '1');
+        // A storefront request may have read the separate cart session first.
+        // Its closed session ID must never be reused for an account cookie.
+        session_id('');
         session_name($sessionName);
         session_set_cookie_params([
             'lifetime' => 0,

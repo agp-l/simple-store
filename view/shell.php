@@ -27,6 +27,9 @@ $editMode ??= false;
 $contentEditMode ??= false;
 $page ??= '';
 $adminCreate ??= null;
+$cartUrl ??= $basePath . $language . '/kosik';
+$cartCount ??= 0;
+$cartToken ??= '';
 ?>
 <!doctype html>
 <html lang="<?= htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
@@ -41,8 +44,8 @@ $adminCreate ??= null;
 <?php endif; ?>
 <?php require $bodyView; ?>
 <?php require __DIR__ . '/footer.php'; ?>
-<?php require __DIR__ . '/cart.php'; ?>
 <script defer src="<?= $siteRoot ?>assets/app.js?v=<?= filemtime(__DIR__ . '/../assets/app.js') ?>"></script>
+<?php if ($page === 'complete' && !empty($bankPayment['spayd'])): ?><script type="module" src="<?= $siteRoot ?>assets/payment-qr.js?v=<?= filemtime(__DIR__ . '/../assets/payment-qr.js') ?>"></script><?php endif; ?>
 <?php if ($page === 'catalog' || $page === 'blog'): ?><script defer src="<?= $siteRoot ?>assets/load-more.js"></script><?php endif; ?>
 <?php if ($page === 'product-record'): ?><script defer src="<?= $siteRoot ?>assets/product.js"></script><?php endif; ?>
 <?php if ($editMode): ?><script defer src="<?= $siteRoot ?>assets/inline-editor.js?v=<?= filemtime(__DIR__ . '/../assets/inline-editor.js') ?>"></script><?php endif; ?>

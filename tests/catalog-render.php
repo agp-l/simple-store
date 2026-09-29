@@ -19,18 +19,22 @@ if (!str_contains($html, 'Načteno 0 produktů') ||
     throw new RuntimeException('The empty catalog must not display old sample products or leave the language.');
 }
 
-$product = ['slug' => 'bota', 'name' => 'Lehká bota', 'brand' => 'Topo',
+$product = ['slug' => 'bota', 'product_key' => str_repeat('b', 32),
+    'name' => 'Lehká bota', 'brand' => 'Topo',
     'summary' => 'Na hory', 'details_json' => null, 'category' => 'boty',
     'subcategory' => '', 'price_czk' => 3990, 'image_path' => 'images/batoh.webp',
     'sizes' => '', 'stock_status' => 'in_stock'];
 ob_start();
 $renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
     'products' => [$product], 'categoryLabels' => ['boty' => 'Boty'],
+    'cartToken' => 'test-cart-token',
     'nextUrl' => '/shop/cs?offset=12']);
 $html = ob_get_clean();
 if (!str_contains($html, '/shop/cs/produkt/bota') ||
     !str_contains($html, 'data-name="Lehká bota"') ||
-    !str_contains($html, 'data-add') ||
+    !str_contains($html, 'action="/shop/cs/kosik"') ||
+    !str_contains($html, 'name="product_key" value="' . str_repeat('b', 32) . '"') ||
+    !str_contains($html, 'name="csrf" value="test-cart-token"') ||
     !str_contains($html, 'Načteno 1 produkt') ||
     !str_contains($html, 'data-load-more data-target="catalog" href="/shop/cs?offset=12"')) {
     throw new RuntimeException('Published database rows must render as usable product cards.');
@@ -38,6 +42,7 @@ if (!str_contains($html, '/shop/cs/produkt/bota') ||
 
 $cards = $renderer->cards('product', [$product], [
     'basePath' => '/shop/', 'language' => 'cs', 'categoryLabels' => ['boty' => 'Boty'],
+    'cartToken' => 'test-cart-token',
 ]);
 if (!str_contains($cards, '/shop/cs/produkt/bota') || str_contains($cards, '<html')) {
     throw new RuntimeException('The additional catalog batch must render only the reusable product cards.');
@@ -54,7 +59,7 @@ $management = ob_get_clean();
 if (!str_contains($management, '/shop/cs/produkt/bota?edit=1') ||
     !str_contains($management, 'Skrytý koncept') ||
     !str_contains($management, 'name="robots" content="noindex, nofollow"') ||
-    str_contains($management, 'data-add') || str_contains($management, 'id="sort"')) {
+    str_contains($management, 'name="action" value="add"') || str_contains($management, 'id="sort"')) {
     throw new RuntimeException('Management must keep draft cards private and link to editing without cart controls.');
 }
 

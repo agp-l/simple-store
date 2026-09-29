@@ -33,7 +33,12 @@ $hasOptions = ProductDetails::decode($product['details_json'] ?? null, $product[
             <?php elseif ($hasOptions): ?>
               <a class="add-button" href="<?= $escape($productLink) ?>" aria-label="Zobrazit produkt <?= $escape($product['name']) ?>"><?= $product['stock_status'] === 'out_of_stock' ? 'Zobrazit detail →' : 'Vybrat možnosti →' ?></a>
             <?php else: ?>
-              <button class="add-button" type="button" data-add <?= $product['stock_status'] === 'out_of_stock' ? 'disabled' : '' ?> aria-label="Přidat <?= $escape($product['name']) ?> do ukázkového košíku"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h2l2 10h10l2-7H7M9 19h.01M18 19h.01" /></svg><span><?= $product['stock_status'] === 'out_of_stock' ? 'Není skladem' : 'Do košíku' ?></span></button>
+              <form method="post" action="<?= $escape($cartUrl) ?>">
+                <input type="hidden" name="action" value="add"><input type="hidden" name="csrf" value="<?= $escape($cartToken) ?>">
+                <input type="hidden" name="product_key" value="<?= $escape($product['product_key'] ?? '') ?>">
+                <input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="quantity" value="1">
+                <button class="add-button" type="submit" <?= $product['stock_status'] === 'out_of_stock' ? 'disabled' : '' ?> aria-label="Přidat <?= $escape($product['name']) ?> do košíku"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h2l2 10h10l2-7H7M9 19h.01M18 19h.01" /></svg><span><?= $product['stock_status'] === 'out_of_stock' ? 'Není skladem' : 'Do košíku' ?></span></button>
+              </form>
             <?php endif; ?>
           </div>
           <?php if (($canManageCatalog ?? false) && !($managingCatalog ?? false)): ?><a class="card-edit-link" href="<?= $escape($productLink . '?edit=1') ?>">✎ Upravit produkt</a><?php endif; ?>

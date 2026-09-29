@@ -1,7 +1,7 @@
 <?php
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $sectionNames = ['overview' => 'Přehled', 'orders' => 'Objednávky', 'addresses' => 'Moje adresy',
-    'payments' => 'Uložené karty', 'settings' => 'Nastavení účtu'];
+    'payments' => 'Platby', 'settings' => 'Nastavení účtu'];
 ?>
 <div class="panel-area">
   <?php if ($screen === 'account'): ?>
@@ -16,7 +16,7 @@ $sectionNames = ['overview' => 'Přehled', 'orders' => 'Objednávky', 'addresses
           ['key' => 'overview', 'label' => 'Přehled', 'icon' => '⌂', 'href' => $accountUrl],
           ['key' => 'orders', 'label' => 'Objednávky', 'icon' => '▤', 'href' => $accountUrl . '?section=orders'],
           ['key' => 'addresses', 'label' => 'Moje adresy', 'icon' => '⌖', 'href' => $accountUrl . '?section=addresses'],
-          ['key' => 'payments', 'label' => 'Uložené karty', 'icon' => '▣', 'href' => $accountUrl . '?section=payments'],
+          ['key' => 'payments', 'label' => 'Platby', 'icon' => '▣', 'href' => $accountUrl . '?section=payments'],
           ['key' => 'settings', 'label' => 'Nastavení účtu', 'icon' => '⚙', 'href' => $accountUrl . '?section=settings'],
       ];
       require __DIR__ . '/../panel/sidebar.php';
@@ -29,12 +29,20 @@ $sectionNames = ['overview' => 'Přehled', 'orders' => 'Objednávky', 'addresses
         <?php if ($section === 'overview'): ?>
           <div class="panel-grid panel-overview">
             <section class="panel-panel"><p class="panel-eyebrow">Na cestu</p><h2>Ahoj, <?= $escape($user['display_name']) ?>.</h2><p>Vítej ve svém účtu. Zůstáváš v obchodě a vše důležité máš tady po ruce.</p><a class="panel-button" href="<?= $escape($basePath . $language) ?>#produkty">Prohlédnout vybavení →</a></section>
-            <section class="panel-panel"><p class="panel-eyebrow">Tvůj přehled</p><h2>Vše na jednom místě</h2><div class="panel-metrics"><a href="<?= $escape($accountUrl) ?>?section=orders"><strong><?= count($orders) ?></strong><span>objednávek</span></a><a href="<?= $escape($accountUrl) ?>?section=addresses"><strong><?= count($addresses) ?></strong><span>uložených adres</span></a></div><p class="panel-help">Objednávky se objeví, až obchod nabídne dokončení nákupu.</p></section>
+            <section class="panel-panel"><p class="panel-eyebrow">Tvůj přehled</p><h2>Vše na jednom místě</h2><div class="panel-metrics"><a href="<?= $escape($accountUrl) ?>?section=orders"><strong><?= count($orders) ?></strong><span>objednávek</span></a><a href="<?= $escape($accountUrl) ?>?section=addresses"><strong><?= count($addresses) ?></strong><span>uložených adres</span></a></div><p class="panel-help">Objednávky a jejich platby najdeš v historii.</p></section>
           </div>
         <?php elseif ($section === 'orders'): ?>
           <section class="panel-panel"><h2>Historie objednávek</h2>
-            <?php if ($orders === []): ?><p class="panel-empty">Zatím tu není žádná objednávka. Košík je nyní pouze ukázkový a nákup ještě nelze dokončit.</p><a class="panel-text-link" href="<?= $escape($basePath . $language) ?>#produkty">Vrátit se k vybavení →</a>
-            <?php else: ?><div class="panel-order-list"><?php foreach ($orders as $order): ?><div class="panel-order"><strong>Objednávka <?= $escape($order['order_number']) ?></strong><span><?= $escape($order['created_at']) ?> · <?= $escape($order['status']) ?></span><strong><?= number_format((int) $order['total_czk'], 0, ',', ' ') ?> Kč</strong></div><?php endforeach; ?></div><?php endif; ?>
+            <?php if ($orders === []): ?><p class="panel-empty">Zatím tu není žádná objednávka.</p><a class="panel-text-link" href="<?= $escape($basePath . $language) ?>#produkty">Vrátit se k vybavení →</a>
+            <?php else: ?><div class="panel-order-list"><?php foreach ($orders as $order): ?>
+              <?php $orderLabel = match ($order['payment_status'] ?? '') {
+                  'pending' => 'Čeká na platbu', 'paid' => 'Zaplaceno',
+                  default => (($order['status'] ?? '') === 'new' ? 'Přijata' : 'Stav: ' . ($order['status'] ?? 'neuveden')),
+              }; ?>
+              <div class="panel-order"><strong>Objednávka <?= $escape($order['order_number']) ?></strong><span><?= $escape($order['created_at']) ?> · <?= $escape($orderLabel) ?></span><strong><?= number_format((int) $order['total_czk'], 0, ',', ' ') ?> Kč</strong>
+                <?php if (!empty($order['order_token'])): ?><a href="<?= $escape($basePath . $language . '/objednavka/' . $order['order_token']) ?>">Zobrazit platbu a objednávku →</a><?php endif; ?>
+              </div>
+            <?php endforeach; ?></div><?php endif; ?>
           </section>
         <?php elseif ($section === 'addresses'): ?>
           <div class="panel-grid panel-grid-catalog">
@@ -54,7 +62,7 @@ $sectionNames = ['overview' => 'Přehled', 'orders' => 'Objednávky', 'addresses
             </section>
           </div>
         <?php elseif ($section === 'payments'): ?>
-          <section class="panel-panel panel-payment"><p class="panel-eyebrow">Platební metody</p><h2>Uložené karty</h2><p>Dobrodruzi nyní přijímají pouze bitcoin. Údaje o platebních kartách se na tomto webu neukládají. Pokud v budoucnu přibude platba kartou, propojí se s platebním poskytovatelem.</p><a class="panel-text-link" href="<?= $escape($accountUrl) ?>">Zpět na přehled →</a></section>
+          <section class="panel-panel panel-payment"><p class="panel-eyebrow">Platební metody</p><h2>Bankovní převod</h2><p>Objednávku zatím zaplatíte převodem na účet. Číslo účtu, variabilní symbol a QR kód se zobrazí po odeslání objednávky. Platební karty se na tomto webu neukládají.</p><a class="panel-text-link" href="<?= $escape($accountUrl) ?>">Zpět na přehled →</a></section>
         <?php elseif ($section === 'settings'): ?>
           <div class="panel-grid panel-grid-catalog">
             <section class="panel-panel"><h2>Osobní údaje</h2><form class="panel-form" method="post" action="<?= $escape($accountUrl . '?section=settings') ?>"><input type="hidden" name="action" value="profile"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><label>E-mail <input type="email" value="<?= $escape($user['email']) ?>" readonly></label><p class="panel-help">E-mail je přihlašovací údaj. Jeho změna bude dostupná po zavedení ověření e-mailu.</p><label>Jméno <input name="display_name" maxlength="120" autocomplete="name" required value="<?= $escape($user['display_name']) ?>"></label><label>Telefon (volitelný) <input name="phone" type="tel" maxlength="40" autocomplete="tel" value="<?= $escape($user['phone']) ?>"></label><button class="panel-button" type="submit">Uložit profil</button></form></section>

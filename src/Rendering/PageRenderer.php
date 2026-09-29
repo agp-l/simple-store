@@ -8,7 +8,8 @@ use InvalidArgumentException;
 /** Pass explicit data to PHP views without embedding SQL or Twig in templates. */
 final class PageRenderer
 {
-    private const PAGES = ['catalog', 'product-record', 'page', 'blog', 'post', 'not-found', 'unavailable'];
+    private const PAGES = ['catalog', 'product-record', 'page', 'blog', 'post', 'cart',
+        'shipping', 'payment', 'review', 'complete', 'not-found', 'unavailable'];
 
     public function __construct(private string $viewPath)
     {
@@ -73,6 +74,28 @@ final class PageRenderer
         $setupNotice = (string) ($data['setupNotice'] ?? '');
         $debugError = (string) ($data['debugError'] ?? '');
         $showErrors = (bool) ($data['showErrors'] ?? true);
+        $cartUrl = (string) ($data['cartUrl'] ?? $basePath . $language . '/kosik');
+        $checkoutUrl = (string) ($data['checkoutUrl'] ?? $basePath . $language . '/pokladna');
+        $cartCount = (int) ($data['cartCount'] ?? 0);
+        $cartToken = (string) ($data['cartToken'] ?? '');
+        $checkout = $data['checkout'] ?? ['items' => [], 'count' => 0, 'subtotal_czk' => 0,
+            'issues' => [], 'can_continue' => false];
+        $delivery = $data['delivery'] ?? [];
+        $shippingOptions = $data['shippingOptions'] ?? [];
+        $selectedShippingPrice = $data['selectedShippingPrice'] ?? null;
+        $error = (string) ($data['error'] ?? '');
+        $step = (string) ($data['step'] ?? '');
+        $bankConfigured = (bool) ($data['bankConfigured'] ?? false);
+        $shippingConfigured = (bool) ($data['shippingConfigured'] ?? false);
+        $checkoutAvailable = (bool) ($data['checkoutAvailable'] ?? false);
+        $termsUrl = (string) ($data['termsUrl'] ?? '');
+        $order = $data['order'] ?? [];
+        $bankPayment = $data['bankPayment'] ?? [];
+        $orderUrl = (string) ($data['orderUrl'] ?? '');
+        $qrMarkup = (string) ($data['qrMarkup'] ?? '');
+        $checkoutReady = (bool) ($data['checkoutReady'] ?? false);
+        $compactHeader = (bool) ($data['compactHeader'] ?? false);
+        $skipTarget = (string) ($data['skipTarget'] ?? 'produkty');
         require $this->viewPath . '/layout.php';
     }
 
@@ -89,6 +112,8 @@ final class PageRenderer
         $canManageContent = (bool) ($data['canManageContent'] ?? false);
         $managingCatalog = (bool) ($data['managingCatalog'] ?? false);
         $canManageCatalog = (bool) ($data['canManageCatalog'] ?? false);
+        $cartToken = (string) ($data['cartToken'] ?? '');
+        $cartUrl = (string) ($data['cartUrl'] ?? $basePath . $language . '/kosik');
         ob_start();
         try {
             foreach ($items as $item) {

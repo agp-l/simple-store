@@ -61,7 +61,7 @@ final class ProductRepository
         };
         array_push($values, $limit + 1, $offset);
         $rows = $this->db->query(
-            'SELECT slug, name, brand, summary, details_json, category, subcategory,
+            'SELECT product_key, slug, name, brand, summary, details_json, category, subcategory,
                     price_czk, image_path, sizes, stock_status
              FROM product_revisions WHERE ' . $where . ' ORDER BY ' . $order . ' LIMIT %i OFFSET %i',
             ...$values
@@ -141,6 +141,19 @@ final class ProductRepository
         return $this->db->queryFirstRow(
             'SELECT * FROM product_revisions WHERE slug=%s AND language=%s AND published=1
              AND active_product_key IS NOT NULL LIMIT 1', $slug, $language
+        );
+    }
+
+    /** Resolve cart entries by permanent identity; browser supplied prices are ignored. */
+    public function findPublishedByKey(string $key, string $language): ?array
+    {
+        if (preg_match('/^[a-f0-9]{32}$/D', $key) !== 1 ||
+            !in_array($language, $this->languages, true)) {
+            throw new InvalidArgumentException('Neplatný produkt v košíku.');
+        }
+        return $this->db->queryFirstRow(
+            'SELECT * FROM product_revisions WHERE product_key=%s AND language=%s
+             AND active_product_key IS NOT NULL AND published=1 LIMIT 1', $key, $language
         );
     }
 

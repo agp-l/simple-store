@@ -2,13 +2,13 @@
 
 ## Smysl první etapy
 
-CMS řeší stránky, blog a produktové karty. Produkty mají vlastní revize; nákupní proces a platby budou samostatné další etapy. Správce i zákazníci mají roli v `users`; heslo se ukládá pouze jako hash. Reset hesla správce provádí `tools/admin.php --reset` z terminálu.
+CMS řeší stránky, blog a produkty s revizemi. První nákupní proces vytváří objednávky s doručením na adresu v ČR a bankovním převodem v Kč. Správce i zákazníci mají roli v `users`; heslo se ukládá pouze jako hash. Host může objednat bez účtu. Reset hesla správce provádí `tools/admin.php --reset` z terminálu.
 
 ## Jak jde požadavek aplikací
 
 1. Apache ponechá obrázky a CSS jako soubory. Ostatní URL předá do `index.php`.
 2. `UrlManager` rozdělí cestu na úseky, určí jazyk a udrží správný prefix, pokud je projekt v podsložce.
-3. `UrlManager::route()` určí obchod, kategorii, produkt, seznam článků, článek, stránku nebo 404; `index.php` vybere odpovídající databázový obsah.
+3. `UrlManager::route()` určí obchod, kategorii, produkt, blog, stránku, košík, pokladnu, potvrzení objednávky nebo 404; `index.php` vybere odpovídající data a předá nákupní trasy `CheckoutController`.
 4. `CategoryRepository` načte strom kategorií a `ContentRepository` aktuální publikovanou revizi. `MenuDefinitionRepository` spojí výchozí místa s případnými změnami v SQL; `MenuManager` z nich sestaví odkazy.
 5. `PageRenderer` pošle data do schválených PHP pohledů ve `view/`. `view/shell.php` společně vykreslí head, hlavičku a patičku. Nepoužívá Twig ani databázi.
 
@@ -34,6 +34,12 @@ CMS řeší stránky, blog a produktové karty. Produkty mají vlastní revize; 
 | `src/Media/` | Stálé cesty, validace uploadu, převod obrázků a připojení dávky k jedné revizi. |
 | `src/Admin/media-api.php`, `src/Admin/media.php` | Přihlášená knihovna fotografií pro konkrétní obsah podle jeho trvalého klíče. |
 | `src/Media/MediaAttachment.php` | Výběr umístění snímků, sestavení jedné revize dávky a zjištění jejich použití. |
+| `src/Checkout/CartSession.php`, `src/Checkout/CartService.php` | Samostatná anonymní session košíku a ověření aktuálních produktů i cen na serveru. |
+| `src/Checkout/CheckoutController.php`, `view/checkout/` | PHP formuláře košíku, dopravy, kontroly objednávky a bankovní platby. |
+| `src/Checkout/OrderRepository.php` | Transakční uložení objednávky, omezený správcovský výpis a ruční potvrzení platby. |
+| `src/Checkout/BankTransferPayment.php`, `src/Checkout/ShippingPolicy.php` | Ověření českého účtu a cen dopravy, příprava platebních údajů. |
+| `config/checkout.php` | Místní banka, doprava a obchodní podmínky; vychází z `config/checkout.example.php` a není ve verzovacím systému. |
+| `src/Admin/orders.php`, `view/admin/orders.php` | Přehled přijatých objednávek a ruční kontrola přijatého bankovního převodu. |
 | `src/Admin/delete-product.php` | Tenký POST vstup do kontroly revize a transakčního odstranění produktu. |
 | `src/Admin/inline-product.php` | Přijme ověřený požadavek z náhledu, uloží revizi a vrátí její číslo. |
 | `config/site.php` | Výchozí a podporované jazyky. |
@@ -51,9 +57,19 @@ CMS řeší stránky, blog a produktové karty. Produkty mají vlastní revize; 
 
 `view/shell.php` vkládá jediný `<head>`, hlavičku, zvolený obsah, patičku a společné skripty. Veřejný `PageRenderer` předává svůj pohled přes `view/layout.php`. `view/admin/layout.php` a `view/account/layout.php` nastavují jen titulek, text v hero a obsah pro `view/panel/layout.php`. Obě soukromé části používají `view/panel/sidebar.php`; odkazy a aktivní položky mu dodávají samostatně. Styly panelů žijí v `assets/panel.css` pod `.panel-area`, takže se vzhled formulářů nemíchá do katalogu. Změna loga, patičky nebo hlavního menu se dělá pouze ve společných souborech.
 
-Zákaznický účet je na `account.php`, administrativa na `admin.php`. Oba používají `RoleAuth`, ale jiné názvy cookie a repository, která vracejí pouze správnou roli. Případná klientská session tedy nikdy nepovolí správcovský zápis. Registrační a editační POST požadavky ověřují CSRF; dotazy na adresy a objednávky vždy filtrují `user_id`. `users` obsahuje e-mail, jméno a telefon zákazníka; více adres je v `customer_addresses`. `shop_orders` má základní pole pro pozdější snímky objednávek, ale současný ukázkový košík do něj nic nezapisuje.
+Zákaznický účet je na `account.php`, administrativa na `admin.php`. Oba používají `RoleAuth`, ale jiné názvy cookie a repository, která vracejí pouze správnou roli. Případná klientská session tedy nikdy nepovolí správcovský zápis. Registrační a editační POST požadavky ověřují CSRF; dotazy na adresy a historii objednávek účtu vždy filtrují `user_id`. `users` obsahuje e-mail, jméno a telefon zákazníka; více adres je v `customer_addresses`. Host může objednat s `user_id=NULL` a zadaným kontaktním e-mailem; jeho objednávka se v historii cizího účtu neobjeví.
 
-Karty nejsou zapojeny do plateb. Klientská záložka je pouze informativní; při budoucím přidání karet bude třeba integrace s poskytovatelem plateb a uchování jeho tokenů místo zadávání údajů o kartách do tohoto PHP systému. Současná implementace neukládá čísla karet ani bezpečnostní kódy. Více o zákazu uchovávat ověřovací kódy po autorizaci je v [FAQ PCI Security Standards Council](https://www.pcisecuritystandards.org/faqs/1280/).
+Platba kartou zatím není součástí pokladny; ukládá se pouze bankovní převod. Čísla karet ani bezpečnostní kódy aplikace nepřijímá. Pole `payment_method` a `provider_reference` dávají objednávce místo pro budoucí poskytovatele, například Comgate nebo BTCPay Server; jejich napojení, podpisy webhooků a idempotentní zpracování událostí zatím nejsou implementované.
+
+## Košík a bankovní objednávka
+
+`config/checkout.example.php` je úmyslně nevyplněný. Správce jej zkopíruje do ignorovaného `config/checkout.php` a nastaví místní `terms_url` publikované stránky obchodních podmínek, český IBAN s platnými kontrolními číslicemi, odpovídající tuzemské číslo účtu, příjemce, splatnost a cenu metody `home` v celých Kč s `requires_address=true`. `BankTransferPayment` ověřuje shodu IBANu a tuzemského účtu; `ShippingPolicy` ověřuje metody a ceny. Pokladna přijme jen doručení na adresu v ČR. Volba `pickup` v příkladu zatím neznamená hotový výběr výdejního místa. Bez platného účtu, dopravy, vyplněné místní adresy podmínek a schématu `shop_orders` nepovolí vytvoření objednávky; existenci obsahu podmínek musí správce ověřit.
+
+Košík na `/cs/kosik` používá oddělenou krátkodobou PHP session a CSRF token; drží jen identitu produktu, počet kusů a zvolené možnosti. `CartService` při každém čtení ověří současnou publikovanou revizi, dostupnost, varianty a cenu. Neplatná položka zůstane viditelná k odebrání, ale zablokuje odeslání celé objednávky. `CheckoutController` vede zákazníka přes `/cs/pokladna`: adresa a kontakt, platba převodem, závěrečná kontrola a souhlas s obchodními podmínkami. Ceny a dopravné se berou pouze ze serveru. JavaScript slouží k vykreslení QR kódu z řetězce SPAYD vytvořeného v PHP; číslo účtu, částka a variabilní symbol jsou čitelné i bez JavaScriptu.
+
+`OrderRepository::create()` v jedné transakci vloží do `shop_orders` snímek názvů, cen, možností, dopravy, kontaktních a bankovních údajů. Změna produktu nebo účtu pak nemění již založenou objednávku. Náhodný `idempotency_key` z košíku a unikátní index zamezují dvojímu založení při opakovaném POST včetně souběžných požadavků. Objednávka dostane trvalé číslo, náhodný `order_token`, unikátní variabilní symbol a počáteční stav platby `pending`; produktové revize nejsou její jediný zdroj historických cen. `database/schema.sql` obsahuje opakovatelnou migraci starších řádků, které nedostanou vymyšlené bankovní údaje.
+
+Stránka `/cs/objednavka/<token>` funguje i bez účtu jako soukromý odkaz. Její obsah se neposílá e-mailem; host si odkaz musí ponechat. Token je přístupový údaj k objednávce, proto odpověď používá `no-store`, `noindex` a pravidla pro referrer. Přihlášený zákazník navíc vidí vlastní objednávky v účtu. `admin.php?section=orders` nabízí omezený seznam s filtrem stavu a detail. Správce po skutečné kontrole částky a variabilního symbolu ve výpisu banky ručně přepne platbu z `pending` na `paid`; zaznamená se čas a ID správce. Přijetí bankovní platby ani e-mailové potvrzení zatím neběží automaticky. Tato etapa nerezervuje skladové kusy a nevytváří zásilky u dopravce.
 
 ## Jedna tabulka pro stránky, články a historii
 
@@ -87,10 +103,10 @@ Produktová revize nadále ukládá kořen do `category` a zbytek cesty do `subc
 
 Revize jednoho dokumentu či produktu jsou úplné snímky. Společný `document_key` / `product_key` a unikátní indexy určují identitu, jazyk, číslo a aktuální adresu. Zápis v transakci a kontrola očekávané revize zabraňují přepsání novější práce. Při vytváření překladu repository ověří, že původní identita už existuje. Není nutná další tabulka pro jednotlivé bloky ani cizí klíč na každý odstavec. Limit 50 revizí na identitu a jazyk nastavuje `config/site.php`; po úspěšném vložení se v téže transakci odstraní jen starší neaktivní snímky. Již existující dlouhé historie se zkrátí při příštím uložení daného obsahu.
 
-Kategorie používají stabilní řetězcovou cestu a překlady mají stejné cesty. Repository před uložením produktu ověřuje, že zapnutá kategorie a její rodiče existují. Kdyby někdo ručně smazal kategorii SQL příkazem, neexistuje cizí klíč, který by změnu zastavil; navázané produkty bude třeba najít a přiřadit znovu. U objednávek, plateb a skladových pohybů už tato volnost nedává smysl: musí mít vlastní identitu, přesná pravidla konzistence a vazbu na produkt nebo jeho snímek v okamžiku nákupu.
+Kategorie používají stabilní řetězcovou cestu a překlady mají stejné cesty. Repository před uložením produktu ověřuje, že zapnutá kategorie a její rodiče existují. Kdyby někdo ručně smazal kategorii SQL příkazem, neexistuje cizí klíč, který by změnu zastavil; navázané produkty bude třeba najít a přiřadit znovu. Objednávka proto ukládá vlastní úplný snímek zakoupených položek a částek; její historický obsah není závislý na budoucích úpravách či odstranění produktu. Skladové pohyby a napojení externích plateb by vyžadovaly další pravidla konzistence.
 
 Veřejný katalog čte 12 produktů a blog 6 článků v jedné dávce. SQL používá `LIMIT` a `OFFSET`; současně kontroluje jeden další řádek kvůli zobrazení odkazu na další dávku. Odkaz funguje i bez JavaScriptu, s JavaScriptem načte JSON s HTML kartami ze stejné URL a připojí je k seznamu. Pokud během procházení někdo mění publikovaný obsah, posun mezi dávkami může některou kartu zopakovat či přeskočit; při větším provozu lze přejít na kurzorové stránkování. `database/schema.sql` zůstává jediným aktuálním schématem.
 
 ## Hranice zabezpečení
 
-Pro běžný hosting zůstává kořen projektu také kořenem webu. `.htaccess` na Apache blokuje `src/`, `config/`, `database/`, `view/`, `vendor/` a další neveřejné soubory ještě před pravidlem pro směrování. Na jiném serveru je potřeba odpovídající zákaz v jeho nastavení. Přihlášení administrátora používá silné náhodné heslo, PHP session a kontrolu CSRF tokenu u každého POST; editor přistupuje k databázi až po přihlášení. Administraci na veřejné doméně provozuj pouze přes HTTPS a s vypnutým ladicím výpisem chyb.
+Pro běžný hosting zůstává kořen projektu také kořenem webu. `.htaccess` na Apache blokuje `src/`, `config/`, `database/`, `view/`, `vendor/` a další neveřejné soubory ještě před pravidlem pro směrování. Na jiném serveru je potřeba odpovídající zákaz v jeho nastavení. Přihlášení administrátora používá silné náhodné heslo, PHP session a kontrolu CSRF tokenu u každého POST; editor přistupuje k databázi až po přihlášení. Košík má vlastní session a CSRF token i pro hosta. Soukromá stránka objednávky se otevírá pouze znalostí náhodného tokenu; odpověď zakazuje ukládání do cache a indexování. Administraci a pokladnu na veřejné doméně provozuj pouze přes HTTPS a s vypnutým ladicím výpisem chyb.

@@ -1,5 +1,6 @@
 /vendor/
 /config/database.php
+/config/checkout.php
 /config/admin.php
 /config/.admin-*
 /.env

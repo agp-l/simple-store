@@ -1,5 +1,6 @@
 DirectoryIndex index.php
 Options -Indexes
+AddType text/javascript .mjs
 RewriteEngine On
 
 # Keep source code, credentials, SQL and local HTML previews off the web.

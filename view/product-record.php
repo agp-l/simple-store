@@ -78,10 +78,13 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         <p class="product-brand"><span<?= $editable('brand', $product['brand']) ?>><?= $escape($product['brand']) ?></span> · <?= $escape($categoryLabel) ?></p>
         <h1<?= $editable('name', $product['name']) ?>><?= $escape($product['name']) ?></h1>
         <?php if ($editing || $product['summary'] !== ''): ?><p class="detail-lead"<?= $editable('summary', $product['summary'] ?? '') ?>><?= $escape($product['summary'] ?: 'Krátký popis produktu…') ?></p><?php endif; ?>
+        <form method="post" action="<?= $escape($cartUrl) ?>" class="product-purchase">
+          <input type="hidden" name="action" value="add"><input type="hidden" name="csrf" value="<?= $escape($cartToken) ?>">
+          <input type="hidden" name="product_key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
         <?php foreach ($details['options'] as $i => $group): ?>
           <div class="inline-option">
             <label class="field-label" for="product-option-<?= $i ?>"><span<?= $editable('option_name', $group['name'], $i, 'option.set') ?>><?= $escape($group['name']) ?></span></label>
-            <select id="product-option-<?= $i ?>" class="product-option" data-option-name="<?= $escape($group['name']) ?>" required><option value="">Vyberte <?= $escape($group['name']) ?></option>
+            <select id="product-option-<?= $i ?>" name="options[<?= $i ?>]" class="product-option" required><option value="">Vyberte <?= $escape($group['name']) ?></option>
               <?php foreach ($group['values'] as $choice): ?><option value="<?= $escape($choice) ?>"><?= $escape($choice) ?></option><?php endforeach; ?>
             </select>
             <?php if ($editing): ?><div class="inline-option-tools"><button class="inline-tiny" type="button" data-editor-action="option-values" data-editor-index="<?= $i ?>">✎ Upravit možnosti</button><button class="inline-tiny" type="button" data-editor-action="option-remove" data-editor-index="<?= $i ?>">× Odebrat</button></div>
@@ -91,9 +94,9 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         <?php endforeach; ?>
         <?php if ($editing): ?><button class="inline-small" type="button" data-editor-action="option-add">＋ Přidat výběr (barva, velikost…)</button><?php endif; ?>
         <div class="detail-price"><strong><span<?= $editable('price_czk', (string) $product['price_czk']) ?>><?= number_format((int) $product['price_czk'], 0, ',', ' ') ?></span> Kč</strong><span class="stock <?= $product['stock_status'] === 'in_stock' ? '' : 'stock-wait' ?>"><span class="stock-dot" aria-hidden="true"></span><?= $escape($stockText[$product['stock_status']] ?? '') ?></span></div>
-        <div class="buy-row"><div class="quantity" aria-label="Počet kusů"><button type="button" id="minus" aria-label="Ubrat kus">−</button><output id="qty">1</output><button type="button" id="plus" aria-label="Přidat kus">+</button></div>
-          <button class="detail-add" type="button" id="detail-add" data-name="<?= $escape($product['name']) ?>" data-price="<?= (int) $product['price_czk'] ?>" <?= $product['stock_status'] === 'out_of_stock' ? 'disabled' : '' ?>><?= $product['stock_status'] === 'out_of_stock' ? 'Není skladem' : 'Přidat do košíku' ?></button></div>
-        <p class="detail-feedback" id="detail-feedback" role="status" aria-live="polite"></p>
+        <div class="buy-row"><div class="quantity"><button type="button" id="minus" aria-label="Ubrat kus">−</button><input id="qty" type="number" name="quantity" min="1" max="99" value="1" aria-label="Počet kusů" required><button type="button" id="plus" aria-label="Přidat kus">＋</button></div>
+          <button class="detail-add" type="submit" id="detail-add" <?= $product['stock_status'] === 'out_of_stock' || empty($product['published']) ? 'disabled' : '' ?>><?= empty($product['published']) ? 'Neveřejný koncept' : ($product['stock_status'] === 'out_of_stock' ? 'Není skladem' : 'Přidat do košíku') ?></button></div>
+        </form>
       </div>
     </div>
     <?php if ($editing || $product['description'] !== '' || $details['sections'] !== [] || $details['specifications'] !== []): ?>
