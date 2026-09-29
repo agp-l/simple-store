@@ -81,6 +81,7 @@ try {
             }
             http_response_code(403);
             $screen = 'forbidden';
+            $error = 'Platnost administrátorského formuláře vypršela. Obnov stránku, znovu se přihlas a akci opakuj.';
             require __DIR__ . '/view/admin/layout.php';
             exit;
         }
@@ -112,6 +113,7 @@ try {
             }
             http_response_code(403);
             $screen = 'forbidden';
+            $error = 'Pro tuto akci je potřeba přihlášení správce. Otevři administraci a přihlas se.';
             require __DIR__ . '/view/admin/layout.php';
             exit;
         }

@@ -32,7 +32,7 @@ $inside = in_array($screen, ['editor', 'categories', 'menus', 'media', 'orders']
         <p>Nejdřív importuj <code>database/schema.sql</code>, pak v kořeni projektu spusť <code>/opt/lampp/bin/php tools/admin.php</code>. Příkaz jednou vypíše přístupové heslo; ulož si ho. Pokud už účet existoval v souboru, můžeš jej převést příkazem <code>/opt/lampp/bin/php tools/admin.php --migrate</code>.</p>
       </section>
     <?php elseif ($screen === 'forbidden'): ?>
-      <section class="panel-panel panel-centered"><h1>Přístup odepřen</h1><p>Obnov stránku a zkus akci znovu.</p></section>
+      <section class="panel-panel panel-centered"><h1>Přístup odepřen</h1><p role="alert"><?= $escape($error) ?></p><p><a href="<?= $escape($adminUrl) ?>">Přejít do administrace</a></p></section>
     <?php elseif ($screen === 'error'): ?>
       <section class="panel-panel panel-centered"><h1>Administraci se nepodařilo načíst</h1><p class="panel-error"><?= $escape($error) ?></p></section>
     <?php elseif ($screen === 'login'): ?>
