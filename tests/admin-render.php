@@ -166,6 +166,18 @@ if (!str_contains($html, 'name="action" value="packeta-courier"') ||
     str_contains($html, 'packeta_label=1')) {
     throw new RuntimeException('HD must obtain a carrier number before its label.');
 }
+$packetaShipment = ['status' => 'rejected', 'last_error' => 'eshop_id: Není zadán odesilatel zásilky.',
+    'submitted_json' => json_encode(['eshop' => 'Dobrodruzi <script>'], JSON_THROW_ON_ERROR)];
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'Odeslané označení odesílatele') ||
+    !str_contains($html, 'Dobrodruzi &lt;script&gt;') ||
+    str_contains($html, 'Dobrodruzi <script>') ||
+    !str_contains($html, 'client.packeta.com/senders/') ||
+    !str_contains($html, 'section=settings')) {
+    throw new RuntimeException('Rejected Packeta sender should show its submitted label and correction path safely.');
+}
 $packetaShipment = null;
 $orderPage = ['items' => [$order], 'nextOffset' => 25];
 $ordersNextUrl = $orderBaseUrl . '&status=all&offset=25';
@@ -193,6 +205,7 @@ $html = ob_get_clean();
 if (!str_contains($html, 'Nastavení obchodu') ||
     !str_contains($html, 'value="save-checkout-settings"') ||
     !str_contains($html, 'value="123456/0100"') ||
+    !str_contains($html, 'Označení odesílatele (hodnota pro API pole eshop)') ||
     !str_contains($html, 'name="shipping_price[gls_pickup]"') ||
     !str_contains($html, 'name="csrf" value="test-token"')) {
     throw new RuntimeException('Authenticated checkout settings form is missing.');

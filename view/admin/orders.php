@@ -116,7 +116,14 @@ $packetaAction ??= '';
                 </form>
               <?php endif; ?>
             <?php else: ?>
-              <?php if ($packetaShipment !== null && $packetaShipment['status'] === 'rejected'): ?><p class="panel-error" role="alert"><?= $escape($packetaShipment['last_error'] ?: 'Zásilkovna zásilku odmítla.') ?></p><?php endif; ?>
+              <?php if ($packetaShipment !== null && $packetaShipment['status'] === 'rejected'): ?>
+                <p class="panel-error" role="alert"><?= $escape($packetaShipment['last_error'] ?: 'Zásilkovna zásilku odmítla.') ?></p>
+                <?php if (str_contains((string) ($packetaShipment['last_error'] ?? ''), 'eshop_id:')): ?>
+                  <?php $rejectedPacket = json_decode((string) ($packetaShipment['submitted_json'] ?? ''), true); ?>
+                  <?php $sentSender = is_array($rejectedPacket) ? ($rejectedPacket['eshop'] ?? '') : ''; ?>
+                  <p class="panel-help">Odeslané označení odesílatele: <strong><?= $escape(is_string($sentSender) ? $sentSender : '') ?></strong>. Zkopíruj přesné <strong>Označení</strong> ze čtvrtého sloupce <a href="https://client.packeta.com/senders/" target="_blank" rel="noopener noreferrer">seznamu odesílatelů Zásilkovny</a> do <a href="<?= $escape($adminUrl . '?section=settings') ?>">nastavení obchodu</a>. Potom zásilku podej znovu.</p>
+                <?php endif; ?>
+              <?php endif; ?>
               <?php if (!$paid): ?><p class="panel-help">Nejdřív ověř platbu na bankovním výpisu a označ ji jako přijatou.</p><?php endif; ?>
               <?php if (($shipping['method'] ?? '') === 'zasilkovna_pickup' &&
                   (($shipping['pickup_verified'] ?? false) !== true ||
