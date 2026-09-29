@@ -11,11 +11,15 @@ $screen = 'media';
 $categoryRepository = new CategoryRepository($db);
 $productRepository = new ProductRepository($db, $site['languages'], $categoryRepository, $site['revision_limit']);
 $mediaTargets = [];
+$categoryNames = [];
 foreach ($productRepository->currentProducts() as $row) {
     $path = CategoryPath::fromProduct($row);
-    $category = $categoryRepository->find($row['language'], $path);
+    if (!isset($categoryNames[$row['language']])) {
+        $categoryNames[$row['language']] = array_column(
+            $categoryRepository->all($row['language']), 'title', 'path');
+    }
     $mediaTargets[] = [
-        'group' => 'Produkty · ' . ($category['title'] ?? $path),
+        'group' => 'Produkty · ' . ($categoryNames[$row['language']][$path] ?? $path),
         'label' => $row['name'] . ' (' . $row['language'] . ')',
         'type' => 'product', 'key' => $row['product_key'], 'language' => $row['language'],
         'revision' => (int) $row['revision_number'],

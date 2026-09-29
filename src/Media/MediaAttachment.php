@@ -39,6 +39,11 @@ final class MediaAttachment
             $gallery[] = $form['image_path'];
         }
         $form['image_path'] = array_shift($paths);
+        foreach ($form['section_type'] as $index => $sectionType) {
+            if ($sectionType === 'image' && $form['section_body'][$index] === 'images/batoh.webp') {
+                $form['section_body'][$index] = $form['image_path'];
+            }
+        }
         $form['gallery'] = implode("\n", array_merge($gallery, $paths));
         return $form;
     }

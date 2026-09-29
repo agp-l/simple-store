@@ -106,7 +106,8 @@ final class MediaLibrary
         }
         try {
             if ($info[2] === IMAGETYPE_JPEG && function_exists('exif_read_data')) {
-                $orientation = (int) ((@exif_read_data($source)['Orientation'] ?? 1));
+                $metadata = @exif_read_data($source);
+                $orientation = is_array($metadata) ? (int) ($metadata['Orientation'] ?? 1) : 1;
                 if ($orientation === 3 || $orientation === 6 || $orientation === 8) {
                     $rotated = imagerotate($image, [3 => 180, 6 => -90, 8 => 90][$orientation], 0);
                     if ($rotated instanceof GdImage) {

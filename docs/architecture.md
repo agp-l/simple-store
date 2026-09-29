@@ -31,6 +31,8 @@ CMS řeší stránky, blog a produktové karty. Produkty mají vlastní revize; 
 | `src/Product/ProductRepository.php` | Produkty, publikovaný katalog a revize v jedné produktové tabulce. |
 | `src/Product/ProductDetails.php` | Ověří a připraví volitelné výběry, technické údaje, galerii a bloky obsahu. |
 | `src/Product/ProductInlineEditor.php` | Výchozí koncept a převod jedné malé úpravy na kompletní ověřený snímek. |
+| `src/Media/` | Stálé cesty, validace uploadu, převod obrázků a připojení dávky k jedné revizi. |
+| `src/Admin/media-api.php`, `src/Admin/media.php` | Přihlášená knihovna fotografií a její seznam podle současných kategorií. |
 | `src/Admin/inline-product.php` | Přijme ověřený požadavek z náhledu, uloží revizi a vrátí její číslo. |
 | `config/site.php` | Výchozí a podporované jazyky. |
 | `config/database.php` | Místní údaje k DB, není ve verzovacím systému. |
@@ -66,6 +68,8 @@ Administrace ukazuje seznam produktů a tlačítko pro založení neveřejného 
 `assets/inline-editor.js` po opuštění textového pole odešle jednu změnu spolu s CSRF tokenem a očekávaným číslem revize do `admin.php`. Editor řadí požadavky za sebe, aby rychlé úpravy používaly správné číslo revize. `ProductInlineEditor` vezme aktuální kompletní revizi, změní jen povolené pole nebo jeden blok a připraví původní všechna ostatní data k uložení. `ProductRepository::saveRevision()` ověří obsah i původní číslo revize a vloží nový řádek v transakci. Obnova starší verze používá stejný zápis a vytváří další revizi. Při chybě se editor zastaví a zobrazí chybu, takže další zápisy nevycházejí ze zastaralého stavu.
 
 Stránky a články používají stejný postup přes `assets/content-editor.js`, `src/Admin/inline-content.php` a `ContentInlineEditor`. `index.php` nabízí draft jen při platné relaci správce a parametru `?edit=1`. Běžná adresa načítá pouze publikované dokumenty. Jedno uložení mění jeden blok nebo jedno pole a `ContentRepository::saveRevision()` zapíše nový úplný řádek s kontrolou revize; historii lze obnovit stejnou cestou. Administrace zobrazuje seznam a dvě tlačítka pro založení neveřejného konceptu.
+
+Obrazové soubory jsou mimo SQL. `MediaLibrary` přijme jen skutečný PHP upload JPG/PNG/WebP v daných mezích, zkontroluje typ dat a obraz znovu zakóduje. Původní soubor se veřejně neukládá; vzniknou tři neměnné WebP soubory. Souborová cesta používá typ obsahu a jeho stabilní klíč, nikoli slug nebo kategorii. Administrace při výpisu přiřadí produktu aktuální kategorii, takže změna názvu či přesun produktu nemění existující URL. Překlady se stejným klíčem mohou obrázek znovu vybrat z téže knihovny. `MediaAttachment` připraví jeden kompletní snímek pro celou dávku, repository ho uloží s kontrolou očekávané revize; při neúspěchu se soubory této dávky odstraní. Soubory ze starších revizí se automaticky neodstraňují, protože jejich URL mohou být použity i mimo databázi. Pro trvalost obsahu zálohuj SQL i `images/media/`.
 
 Základní cesty jsou `/`, `/cs`, `/cs/kategorie-produktu/spani/spacaky`, `/cs/produkt/nazev`, `/cs/blog`, `/cs/blog/nazev-clanku`, `/cs/o-nas`. Jazyk vybírá výhradně URL, nikoli cookie nebo session. Nyní je zapnutá jen čeština; další jazyk vyžaduje také přeložené texty rozhraní a řádky se stejnými cestami v `catalog_categories`. Chybějící překlad zobrazí 404, aby se potichu nepodstrčil obsah v jiném jazyce.
 

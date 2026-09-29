@@ -28,7 +28,8 @@ $form = ProductInlineEditor::starter('cs', 'boty');
 $product = $form + ['category' => 'boty', 'subcategory' => ''];
 $product['details_json'] = json_encode(ProductDetails::fromForm($form), JSON_THROW_ON_ERROR);
 $attached = MediaAttachment::product($product, [$path, str_replace('zepredu', 'zboku', $path)]);
-if ($attached['image_path'] !== $path || !str_contains($attached['gallery'], 'zboku')) {
+if ($attached['image_path'] !== $path || !str_contains($attached['gallery'], 'zboku') ||
+    $attached['section_body'][3] !== $path) {
     throw new RuntimeException('Hromadné nahrání nepřiřadilo snímky produktu.');
 }
 $product['image_path'] = 'images/stara.webp';
