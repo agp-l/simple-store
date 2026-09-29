@@ -266,11 +266,17 @@ $packetaAction ??= '';
     <div class="panel-order-list">
       <?php foreach ($orderPage['items'] as $listed): ?>
         <?php $listedPaid = ($listed['payment_status'] ?? '') === 'paid'; ?>
+        <?php $listedShipment = match ($listed['shipment_status'] ?? '') {
+            'created' => 'Zásilka vytvořena', 'cancelled' => 'Zásilka stornována',
+            'cancelling', 'cancel_uncertain' => 'Storno k ověření',
+            'submitting', 'uncertain' => 'Podání k ověření', 'rejected' => 'Podání odmítnuto',
+            default => '',
+        }; ?>
         <a class="panel-order-row" href="<?= $escape($orderBaseUrl . '&id=' . (int) $listed['id']) ?>">
           <span><strong><?= $escape($listed['order_number'] ?? '') ?></strong><small><?= $escape($listed['created_at'] ?? '') ?> · <?= $escape($listed['customer_email'] ?? '') ?></small></span>
           <span class="panel-order-symbol"><?= ($listed['payment_method'] ?? '') === 'test' ? 'TEST' : 'VS ' . $escape($listed['variable_symbol'] ?? '–') ?></span>
           <strong><?= $orderMoney($listed['total_czk'] ?? 0) ?></strong>
-          <span class="panel-order-state <?= $listedPaid ? 'is-paid' : 'is-pending' ?>"><?= $escape($orderPaymentLabel($listed['payment_status'] ?? '')) ?> · <?= $escape($orderFulfillmentLabel($listed['status'] ?? '')) ?></span>
+          <span class="panel-order-state <?= $listedPaid ? 'is-paid' : 'is-pending' ?>"><?= $escape($orderPaymentLabel($listed['payment_status'] ?? '')) ?> · <?= $escape($orderFulfillmentLabel($listed['status'] ?? '')) ?><?= $listedShipment !== '' ? ' · ' . $escape($listedShipment) : '' ?></span>
         </a>
       <?php endforeach; ?>
     </div>

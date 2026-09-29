@@ -237,9 +237,12 @@ final class OrderRepository
                 'shipped', 'completed', 'cancelled'], true)) {
             throw new InvalidArgumentException('Neplatný filtr objednávek.');
         }
+        $parcelField = (new PacketaShipmentRepository($this->db))->installed()
+            ? '(SELECT status FROM shop_packeta_shipments WHERE order_id=shop_orders.id)'
+            : 'NULL';
         $fields = 'SELECT id, order_number, status, customer_email, subtotal_czk, shipping_czk,
-                          total_czk, payment_method, payment_status, variable_symbol, created_at
-                   FROM shop_orders';
+                          total_czk, payment_method, payment_status, variable_symbol, created_at,
+                          ' . $parcelField . ' AS shipment_status FROM shop_orders';
         $rows = $filter === null
             ? $this->db->query($fields . ' ORDER BY id DESC LIMIT %i OFFSET %i', $limit + 1, $offset)
             : $this->db->query($fields . (in_array($filter, ['pending', 'paid', 'test'], true)

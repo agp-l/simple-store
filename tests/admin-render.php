@@ -195,7 +195,7 @@ if (!str_contains($html, 'Odeslané označení odesílatele') ||
     throw new RuntimeException('Rejected Packeta sender should show its submitted label and correction path safely.');
 }
 $packetaShipment = null;
-$orderPage = ['items' => [$order], 'nextOffset' => 25];
+$orderPage = ['items' => [array_replace($order, ['shipment_status' => 'created'])], 'nextOffset' => 25];
 $ordersNextUrl = $orderBaseUrl . '&status=all&offset=25';
 $order = null;
 ob_start();
@@ -203,6 +203,7 @@ require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
 if (!str_contains($html, 'DB-20260929-1') ||
     !str_contains($html, '1234567890') ||
+    !str_contains($html, 'Zásilka vytvořena') ||
     !str_contains($html, 'status=all&amp;offset=25') ||
     !str_contains($html, 'Objednávky')) {
     throw new RuntimeException('Admin order list must show payment references and pagination.');
