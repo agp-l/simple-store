@@ -5,3 +5,5 @@
 /.env
 /.env.*
 /composer.phar
+/images/media/*
+!/images/media/.htaccess

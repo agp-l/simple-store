@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace SimpleStore\Product;
 
 use InvalidArgumentException;
+use SimpleStore\Media\MediaPath;
 
 /** Optional product fields are stored as one snapshot alongside each product revision. */
 final class ProductDetails
@@ -12,6 +13,7 @@ final class ProductDetails
     {
         return strlen($path) <= 1000 && (
             preg_match('~^images/[A-Za-z0-9_-]+\.(?:webp|jpg|jpeg|png|avif)$~iD', $path) === 1 ||
+            MediaPath::isManaged($path) ||
             (filter_var($path, FILTER_VALIDATE_URL) && parse_url($path, PHP_URL_SCHEME) === 'https')
         );
     }
