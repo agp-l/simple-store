@@ -198,6 +198,7 @@
       text-decoration: none;
     }
     .header-actions .account:hover { color: var(--forest-dark); text-decoration: underline; }
+    .account-mobile { display: none; }
 
     .cart-button {
       position: relative;
@@ -1095,15 +1096,22 @@
       }
 
       .header-actions {
-        margin-left: 0
+        margin-left: 0;
+        gap: 8px;
       }
 
       .cart-button { min-height: 40px; padding: 0 9px; gap: 5px; }
       .cart-button > span:not(.cart-count) { display: none; }
 
       .header-actions .account {
-        display: none
+        display: inline-flex;
+        align-items: center;
+        min-height: 40px;
+        padding: 0 3px;
+        font-weight: 700;
       }
+      .account-desktop { display: none; }
+      .account-mobile { display: inline; }
 
       .utility {
         height: auto;
