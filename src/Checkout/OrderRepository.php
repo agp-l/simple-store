@@ -230,19 +230,21 @@ final class OrderRepository
     }
 
     /** Bounded admin list with a single extra row for the next-page link. */
-    public function managementPage(int $offset = 0, int $limit = 20, ?string $paymentStatus = null): array
+    public function managementPage(int $offset = 0, int $limit = 20, ?string $filter = null): array
     {
         if ($offset < 0 || $offset > 100000 || $limit < 1 || $limit > 100 ||
-            !in_array($paymentStatus, [null, 'pending', 'paid', 'test'], true)) {
+            !in_array($filter, [null, 'pending', 'paid', 'test', 'processing', 'ready_to_ship',
+                'shipped', 'completed', 'cancelled'], true)) {
             throw new InvalidArgumentException('Neplatný filtr objednávek.');
         }
         $fields = 'SELECT id, order_number, status, customer_email, subtotal_czk, shipping_czk,
                           total_czk, payment_method, payment_status, variable_symbol, created_at
                    FROM shop_orders';
-        $rows = $paymentStatus === null
+        $rows = $filter === null
             ? $this->db->query($fields . ' ORDER BY id DESC LIMIT %i OFFSET %i', $limit + 1, $offset)
-            : $this->db->query($fields . ' WHERE payment_status=%s ORDER BY id DESC LIMIT %i OFFSET %i',
-                $paymentStatus, $limit + 1, $offset);
+            : $this->db->query($fields . (in_array($filter, ['pending', 'paid', 'test'], true)
+                ? ' WHERE payment_status=%s' : ' WHERE status=%s') .
+                ' ORDER BY id DESC LIMIT %i OFFSET %i', $filter, $limit + 1, $offset);
         return [
             'items' => array_slice($rows, 0, $limit),
             'nextOffset' => count($rows) > $limit ? $offset + $limit : null,
@@ -290,18 +292,41 @@ final class OrderRepository
     /** Manual fulfillment state; a bank transfer must be verified before shipping. */
     public function setFulfillmentStatus(int $id, string $status): void
     {
-        if ($id < 1 || !in_array($status, ['processing', 'shipped', 'completed', 'cancelled'], true)) {
+        if ($id < 1 || !in_array($status,
+            ['processing', 'ready_to_ship', 'shipped', 'completed', 'cancelled'], true)) {
             throw new InvalidArgumentException('Neplatný stav objednávky.');
         }
         $this->db->startTransaction();
         try {
             $row = $this->db->queryFirstRow(
-                'SELECT status, payment_status FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $id
+                'SELECT status, payment_status, shipping_json FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $id
             );
+            $allowed = match ($row['status'] ?? '') {
+                'new' => ['processing', 'ready_to_ship', 'shipped', 'cancelled'],
+                'processing' => ['processing', 'ready_to_ship', 'shipped'],
+                'ready_to_ship' => ['ready_to_ship', 'processing', 'shipped'],
+                'shipped' => ['shipped', 'completed'],
+                default => [],
+            };
             if ($row === null || in_array($row['status'], ['completed', 'cancelled', 'test'], true) ||
+                !in_array($status, $allowed, true) ||
                 ($status === 'cancelled' && $row['payment_status'] === 'paid') ||
                 ($status !== 'cancelled' && $row['payment_status'] !== 'paid')) {
                 throw new InvalidArgumentException('Tento přechod stavu není možný. Zaplacenou objednávku před zrušením nejprve vyřeš individuálně.');
+            }
+            $shipping = json_decode((string) ($row['shipping_json'] ?? ''), true);
+            if (in_array($status, ['ready_to_ship', 'shipped'], true) &&
+                in_array($shipping['method'] ?? '', ['zasilkovna_pickup', 'zasilkovna_home'], true)) {
+                if ((int) $this->db->queryFirstField(
+                    'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
+                    'shop_packeta_shipments') === 0) {
+                    throw new InvalidArgumentException('Aktualizuj SQL tabulky v sekci Databáze.');
+                }
+                $shipment = $this->db->queryFirstRow(
+                    'SELECT status FROM shop_packeta_shipments WHERE order_id=%i LIMIT 1', $id);
+                if ($shipment === null || $shipment['status'] !== 'created') {
+                    throw new InvalidArgumentException('Nejdřív vytvoř aktivní zásilku u Zásilkovny. Storno či nejasný výsledek nelze označit jako připravené nebo odeslané.');
+                }
             }
             $this->db->query('UPDATE shop_orders SET status=%s WHERE id=%i AND status=%s',
                 $status, $id, $row['status']);

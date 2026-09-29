@@ -4,6 +4,7 @@ declare(strict_types=1);
 use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Content\ContentRepository;
 use SimpleStore\Checkout\CartSession;
+use SimpleStore\Checkout\PacketaShipmentRepository;
 use SimpleStore\Customer\CustomerAuth;
 use SimpleStore\Customer\CustomerRepository;
 use SimpleStore\Database\ConnectionFactory;
@@ -29,6 +30,7 @@ $addresses = [];
 $orders = [];
 $orderPage = ['items' => [], 'nextOffset' => null];
 $orderDetail = null;
+$orderTrackingUrl = null;
 $orderHistory = ($_GET['history'] ?? '') === '1';
 $orderOffset = filter_var($_GET['offset'] ?? '0', FILTER_VALIDATE_INT,
     ['options' => ['min_range' => 0, 'max_range' => 100000]]);
@@ -182,6 +184,12 @@ try {
                     if ($orderDetail === null) {
                         http_response_code(404);
                         $error = 'Objednávka nebyla nalezena.';
+                    } elseif (in_array($orderDetail['shipping']['method'] ?? '',
+                        ['zasilkovna_pickup', 'zasilkovna_home'], true)) {
+                        $shipments = new PacketaShipmentRepository($db);
+                        if ($shipments->installed()) {
+                            $orderTrackingUrl = PacketaShipmentRepository::trackingUrl($shipments->find($id));
+                        }
                     }
                 }
             } else {

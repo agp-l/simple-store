@@ -117,7 +117,8 @@ CREATE TABLE IF NOT EXISTS shop_orders (
   UNIQUE KEY orders_variable_symbol (variable_symbol),
   UNIQUE KEY orders_idempotency_key (idempotency_key),
   KEY orders_for_customer (user_id, id),
-  KEY orders_payment_status (payment_status, id)
+  KEY orders_payment_status (payment_status, id),
+  KEY orders_fulfillment_status (status, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- One reservation per order prevents two API calls for the same parcel.
@@ -305,6 +306,14 @@ SET @order_status_index_upgrade = IF(@order_status_index=0,
 PREPARE order_status_index_statement FROM @order_status_index_upgrade;
 EXECUTE order_status_index_statement;
 DEALLOCATE PREPARE order_status_index_statement;
+
+SET @fulfillment_index = (SELECT COUNT(*) FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND INDEX_NAME='orders_fulfillment_status');
+SET @fulfillment_index_upgrade = IF(@fulfillment_index=0,
+  'ALTER TABLE shop_orders ADD KEY orders_fulfillment_status (status, id)', 'SELECT 1');
+PREPARE fulfillment_index_statement FROM @fulfillment_index_upgrade;
+EXECUTE fulfillment_index_statement;
+DEALLOCATE PREPARE fulfillment_index_statement;
 
 -- Each save inserts a complete snapshot of a page or blog post.
 -- Older inactive snapshots are pruned to config/site.php revision_limit after saving.

@@ -105,7 +105,8 @@ try {
             'inline-product', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
             'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product',
             'mark-order-paid', 'set-order-status', 'packeta-create', 'packeta-courier',
-            'packeta-reconcile', 'packeta-retry', 'save-checkout-settings', 'customer-create',
+            'packeta-reconcile', 'packeta-retry', 'packeta-cancel', 'packeta-cancel-confirmed',
+            'packeta-cancel-not-done', 'save-checkout-settings', 'customer-create',
             'customer-update', 'customer-active', 'customer-password', 'schema-apply'], true) ||
             !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach'], true)) {

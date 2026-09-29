@@ -77,9 +77,9 @@ class MeekroDB
         }
         if (str_contains($sql, 'FROM shop_orders')) {
             $rows = array_reverse($this->rows);
-            if (str_contains($sql, 'WHERE payment_status=%s')) {
+            if (str_contains($sql, 'WHERE payment_status=%s') || str_contains($sql, 'WHERE status=%s')) {
                 $rows = array_values(array_filter($rows,
-                    static fn (array $row): bool => $row['payment_status'] === $values[0]));
+                    static fn (array $row): bool => $row[str_contains($sql, 'WHERE status=%s') ? 'status' : 'payment_status'] === $values[0]));
                 return array_slice($rows, $values[2], $values[1]);
             }
             return array_slice($rows, $values[1], $values[0]);
@@ -148,7 +148,15 @@ if ($db->rows[0]['payment_status'] !== 'paid' || $db->rows[0]['status'] !== 'new
     throw new RuntimeException('Manual reconciliation changed the wrong status or filter.');
 }
 $repository->setFulfillmentStatus(1, 'processing');
+$repository->setFulfillmentStatus(1, 'ready_to_ship');
+if ($repository->managementPage(0, 20, 'ready_to_ship')['items'][0]['id'] !== 1) {
+    throw new RuntimeException('Ready orders are not filterable.');
+}
 $repository->setFulfillmentStatus(1, 'shipped');
+try {
+    $repository->setFulfillmentStatus(1, 'processing');
+    throw new RuntimeException('A handed over order returned to preparation.');
+} catch (InvalidArgumentException $expected) {}
 $repository->setFulfillmentStatus(1, 'completed');
 if ($db->rows[0]['status'] !== 'completed') {
     throw new RuntimeException('Fulfillment status did not advance.');

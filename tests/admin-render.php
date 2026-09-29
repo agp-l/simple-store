@@ -143,21 +143,37 @@ require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
 if (str_contains($html, 'name="action" value="mark-order-paid"') ||
     !str_contains($html, 'name="action" value="set-order-status"') ||
-    !str_contains($html, 'value="completed"') || !str_contains($html, 'Zaplaceno') ||
+    !str_contains($html, 'Zaplaceno') ||
     !str_contains($html, 'name="action" value="packeta-create"') ||
-    !str_contains($html, 'Výdejní místo: Praha (ID 123456)')) {
+    !str_contains($html, 'Původní místo: Praha (ID 123456)') ||
+    str_contains($html, 'value="ready_to_ship"')) {
     throw new RuntimeException('Paid bank transfers must not show the confirmation form.');
 }
+$packetaCancelReady = true;
+$packetaTrackingUrl = 'https://tracking.packeta.com/cs/?id=1234567890';
 $packetaShipment = ['status' => 'created', 'method' => 'zasilkovna_pickup',
     'barcode_text' => 'Z 123 4567 890', 'barcode' => 'Z1234567890',
-    'weight_kg' => '0.750', 'courier_number' => null];
+    'weight_kg' => '0.750', 'courier_number' => null, 'last_error' => null];
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
 if (!str_contains($html, 'Z 123 4567 890') || !str_contains($html, 'packeta_label=1') ||
+    !str_contains($html, 'name="action" value="packeta-cancel"') ||
+    !str_contains($html, 'value="ready_to_ship"') ||
+    !str_contains($html, 'tracking.packeta.com/cs/?id=1234567890') ||
     str_contains($html, 'name="action" value="packeta-create"')) {
     throw new RuntimeException('Created pickup packet must show the number and label.');
 }
+$packetaShipment['status'] = 'cancel_uncertain';
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'name="action" value="packeta-cancel-confirmed"') ||
+    !str_contains($html, 'name="action" value="packeta-cancel-not-done"') ||
+    str_contains($html, 'value="shipped"')) {
+    throw new RuntimeException('Uncertain cancellation must block shipping and allow manual resolution.');
+}
+$packetaShipment['status'] = 'created';
 $packetaShipment['method'] = 'zasilkovna_home';
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';

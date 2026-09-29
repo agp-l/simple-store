@@ -9,9 +9,9 @@ class MeekroDB
     private ?array $snapshot = null;
 
     public function queryFirstField(string $sql, mixed ...$args): int { return 1; }
-    public function startTransaction(): void { $this->snapshot = [$this->shipment, $this->history]; }
+    public function startTransaction(): void { $this->snapshot = [$this->shipment, $this->history, $this->order]; }
     public function commit(): void { $this->snapshot = null; }
-    public function rollback(): void { [$this->shipment, $this->history] = $this->snapshot; }
+    public function rollback(): void { [$this->shipment, $this->history, $this->order] = $this->snapshot; }
     public function queryFirstRow(string $sql, mixed ...$args): ?array
     {
         return str_contains($sql, 'FROM shop_orders') ? $this->order : $this->shipment;
@@ -29,6 +29,10 @@ class MeekroDB
     public function query(string $sql, mixed ...$values): array
     {
         if (str_contains($sql, 'FROM shop_packeta_cancelled_shipments')) return $this->history;
+        if (str_contains($sql, 'UPDATE shop_orders SET status=%s')) {
+            if ($this->order['status'] === $values[2]) $this->order['status'] = $values[0];
+            return [];
+        }
         if ($this->shipment === null) throw new RuntimeException('No shipment.');
         if (str_contains($sql, 'SET status=%s, packet_id=%s')) {
             if (in_array($this->shipment['status'], ['submitting', 'uncertain'], true)) {
@@ -134,13 +138,22 @@ $repo->cancellationFailed(9, 'Nejasná odpověď', false);
 if ($repo->find(9)['status'] !== 'cancel_uncertain') {
     throw new RuntimeException('Uncertain cancellation became retryable.');
 }
+$repo->cancellationNotDone(9, 'cancel_uncertain');
+if ($repo->find(9)['status'] !== 'created' ||
+    $repo->find(9)['barcode'] !== 'Z1234567890') {
+    throw new RuntimeException('Manual resolution erased an active parcel.');
+}
+$repo->reserveCancellation(9, 3);
+$repo->cancellationFailed(9, 'Nejasná odpověď', false);
 try {
     $repo->reserve(9, 3, $pickup);
     throw new RuntimeException('A new parcel was created before the cancellation was resolved.');
 } catch (InvalidArgumentException $expected) {}
+$db->order['status'] = 'ready_to_ship';
 $repo->completeCancellation(9, 3, 'cancel_uncertain');
 if ($repo->find(9)['status'] !== 'cancelled' ||
-    $repo->cancelledForOrder(9)[0]['barcode'] !== 'Z1234567890') {
+    $repo->cancelledForOrder(9)[0]['barcode'] !== 'Z1234567890' ||
+    $db->order['status'] !== 'processing' || PacketaShipmentRepository::trackingUrl($repo->find(9)) !== null) {
     throw new RuntimeException('Cancellation did not preserve the old parcel in history.');
 }
 $repo->reserve(9, 3, $pickup);
@@ -150,6 +163,10 @@ if ($repo->find(9)['status'] !== 'submitting' || $repo->find(9)['packet_id'] !==
 }
 $repo->complete(9, ['id' => '1234567891', 'barcode' => 'Z1234567891',
     'barcode_text' => 'Z 123 4567 891']);
+if (PacketaShipmentRepository::trackingUrl($repo->find(9)) !==
+    'https://tracking.packeta.com/cs/?id=1234567891') {
+    throw new RuntimeException('The active parcel tracking URL is missing.');
+}
 $db->order['status'] = 'shipped';
 try {
     $repo->reserveCancellation(9, 3);

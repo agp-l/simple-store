@@ -61,6 +61,19 @@ if (!str_contains($html, 'Aktivní objednávky') ||
     !str_contains($html, 'Historie') || !str_contains($html, 'name="action" value="claim-order"')) {
     throw new RuntimeException('Customer orders screen is incomplete.');
 }
+$orderDetail = ['id' => 8, 'order_number' => 'DB-20260929-8',
+    'status' => 'ready_to_ship', 'payment_status' => 'paid', 'created_at' => '2026-09-29',
+    'items' => [], 'subtotal_czk' => 100, 'shipping_czk' => 90, 'total_czk' => 190,
+    'shipping' => ['label' => 'Zásilkovna', 'pickup_point' => 'Praha', 'pickup_address' => 'Ulice 1']];
+$orderTrackingUrl = 'https://tracking.packeta.com/cs/?id=1234567890';
+ob_start();
+require dirname(__DIR__) . '/view/account/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'Připraveno k odeslání') ||
+    !str_contains($html, 'tracking.packeta.com/cs/?id=1234567890')) {
+    throw new RuntimeException('Customer order did not show fulfillment and tracking.');
+}
+$orderDetail = null;
 $section = 'settings';
 ob_start();
 require dirname(__DIR__) . '/view/account/layout.php';

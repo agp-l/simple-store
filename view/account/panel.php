@@ -40,7 +40,7 @@ $checkoutReturn = $checkoutReturn ?? $accountUrl;
             <?php else: ?><div class="panel-order-list"><?php foreach ($orders as $order): ?>
               <?php $orderLabel = match ($order['status'] ?? '') {
                   'completed' => 'Dokončeno', 'cancelled' => 'Zrušeno', 'shipped' => 'Odesláno',
-                  'processing' => 'Připravuje se', 'test' => 'Testovací objednávka',
+                  'processing' => 'Připravuje se', 'ready_to_ship' => 'Připraveno k odeslání', 'test' => 'Testovací objednávka',
                   default => (($order['payment_status'] ?? '') === 'paid' ? 'Zaplaceno, čeká na zpracování' : 'Čeká na platbu'),
               }; ?>
               <div class="panel-order"><strong>Objednávka <?= $escape($order['order_number']) ?></strong><span><?= $escape($order['created_at']) ?> · <?= $escape($orderLabel) ?></span><strong><?= number_format((int) $order['total_czk'], 0, ',', ' ') ?> Kč</strong>
@@ -53,7 +53,7 @@ $checkoutReturn = $checkoutReturn ?? $accountUrl;
           <section class="panel-panel panel-customer-order"><h2>Objednávka <?= $escape($orderDetail['order_number']) ?></h2>
             <?php $detailStatus = match ($orderDetail['status']) {
                 'completed' => 'Dokončeno', 'cancelled' => 'Zrušeno', 'shipped' => 'Odesláno',
-                'processing' => 'Připravuje se', 'test' => 'Testovací objednávka',
+                'processing' => 'Připravuje se', 'ready_to_ship' => 'Připraveno k odeslání', 'test' => 'Testovací objednávka',
                 default => 'Přijato',
             }; ?>
             <p><?= $escape($orderDetail['created_at']) ?> · Stav: <?= $escape($detailStatus) ?> · Platba: <?= $escape(match ($orderDetail['payment_status']) {
@@ -66,6 +66,7 @@ $checkoutReturn = $checkoutReturn ?? $accountUrl;
             <p><strong>Celkem <?= number_format((int) $orderDetail['total_czk'], 0, ',', ' ') ?> Kč</strong></p>
             <?php if (!empty($orderDetail['shipping']['pickup_point'])): ?><p>Výdejní místo: <?= $escape($orderDetail['shipping']['pickup_point']) ?>, <?= $escape($orderDetail['shipping']['pickup_address'] ?? '') ?></p>
             <?php else: ?><p>Doručení: <?= $escape($orderDetail['shipping']['recipient'] ?? $orderDetail['shipping']['name'] ?? '') ?>, <?= $escape($orderDetail['shipping']['street'] ?? '') ?>, <?= $escape($orderDetail['shipping']['postal_code'] ?? '') ?> <?= $escape($orderDetail['shipping']['city'] ?? '') ?></p><?php endif; ?>
+            <?php if ($orderTrackingUrl !== null): ?><p><a class="panel-text-link" href="<?= $escape($orderTrackingUrl) ?>" target="_blank" rel="noopener noreferrer">Sledovat zásilku u Zásilkovny →</a></p><?php endif; ?>
             <?php if (!empty($orderDetail['order_token'])): ?><a class="panel-text-link" href="<?= $escape($basePath . $language . '/objednavka/' . $orderDetail['order_token']) ?>">Zobrazit platební údaje →</a><?php endif; ?>
           </section>
           <?php endif; ?>

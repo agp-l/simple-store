@@ -41,6 +41,14 @@ final class PacketaShipmentRepository
             WHERE order_id=%i ORDER BY id DESC', $orderId);
     }
 
+    public static function trackingUrl(?array $shipment): ?string
+    {
+        $id = (string) ($shipment['packet_id'] ?? '');
+        return $shipment !== null && ($shipment['status'] ?? '') === 'created' &&
+            preg_match('/^[0-9]{1,20}$/D', $id) === 1 ?
+            'https://tracking.packeta.com/cs/?id=' . $id : null;
+    }
+
     public function reserve(int $orderId, int $adminId, array $draft): void
     {
         if ($orderId < 1 || $adminId < 1) throw new InvalidArgumentException('Neplatná objednávka.');
@@ -52,7 +60,7 @@ final class PacketaShipmentRepository
             $shipping = is_array($order) ? json_decode((string) $order['shipping_json'], true) : null;
             if ($order === null || $order['payment_method'] !== 'bank_transfer' ||
                 $order['payment_status'] !== 'paid' ||
-                in_array($order['status'], ['cancelled', 'completed', 'test'], true) ||
+                in_array($order['status'], ['shipped', 'cancelled', 'completed', 'test'], true) ||
                 !is_array($shipping) || ($shipping['method'] ?? '') !== $draft['method']) {
                 throw new InvalidArgumentException('Objednávka není připravená k podání. Obnov stránku.');
             }
@@ -165,6 +173,7 @@ final class PacketaShipmentRepository
         }
         $this->db->startTransaction();
         try {
+            $this->db->queryFirstRow('SELECT status FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId);
             $shipment = $this->db->queryFirstRow(
                 'SELECT * FROM shop_packeta_shipments WHERE order_id=%i LIMIT 1 FOR UPDATE', $orderId);
             if ($shipment === null || $shipment['status'] !== $expectedStatus ||
@@ -180,6 +189,8 @@ final class PacketaShipmentRepository
             $this->db->query('UPDATE shop_packeta_shipments SET status=%s, last_error=NULL,
                 updated_at=UTC_TIMESTAMP() WHERE order_id=%i AND status=%s',
                 'cancelled', $orderId, $expectedStatus);
+            $this->db->query('UPDATE shop_orders SET status=%s WHERE id=%i AND status=%s',
+                'processing', $orderId, 'ready_to_ship');
             $this->db->commit();
         } catch (Throwable $error) {
             $this->db->rollback();
@@ -197,10 +208,13 @@ final class PacketaShipmentRepository
     }
 
     /** Manual resolution is allowed only when the remote result was uncertain. */
-    public function cancellationNotDone(int $orderId): void
+    public function cancellationNotDone(int $orderId, string $expectedStatus): void
     {
+        if (!in_array($expectedStatus, ['cancelling', 'cancel_uncertain'], true)) {
+            throw new InvalidArgumentException('Neplatný stav storna.');
+        }
         $this->db->query('UPDATE shop_packeta_shipments SET status=%s, last_error=NULL,
             updated_at=UTC_TIMESTAMP() WHERE order_id=%i AND status=%s',
-            'created', $orderId, 'cancel_uncertain');
+            'created', $orderId, $expectedStatus);
     }
 }
