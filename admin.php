@@ -10,6 +10,12 @@ use SimpleStore\Navigation\StorefrontMenus;
 use SimpleStore\Navigation\UrlManager;
 
 $site = require __DIR__ . '/src/bootstrap.php';
+// PHP notices must not be printed into JSON returned to the editor or media manager.
+// They remain in the PHP error log; caught exceptions still provide JSON error messages.
+if (str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json')) {
+    ini_set('display_errors', '0');
+    ini_set('display_startup_errors', '0');
+}
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');

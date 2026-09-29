@@ -11,6 +11,8 @@ use SimpleStore\Category\CategoryRepository;
 // Only admin.php includes this controller, after checking the admin session and POST CSRF.
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: private, no-store');
+// Libraries may write a diagnostic to stdout; keep the API response valid JSON.
+ob_start();
 
 try {
     $input = $method === 'GET' ? $_GET : $_POST;
@@ -29,7 +31,9 @@ try {
     }
     $library = new MediaLibrary(__DIR__ . '/../..');
     if ($method === 'GET') {
-        echo json_encode(['files' => $library->files($type, $key)], JSON_THROW_ON_ERROR);
+        $response = json_encode(['files' => $library->files($type, $key)], JSON_THROW_ON_ERROR);
+        ob_end_clean();
+        echo $response;
         return;
     }
 
@@ -64,17 +68,21 @@ try {
         if (($_POST['action'] ?? '') === 'media-upload') $library->removeNew($paths);
         throw $error;
     }
-    echo json_encode([
+    $response = json_encode([
         'revision' => (int) $saved['revision_number'],
         'paths' => $paths,
         'url' => $basePath . $language . ($type === 'product' ? '/produkt' : ($type === 'post' ? '/blog' : '')) .
             '/' . rawurlencode($form['slug']) . '?edit=1',
     ], JSON_THROW_ON_ERROR);
+    ob_end_clean();
+    echo $response;
 } catch (Throwable $error) {
     error_log((string) $error);
     $conflict = str_contains($error->getMessage(), 'mezi') ||
         str_contains($error->getMessage(), 'changed since');
     http_response_code($error instanceof InvalidArgumentException ? 422 : ($conflict ? 409 : 500));
-    echo json_encode(['error' => $error instanceof InvalidArgumentException || $site['debug']
+    $response = json_encode(['error' => $error instanceof InvalidArgumentException || $site['debug']
         ? $error->getMessage() : 'Fotografie se nepodařilo uložit. Zkontroluj oprávnění a nastavení PHP.'], JSON_THROW_ON_ERROR);
+    ob_end_clean();
+    echo $response;
 }

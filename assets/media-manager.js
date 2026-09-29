@@ -16,8 +16,16 @@
       method: 'POST', credentials: 'same-origin', headers: { 'Accept': 'application/json' },
       body: fields
     });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || !data.revision) throw new Error(data.error || 'Server změnu nepotvrdil.');
+    const body = await response.text();
+    let data;
+    try { data = JSON.parse(body); }
+    catch {
+      throw new Error(`Server nevrátil platné JSON (HTTP ${response.status}). Zkontroluj odpověď požadavku admin.php v nástrojích pro vývojáře a chybový log PHP.`);
+    }
+    if (!response.ok) throw new Error(data.error || `Nahrávání selhalo (HTTP ${response.status}).`);
+    if (!Number.isInteger(data.revision) || data.revision < 1) {
+      throw new Error('Server nevrátil číslo nové revize. Obnov stránku a zkontroluj knihovnu fotografií.');
+    }
     return data;
   }
 
