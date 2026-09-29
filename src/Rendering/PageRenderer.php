@@ -82,6 +82,7 @@ final class PageRenderer
         $checkout = $data['checkout'] ?? ['items' => [], 'count' => 0, 'subtotal_czk' => 0,
             'issues' => [], 'can_continue' => false];
         $delivery = $data['delivery'] ?? [];
+        $customerAddresses = $data['customerAddresses'] ?? [];
         $shippingOptions = $data['shippingOptions'] ?? [];
         $selectedShippingPrice = $data['selectedShippingPrice'] ?? null;
         $error = (string) ($data['error'] ?? '');
