@@ -46,6 +46,14 @@ final class PacketaApiClient
         return $number;
     }
 
+    public function cancelPacket(string $packetId): void
+    {
+        if (preg_match('/^[0-9]{1,20}$/D', $packetId) !== 1) {
+            throw new InvalidArgumentException('Neplatné číslo zásilky.');
+        }
+        $this->call('cancelPacket', ['packetId' => $packetId], false);
+    }
+
     public function labelPdf(string $barcode, ?string $courierNumber = null): string
     {
         self::assertBarcode($barcode);
@@ -78,7 +86,7 @@ final class PacketaApiClient
         }
     }
 
-    private function call(string $method, array $fields): SimpleXMLElement
+    private function call(string $method, array $fields, bool $expectsResult = true): SimpleXMLElement
     {
         $xml = '<?xml version="1.0" encoding="UTF-8"?><' . $method . '>' .
             self::element('apiPassword', $this->password);
@@ -111,13 +119,13 @@ final class PacketaApiClient
         if ((string) $parsed->status === 'fault') {
             throw new PacketaRejectedException($this->faultMessage($parsed, $response['status']));
         }
-        if ((string) $parsed->status !== 'ok' || !isset($parsed->result)) {
+        if ((string) $parsed->status !== 'ok' || ($expectsResult && !isset($parsed->result))) {
             throw new RuntimeException('Zásilkovna nepotvrdila výsledek. Zkontroluj zásilku v klientské sekci.');
         }
         if ($response['status'] !== 200) {
             throw new RuntimeException('Zásilkovna nepotvrdila HTTP požadavek. Zkontroluj zásilku v klientské sekci.');
         }
-        return $parsed->result;
+        return $expectsResult ? $parsed->result : $parsed;
     }
 
     private function faultMessage(SimpleXMLElement $response, int $httpStatus): string

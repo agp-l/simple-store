@@ -27,6 +27,20 @@ final class PacketaShipmentRepository
             'SELECT * FROM shop_packeta_shipments WHERE order_id=%i LIMIT 1', $orderId);
     }
 
+    public function cancellationHistoryInstalled(): bool
+    {
+        return (int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
+            'shop_packeta_cancelled_shipments') > 0;
+    }
+
+    public function cancelledForOrder(int $orderId): array
+    {
+        if (!$this->cancellationHistoryInstalled()) return [];
+        return $this->db->query('SELECT barcode, cancelled_at FROM shop_packeta_cancelled_shipments
+            WHERE order_id=%i ORDER BY id DESC', $orderId);
+    }
+
     public function reserve(int $orderId, int $adminId, array $draft): void
     {
         if ($orderId < 1 || $adminId < 1) throw new InvalidArgumentException('Neplatná objednávka.');
@@ -43,7 +57,7 @@ final class PacketaShipmentRepository
                 throw new InvalidArgumentException('Objednávka není připravená k podání. Obnov stránku.');
             }
             $current = $this->find($orderId);
-            if ($current !== null && $current['status'] !== 'rejected') {
+            if ($current !== null && !in_array($current['status'], ['rejected', 'cancelled'], true)) {
                 throw new InvalidArgumentException('Tato objednávka už má pokus o podání. Zkontroluj stav zásilky.');
             }
             $attributes = $draft['attributes'];
@@ -57,10 +71,11 @@ final class PacketaShipmentRepository
                     'updated_at' => gmdate('Y-m-d H:i:s')]);
             } else {
                 $this->db->query('UPDATE shop_packeta_shipments SET status=%s, method=%s,
-                    weight_kg=%s, submitted_json=%s, last_error=NULL, created_by=%i,
+                    weight_kg=%s, submitted_json=%s, packet_id=NULL, barcode=NULL,
+                    barcode_text=NULL, courier_number=NULL, last_error=NULL, created_by=%i,
                     updated_at=UTC_TIMESTAMP() WHERE order_id=%i AND status=%s',
                     'submitting', $draft['method'], $attributes['weight'], $snapshot,
-                    $adminId, $orderId, 'rejected');
+                    $adminId, $orderId, $current['status']);
             }
             $this->db->commit();
         } catch (Throwable $error) {
@@ -111,5 +126,81 @@ final class PacketaShipmentRepository
         $this->db->query('UPDATE shop_packeta_shipments SET courier_number=%s,
             updated_at=UTC_TIMESTAMP() WHERE order_id=%i AND barcode=%s AND status=%s
             AND courier_number IS NULL', $number, $orderId, $barcode, 'created');
+    }
+
+    /** Reserve one cancellation before calling the remote API. */
+    public function reserveCancellation(int $orderId, int $adminId): string
+    {
+        if ($orderId < 1 || $adminId < 1 || !$this->cancellationHistoryInstalled()) {
+            throw new InvalidArgumentException('Nejdřív aktualizuj SQL tabulky v sekci Databáze.');
+        }
+        $this->db->startTransaction();
+        try {
+            $order = $this->db->queryFirstRow(
+                'SELECT status FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId);
+            $shipment = $this->db->queryFirstRow(
+                'SELECT * FROM shop_packeta_shipments WHERE order_id=%i LIMIT 1 FOR UPDATE', $orderId);
+            if ($order === null || in_array($order['status'], ['shipped', 'completed', 'cancelled', 'test'], true) ||
+                $shipment === null || $shipment['status'] !== 'created' ||
+                preg_match('/^[0-9]{1,20}$/D', (string) ($shipment['packet_id'] ?? '')) !== 1) {
+                throw new InvalidArgumentException('Stornovat lze pouze vytvořenou zásilku před označením objednávky jako odeslané.');
+            }
+            $this->db->query('UPDATE shop_packeta_shipments SET status=%s, last_error=NULL,
+                updated_at=UTC_TIMESTAMP() WHERE order_id=%i AND status=%s',
+                'cancelling', $orderId, 'created');
+            $this->db->commit();
+            return (string) $shipment['packet_id'];
+        } catch (Throwable $error) {
+            $this->db->rollback();
+            throw $error;
+        }
+    }
+
+    /** Preserve the cancelled packet before its slot is reused for a new submission. */
+    public function completeCancellation(int $orderId, int $adminId, string $expectedStatus): void
+    {
+        if ($orderId < 1 || $adminId < 1 ||
+            !in_array($expectedStatus, ['cancelling', 'cancel_uncertain'], true)) {
+            throw new InvalidArgumentException('Neplatné potvrzení storna.');
+        }
+        $this->db->startTransaction();
+        try {
+            $shipment = $this->db->queryFirstRow(
+                'SELECT * FROM shop_packeta_shipments WHERE order_id=%i LIMIT 1 FOR UPDATE', $orderId);
+            if ($shipment === null || $shipment['status'] !== $expectedStatus ||
+                preg_match('/^[0-9]{1,20}$/D', (string) ($shipment['packet_id'] ?? '')) !== 1 ||
+                (string) ($shipment['barcode'] ?? '') !== 'Z' . $shipment['packet_id']) {
+                throw new InvalidArgumentException('Stav stornované zásilky se změnil. Obnov stránku.');
+            }
+            $this->db->insert('shop_packeta_cancelled_shipments', [
+                'order_id' => $orderId, 'packet_id' => $shipment['packet_id'],
+                'barcode' => $shipment['barcode'], 'method' => $shipment['method'],
+                'submitted_json' => $shipment['submitted_json'], 'cancelled_by' => $adminId,
+            ]);
+            $this->db->query('UPDATE shop_packeta_shipments SET status=%s, last_error=NULL,
+                updated_at=UTC_TIMESTAMP() WHERE order_id=%i AND status=%s',
+                'cancelled', $orderId, $expectedStatus);
+            $this->db->commit();
+        } catch (Throwable $error) {
+            $this->db->rollback();
+            throw $error;
+        }
+    }
+
+    public function cancellationFailed(int $orderId, string $message, bool $rejected): void
+    {
+        $this->db->query('UPDATE shop_packeta_shipments SET status=%s, last_error=%s,
+            updated_at=UTC_TIMESTAMP() WHERE order_id=%i AND status=%s',
+            $rejected ? 'created' : 'cancel_uncertain', strlen($message) <= 500 ? $message :
+                'Výsledek storna je nejasný. Zkontroluj zásilku v klientské sekci.',
+            $orderId, 'cancelling');
+    }
+
+    /** Manual resolution is allowed only when the remote result was uncertain. */
+    public function cancellationNotDone(int $orderId): void
+    {
+        $this->db->query('UPDATE shop_packeta_shipments SET status=%s, last_error=NULL,
+            updated_at=UTC_TIMESTAMP() WHERE order_id=%i AND status=%s',
+            'created', $orderId, 'cancel_uncertain');
     }
 }

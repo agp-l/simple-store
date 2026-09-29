@@ -5,24 +5,30 @@ class MeekroDB
 {
     public ?array $shipment = null;
     public array $order = [];
+    public array $history = [];
     private ?array $snapshot = null;
 
     public function queryFirstField(string $sql, mixed ...$args): int { return 1; }
-    public function startTransaction(): void { $this->snapshot = $this->shipment; }
+    public function startTransaction(): void { $this->snapshot = [$this->shipment, $this->history]; }
     public function commit(): void { $this->snapshot = null; }
-    public function rollback(): void { $this->shipment = $this->snapshot; }
+    public function rollback(): void { [$this->shipment, $this->history] = $this->snapshot; }
     public function queryFirstRow(string $sql, mixed ...$args): ?array
     {
         return str_contains($sql, 'FROM shop_orders') ? $this->order : $this->shipment;
     }
     public function insert(string $table, array $values): void
     {
+        if ($table === 'shop_packeta_cancelled_shipments') {
+            $this->history[] = $values + ['cancelled_at' => '2026-09-30 00:00:00'];
+            return;
+        }
         if ($this->shipment !== null) throw new RuntimeException('Duplicate shipment.');
         $this->shipment = ['packet_id' => null, 'barcode' => null,
             'barcode_text' => null, 'courier_number' => null, 'last_error' => null] + $values;
     }
     public function query(string $sql, mixed ...$values): array
     {
+        if (str_contains($sql, 'FROM shop_packeta_cancelled_shipments')) return $this->history;
         if ($this->shipment === null) throw new RuntimeException('No shipment.');
         if (str_contains($sql, 'SET status=%s, packet_id=%s')) {
             if (in_array($this->shipment['status'], ['submitting', 'uncertain'], true)) {
@@ -33,8 +39,13 @@ class MeekroDB
             $this->shipment['status'] = $values[0];
             $this->shipment['last_error'] = $values[1];
         } elseif (str_contains($sql, 'SET status=%s, method=%s')) {
-            if ($this->shipment['status'] !== 'rejected') throw new RuntimeException('Unexpected retry.');
+            if (!in_array($this->shipment['status'], ['rejected', 'cancelled'], true)) {
+                throw new RuntimeException('Unexpected retry.');
+            }
             $this->shipment['status'] = $values[0];
+            $this->shipment['packet_id'] = $this->shipment['barcode'] = null;
+            $this->shipment['barcode_text'] = $this->shipment['courier_number'] = null;
+            $this->shipment['submitted_json'] = $values[3];
         } elseif (str_contains($sql, 'SET status=%s,')) {
             $this->shipment['status'] = $values[0];
         } elseif (str_contains($sql, 'SET courier_number=%s')) {
@@ -108,6 +119,42 @@ $repo->reconcile(9, 'Z1234567890');
 if ($repo->find(9)['status'] !== 'created' || $repo->find(9)['packet_id'] !== '1234567890') {
     throw new RuntimeException('Manual recovery lost the found packet number.');
 }
+if ($repo->reserveCancellation(9, 3) !== '1234567890' ||
+    $repo->find(9)['status'] !== 'cancelling') {
+    throw new RuntimeException('Cancellation did not reserve the original packet ID.');
+}
+try {
+    $repo->reserveCancellation(9, 3);
+    throw new RuntimeException('A duplicate cancellation was accepted.');
+} catch (InvalidArgumentException $expected) {}
+$repo->cancellationFailed(9, 'Zásilkovna storno odmítla.', true);
+if ($repo->find(9)['status'] !== 'created') throw new RuntimeException('Rejected cancellation lost the packet.');
+$repo->reserveCancellation(9, 3);
+$repo->cancellationFailed(9, 'Nejasná odpověď', false);
+if ($repo->find(9)['status'] !== 'cancel_uncertain') {
+    throw new RuntimeException('Uncertain cancellation became retryable.');
+}
+try {
+    $repo->reserve(9, 3, $pickup);
+    throw new RuntimeException('A new parcel was created before the cancellation was resolved.');
+} catch (InvalidArgumentException $expected) {}
+$repo->completeCancellation(9, 3, 'cancel_uncertain');
+if ($repo->find(9)['status'] !== 'cancelled' ||
+    $repo->cancelledForOrder(9)[0]['barcode'] !== 'Z1234567890') {
+    throw new RuntimeException('Cancellation did not preserve the old parcel in history.');
+}
+$repo->reserve(9, 3, $pickup);
+if ($repo->find(9)['status'] !== 'submitting' || $repo->find(9)['packet_id'] !== null ||
+    $repo->find(9)['barcode'] !== null) {
+    throw new RuntimeException('Replacement parcel reused a cancelled barcode.');
+}
+$repo->complete(9, ['id' => '1234567891', 'barcode' => 'Z1234567891',
+    'barcode_text' => 'Z 123 4567 891']);
+$db->order['status'] = 'shipped';
+try {
+    $repo->reserveCancellation(9, 3);
+    throw new RuntimeException('Cancellation was allowed after shipping.');
+} catch (InvalidArgumentException $expected) {}
 
 if (function_exists('simplexml_load_string')) {
     $calls = [];
@@ -133,6 +180,14 @@ if (function_exists('simplexml_load_string')) {
         !str_contains(end($calls)[1], '<courierNumber>98765</courierNumber>')) {
         throw new RuntimeException('Packeta API XML, courier number or label handling failed.');
     }
+    $cancel = new PacketaApiClient('secret-password', static function (string $url, string $xml): array {
+        if (!str_contains($xml, '<cancelPacket>') ||
+            !str_contains($xml, '<packetId>1234567890</packetId>')) {
+            throw new RuntimeException('Cancellation sent an invalid API request.');
+        }
+        return ['status' => 200, 'body' => '<response><status>ok</status></response>'];
+    });
+    $cancel->cancelPacket('1234567890');
     $fault = new PacketaApiClient('secret-password', static fn (): array => [
         'status' => 200, 'body' => '<response><status>fault</status><fault><string>Invalid address</string></fault></response>']);
     try {

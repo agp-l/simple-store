@@ -140,6 +140,21 @@ CREATE TABLE IF NOT EXISTS shop_packeta_shipments (
   CONSTRAINT packeta_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Retain cancelled parcel numbers and submitted details when a replacement is created.
+CREATE TABLE IF NOT EXISTS shop_packeta_cancelled_shipments (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  order_id BIGINT UNSIGNED NOT NULL,
+  packet_id VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  barcode VARCHAR(21) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  method VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  submitted_json LONGTEXT NOT NULL,
+  cancelled_by BIGINT UNSIGNED NOT NULL,
+  cancelled_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY cancelled_packeta_barcode (barcode),
+  KEY cancelled_packeta_order (order_id, id),
+  CONSTRAINT cancelled_packeta_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Additive upgrade for installations with the older customer order placeholder.
 -- Nullable new columns preserve historical rows without inventing payment details.
 SET @order_user_nullable = (SELECT IS_NULLABLE FROM information_schema.COLUMNS
