@@ -9,6 +9,7 @@ use SimpleStore\Checkout\CheckoutController;
 use SimpleStore\Checkout\OrderRepository;
 use SimpleStore\Checkout\LocalCheckoutPreview;
 use SimpleStore\Checkout\CheckoutSettingsRepository;
+use SimpleStore\Checkout\PacketaPickupPoint;
 use SimpleStore\Checkout\ShippingPolicy;
 use SimpleStore\Admin\AdminAuth;
 use SimpleStore\Admin\AdminUserRepository;
@@ -96,6 +97,7 @@ try {
         }
         $shippingMethods = $checkoutConfig['shipping_methods'] ?? [];
         $shipping = new ShippingPolicy($shippingMethods);
+        $packeta = new PacketaPickupPoint((string) ($checkoutConfig['packeta']['api_key'] ?? ''));
         $dueDays = $bankSettings['payment_due_days'] ?? 7;
         $orders = new OrderRepository($db, $bank, $dueDays);
         $localPreview = LocalCheckoutPreview::available($_SERVER, (bool) $site['debug'],
@@ -120,7 +122,7 @@ try {
         $controller = new CheckoutController($url, $renderer, $shared, $cart,
             new CartService(new ProductRepository($db, $site['languages']), $site['languages']),
             $shipping, $orders, $bank, $customerId, (string) ($checkoutConfig['terms_url'] ?? ''),
-            $localPreview, $customerProfile, $customerAddresses);
+            $localPreview, $customerProfile, $customerAddresses, $packeta);
         $controller->handle($route);
         exit;
     }

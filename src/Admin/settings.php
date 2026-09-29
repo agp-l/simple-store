@@ -22,6 +22,7 @@ $form = [
     'recipient' => $settings['bank_transfer']['recipient'] ?? '',
     'payment_due_days' => (string) ($settings['bank_transfer']['payment_due_days'] ?? 7),
     'terms_url' => $settings['terms_url'] ?? '',
+    'packeta_api_key' => $settings['packeta']['api_key'] ?? '',
     'local_test_checkout' => ($settings['local_test_checkout'] ?? true) === true ? '1' : '0',
 ];
 foreach ($shippingCatalog as $code => $definition) {

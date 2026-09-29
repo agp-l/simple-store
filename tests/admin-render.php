@@ -100,6 +100,17 @@ if (!str_contains($html, 'name="action" value="mark-order-paid"') ||
     str_contains($html, '<img src=x onerror=alert(1)>')) {
     throw new RuntimeException('Order detail must require explicit bank verification and escape customer data.');
 }
+$order['shipping'] = ['method' => 'zasilkovna_pickup', 'label' => 'Zásilkovna',
+    'recipient' => 'Eva Nová', 'phone' => '+420123456789',
+    'pickup_code' => '123456', 'pickup_point' => 'Praha', 'pickup_address' => 'Ulice 1, Praha, 110 00'];
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'Podklady pro ruční podání') ||
+    !str_contains($html, 'ID výdejního místa: 123456') ||
+    !str_contains($html, 'Telefon: +420123456789')) {
+    throw new RuntimeException('Packeta order does not provide copyable dispatch details.');
+}
 $order['payment_status'] = 'paid';
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';

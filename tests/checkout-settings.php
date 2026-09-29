@@ -56,6 +56,7 @@ $input = ['shipping_price' => array_map('strval', array_column(ShippingPolicy::d
     'shipping_enabled' => array_fill_keys(array_keys(ShippingPolicy::defaults()), '1'),
     'account_display' => '1265098001/5500', 'iban' => '', 'recipient' => 'Test',
     'payment_due_days' => '10', 'terms_url' => '/simple-store/cs/obchodni-podminky',
+    'packeta_api_key' => 'ABCDEF1234567890',
     'local_test_checkout' => '1'];
 $input['shipping_price'] = array_combine(array_keys(ShippingPolicy::defaults()),
     array_values($input['shipping_price']));
@@ -64,12 +65,14 @@ $saved = $repo->save($input, '/simple-store/');
 $loaded = $repo->load($fallback);
 if ($loaded != $saved || $saved['bank_transfer']['iban'] !== $generated->snapshot()['iban'] ||
     $saved['shipping_methods']['ppl_home']['price_czk'] !== 120 ||
-    $saved['terms_url'] !== '/simple-store/cs/obchodni-podminky') {
+    $saved['terms_url'] !== '/simple-store/cs/obchodni-podminky' ||
+    $saved['packeta']['api_key'] !== 'ABCDEF1234567890') {
     throw new RuntimeException('Checkout settings were not validated and loaded from the database.');
 }
 foreach ([['shipping_price' => array_replace($input['shipping_price'], ['ppl_home' => '-1'])],
     ['terms_url' => 'https://other.test/terms'],
-    ['iban' => 'CZ0000000000000000000000']] as $change) {
+    ['iban' => 'CZ0000000000000000000000'],
+    ['packeta_api_key' => 'API-HESLO']] as $change) {
     try {
         $repo->save(array_replace($input, $change), '/simple-store/');
         throw new RuntimeException('Invalid settings were accepted.');

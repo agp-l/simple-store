@@ -85,6 +85,8 @@ final class PageRenderer
         $customerAddresses = $data['customerAddresses'] ?? [];
         $customerProfile = $data['customerProfile'] ?? [];
         $shippingOptions = $data['shippingOptions'] ?? [];
+        $packetaApiKey = (string) ($data['packetaApiKey'] ?? '');
+        $packetaOptions = $data['packetaOptions'] ?? [];
         $selectedShippingPrice = $data['selectedShippingPrice'] ?? null;
         $error = (string) ($data['error'] ?? '');
         $step = (string) ($data['step'] ?? '');

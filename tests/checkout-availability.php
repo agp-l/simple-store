@@ -26,6 +26,7 @@ use SimpleStore\Checkout\CartService;
 use SimpleStore\Checkout\CartSession;
 use SimpleStore\Checkout\CheckoutController;
 use SimpleStore\Checkout\OrderRepository;
+use SimpleStore\Checkout\PacketaPickupPoint;
 use SimpleStore\Checkout\ShippingPolicy;
 use SimpleStore\Navigation\UrlManager;
 use SimpleStore\Product\ProductRepository;
@@ -70,6 +71,56 @@ $html = ob_get_clean();
 if (!str_contains($html, 'Zkontrolovat objednávku') ||
     str_contains($html, 'Testovací objednávka')) {
     throw new RuntimeException('Local preview must not replace a configured bank transfer.');
+}
+
+$methods = new ShippingPolicy(ShippingPolicy::defaults());
+$withoutKey = new CheckoutController($url, $renderer,
+    ['basePath' => '/simple-store/', 'language' => 'cs'], $cart,
+    new CartService(new ProductRepository($db), ['cs']),
+    $methods, new OrderRepository($db, $bank), $bank, null, '');
+$_GET['step'] = 'shipping';
+ob_start();
+$withoutKey->handle(['name' => 'checkout']);
+$html = ob_get_clean();
+if (str_contains($html, 'value="zasilkovna_pickup"') || !str_contains($html, 'value="ppl_pickup"')) {
+    throw new RuntimeException('Packeta may not be offered before the public widget key is configured.');
+}
+$withKey = new CheckoutController($url, $renderer,
+    ['basePath' => '/simple-store/', 'language' => 'cs'], $cart,
+    new CartService(new ProductRepository($db), ['cs']),
+    $methods, new OrderRepository($db, $bank), $bank, null, '', false, [], [],
+    new PacketaPickupPoint('ABCDEF1234567890'));
+ob_start();
+$withKey->handle(['name' => 'checkout']);
+$html = ob_get_clean();
+if (!str_contains($html, 'value="zasilkovna_pickup"') ||
+    !str_contains($html, 'data-packeta-key="ABCDEF1234567890"')) {
+    throw new RuntimeException('Configured Packeta widget is missing from delivery.');
+}
+$_POST = ['method' => 'zasilkovna_pickup', 'name' => 'Eva Nová',
+    'email' => 'eva@example.org', 'phone' => '123', 'country' => 'CZ',
+    'street' => '', 'city' => '', 'postal_code' => '',
+    'pickup_point' => 'Podvržená pobočka', 'pickup_address' => 'Podvržená adresa',
+    'pickup_code' => 'PODVRH', 'packeta_point_id' => '123456'];
+$verified = new CheckoutController($url, $renderer,
+    ['basePath' => '/simple-store/', 'language' => 'cs'], $cart,
+    new CartService(new ProductRepository($db), ['cs']),
+    $methods, new OrderRepository($db, $bank), $bank, null, '', false, [], [],
+    new PacketaPickupPoint('ABCDEF1234567890', static fn (): array => [
+        'status' => 200, 'body' => '{"isValid":true,"point":{"name":"Praha Hl. nádraží","address":{"street":"Wilsonova 1","city":"Praha","zip":"110 00","country":"cz"}}}',
+    ]));
+$saveDelivery = new ReflectionMethod(CheckoutController::class, 'saveDelivery');
+$saveDelivery->invoke($verified);
+$delivery = $cart->state()['delivery'];
+if ($delivery['pickup_point'] !== 'Praha Hl. nádraží' ||
+    $delivery['pickup_address'] !== 'Wilsonova 1, Praha, 110 00' ||
+    $delivery['pickup_code'] !== '123456') {
+    throw new RuntimeException('Checkout trusted a spoofed pickup label instead of verified Packeta data.');
+}
+try {
+    $saveDelivery->invoke($withoutKey);
+    throw new RuntimeException('Checkout accepted Packeta without a widget key.');
+} catch (InvalidArgumentException $expected) {
 }
 
 echo "Checkout availability tests passed.\n";

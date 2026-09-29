@@ -152,6 +152,9 @@ $cart->setDelivery($pickup);
 $check($cart->state()['delivery']['pickup_address'] === 'Nádražní 1, 602 00 Brno' &&
     $cart->state()['delivery']['method'] === 'gls_pickup',
     'Pickup point name, address and carrier must survive checkout.');
+$invalid(static fn () => $cart->setDelivery(array_replace($pickup, [
+    'method' => 'zasilkovna_pickup', 'pickup_code' => '',
+])));
 
 $policy = new ShippingPolicy();
 $check($policy->options() === [] && $policy->quote('home') === null && $policy->quote('pickup') === null,

@@ -61,6 +61,23 @@ $orderPaymentLabel = static fn (mixed $status): string => match ($status) {
           <?php if (!empty($shipping['pickup_point'])): ?><div><dt>Výdejní místo</dt><dd><?= $escape($shipping['pickup_point']) ?><br><?= $escape($shipping['pickup_address'] ?? '') ?><?php if (!empty($shipping['pickup_code'])): ?><br>Kód: <?= $escape($shipping['pickup_code']) ?><?php endif; ?></dd></div>
           <?php else: ?><div><dt>Adresa</dt><dd><?= $escape($shipping['street'] ?? '') ?><br><?= $escape(trim((string) ($shipping['postal_code'] ?? '') . ' ' . (string) ($shipping['city'] ?? ''))) ?><br><?= $escape($shipping['country'] ?? 'CZ') ?></dd></div><?php endif; ?>
         </dl>
+        <?php if (($shipping['method'] ?? '') === 'zasilkovna_pickup' && !empty($shipping['pickup_code'])): ?>
+          <div class="panel-packeta-dispatch">
+            <h3>Podklady pro ruční podání v Zásilkovně</h3>
+            <p class="panel-help">Údaje z objednávky můžeš zkopírovat do klientské sekce. <?php if (empty($shipping['pickup_verified'])): ?>Tato starší objednávka ještě nemá potvrzené ověření pobočky; před podáním ji zkontroluj. <?php endif; ?>Číslo zásilky a štítek vzniknou až po jejím skutečném podání; hmotnost zkontroluj podle zabaleného balíku.</p>
+            <label for="packeta-dispatch-data">Údaje k zásilce</label>
+            <textarea id="packeta-dispatch-data" readonly rows="8" spellcheck="false"><?= $escape(implode("\n", [
+                'Objednávka: ' . ($order['order_number'] ?? ''),
+                'Příjemce: ' . ($shipping['recipient'] ?? $shipping['name'] ?? ''),
+                'Telefon: ' . ($shipping['phone'] ?? ''),
+                'E-mail: ' . ($order['customer_email'] ?? $shipping['email'] ?? ''),
+                'ID výdejního místa: ' . $shipping['pickup_code'],
+                'Výdejní místo: ' . ($shipping['pickup_point'] ?? ''),
+                'Adresa místa: ' . ($shipping['pickup_address'] ?? ''),
+                'Dobírka: ne' . ($bankTransfer ? ' (platba bankovním převodem)' : ''),
+            ])) ?></textarea>
+          </div>
+        <?php endif; ?>
       </section>
     </div>
     <aside class="panel-panel panel-order-payment">

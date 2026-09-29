@@ -9,11 +9,14 @@ declare(strict_types=1);
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
   <input type="hidden" name="action" value="save-checkout-settings">
   <h2>Výdejní místa a boxy</h2>
-  <p class="panel-help">U výdejního místa zákazník vybere bod na mapě dopravce a opíše jeho název a adresu do objednávky. Přepravu a štítek zatím zadáváš ručně.</p>
+  <p class="panel-help">U ostatních dopravců zákazník zatím opíše adresu z mapy. U Zásilkovny vybere bod přímo v pokladně a adresa se uloží automaticky.</p>
   <?php foreach ($shippingCatalog as $code => $definition): ?>
     <?php if (str_ends_with($code, '_home') && $code === 'gls_home'): ?><h2>Na adresu</h2><?php endif; ?>
     <div class="panel-shipping-row"><strong><?= $escape($definition['label']) ?></strong><label>Cena v Kč<input type="number" name="shipping_price[<?= $escape($code) ?>]" value="<?= $escape($form['shipping_price'][$code]) ?>" min="0" max="100000" required></label><label class="panel-check"><input type="checkbox" name="shipping_enabled[<?= $escape($code) ?>]" value="1" <?= $form['shipping_enabled'][$code] === '1' ? 'checked' : '' ?>> Nabízet</label></div>
   <?php endforeach; ?>
+  <h3>Zásilkovna – mapa výdejních míst</h3>
+  <label>Veřejný API klíč widgetu<input name="packeta_api_key" value="<?= $escape($form['packeta_api_key'] ?? '') ?>" maxlength="16" pattern="[A-Za-z0-9]{16}" autocomplete="off" placeholder="16 znaků z klientské sekce"></label>
+  <p class="panel-help">Klíč pro mapu získáš v klientské sekci Zásilkovny. Je určený pro webový widget; <strong>nevkládej sem API heslo</strong>. Bez klíče se doprava Zásilkovnou v pokladně nenabídne, i když je nahoře zapnutá. Podání zásilky a štítek se zatím vyřizují ručně.</p>
   <h2>Bankovní převod</h2>
   <label>Číslo účtu<input name="account_display" value="<?= $escape($form['account_display']) ?>" placeholder="číslo/kód banky" autocomplete="off"></label>
   <label>IBAN (nepovinný, z čísla účtu se dopočítá)<input name="iban" value="<?= $escape($form['iban']) ?>" autocomplete="off"></label>

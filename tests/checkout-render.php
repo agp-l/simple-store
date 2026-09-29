@@ -21,6 +21,8 @@ $data = [
     'basePath' => '/simple-store/', 'language' => 'cs',
     'cartUrl' => '/simple-store/cs/kosik', 'checkoutUrl' => '/simple-store/cs/pokladna',
     'cartToken' => 'test-token', 'shippingOptions' => $options, 'shippingConfigured' => true,
+    'packetaApiKey' => 'ABCDEF1234567890',
+    'packetaOptions' => \SimpleStore\Checkout\PacketaPickupPoint::options(),
     'bankConfigured' => false, 'checkoutReady' => false, 'termsUrl' => '',
     'checkout' => [
         'items' => [['line_id' => str_repeat('a', 64), 'name' => 'Batoh', 'slug' => 'batoh',
@@ -44,7 +46,11 @@ $shipping = ob_get_clean();
 if (!str_contains($shipping, 'value="ppl_home"') || !str_contains($shipping, '99 Kč') ||
     !str_contains($shipping, 'value="gls_pickup"') || !str_contains($shipping, '59 Kč') ||
     !str_contains($shipping, 'Vybrat adresu výdejního místa') ||
-    !str_contains($shipping, 'Pokračovat k platbě')) {
+    !str_contains($shipping, 'Pokračovat k platbě') ||
+    !str_contains($shipping, 'Vybrat výdejní místo Zásilkovny') ||
+    !str_contains($shipping, 'name="packeta_point_id"') ||
+    !str_contains($shipping, 'assets/packeta-checkout.js') ||
+    !str_contains($shipping, 'widget.packeta.com/v6/www/js/library.js')) {
     throw new RuntimeException('Carrier choices, pickup map and prices are missing.');
 }
 $data['customerAddresses'] = [['id' => 4, 'label' => 'Domů', 'street' => 'Polní 1',

@@ -32,6 +32,7 @@ jobs:
           php tests/checkout-render.php
           php tests/checkout-availability.php
           php tests/checkout-settings.php
+          php tests/packeta-pickup.php
           php tests/checkout-order.php
           php tests/catalog-render.php
           php tests/footer-legal.php

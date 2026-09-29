@@ -17,6 +17,8 @@ final class CheckoutSettingsRepository
     {
         $local['shipping_methods'] = self::normalizedMethods($local['shipping_methods'] ?? [],
             $example['shipping_methods']);
+        $local['packeta'] = is_array($local['packeta'] ?? null)
+            ? array_replace($example['packeta'], $local['packeta']) : $example['packeta'];
         if (($local['bank_transfer']['account_display'] ?? '') === '' &&
             ($local['bank_transfer']['recipient'] ?? '') === '') {
             $local['bank_transfer'] = $example['bank_transfer'];
@@ -90,8 +92,11 @@ final class CheckoutSettingsRepository
             preg_match('~^/(?:[a-z0-9]+(?:-[a-z0-9]+)*)(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*/?$~D', $termsUrl) !== 1)) {
             throw new InvalidArgumentException('Odkaz na podmínky musí být místní adresa stránky v tomto obchodě.');
         }
+        $packetaKey = self::value($input, 'packeta_api_key');
+        new PacketaPickupPoint($packetaKey);
         $settings = [
             'shipping_methods' => $shipping,
+            'packeta' => ['api_key' => $packetaKey],
             'bank_transfer' => $bankSettings,
             'terms_url' => $termsUrl,
             'local_test_checkout' => ($input['local_test_checkout'] ?? null) === '1',

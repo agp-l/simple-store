@@ -212,3 +212,7 @@
   .panel-fields-two { grid-template-columns: 1fr; }
   .panel-page-order { gap: 10px; }
 }
+.panel-packeta-dispatch { margin-top: 24px; padding-top: 18px; border-top: 1px solid var(--line); }
+.panel-packeta-dispatch h3 { margin: 0 0 8px; font-size: 17px; }
+.panel-packeta-dispatch label { display: block; margin: 14px 0 6px; font-size: 13px; font-weight: 700; }
+.panel-packeta-dispatch textarea { width: 100%; min-height: 170px; padding: 12px; border: 1px solid var(--line); border-radius: 4px; background: #f7f9f6; color: var(--ink); font: 13px/1.5 monospace; resize: vertical; }

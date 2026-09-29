@@ -14,6 +14,7 @@ final class CheckoutController
     private string $checkoutUrl;
     private array $shippingOptions;
     private string $termsUrl;
+    private PacketaPickupPoint $packeta;
 
     public function __construct(
         private UrlManager $url,
@@ -28,11 +29,14 @@ final class CheckoutController
         string $termsUrl,
         private bool $allowLocalPreview = false,
         private array $customerProfile = [],
-        private array $customerAddresses = []
+        private array $customerAddresses = [],
+        ?PacketaPickupPoint $packeta = null
     ) {
         $this->cartUrl = $url->path('kosik');
         $this->checkoutUrl = $url->path('pokladna');
-        $this->shippingOptions = $shipping->options();
+        $this->packeta = $packeta ?? new PacketaPickupPoint();
+        $this->shippingOptions = array_values(array_filter($shipping->options(),
+            fn (array $option): bool => $option['code'] !== 'zasilkovna_pickup' || $this->packeta->isConfigured()));
         $termsUrl = trim($termsUrl);
         $this->termsUrl = str_starts_with($termsUrl, $url->getBasePath()) &&
             preg_match('~^/(?:[a-z0-9]+(?:-[a-z0-9]+)*)(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*/?$~D', $termsUrl) === 1
@@ -155,6 +159,9 @@ final class CheckoutController
         if ($this->shipping->method($method) === null) {
             throw new InvalidArgumentException('Vybraný způsob dopravy není dostupný.');
         }
+        if ($method === 'zasilkovna_pickup' && !$this->packeta->isConfigured()) {
+            throw new InvalidArgumentException('Zásilkovna není nastavená. Vyber jinou dopravu.');
+        }
         $fields = [];
         foreach (['method', 'name', 'email', 'phone', 'street', 'city', 'postal_code', 'country',
             'pickup_point', 'pickup_address', 'pickup_code'] as $field) {
@@ -163,6 +170,9 @@ final class CheckoutController
         }
         if (ShippingPolicy::isPickup($method)) {
             $fields['street'] = $fields['city'] = $fields['postal_code'] = '';
+            if ($method === 'zasilkovna_pickup') {
+                $fields = array_replace($fields, $this->packeta->verify(self::field('packeta_point_id')));
+            }
         } else {
             $fields['pickup_point'] = $fields['pickup_address'] = $fields['pickup_code'] = '';
         }
@@ -185,6 +195,9 @@ final class CheckoutController
             !$this->orders->installed()) {
             throw new InvalidArgumentException('Objednávku nyní nelze dokončit. Zkontrolujte košík, doručení a nastavení obchodu.');
         }
+        if ($methodCode === 'zasilkovna_pickup') {
+            $delivery = array_replace($delivery, $this->packeta->verify((string) ($delivery['pickup_code'] ?? '')));
+        }
         if ($summary['subtotal_czk'] + $price > 9999999) {
             throw new InvalidArgumentException('Celková částka objednávky přesahuje dostupný limit.');
         }
@@ -195,6 +208,7 @@ final class CheckoutController
         $shipping = $delivery;
         $shipping['label'] = $label;
         $shipping['recipient'] = $delivery['name'];
+        if ($methodCode === 'zasilkovna_pickup') $shipping['pickup_verified'] = true;
         $order = $this->orders->create($this->customerId, $delivery['email'], $summary['items'],
             $shipping, $price, $this->cart->checkoutKey(), $testOrder);
         $this->cart->clear();
@@ -260,6 +274,7 @@ final class CheckoutController
             'customerAddresses' => $this->customerAddresses,
             'customerProfile' => $this->customerProfile,
             'shippingOptions' => $this->shippingOptions, 'selectedShippingPrice' => $price,
+            'packetaApiKey' => $this->packeta->apiKey(), 'packetaOptions' => PacketaPickupPoint::options(),
             'shippingConfigured' => $shippingConfigured, 'bankConfigured' => $this->bank !== null,
             'checkoutReady' => $ready, 'testCheckout' => $testCheckout, 'termsUrl' => $this->termsUrl,
             'error' => $error, 'step' => $step,
