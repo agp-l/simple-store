@@ -78,7 +78,7 @@
                 <label>Text odkazu <input name="label" maxlength="80" required value="<?= $escape($selectedItem['label'] ?? '') ?>"></label>
                 <div class="admin-fields-two">
                   <label>Kam vede <select name="target_type"><option value="category" <?= ($selectedItem['target_type'] ?? '') === 'category' ? 'selected' : '' ?>>Kategorie</option><option value="path" <?= ($selectedItem['target_type'] ?? '') === 'path' ? 'selected' : '' ?>>Stránka nebo blog</option></select></label>
-                  <label>Cesta <input name="target" list="menu-targets" value="<?= $escape($selectedItem['target'] ?? '') ?>" placeholder="spani nebo blog" required></label>
+                  <label>Cesta <input name="target" list="menu-targets" value="<?= $escape($selectedItem['target'] ?? '') ?>" placeholder="spani nebo blog"></label>
                 </div>
                 <datalist id="menu-targets"><?php foreach ($categoryOptions as $category): ?><option value="<?= $escape($category['path']) ?>"><?= $escape($category['title']) ?></option><?php endforeach; ?>
                   <option value="blog">Blog</option><?php foreach ($pageRows as $page): ?><option value="<?= $escape($page['slug']) ?>"><?= $escape($page['title']) ?></option><?php endforeach; ?></datalist>
@@ -86,7 +86,7 @@
                   <?php foreach ($menuItems as $item): ?><option value="<?= $escape($item['id']) ?>" <?= ($selectedItem['parent_id'] ?? '') === $item['id'] ? 'selected' : '' ?>><?= $escape(str_repeat('— ', (int) $item['depth']) . $item['label']) ?></option><?php endforeach; ?>
                 </select></label>
                 <label>Pořadí <input type="number" name="sort_order" min="0" max="65535" value="<?= (int) ($selectedItem['sort_order'] ?? 10) ?>" required></label>
-                <p class="admin-help">Pro kategorii napiš cestu, například <code>spani/spacaky</code>. Pro stránku její adresu, například <code>o-nas</code>; pro blog <code>blog</code>.</p>
+                <p class="admin-help">Pro kategorii napiš cestu, například <code>spani/spacaky</code>. Pro stránku její adresu, například <code>o-nas</code>; pro blog <code>blog</code>. Prázdná cesta vede na úvod.</p>
                 <button class="admin-button" type="submit" <?= $menuReady ? '' : 'disabled' ?>><?= $selectedItem === null ? '＋ Přidat odkaz' : 'Uložit odkaz' ?></button>
               </form>
               <?php if ($selectedItem !== null): ?><form class="admin-remove-form" method="post" action="<?= $escape($adminUrl . '?section=menus') ?>">

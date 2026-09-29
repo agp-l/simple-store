@@ -85,9 +85,17 @@ VALUES ('cs', 'spani/spacaky/zimni', 'Zimní spacáky', 1);
 
 Hlavní menu nahoře ukazuje jen šest kořenových kategorií. Na stránce `/cs/kategorie-produktu/spani` uvidíš nad produkty Spacáky, Quilty a ostatní přímé podsekce. Stránka `/cs/kategorie-produktu/spani/spacaky` ukáže produkty ze spacáků; existující produkty se starými kódy `spacaky`, `stany` a objemovými filtry batohů se přečtou i bez zásahu do historie revizí. Stránka hlubší kategorie ukáže její potomky, nebo vedlejší kategorie, pokud už potomky nemá. Vypnuté kategorie se nezobrazují a neexistující adresa vrací 404. Produkty se filtrují, hledají i řadí v SQL. Katalog ukáže 12 produktů, blog 6 článků; další připojí tlačítko **Načíst další** bez obnovení stránky. Bez JavaScriptu tlačítko otevře další dávku jako běžný odkaz.
 
-`config/menus.php` pojmenovává místa na stránce. `primary` tvoří kategorie hlavičky, `category_tabs` načítá přímé děti právě zobrazené kategorie, `utility` tvoří Blog a publikované stránky označené pro horní odkazy, `footer` znovu používá kořenové kategorie. Můžeš přidat další místo s `source => categories` a `parent => 'spani'`, nebo `source => manual` s `items` obsahujícími `label`, `category` / `path` a vnořené `children`. Zobrazí se, až nové místo zavoláš přes `MenuManager::links('nazev')` a vypíšeš ve své šabloně. Třída vrací strom odkazů (`label`, `href`, `active`, `children`), takže HTML rozbalovacího menu lze přidat bez změny databáze nebo směrování.
+`config/menus.php` pojmenovává výchozí místa na stránce. `primary` tvoří kategorie hlavičky, `category_tabs` načítá přímé děti právě zobrazené kategorie, `utility` tvoří Blog a publikované stránky označené pro horní odkazy, `footer` znovu používá kořenové kategorie. Správa menu v administraci ukládá změny po jednotlivých jazycích do `navigation_menus`. Pokud tabulka nebo konkrétní řádek chybí, platí výchozí nastavení v `config/menus.php`; stará navigace se po aktualizaci neztratí.
 
-Kontroly bez databáze: `/opt/lampp/bin/php tests/url-manager.php`, `/opt/lampp/bin/php tests/category-path.php` a `/opt/lampp/bin/php tests/menu-manager.php`. Po importu také `/opt/lampp/bin/php tests/category-navigation.php`.
+### Správa kategorií a menu v administraci
+
+Po přihlášení otevři **Kategorie** na `admin.php?section=categories`. Můžeš vytvořit hlavní sekci nebo podkategorii, změnit název, pořadí mezi sousedy a zobrazení. Pořadí je číslo; menší číslo se ukáže dřív. Adresa `path` se po vytvoření nemění: produkty a další větve na ni odkazují. Skrytí rodiče skryje na webu také jeho podkategorie, v administraci zůstanou dostupné. Na stránce kategorie má přihlášený správce odkazy **Upravit kategorie** a **Přidat podkategorii**; v horních odkazech webu najde **Upravit menu**. Tyto zkratky otevřou stejný editor jako administrace.
+
+Na `admin.php?section=menus` nastavíš pro hlavičku, horní odkazy, podkategorie a patičku zdroj **Kategorie**, **Publikované stránky** nebo **Vlastní odkazy**. U kategorií měníš jejich skutečné pořadí ve správě kategorií. Horní odkazy se stránkami mají přímo v editoru menu pole **V menu** a **Pořadí**; uložení vytvoří novou revizi stránky. Vlastní odkazy mohou vést na kategorii, stránku či blog, lze je vnořit a seřadit. Vnořené vlastní odkazy v hlavičce se otevírají rozbalovacím prvkem, v patičce se vypisují pod rodičem a mezi podkategoriemi se zobrazí jako další odkazy. Nové pojmenované místo lze založit v administraci, ale jeho výpis v další části webu vyžaduje zavolat `MenuManager::links('nazev')` v odpovídající šabloně.
+
+Pro tuto aktualizaci importuj `database/schema.sql` do databáze z `config/database.php`. Přidá pouze tabulku `navigation_menus`; `catalog_categories` a `content_revisions` už existují. Pokud máš jiný název databáze než `simple_store`, uprav v lokální kopii SQL příkaz `USE` nebo spusť jen vytvoření nové tabulky ve vybrané databázi v phpMyAdmin. Všechny změny kategorií a menu ověřuje přihlášení správce a CSRF token. Správa klientů a jejich přihlašování zatím nejsou součástí této etapy; současná šablona a pole `role` v `users` nechávají pro samostatný klientský portál prostor.
+
+Kontroly bez databáze: `/opt/lampp/bin/php tests/url-manager.php`, `/opt/lampp/bin/php tests/category-editor.php`, `/opt/lampp/bin/php tests/menu-definitions.php` a `/opt/lampp/bin/php tests/menu-manager.php`. Po importu také `/opt/lampp/bin/php tests/category-navigation.php`.
 
 ## První stránka, článek a historie
 
@@ -115,6 +123,7 @@ Webové adresy pak budou `/cs/o-nas` a `/cs/blog/prvni-vyprava`. Publikované č
 | `index.php` | Jediné veřejné směrování CMS; úvod, kategorie, produkt, stránky, blog a 404. |
 | `src/Navigation/UrlManager.php` | Části URL, jazyk a odkazy při instalaci v podsložce. |
 | `src/Navigation/MenuManager.php` | Pojmenovaná menu kategorií, publikovaných stránek a ručních odkazů. |
+| `src/Navigation/MenuDefinitionRepository.php` | Databázové nastavení menu po jazycích a vlastní vnořené odkazy. |
 | `src/Category/CategoryRepository.php` | Jedna tabulka s kategoriemi a jejich stromem. |
 | `src/Category/CategoryPath.php` | Práce s vnořenými cestami a čtení starých produktů. |
 | `config/menus.php` | Určení zdroje pro jednotlivá místa menu. |
@@ -127,6 +136,7 @@ Webové adresy pak budou `/cs/o-nas` a `/cs/blog/prvni-vyprava`. Publikované č
 | `src/Content/ContentBody.php` | Bloky ve stávajícím sloupci body a čtení původního prostého textu. |
 | `src/Content/ContentInlineEditor.php` | Předvyplněný koncept a skládání nových kompletních revizí ze změn na stránce. |
 | `src/Admin/inline-content.php` | Kontrolovaný zápis a obnova stránek a článků po přihlášení. |
+| `src/Admin/categories.php`, `src/Admin/menus.php` | Správa kategorií, zdrojů menu a pořadí stránek. |
 | `src/Rendering/PageRenderer.php` | PHP pohledy bez Twig. |
 | `database/schema.sql` | Vždy aktuální úplné schéma. |
 | `view/` | HTML pro obchod, blog, stránky, `<head>`, hlavičku, menu a patičku. |
@@ -141,4 +151,4 @@ Revize v `content_revisions` a `product_revisions` zůstávají celé v jednom �
 
 Tohle je rozumná podoba pro **verzovaný obsah**, ale neznamená to, že každou budoucí tabulku lze držet bez vztahů. Objednávky, platby a skladové pohyby budou potřebovat trvalé identifikátory produktů, pravidla konzistence a pravděpodobně i vztahy mezi záznamy. Přidání dalšího jazyka vyžaduje přeložit i texty rozhraní; sloupec `language` počítá s dvoupísmenným kódem.
 
-Tento úklid **nemění databázové schéma**. Po `git pull` není potřeba žádný SQL příkaz. Kontroly bez databáze: `/opt/lampp/bin/php tests/url-manager.php`, `/opt/lampp/bin/php tests/menu-manager.php`, `/opt/lampp/bin/php tests/revision-guards.php` a `/opt/lampp/bin/php tests/catalog-render.php`.
+Po této aktualizaci je potřeba vytvořit tabulku `navigation_menus` z aktuálního `database/schema.sql`. Kontroly bez databáze: `/opt/lampp/bin/php tests/url-manager.php`, `/opt/lampp/bin/php tests/menu-definitions.php`, `/opt/lampp/bin/php tests/revision-guards.php` a `/opt/lampp/bin/php tests/catalog-render.php`.

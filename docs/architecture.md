@@ -9,7 +9,7 @@ CMS řeší stránky, blog a nyní také produktové karty a detail. Produkty ma
 1. Apache ponechá obrázky a CSS jako soubory. Ostatní URL předá do `index.php`.
 2. `UrlManager` rozdělí cestu na úseky, určí jazyk a udrží správný prefix, pokud je projekt v podsložce.
 3. `UrlManager::route()` určí obchod, kategorii, produkt, seznam článků, článek, stránku nebo 404; `index.php` vybere odpovídající databázový obsah.
-4. `CategoryRepository` načte strom kategorií a `ContentRepository` aktuální publikovanou revizi. `MenuManager` sestaví pojmenovaná menu pro jednotlivá místa šablony.
+4. `CategoryRepository` načte strom kategorií a `ContentRepository` aktuální publikovanou revizi. `MenuDefinitionRepository` spojí výchozí místa s případnými změnami v SQL; `MenuManager` z nich sestaví odkazy.
 5. `PageRenderer` pošle data do stávajících PHP pohledů ve `view/`. Nepoužívá Twig ani databázi.
 
 ## Složky a názvy
@@ -21,6 +21,7 @@ CMS řeší stránky, blog a nyní také produktové karty a detail. Produkty ma
 | `src/Category/CategoryRepository.php` | Jeden SQL zdroj pro kořeny, přímé děti, strom a drobečkovou navigaci. |
 | `src/Category/CategoryPath.php` | Ověření cesty, její rodič, podstrom a převod starých kódů produktů při čtení. |
 | `config/menus.php` | Přiřazuje zdroj a kořen kategorického stromu ke jménu každého menu. |
+| `src/Navigation/MenuDefinitionRepository.php` | Načte nastavení menu pro jazyk z `navigation_menus`; bez řádku použije výchozí soubor. |
 | `src/Navigation/Slugger.php` | Navrhne adresu z českého nadpisu; ruční slug má přednost. |
 | `src/Content/ContentRepository.php` | SQL dotazy, publikovaný obsah a ukládání revizí. |
 | `src/Content/ContentBody.php` | Bloky textu, seznamu, tabulky a fotografie v jediném sloupci body; starý prostý text se načítá jako jeden blok. |
@@ -58,11 +59,11 @@ Základní cesty jsou `/`, `/cs`, `/cs/kategorie-produktu/spani/spacaky`, `/cs/p
 
 ## Kategorie bez dalších vztahových tabulek
 
-`catalog_categories` ukládá `language`, stabilní `path`, čitelný `title`, pořadí a příznak `enabled`. Cesta `obleceni/muzi/bundy` sama určuje rodiče `obleceni/muzi`, proto není potřeba `parent_id` ani spojování tabulek. `CategoryRepository::tree()` zahrne jen povolené větve, kterým existují všechny rodičovské cesty. Ruční přidání potomka znamená vložení jednoho řádku. Po změně `path` musíš opravit i cesty potomků a přiřazení produktu; proto je `path` trvalý identifikátor a pro změnu nápisu uprav pouze `title`.
+`catalog_categories` ukládá `language`, stabilní `path`, čitelný `title`, pořadí a příznak `enabled`. Cesta `obleceni/muzi/bundy` sama určuje rodiče `obleceni/muzi`, proto není potřeba `parent_id` ani spojování tabulek. `CategoryRepository::tree()` zahrne jen povolené větve, kterým existují všechny rodičovské cesty. Administrace umožní přidat potomka nebo upravit název, pořadí a viditelnost bez zásahu do SQL. `path` zůstává neměnným identifikátorem, protože jej používají produkty, další větve a odkazy.
 
 Produktová revize nadále ukládá kořen do `category` a zbytek cesty do `subcategory`. Editor ukazuje jedno pole celé cesty a repository ji při ukládání rozdělí. Původní `spacaky`, `stany` a objemové kódy batohů jsou součástí podmínek SQL, bez zpětného přepsání revizí. Kořenová kategorie zahrnuje produkty všech podkategorií, podsekce pouze svůj podstrom. SQL filtruje publikované produkty podle jazyka, cesty a hledání; řazení a omezení počtu řádků probíhají ve stejném dotazu. Při velkém katalogu lze později doplnit index pro kategorii a hledání.
 
-`MenuManager::links()` bere jméno místa z `config/menus.php`. `categories` vrací děti zadaného rodiče, `content` publikované stránky označené pro menu a případně Blog, `manual` ručně zapsaný strom odkazů. Každá položka má `label`, `href`, `active`, `children` a u kategorií také `path`. Hlavička vykreslí jen vrchní úroveň; vnořené položky může později zobrazit například rozbalovací menu bez zásahu do modelu. `category_tabs` ukazuje aktuální děti nebo sourozence listové kategorie a tím zpřístupňuje i hluboké větve.
+`MenuManager::links()` stále bere jméno místa. Výchozí zdroje určuje `config/menus.php`; tabulka `navigation_menus` může přepsat zdroj pro konkrétní jazyk a místo. Jeden řádek obsahuje nastavení a JSON seznam vlastních položek s identifikátorem a identifikátorem rodiče. Není tu cizí klíč ani další tabulka pro jednotlivé odkazy. Repository ověřuje cíle, rodiče a cykly, potom skládá strom pro existující `MenuManager`. Zdroj `categories` vrací děti dané větve, `content` publikované stránky v pořadí `menu_order` a případně Blog, `manual` vlastní odkazy. Hlavička a horní odkazy vnořené vlastní položky otevírají rozbalovacím prvkem; patička je vypisuje pod rodičem. `category_tabs` pracuje s aktuální kategorií a ukazuje její děti nebo sourozence.
 
 ## Co může zůstat bez databázových vazeb
 

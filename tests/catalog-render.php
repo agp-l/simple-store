@@ -13,6 +13,7 @@ $html = ob_get_clean();
 if (!str_contains($html, 'Načteno 0 produktů') ||
     !str_contains($html, 'Zatím tu nejsou zveřejněné produkty') ||
     !str_contains($html, 'href="/shop/cs"') ||
+    str_contains($html, 'menu-admin-shortcut') ||
     str_contains($html, 'produkt-topo-terraventure.php') ||
     str_contains($html, 'data-add')) {
     throw new RuntimeException('The empty catalog must not display old sample products or leave the language.');
@@ -51,6 +52,39 @@ $html = ob_get_clean();
 if (!str_contains($html, '/shop/cs/blog/stezka') ||
     !str_contains($html, 'data-load-more data-target="cms-post-list"')) {
     throw new RuntimeException('Blog must link to articles and the next batch.');
+}
+
+$manual = [[
+    'label' => 'Výpravy', 'href' => '/shop/cs/blog', 'active' => false,
+    'children' => [[
+        'label' => 'První trek', 'href' => '/shop/cs/blog/prvni-trek', 'active' => false,
+        'children' => [],
+    ]],
+]];
+ob_start();
+$renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
+    'primaryMenu' => $manual, 'manualPrimaryMenu' => true,
+    'footerMenu' => $manual, 'manualFooterMenu' => true]);
+$html = ob_get_clean();
+if (!str_contains($html, '<details class="nav-dropdown') ||
+    !str_contains($html, 'href="/shop/cs/blog/prvni-trek"') ||
+    !str_contains($html, 'class="footer-submenu"')) {
+    throw new RuntimeException('Nested manual menus must remain reachable on the public site.');
+}
+
+ob_start();
+$renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
+    'currentCategory' => ['path' => 'spani', 'title' => 'Spaní'],
+    'categoryMenuRoot' => ['path' => 'spani', 'title' => 'Spaní'],
+    'categoryMenu' => $manual, 'manualCategoryMenu' => true,
+    'primaryMenu' => $manual, 'manualPrimaryMenu' => true,
+    'canManageMenu' => true, 'menuAdminUrl' => '/shop/admin.php?section=menus']);
+$html = ob_get_clean();
+if (!str_contains($html, 'aria-label="Podkategorie Spaní"') ||
+    !str_contains($html, 'href="/shop/cs/blog/prvni-trek"') ||
+    !str_contains($html, 'menu-admin-shortcut') ||
+    str_contains($html, 'href="/shop/cs/blog#produkty"')) {
+    throw new RuntimeException('Manual category tabs and editorial links must not assume category paths.');
 }
 
 echo "Catalog rendering tests passed.\n";

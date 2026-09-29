@@ -53,7 +53,12 @@ try {
     $contents = new ContentRepository($db, $site['languages'], $site['revision_limit']);
     $categories = new CategoryRepository($db);
     $menuDefinitions = new MenuDefinitionRepository($db, require __DIR__ . '/config/menus.php', $categories);
-    $menus = new MenuManager($contents, $categories, $url, $menuDefinitions->settings($url->getLanguage()));
+    $menuSettings = $menuDefinitions->settings($url->getLanguage());
+    $menus = new MenuManager($contents, $categories, $url, $menuSettings);
+    $shared['manualPrimaryMenu'] = ($menuSettings['primary']['source'] ?? '') === 'manual';
+    $shared['manualUtilityMenu'] = ($menuSettings['utility']['source'] ?? '') === 'manual';
+    $shared['manualFooterMenu'] = ($menuSettings['footer']['source'] ?? '') === 'manual';
+    $shared['manualCategoryMenu'] = ($menuSettings['category_tabs']['source'] ?? '') === 'manual';
     $hasContent = (int) $db->queryFirstField(
         'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
         'content_revisions'
@@ -66,7 +71,7 @@ try {
     // An authenticated preview may read drafts; ordinary routes never start an admin session.
     $editRequested = ($_GET['edit'] ?? '') === '1';
     $auth = null;
-    if (in_array($route['name'], ['product', 'page', 'post', 'catalog', 'category'], true)) {
+    if (in_array($route['name'], ['product', 'page', 'post', 'blog', 'catalog', 'category'], true)) {
         if ($editRequested || isset($_COOKIE['simple_store_admin'])) {
             $users = new AdminUserRepository($db);
             if ($users->installed()) {
@@ -78,6 +83,10 @@ try {
     if ($canEdit) {
         header('Cache-Control: private, no-store');
     }
+    $shared['canManageMenu'] = $canEdit;
+    $shared['menuAdminUrl'] = $url->getBasePath() . 'admin.php?' . http_build_query([
+        'section' => 'menus', 'language' => $url->getLanguage(), 'slot' => 'primary',
+    ]);
 
     if ($route['name'] === 'catalog' || $route['name'] === 'category') {
         $path = $route['path'] ?? null;
@@ -96,7 +105,6 @@ try {
         $shared['newSubcategoryUrl'] = $path === null ? '' : $url->getBasePath() . 'admin.php?' . http_build_query([
             'section' => 'categories', 'language' => $url->getLanguage(), 'parent' => $path,
         ]);
-        $shared['menuAdminUrl'] = $url->getBasePath() . 'admin.php?section=menus';
         $shared['categoryTrail'] = $path === null ? [] : $categories->trail($url->getLanguage(), $path);
         $shared['categoryMenuRoot'] = $menuRoot === '' ? null : $categories->find($url->getLanguage(), $menuRoot);
         $shared['categoryMenu'] = $path === null ? [] : $menus->links('category_tabs', $menuRoot);

@@ -1,3 +1,17 @@
+<?php
+$footerEscape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+$drawFooterBranch = static function (array $links) use (&$drawFooterBranch, $footerEscape): void {
+    foreach ($links as $link) {
+        echo '<li><a href="' . $footerEscape($link['href']) . '">' . $footerEscape($link['label']) . '</a>';
+        if ($link['children'] !== []) {
+            echo '<ul class="footer-submenu">';
+            $drawFooterBranch($link['children']);
+            echo '</ul>';
+        }
+        echo '</li>';
+    }
+};
+?>
   <footer class="foot">
     <svg class="footer-routes" viewBox="0 0 1440 480" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
       <g fill="none" stroke="#bde18d" stroke-width="1.4" opacity=".14">
@@ -21,17 +35,21 @@
         <h2>Prozkoumat</h2>
         <ul>
           <li><a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>#produkty">Všechny produkty</a></li>
+          <?php if ($manualFooterMenu): $drawFooterBranch(array_slice($footerMenu, 0, 3)); else: ?>
           <?php foreach (array_slice($footerMenu, 0, 3) as $link): ?>
             <li><a href="<?= htmlspecialchars($link['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>#produkty"><?= htmlspecialchars($link['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a></li>
           <?php endforeach; ?>
+          <?php endif; ?>
         </ul>
       </nav>
       <nav aria-label="Další odkazy v patičce">
         <h2>Na cestu</h2>
         <ul>
+          <?php if ($manualFooterMenu): $drawFooterBranch(array_slice($footerMenu, 3)); else: ?>
           <?php foreach (array_slice($footerMenu, 3) as $link): ?>
             <li><a href="<?= htmlspecialchars($link['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>#produkty"><?= htmlspecialchars($link['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a></li>
           <?php endforeach; ?>
+          <?php endif; ?>
           <li><a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>#kategorie">Kategorie</a></li>
           <li><a href="#nahoru">Zpět nahoru ↑</a></li>
         </ul>

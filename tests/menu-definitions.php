@@ -2,6 +2,10 @@
 declare(strict_types=1);
 
 use SimpleStore\Navigation\MenuDefinitionRepository;
+use SimpleStore\Navigation\MenuManager;
+use SimpleStore\Navigation\UrlManager;
+use SimpleStore\Content\ContentRepository;
+use SimpleStore\Category\CategoryRepository;
 
 class MeekroDB
 {
@@ -64,6 +68,11 @@ $second = $menus->saveItem('cs', 'primary', null, [
 $links = $menus->settings('cs')['primary']['items'];
 if ($links[0]['path'] !== 'blog' || $links[0]['children'][0]['category'] !== 'boty') {
     throw new RuntimeException('Manual links lost their nested destination.');
+}
+$public = new MenuManager(new ContentRepository($db), new CategoryRepository($db),
+    new UrlManager('/shop/cs/blog', '/shop/index.php'), $menus->settings('cs'));
+if ($public->links('primary')[0]['children'][0]['href'] !== '/shop/cs/kategorie-produktu/boty') {
+    throw new RuntimeException('Saved menu settings must produce usable storefront URLs.');
 }
 try {
     $menus->saveItem('cs', 'primary', $first, [

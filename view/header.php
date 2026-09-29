@@ -24,8 +24,10 @@
         <p class="hero-tag">Paralelní společnost</p>
         <nav class="utility-right" aria-label="Stránky a blog">
           <?php foreach ($utilityMenu as $link): ?>
-            <a href="<?= htmlspecialchars($link['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" <?= $link['active'] ? 'aria-current="page"' : '' ?>><?= htmlspecialchars($link['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a>
+            <?php if ($manualUtilityMenu && $link['children'] !== []): ?><?php require __DIR__ . '/nav-dropdown.php'; ?>
+            <?php else: ?><a href="<?= htmlspecialchars($link['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" <?= $link['active'] ? 'aria-current="page"' : '' ?>><?= htmlspecialchars($link['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a><?php endif; ?>
           <?php endforeach; ?>
+          <?php if ($canManageMenu): ?><a class="menu-admin-shortcut" href="<?= htmlspecialchars($menuAdminUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">✎ Upravit menu</a><?php endif; ?>
         </nav>
       </div>
       <?php require __DIR__ . '/menu.php'; ?>

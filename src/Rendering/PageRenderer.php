@@ -29,10 +29,15 @@ final class PageRenderer
         $primaryMenu = $data['primaryMenu'] ?? [];
         $utilityMenu = $data['utilityMenu'] ?? [];
         $footerMenu = $data['footerMenu'] ?? [];
+        $manualPrimaryMenu = (bool) ($data['manualPrimaryMenu'] ?? false);
+        $manualUtilityMenu = (bool) ($data['manualUtilityMenu'] ?? false);
+        $manualFooterMenu = (bool) ($data['manualFooterMenu'] ?? false);
+        $manualCategoryMenu = (bool) ($data['manualCategoryMenu'] ?? false);
         $categoryMenu = $data['categoryMenu'] ?? [];
         $categoryMenuRoot = $data['categoryMenuRoot'] ?? null;
         $currentCategory = $data['currentCategory'] ?? null;
         $canManageCatalog = (bool) ($data['canManageCatalog'] ?? false);
+        $canManageMenu = (bool) ($data['canManageMenu'] ?? false);
         $categoryAdminUrl = (string) ($data['categoryAdminUrl'] ?? '');
         $newSubcategoryUrl = (string) ($data['newSubcategoryUrl'] ?? '');
         $menuAdminUrl = (string) ($data['menuAdminUrl'] ?? '');

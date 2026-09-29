@@ -3,6 +3,7 @@
   const menuBand = document.querySelector('.nav-band');
   const closeMenu = () => {
     menuBand.classList.remove('is-open');
+    document.querySelectorAll('.nav-dropdown[open]').forEach(dropdown => { dropdown.open = false; });
     menuToggle.setAttribute('aria-expanded', 'false');
     menuToggle.setAttribute('aria-label', 'Otevřít nabídku');
   };
