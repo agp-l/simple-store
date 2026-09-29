@@ -23,7 +23,7 @@ final class TestAdminAuth extends RoleAuth
     {
         // Stable across requests, like the password hash stored in the database.
         return $id === 1 ? ['id' => 1,
-            'password_hash' => '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2uheWG/igi.'] : null;
+            'password_hash' => '$2y$12$K6oaVzh/wtRKsxHqtw5uruJZTUHo31wM59WpvCyyoBrU9GwRhFfgC'] : null;
     }
 }
 
