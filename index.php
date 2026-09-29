@@ -8,6 +8,7 @@ use SimpleStore\Category\CategoryPath;
 use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Navigation\MenuManager;
+use SimpleStore\Navigation\MenuDefinitionRepository;
 use SimpleStore\Navigation\UrlManager;
 use SimpleStore\Product\ProductRepository;
 use SimpleStore\Rendering\PageRenderer;
@@ -51,7 +52,8 @@ try {
     $db = ConnectionFactory::create($database);
     $contents = new ContentRepository($db, $site['languages'], $site['revision_limit']);
     $categories = new CategoryRepository($db);
-    $menus = new MenuManager($contents, $categories, $url, require __DIR__ . '/config/menus.php');
+    $menuDefinitions = new MenuDefinitionRepository($db, require __DIR__ . '/config/menus.php', $categories);
+    $menus = new MenuManager($contents, $categories, $url, $menuDefinitions->settings($url->getLanguage()));
     $hasContent = (int) $db->queryFirstField(
         'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
         'content_revisions'
@@ -64,7 +66,7 @@ try {
     // An authenticated preview may read drafts; ordinary routes never start an admin session.
     $editRequested = ($_GET['edit'] ?? '') === '1';
     $auth = null;
-    if (in_array($route['name'], ['product', 'page', 'post'], true)) {
+    if (in_array($route['name'], ['product', 'page', 'post', 'catalog', 'category'], true)) {
         if ($editRequested || isset($_COOKIE['simple_store_admin'])) {
             $users = new AdminUserRepository($db);
             if ($users->installed()) {
@@ -87,6 +89,14 @@ try {
         $menuRoot = $path === null ? '' :
             ($categories->children($url->getLanguage(), $path) !== [] ? $path : CategoryPath::parent($path));
         $shared['currentCategory'] = $selected;
+        $shared['canManageCatalog'] = $canEdit;
+        $categoryAdminParams = ['section' => 'categories', 'language' => $url->getLanguage()];
+        if ($path !== null) $categoryAdminParams['edit'] = $path;
+        $shared['categoryAdminUrl'] = $url->getBasePath() . 'admin.php?' . http_build_query($categoryAdminParams);
+        $shared['newSubcategoryUrl'] = $path === null ? '' : $url->getBasePath() . 'admin.php?' . http_build_query([
+            'section' => 'categories', 'language' => $url->getLanguage(), 'parent' => $path,
+        ]);
+        $shared['menuAdminUrl'] = $url->getBasePath() . 'admin.php?section=menus';
         $shared['categoryTrail'] = $path === null ? [] : $categories->trail($url->getLanguage(), $path);
         $shared['categoryMenuRoot'] = $menuRoot === '' ? null : $categories->find($url->getLanguage(), $menuRoot);
         $shared['categoryMenu'] = $path === null ? [] : $menus->links('category_tabs', $menuRoot);

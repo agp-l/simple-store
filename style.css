@@ -466,6 +466,9 @@
       font-size: 14px;
     }
 
+    .catalog-admin-links { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 14px !important; }
+    .catalog-admin-links a { color: #397c37; font-size: 12px; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+
     .result-count {
       padding-bottom: 6px;
       color: var(--muted);

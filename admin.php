@@ -74,7 +74,9 @@ try {
             $auth->signOut();
             header('Location: ' . $adminUrl, true, 303);
             exit;
-        } elseif (!in_array($action, ['create-content', 'create-translation', 'inline-content', 'create-product', 'inline-product'], true) ||
+        } elseif (!in_array($action, ['create-content', 'create-translation', 'inline-content', 'create-product',
+            'inline-product', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
+            'menu-item-remove', 'page-menu'], true) ||
             !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content'], true)) {
                 header('Content-Type: application/json; charset=utf-8');
@@ -106,8 +108,22 @@ try {
         exit;
     }
 
-    if (($method === 'POST' && ($_POST['action'] ?? '') === 'create-product') ||
-        ($method !== 'POST' && ($_GET['section'] ?? '') === 'products')) {
+    $action = $method === 'POST' ? ($_POST['action'] ?? '') : '';
+    $section = $_GET['section'] ?? '';
+    if (in_array($action, ['category-create', 'category-update'], true) ||
+        ($method !== 'POST' && $section === 'categories')) {
+        require __DIR__ . '/src/Admin/categories.php';
+        require __DIR__ . '/view/admin/layout.php';
+        exit;
+    }
+    if (in_array($action, ['menu-slot', 'menu-item-save', 'menu-item-remove', 'page-menu'], true) ||
+        ($method !== 'POST' && $section === 'menus')) {
+        require __DIR__ . '/src/Admin/menus.php';
+        require __DIR__ . '/view/admin/layout.php';
+        exit;
+    }
+
+    if ($action === 'create-product' || ($method !== 'POST' && $section === 'products')) {
         require __DIR__ . '/src/Admin/products.php';
         require __DIR__ . '/view/admin/layout.php';
         exit;

@@ -6,6 +6,7 @@ class MeekroDB
 {
     public ?string $sourceType = null;
     public ?int $currentRevision = null;
+    public ?array $currentPage = null;
     public array $inserted = [];
     public bool $rolledBack = false;
     public array $deletions = [];
@@ -34,6 +35,10 @@ class MeekroDB
 
     public function queryFirstRow(string $sql, mixed ...$values): ?array
     {
+        if (str_contains($sql, 'SELECT * FROM content_revisions') &&
+            str_contains($sql, 'active_document_key IS NOT NULL')) {
+            return $this->currentPage;
+        }
         if (str_contains($sql, 'SELECT type FROM content_revisions')) {
             return $this->sourceType === null ? null : ['type' => $this->sourceType];
         }
@@ -87,6 +92,18 @@ try {
     throw new RuntimeException('A stale edit was accepted.');
 } catch (RuntimeException $expected) {
     if ($db->inserted !== []) throw new RuntimeException('A stale edit inserted a revision.');
+}
+
+$db->currentPage = [
+    'type' => 'page', 'language' => 'en', 'slug' => 'about', 'title' => 'About',
+    'summary' => 'Intro', 'body' => 'Original body', 'published' => 1,
+    'visible_in_menu' => 0, 'menu_order' => 0, 'revision_number' => 2,
+];
+$content->saveMenuPosition($key, 'en', 2, true, 3);
+if ($db->inserted[0][1]['body'] !== 'Original body' ||
+    $db->inserted[0][1]['visible_in_menu'] !== 1 ||
+    $db->inserted[0][1]['menu_order'] !== 3) {
+    throw new RuntimeException('Menu order must create a full page revision without rewriting its body.');
 }
 
 $db = new MeekroDB();

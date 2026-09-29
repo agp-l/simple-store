@@ -10,15 +10,19 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex, nofollow">
   <title>Administrace · dobrodruzi</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="<?= $escape($basePath) ?>assets/admin.css">
 </head>
 <body>
+  <?php $inside = in_array($screen, ['editor', 'products', 'categories', 'menus'], true); ?>
   <header class="admin-header">
     <div class="admin-wrap admin-header-inner">
-      <a class="admin-brand" href="<?= $escape($adminUrl) ?>">dobrodruzi<span class="admin-brand-label"> / redakce</span></a>
-      <?php if ($screen === 'editor' || $screen === 'products'): ?>
+      <a class="admin-brand" href="<?= $escape($adminUrl) ?>"><svg class="admin-logo-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20 10 5l3 7 2-4 6 12Z" /></svg>dobrodruzi<span class="admin-brand-label"> / správa</span></a>
+      <?php if ($inside): ?>
         <div class="admin-header-actions">
-          <a href="<?= $escape($basePath) ?>index.php">Zobrazit obchod</a>
+          <a href="<?= $escape($basePath) ?>index.php">Otevřít obchod ↗</a>
           <form method="post" action="<?= $escape($adminUrl) ?>">
             <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
             <button class="admin-quiet" type="submit" name="action" value="logout">Odhlásit se</button>
@@ -27,7 +31,22 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
       <?php endif; ?>
     </div>
   </header>
-  <main class="admin-wrap">
+  <?php if ($inside): ?>
+  <div class="admin-shell admin-wrap">
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar-heading"><span>Ovládací panel</span><small>OBCHOD A OBSAH</small></div>
+      <nav aria-label="Správa webu">
+        <a href="<?= $escape($adminUrl) ?>" <?= $screen === 'editor' ? 'aria-current="page"' : '' ?>><span aria-hidden="true">▤</span> Stránky a články</a>
+        <a href="<?= $escape($adminUrl . '?section=products') ?>" <?= $screen === 'products' ? 'aria-current="page"' : '' ?>><span aria-hidden="true">▦</span> Produkty</a>
+        <a href="<?= $escape($adminUrl . '?section=categories') ?>" <?= $screen === 'categories' ? 'aria-current="page"' : '' ?>><span aria-hidden="true">⌁</span> Kategorie</a>
+        <a href="<?= $escape($adminUrl . '?section=menus') ?>" <?= $screen === 'menus' ? 'aria-current="page"' : '' ?>><span aria-hidden="true">☷</span> Menu</a>
+      </nav>
+      <div class="admin-sidebar-foot"><span class="admin-status-dot"></span> Přihlášený správce</div>
+    </aside>
+    <main class="admin-main" id="obsah">
+  <?php else: ?>
+    <main class="admin-wrap admin-auth-main" id="obsah">
+  <?php endif; ?>
     <?php if ($screen === 'setup'): ?>
       <section class="admin-panel admin-centered">
         <p class="admin-eyebrow">První spuštění</p><h1>Vytvoř administrátora</h1>
@@ -51,9 +70,14 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
       </section>
     <?php elseif ($screen === 'products'): ?>
       <?php require __DIR__ . '/products.php'; ?>
+    <?php elseif ($screen === 'categories'): ?>
+      <?php require __DIR__ . '/categories.php'; ?>
+    <?php elseif ($screen === 'menus'): ?>
+      <?php require __DIR__ . '/menus.php'; ?>
     <?php else: ?>
       <?php require __DIR__ . '/contents.php'; ?>
     <?php endif; ?>
   </main>
+  <?php if ($inside): ?></div><?php endif; ?>
 </body>
 </html>

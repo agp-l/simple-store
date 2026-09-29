@@ -32,6 +32,10 @@ final class PageRenderer
         $categoryMenu = $data['categoryMenu'] ?? [];
         $categoryMenuRoot = $data['categoryMenuRoot'] ?? null;
         $currentCategory = $data['currentCategory'] ?? null;
+        $canManageCatalog = (bool) ($data['canManageCatalog'] ?? false);
+        $categoryAdminUrl = (string) ($data['categoryAdminUrl'] ?? '');
+        $newSubcategoryUrl = (string) ($data['newSubcategoryUrl'] ?? '');
+        $menuAdminUrl = (string) ($data['menuAdminUrl'] ?? '');
         $categoryTrail = $data['categoryTrail'] ?? [];
         $categoryLabels = $data['categoryLabels'] ?? [];
         $content = $data['content'] ?? null;

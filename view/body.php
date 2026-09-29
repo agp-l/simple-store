@@ -17,6 +17,7 @@ $productWord = $productCount === 1 ? 'produkt' : ($productCount >= 2 && $product
       <div>
         <h2 id="section-title"><?= $escape($currentCategory['title'] ?? 'Objevte vybavení') ?></h2>
         <p id="section-description"><?= $currentCategory === null ? 'Poctivý výběr pro pohodlí na stezce i mimo ni.' : 'Vybavení na každou cestu. Vyberte si z nabídky níže.' ?></p>
+        <?php if ($canManageCatalog): ?><p class="catalog-admin-links"><a href="<?= $escape($categoryAdminUrl) ?>">Upravit kategorie</a><?php if ($newSubcategoryUrl !== ''): ?><a href="<?= $escape($newSubcategoryUrl) ?>">＋ Přidat podkategorii</a><?php endif; ?><a href="<?= $escape($menuAdminUrl) ?>">Upravit menu</a></p><?php endif; ?>
       </div><span class="result-count" id="result-count" aria-live="polite">Načteno <?= $productCount . ' ' . $productWord ?></span>
     </div>
     <div class="tools">
