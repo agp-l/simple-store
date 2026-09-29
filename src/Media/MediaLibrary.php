@@ -7,7 +7,7 @@ use GdImage;
 use InvalidArgumentException;
 use RuntimeException;
 
-/** Re-encode untrusted uploads and make three immutable WebP sizes. No original upload is served. */
+/** Re-encode untrusted uploads and make three immutable sizes. No original upload is served. */
 final class MediaLibrary
 {
     private const MAX_FILES = 12;
@@ -76,8 +76,8 @@ final class MediaLibrary
     public function storeFile(string $type, string $key, string $source, string $filename): string
     {
         $relative = MediaPath::directory($type, $key);
-        if (!extension_loaded('gd') || !function_exists('imagewebp')) {
-            throw new RuntimeException('Nahrávání vyžaduje zapnuté rozšíření PHP GD s podporou WebP.');
+        if (!extension_loaded('gd')) {
+            throw new InvalidArgumentException('Nahrávání vyžaduje zapnuté rozšíření PHP GD.');
         }
         if (!is_file($source) || filesize($source) === false || filesize($source) > self::MAX_BYTES) {
             throw new InvalidArgumentException('Soubor je prázdný nebo příliš velký (nejvýše 12 MB).');
@@ -94,7 +94,15 @@ final class MediaLibrary
             throw new InvalidArgumentException('Soubor neodpovídá formátu fotografie.');
         }
         if ($info[2] === IMAGETYPE_WEBP && !function_exists('imagecreatefromwebp')) {
-            throw new RuntimeException('Rozšíření PHP GD nemá podporu čtení WebP.');
+            throw new InvalidArgumentException('Toto PHP neumí číst WebP. Nahraj fotografii jako JPG nebo PNG.');
+        }
+        if (($info[2] === IMAGETYPE_JPEG && !function_exists('imagecreatefromjpeg')) ||
+            ($info[2] === IMAGETYPE_PNG && !function_exists('imagecreatefrompng'))) {
+            throw new InvalidArgumentException('Toto PHP neumí číst vybraný formát fotografie.');
+        }
+        $format = function_exists('imagewebp') ? 'webp' : ($info[2] === IMAGETYPE_JPEG ? 'jpg' : 'png');
+        if (!function_exists('image' . ($format === 'jpg' ? 'jpeg' : $format))) {
+            throw new InvalidArgumentException('Toto PHP neumí uložit vybraný formát fotografie.');
         }
         $image = match ($info[2]) {
             IMAGETYPE_JPEG => @imagecreatefromjpeg($source),
@@ -117,14 +125,14 @@ final class MediaLibrary
                 }
             }
             $label = $this->slug($filename);
-            $path = $relative . '/' . $label . '--' . bin2hex(random_bytes(12)) . '.webp';
+            $path = $relative . '/' . $label . '--' . bin2hex(random_bytes(12)) . '.' . $format;
             $folder = $this->root . '/' . $relative;
             $this->prepareDirectory($relative);
             $created = [];
             try {
                 foreach ([[$path, 1800], [MediaPath::variant($path, 'card'), 960],
                     [MediaPath::variant($path, 'thumb'), 240]] as [$target, $size]) {
-                    $this->writeSize($image, $folder . '/' . basename($target), $size);
+                    $this->writeSize($image, $folder . '/' . basename($target), $size, $format);
                     $created[] = $target;
                 }
             } catch (\Throwable $error) {
@@ -160,7 +168,7 @@ final class MediaLibrary
         }
     }
 
-    private function writeSize(GdImage $source, string $target, int $max): void
+    private function writeSize(GdImage $source, string $target, int $max, string $format): void
     {
         $width = imagesx($source);
         $height = imagesy($source);
@@ -170,17 +178,25 @@ final class MediaLibrary
         $result = imagecreatetruecolor($newWidth, $newHeight);
         if (!$result instanceof GdImage) throw new RuntimeException('Fotografii nelze zpracovat.');
         try {
-            imagealphablending($result, false);
-            imagesavealpha($result, true);
-            $transparent = imagecolorallocatealpha($result, 0, 0, 0, 127);
-            imagefilledrectangle($result, 0, 0, $newWidth, $newHeight, $transparent);
+            if ($format !== 'jpg') {
+                imagealphablending($result, false);
+                imagesavealpha($result, true);
+                $transparent = imagecolorallocatealpha($result, 0, 0, 0, 127);
+                imagefilledrectangle($result, 0, 0, $newWidth, $newHeight, $transparent);
+            }
             if (!imagecopyresampled($result, $source, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height)) {
                 throw new RuntimeException('Fotografii nelze zmenšit.');
             }
             $temporary = tempnam(dirname($target), '.image-');
             if ($temporary === false) throw new RuntimeException('Fotografii nelze uložit.');
             try {
-                if (!imagewebp($result, $temporary, 86) || !chmod($temporary, 0644) || !rename($temporary, $target)) {
+                $saved = match ($format) {
+                    'webp' => imagewebp($result, $temporary, 86),
+                    'jpg' => imagejpeg($result, $temporary, 86),
+                    'png' => imagepng($result, $temporary, 6),
+                };
+                if (!$saved || !is_file($temporary) || filesize($temporary) === 0 ||
+                    !chmod($temporary, 0644) || !rename($temporary, $target)) {
                     throw new RuntimeException('Fotografii nelze uložit.');
                 }
             } finally {

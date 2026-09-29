@@ -19,6 +19,15 @@ if (!MediaPath::isManaged($path) || !ProductDetails::imagePath($path) ||
     MediaPath::isManaged('images/media/products/' . $key . '/../attack.webp')) {
     throw new RuntimeException('Neplatné pravidlo pro adresy fotografií.');
 }
+foreach (['jpg', 'png'] as $extension) {
+    $other = substr($path, 0, -4) . $extension;
+    if (!MediaPath::isManaged($other) || !ProductDetails::imagePath($other) ||
+        !MediaPath::isAsset(MediaPath::variant($other, 'card')) ||
+        MediaPath::variant($other, 'thumb') !== substr($other, 0, -strlen($extension) - 1) . '-thumb.' . $extension ||
+        MediaPath::label($other) !== 'boty-zepredu') {
+        throw new RuntimeException('Neplatné adresy alternativních formátů.');
+    }
+}
 try {
     MediaPath::directory('product', '../escape');
     throw new RuntimeException('Klíč složky dovolil průchod adresářem.');
@@ -60,31 +69,49 @@ if (count($blocks) !== 4 || $blocks[3]['body'] !== $first) {
     throw new RuntimeException('Ukázkový blok článku se nenahradil fotografií.');
 }
 
-if (extension_loaded('gd') && function_exists('imagewebp')) {
+if (extension_loaded('gd') && function_exists('imagepng') && function_exists('imagejpeg') &&
+    function_exists('imagecreatefrompng') && function_exists('imagecreatefromjpeg')) {
     $temp = sys_get_temp_dir() . '/simple-store-media-' . bin2hex(random_bytes(6));
     mkdir($temp, 0700);
-    $input = $temp . '/source.png';
-    $image = imagecreatetruecolor(1600, 900);
-    imagefilledrectangle($image, 0, 0, 1600, 900, imagecolorallocate($image, 40, 120, 60));
-    imagepng($image, $input);
-    imagedestroy($image);
     try {
         $library = new MediaLibrary($temp);
-        $result = $library->storeFile('product', $key, $input, 'Přední strana.png');
-        foreach ([$result => 1600, MediaPath::variant($result, 'card') => 960,
-            MediaPath::variant($result, 'thumb') => 240] as $file => $limit) {
-            $size = getimagesize($temp . '/' . $file);
-            if ($size === false || max($size[0], $size[1]) > $limit || $size[2] !== IMAGETYPE_WEBP) {
-                throw new RuntimeException('Zpracování fotografie vytvořilo chybný rozměr nebo formát.');
+        foreach (['png' => IMAGETYPE_PNG, 'jpg' => IMAGETYPE_JPEG] as $inputExtension => $inputType) {
+            $input = $temp . '/source.' . $inputExtension;
+            $image = imagecreatetruecolor(1600, 900);
+            if ($inputExtension === 'png') {
+                imagealphablending($image, false);
+                imagesavealpha($image, true);
+                imagefill($image, 0, 0, imagecolorallocatealpha($image, 0, 0, 0, 127));
             }
+            imagefilledrectangle($image, 50, 50, 1550, 850, imagecolorallocate($image, 40, 120, 60));
+            if ($inputExtension === 'png') imagepng($image, $input);
+            else imagejpeg($image, $input);
+            imagedestroy($image);
+            $result = $library->storeFile('product', $key, $input, 'Přední strana.' . $inputExtension);
+            $expectedType = function_exists('imagewebp') ? IMAGETYPE_WEBP : $inputType;
+            foreach ([$result => 1600, MediaPath::variant($result, 'card') => 960,
+                MediaPath::variant($result, 'thumb') => 240] as $file => $limit) {
+                $size = getimagesize($temp . '/' . $file);
+                if ($size === false || max($size[0], $size[1]) > $limit || $size[2] !== $expectedType) {
+                    throw new RuntimeException('Zpracování fotografie vytvořilo chybný rozměr nebo formát.');
+                }
+            }
+            if (count($library->files('product', $key)) !== 1) {
+                throw new RuntimeException('Miniatury se zobrazují jako samostatné fotografie.');
+            }
+            if ($inputExtension === 'png' && !function_exists('imagewebp')) {
+                $converted = imagecreatefrompng($temp . '/' . MediaPath::variant($result, 'thumb'));
+                if (imagecolorsforindex($converted, imagecolorat($converted, 0, 0))['alpha'] !== 127) {
+                    throw new RuntimeException('PNG přišlo o průhlednost.');
+                }
+                imagedestroy($converted);
+            }
+            $library->removeNew([$result]);
+            if (is_file($temp . '/' . $result)) throw new RuntimeException('Vrácení uploadu nechalo soubory na disku.');
+            @unlink($input);
         }
-        if (count($library->files('product', $key)) !== 1) {
-            throw new RuntimeException('Miniatury se zobrazují jako samostatné fotografie.');
-        }
-        $library->removeNew([$result]);
-        if (is_file($temp . '/' . $result)) throw new RuntimeException('Vrácení uploadu nechalo soubory na disku.');
     } finally {
-        @unlink($input);
+        foreach (glob($temp . '/source.*') ?: [] as $file) @unlink($file);
         foreach (glob($temp . '/images/media/products/' . $key . '/*') ?: [] as $file) @unlink($file);
         @rmdir($temp . '/images/media/products/' . $key);
         @rmdir($temp . '/images/media/products');

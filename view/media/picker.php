@@ -1,9 +1,9 @@
 <dialog id="media-picker" class="media-picker" aria-labelledby="media-picker-title">
   <div class="media-picker-head"><div><p class="media-eyebrow">Knihovna fotografií</p><h2 id="media-picker-title">Vybrat fotografii</h2></div>
     <button type="button" class="media-close" data-media-close aria-label="Zavřít správce fotografií">×</button></div>
-  <p class="media-note">JPG, PNG nebo WebP · nejvýše 12 souborů po 12 MB a 20 Mpx. Obrázky se převedou na WebP v rozměrech do 1800, 960 a 240 px. Nahrání je rovnou vloží do obsahu.</p>
+  <p class="media-note">JPG, PNG<?= function_exists('imagecreatefromwebp') ? ' nebo WebP' : '' ?> · nejvýše 12 souborů po 12 MB a 20 Mpx. Obrázky se zmenší do 1800, 960 a 240 px<?= function_exists('imagewebp') ? ' a uloží jako WebP' : ' a uloží jako JPG nebo PNG' ?>. Nahrání je rovnou vloží do obsahu.</p>
   <form id="media-upload-form" class="media-upload-form">
-    <label>Fotografie z počítače <input type="file" name="photos[]" accept="image/jpeg,image/png,image/webp" multiple required></label>
+    <label>Fotografie z počítače <input type="file" name="photos[]" accept="image/jpeg,image/png<?= function_exists('imagecreatefromwebp') ? ',image/webp' : '' ?>" multiple required></label>
     <button type="submit" class="media-primary">Nahrát a vložit</button>
   </form>
   <form id="media-url-form" class="media-url-form">
