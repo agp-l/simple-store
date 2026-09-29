@@ -16,7 +16,12 @@ declare(strict_types=1);
   <?php endforeach; ?>
   <h3>Zásilkovna – mapa výdejních míst</h3>
   <label>Veřejný API klíč widgetu<input name="packeta_api_key" value="<?= $escape($form['packeta_api_key'] ?? '') ?>" maxlength="16" pattern="[A-Za-z0-9]{16}" autocomplete="off" placeholder="16 znaků z klientské sekce"></label>
-  <p class="panel-help">Klíč pro mapu získáš v klientské sekci Zásilkovny. Je určený pro webový widget; <strong>nevkládej sem API heslo</strong>. Bez klíče se doprava Zásilkovnou v pokladně nenabídne, i když je nahoře zapnutá. Podání zásilky a štítek se zatím vyřizují ručně.</p>
+  <p class="panel-help">Klíč pro mapu získáš v klientské sekci Zásilkovny. Je určený pro webový widget; <strong>nevkládej sem API heslo</strong>. Bez klíče se doprava Zásilkovnou v pokladně nenabídne, i když je nahoře zapnutá.</p>
+  <h3>Podávání zásilek</h3>
+  <label>Označení odesílatele<input name="packeta_sender" value="<?= $escape($form['packeta_sender'] ?? '') ?>" maxlength="64" autocomplete="off" placeholder="Přesně podle klientské sekce"></label>
+  <label>API heslo Zásilkovny<input type="password" name="packeta_api_password" value="" maxlength="128" autocomplete="new-password" placeholder="<?= !empty($packetaPasswordConfigured) ? 'Heslo je uloženo; pro změnu zadej nové' : 'Zadej soukromé API heslo' ?>"></label>
+  <p class="panel-help">API heslo je jiné než veřejný klíč widgetu. Prázdné pole ponechá uložené heslo beze změny. Heslo se na veřejných stránkách ani v administraci znovu nevypisuje.</p>
+  <?php if (!empty($packetaPasswordConfigured)): ?><label class="panel-check"><input type="checkbox" name="packeta_clear_password" value="1"> Odstranit uložené API heslo</label><?php endif; ?>
   <h2>Bankovní převod</h2>
   <label>Číslo účtu<input name="account_display" value="<?= $escape($form['account_display']) ?>" placeholder="číslo/kód banky" autocomplete="off"></label>
   <label>IBAN (nepovinný, z čísla účtu se dopočítá)<input name="iban" value="<?= $escape($form['iban']) ?>" autocomplete="off"></label>

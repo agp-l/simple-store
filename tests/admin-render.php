@@ -102,14 +102,16 @@ if (!str_contains($html, 'name="action" value="mark-order-paid"') ||
 }
 $order['shipping'] = ['method' => 'zasilkovna_pickup', 'label' => 'Zásilkovna',
     'recipient' => 'Eva Nová', 'phone' => '+420123456789',
-    'pickup_code' => '123456', 'pickup_point' => 'Praha', 'pickup_address' => 'Ulice 1, Praha, 110 00'];
+    'pickup_code' => '123456', 'pickup_point' => 'Praha', 'pickup_address' => 'Ulice 1, Praha, 110 00',
+    'pickup_verified' => true];
+$packetaReady = true;
+$packetaConfigured = true;
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
-if (!str_contains($html, 'Podklady pro ruční podání') ||
-    !str_contains($html, 'ID výdejního místa: 123456') ||
-    !str_contains($html, 'Telefon: +420123456789')) {
-    throw new RuntimeException('Packeta order does not provide copyable dispatch details.');
+if (!str_contains($html, 'Podání zásilky Zásilkovně') ||
+    !str_contains($html, 'Nejdřív ověř platbu')) {
+    throw new RuntimeException('Packeta dispatch should wait for the payment.');
 }
 $order['payment_status'] = 'paid';
 ob_start();
@@ -117,9 +119,30 @@ require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
 if (str_contains($html, 'name="action" value="mark-order-paid"') ||
     !str_contains($html, 'name="action" value="set-order-status"') ||
-    !str_contains($html, 'value="completed"') || !str_contains($html, 'Zaplaceno')) {
+    !str_contains($html, 'value="completed"') || !str_contains($html, 'Zaplaceno') ||
+    !str_contains($html, 'name="action" value="packeta-create"') ||
+    !str_contains($html, 'Výdejní místo: Praha (ID 123456)')) {
     throw new RuntimeException('Paid bank transfers must not show the confirmation form.');
 }
+$packetaShipment = ['status' => 'created', 'method' => 'zasilkovna_pickup',
+    'barcode_text' => 'Z 123 4567 890', 'barcode' => 'Z1234567890',
+    'weight_kg' => '0.750', 'courier_number' => null];
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'Z 123 4567 890') || !str_contains($html, 'packeta_label=1') ||
+    str_contains($html, 'name="action" value="packeta-create"')) {
+    throw new RuntimeException('Created pickup packet must show the number and label.');
+}
+$packetaShipment['method'] = 'zasilkovna_home';
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'name="action" value="packeta-courier"') ||
+    str_contains($html, 'packeta_label=1')) {
+    throw new RuntimeException('HD must obtain a carrier number before its label.');
+}
+$packetaShipment = null;
 $orderPage = ['items' => [$order], 'nextOffset' => 25];
 $ordersNextUrl = $orderBaseUrl . '&status=all&offset=25';
 $order = null;

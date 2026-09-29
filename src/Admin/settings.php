@@ -23,8 +23,10 @@ $form = [
     'payment_due_days' => (string) ($settings['bank_transfer']['payment_due_days'] ?? 7),
     'terms_url' => $settings['terms_url'] ?? '',
     'packeta_api_key' => $settings['packeta']['api_key'] ?? '',
+    'packeta_sender' => $settings['packeta']['sender'] ?? '',
     'local_test_checkout' => ($settings['local_test_checkout'] ?? true) === true ? '1' : '0',
 ];
+$packetaPasswordConfigured = ($settings['packeta']['api_password'] ?? '') !== '';
 foreach ($shippingCatalog as $code => $definition) {
     $saved = $settings['shipping_methods'][$code] ?? $definition;
     $form['shipping_price'][$code] = (string) ($saved['price_czk'] ?? $definition['price_czk']);
@@ -32,7 +34,7 @@ foreach ($shippingCatalog as $code => $definition) {
 }
 if ($method === 'POST') {
     try {
-        $repository->save($_POST, $basePath);
+        $repository->save($_POST, $basePath, $settings);
         header('Location: ' . $adminUrl . '?section=settings&saved=1', true, 303);
         exit;
     } catch (InvalidArgumentException $exception) {

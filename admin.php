@@ -104,7 +104,8 @@ try {
         } elseif (!in_array($action, ['create-content', 'create-translation', 'inline-content', 'create-product',
             'inline-product', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
             'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product',
-            'mark-order-paid', 'set-order-status', 'save-checkout-settings', 'customer-create',
+            'mark-order-paid', 'set-order-status', 'packeta-create', 'packeta-courier',
+            'packeta-reconcile', 'packeta-retry', 'save-checkout-settings', 'customer-create',
             'customer-update', 'customer-active', 'customer-password'], true) ||
             !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach'], true)) {
@@ -172,7 +173,8 @@ try {
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }
-    if (in_array($action, ['mark-order-paid', 'set-order-status'], true) ||
+    if (in_array($action, ['mark-order-paid', 'set-order-status', 'packeta-create',
+        'packeta-courier', 'packeta-reconcile', 'packeta-retry'], true) ||
         ($method !== 'POST' && $section === 'orders')) {
         require __DIR__ . '/src/Admin/orders.php';
         require __DIR__ . '/view/admin/layout.php';

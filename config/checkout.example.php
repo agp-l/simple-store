@@ -6,7 +6,11 @@ declare(strict_types=1);
 return [
     'local_test_checkout' => true, // Only on localhost in debug mode; no payment is requested.
     'terms_url' => '', // Optional local published page, e.g. /cs/obchodni-podminky.
-    'packeta' => ['api_key' => ''], // Public 16-character widget key from Packeta client section.
+    'packeta' => [
+        'api_key' => '', // Public 16-character widget key.
+        'api_password' => '', // Private API password: never expose in the storefront or commit credentials.
+        'sender' => '', // Sender indication from the Packeta client section.
+    ],
     'bank_transfer' => [
         'iban' => '', // Calculated from the Czech account number if left empty.
         'account_display' => '', // Enter in administration; do not commit a private account.

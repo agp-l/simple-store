@@ -45,7 +45,7 @@ final class CheckoutSettingsRepository
         return $result;
     }
 
-    public function save(array $input, string $basePath): array
+    public function save(array $input, string $basePath, array $current = []): array
     {
         $prices = $input['shipping_price'] ?? null;
         $enabled = $input['shipping_enabled'] ?? [];
@@ -94,9 +94,22 @@ final class CheckoutSettingsRepository
         }
         $packetaKey = self::value($input, 'packeta_api_key');
         new PacketaPickupPoint($packetaKey);
+        $password = self::value($input, 'packeta_api_password');
+        if ($password === '') {
+            $password = ($input['packeta_clear_password'] ?? null) === '1' ? '' :
+                (string) ($current['packeta']['api_password'] ?? '');
+        }
+        if ($password !== '' && preg_match('/^[\x21-\x7e]{8,128}$/D', $password) !== 1) {
+            throw new InvalidArgumentException('API heslo Zásilkovny musí mít 8 až 128 znaků bez mezer.');
+        }
+        $sender = self::value($input, 'packeta_sender');
+        if ($sender !== '' && (strlen($sender) > 64 || preg_match('/[\x00-\x1f\x7f]/', $sender) ||
+            preg_match('//u', $sender) !== 1)) {
+            throw new InvalidArgumentException('Označení odesílatele Zásilkovny je neplatné.');
+        }
         $settings = [
             'shipping_methods' => $shipping,
-            'packeta' => ['api_key' => $packetaKey],
+            'packeta' => ['api_key' => $packetaKey, 'api_password' => $password, 'sender' => $sender],
             'bank_transfer' => $bankSettings,
             'terms_url' => $termsUrl,
             'local_test_checkout' => ($input['local_test_checkout'] ?? null) === '1',

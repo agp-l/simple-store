@@ -109,6 +109,26 @@ CREATE TABLE IF NOT EXISTS shop_orders (
   KEY orders_payment_status (payment_status, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- One reservation per order prevents two API calls for the same parcel.
+-- An uncertain network result must be reconciled in the Packeta client section.
+CREATE TABLE IF NOT EXISTS shop_packeta_shipments (
+  order_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  status VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  method VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  packet_id VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  barcode VARCHAR(21) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  barcode_text VARCHAR(120) DEFAULT NULL,
+  courier_number VARCHAR(100) DEFAULT NULL,
+  weight_kg DECIMAL(6,3) NOT NULL,
+  submitted_json LONGTEXT NOT NULL,
+  last_error VARCHAR(500) DEFAULT NULL,
+  created_by BIGINT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY packeta_barcode (barcode),
+  CONSTRAINT packeta_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Additive upgrade for installations with the older customer order placeholder.
 -- Nullable new columns preserve historical rows without inventing payment details.
 SET @order_user_nullable = (SELECT IS_NULLABLE FROM information_schema.COLUMNS
