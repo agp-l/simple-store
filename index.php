@@ -72,6 +72,8 @@ try {
     $shared['checkoutUrl'] = $url->path('pokladna');
     $shared['cartToken'] = $cart->token();
     $shared['cartCount'] = $cart->count();
+    // Public product HTML includes a session-specific CSRF token and cart count.
+    header('Cache-Control: private, no-store');
 
     if (in_array($route['name'], ['cart', 'checkout', 'order'], true)) {
         $checkoutFile = __DIR__ . '/config/checkout.php';

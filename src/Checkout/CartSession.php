@@ -124,7 +124,6 @@ final class CartSession
         $this->access(static function (array &$session): void {
             $session['checkout_items'] = [];
             $session['checkout_delivery'] = null;
-            $session['checkout_csrf'] = bin2hex(random_bytes(32));
             $session['checkout_key'] = bin2hex(random_bytes(32));
         });
     }
@@ -216,14 +215,15 @@ final class CartSession
         if (session_status() !== PHP_SESSION_NONE) {
             throw new RuntimeException('Close the active login session before accessing the cart.');
         }
-        // PHP retains the previous session ID after session_write_close().
-        // The in-request ID below preserves an anonymous cart before its cookie arrives.
+        // A different named login session may have been closed earlier in this request.
+        // Select the cart cookie explicitly; PHP otherwise can retain the other role's ID.
         session_id('');
         ini_set('session.use_strict_mode', '1');
         ini_set('session.use_only_cookies', '1');
         session_name(self::SESSION_NAME);
-        if ($this->requestSessionId !== null) {
-            session_id($this->requestSessionId);
+        $incomingId = $this->requestSessionId ?? ($_COOKIE[self::SESSION_NAME] ?? null);
+        if (is_string($incomingId) && preg_match('/^[A-Za-z0-9,-]{16,128}$/D', $incomingId) === 1) {
+            session_id($incomingId);
         }
         session_set_cookie_params([
             'lifetime' => 0, 'path' => $this->cookiePath,
@@ -251,8 +251,11 @@ final class CartSession
             }
             return $operation($_SESSION);
         } finally {
-            session_write_close();
+            $saved = session_write_close();
             session_id('');
+            if (!$saved) {
+                throw new RuntimeException('Košík nelze uložit do PHP session. Zkontroluj session.save_path a práva zápisu.');
+            }
         }
     }
 }

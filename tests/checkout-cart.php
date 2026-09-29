@@ -56,6 +56,13 @@ $check(strlen($token) === 64 && $cart->validToken($token) && !$cart->validToken(
     'Anonymous form CSRF token was not retained.');
 $check(strlen($checkoutKey) === 64 && $checkoutKey !== $token,
     'A checkout submission needs a separate idempotency key.');
+// Emulate the browser returning the Set-Cookie header on its next HTTP request.
+$sessionIdProperty = new ReflectionProperty(CartSession::class, 'requestSessionId');
+$sessionIdProperty->setAccessible(true);
+$_COOKIE['simple_store_cart'] = $sessionIdProperty->getValue($cart);
+$cart = new CartSession('/simple-store/');
+$check($cart->validToken($token) && $cart->checkoutKey() === $checkoutKey,
+    'A new request did not restore the cart session from its cookie.');
 $invalid(static fn () => $service->add($cart, $key, 'cs', [0 => 'Černá'], 1));
 $invalid(static fn () => $service->add($cart, $key, 'cs', [0 => 'Černá', 1 => 'Neexistující'], 1));
 $invalid(static fn () => $service->add($cart, $key, 'en', [0 => 'Černá', 1 => 'S'], 1));
@@ -153,8 +160,8 @@ $invalid(static fn () => new ShippingPolicy(['home' => [
 $invalid(static fn () => $policy->quote('express'));
 
 $cart->clear();
-$check($cart->count() === 0 && $cart->state()['delivery'] === null && !$cart->validToken($token) &&
+$check($cart->count() === 0 && $cart->state()['delivery'] === null && $cart->validToken($token) &&
     $cart->checkoutKey() !== $checkoutKey,
-    'Clearing a cart must also clear delivery and renew CSRF.');
+    'Clearing a cart must renew checkout identity without invalidating cached product forms.');
 
 echo "Checkout cart tests passed.\n";

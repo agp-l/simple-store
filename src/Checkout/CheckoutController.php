@@ -71,7 +71,11 @@ final class CheckoutController
         $error = '';
         if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             if (!$this->cart->validToken($_POST['csrf'] ?? null)) {
-                $this->render($name === 'cart' ? 'cart' : 'shipping', 'Platnost formuláře vypršela. Obnov stránku.', 403);
+                $message = isset($_COOKIE['simple_store_cart'])
+                    ? 'Platnost formuláře vypršela. Obnov stránku a odešli formulář znovu.'
+                    : 'Prohlížeč neposlal cookie košíku. Povol soubory cookie a obnov stránku.';
+                error_log('Cart CSRF rejected; cart cookie ' . (isset($_COOKIE['simple_store_cart']) ? 'present' : 'missing') . '.');
+                $this->render($name === 'cart' ? 'cart' : 'shipping', $message, 403);
                 return;
             }
             try {
