@@ -116,6 +116,19 @@ CREATE TABLE IF NOT EXISTS catalog_categories (
   UNIQUE KEY category_by_path (language, path)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Optional overrides for named menu placements. A missing row uses config/menus.php.
+-- Manual links live in one JSON list per placement and language; no foreign keys.
+CREATE TABLE IF NOT EXISTS navigation_menus (
+  language CHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  slot VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  source VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  parent_path VARCHAR(500) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '',
+  include_blog TINYINT(1) NOT NULL DEFAULT 0,
+  items_json LONGTEXT NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (language, slot)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Seed once; re-importing the schema never overwrites edited titles or ordering.
 INSERT IGNORE INTO catalog_categories (language, path, title, sort_order) VALUES
   ('cs', 'spani', 'Spaní', 1),
