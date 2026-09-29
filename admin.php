@@ -3,8 +3,11 @@ declare(strict_types=1);
 
 use SimpleStore\Admin\AdminAuth;
 use SimpleStore\Admin\AdminUserRepository;
+use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Content\ContentRepository;
 use SimpleStore\Database\ConnectionFactory;
+use SimpleStore\Navigation\StorefrontMenus;
+use SimpleStore\Navigation\UrlManager;
 
 $site = require __DIR__ . '/src/bootstrap.php';
 header('Cache-Control: no-store');
@@ -17,6 +20,7 @@ $screen = 'login';
 $error = '';
 $documents = [];
 $csrf = '';
+$chrome = [];
 
 if (!is_file(__DIR__ . '/config/database.php') || !is_file(__DIR__ . '/vendor/autoload.php')) {
     http_response_code(503);
@@ -28,6 +32,11 @@ if (!is_file(__DIR__ . '/config/database.php') || !is_file(__DIR__ . '/vendor/au
 
 try {
     $db = ConnectionFactory::create(require __DIR__ . '/config/database.php');
+    $menuUrl = new UrlManager($basePath . $site['default_language'],
+        $_SERVER['SCRIPT_NAME'] ?? '/admin.php', $site['languages'], $site['default_language']);
+    $chrome = StorefrontMenus::load($db, $menuUrl,
+        new ContentRepository($db, $site['languages'], $site['revision_limit']),
+        new CategoryRepository($db));
     $users = new AdminUserRepository($db);
     if (!$users->installed() || !$users->hasAdmin()) {
         $screen = 'setup';

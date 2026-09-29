@@ -1,5 +1,5 @@
-  <a class="skip" href="#produkty">Přejít na obsah</a>
-  <header id="nahoru">
+  <a class="skip" href="#<?= htmlspecialchars($skipTarget, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">Přejít na obsah</a>
+  <header id="nahoru"<?= $compactHeader ? ' class="compact-header"' : '' ?>>
     <div class="brand-row">
       <div class="wrap brand-inner">
         <a class="identity" href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="Dobrodruzi.cz – nahoru">
@@ -12,7 +12,7 @@
             <path d="m15.5 15.5 5 5" />
           </svg><input type="search" id="search-input" name="search" value="<?= htmlspecialchars($searchTerm, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="Hledat produkty" placeholder="Co hledáte do výbavy?"
             autocomplete="off"><button type="submit">Hledat</button></form>
-        <div class="header-actions"><span class="account">Proxy e-shop</span><button class="cart-button"
+        <div class="header-actions"><a class="account" href="<?= $siteRoot ?>account.php">Můj účet</a><button class="cart-button"
             type="button" id="cart-open" aria-label="Otevřít ukázkový košík"><svg viewBox="0 0 24 24"
               aria-hidden="true">
               <path d="M3 4h2l2 11h11l3-8H6M9 20h.01M18 20h.01" />
@@ -33,8 +33,8 @@
       <?php require __DIR__ . '/menu.php'; ?>
       <div class="wrap hero">
         <div class="hero-copy">
-          <h1>Vybavení na každou cestu.</h1>
-          <p>Výběr toho nejlepšího ultralehkého vybavení pro nomády a cestovatele.</p>
+          <h1><?= htmlspecialchars($heroTitle, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></h1>
+          <p><?= htmlspecialchars($heroSubtitle, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
         </div>
       </div>
     </div>

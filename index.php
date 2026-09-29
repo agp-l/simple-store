@@ -7,8 +7,7 @@ use SimpleStore\Admin\AdminUserRepository;
 use SimpleStore\Category\CategoryPath;
 use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Database\ConnectionFactory;
-use SimpleStore\Navigation\MenuManager;
-use SimpleStore\Navigation\MenuDefinitionRepository;
+use SimpleStore\Navigation\StorefrontMenus;
 use SimpleStore\Navigation\UrlManager;
 use SimpleStore\Product\ProductRepository;
 use SimpleStore\Rendering\PageRenderer;
@@ -52,21 +51,10 @@ try {
     $db = ConnectionFactory::create($database);
     $contents = new ContentRepository($db, $site['languages'], $site['revision_limit']);
     $categories = new CategoryRepository($db);
-    $menuDefinitions = new MenuDefinitionRepository($db, require __DIR__ . '/config/menus.php', $categories);
-    $menuSettings = $menuDefinitions->settings($url->getLanguage());
-    $menus = new MenuManager($contents, $categories, $url, $menuSettings);
-    $shared['manualPrimaryMenu'] = ($menuSettings['primary']['source'] ?? '') === 'manual';
-    $shared['manualUtilityMenu'] = ($menuSettings['utility']['source'] ?? '') === 'manual';
-    $shared['manualFooterMenu'] = ($menuSettings['footer']['source'] ?? '') === 'manual';
-    $shared['manualCategoryMenu'] = ($menuSettings['category_tabs']['source'] ?? '') === 'manual';
-    $hasContent = (int) $db->queryFirstField(
-        'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
-        'content_revisions'
-    ) > 0;
-    $shared['primaryMenu'] = $menus->links('primary');
-    $shared['utilityMenu'] = $hasContent ? $menus->links('utility') : [];
-    $shared['footerMenu'] = $menus->links('footer');
-    $shared['categoryLabels'] = array_column($categories->all($url->getLanguage()), 'title', 'path');
+    $navigation = StorefrontMenus::load($db, $url, $contents, $categories);
+    $menus = $navigation['manager'];
+    unset($navigation['manager']);
+    $shared = array_merge($shared, $navigation);
 
     // An authenticated preview may read drafts; ordinary routes never start an admin session.
     $editRequested = ($_GET['edit'] ?? '') === '1';

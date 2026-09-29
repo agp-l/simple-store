@@ -195,7 +195,9 @@
       font-size: 13px;
       color: var(--muted);
       white-space: nowrap;
+      text-decoration: none;
     }
+    .header-actions .account:hover { color: var(--forest-dark); text-decoration: underline; }
 
     .cart-button {
       position: relative;
@@ -1341,6 +1343,8 @@
 
 /* Pages and blog reuse the storefront typography and spacing. */
 .nav-band { z-index: 3; }
+.compact-header .hero { min-height: 145px; padding-top: 23px; padding-bottom: 27px; }
+.compact-header .hero h1 { font-size: clamp(29px, 3.5vw, 42px); }
 .nav-inner { flex-wrap: wrap; }
 .utility { z-index: 4; }
 .nav-dropdown { position: relative; }
