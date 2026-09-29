@@ -138,6 +138,54 @@ if (function_exists('simplexml_load_string')) {
     try {
         $fault->createPacket($pickup['attributes']);
         throw new RuntimeException('An explicit Packeta fault was accepted.');
-    } catch (PacketaRejectedException $expected) {}
+    } catch (PacketaRejectedException $expected) {
+        if (!str_contains($expected->getMessage(), 'Invalid address')) {
+            throw new RuntimeException('The plain Packeta fault message was lost.');
+        }
+    }
+    $fieldFault = new PacketaApiClient('secret-password', static fn (): array => [
+        'status' => 400, 'body' => '<response><status>fault</status><fault>' .
+            '<faultCode>PacketAttributesFault</faultCode><attributes>' .
+            '<fault><name>eshop</name><fault>Unknown sender</fault></fault>' .
+            '<fault><name>weight</name><fault>Too heavy</fault></fault>' .
+            '</attributes></fault></response>']);
+    try {
+        $fieldFault->createPacket($pickup['attributes']);
+        throw new RuntimeException('A field validation fault was accepted.');
+    } catch (PacketaRejectedException $expected) {
+        foreach (['PacketAttributesFault', 'eshop: Unknown sender', 'weight: Too heavy'] as $detail) {
+            if (!str_contains($expected->getMessage(), $detail)) {
+                throw new RuntimeException('The Packeta field fault detail was lost: ' . $detail);
+            }
+        }
+    }
+    $nestedFault = new PacketaApiClient('secret-password', static fn (): array => [
+        'status' => 422, 'body' => '<response><status>fault</status><fault><detail>' .
+            '<PacketAttributesFault><attributes><fault><name>phone</name>' .
+            '<fault>Invalid number</fault></fault></attributes></PacketAttributesFault>' .
+            '</detail></fault></response>']);
+    try {
+        $nestedFault->createPacket($pickup['attributes']);
+        throw new RuntimeException('A nested validation fault was accepted.');
+    } catch (PacketaRejectedException $expected) {
+        if (!str_contains($expected->getMessage(), 'phone: Invalid number') ||
+            !str_contains($expected->getMessage(), 'PacketAttributesFault')) {
+            throw new RuntimeException('The nested Packeta fault detail was lost.');
+        }
+    }
+    $passwordFault = new PacketaApiClient('secret-password', static fn (): array => [
+        'status' => 401, 'body' => '<response><status>fault</status><fault>' .
+            '<faultCode>IncorrectApiPasswordFault</faultCode>' .
+            '<faultString>Invalid secret-password</faultString></fault></response>']);
+    try {
+        $passwordFault->createPacket($pickup['attributes']);
+        throw new RuntimeException('An authentication fault was accepted.');
+    } catch (PacketaRejectedException $expected) {
+        if (!str_contains($expected->getMessage(), 'IncorrectApiPasswordFault') ||
+            !str_contains($expected->getMessage(), '[skryto]') ||
+            str_contains($expected->getMessage(), 'secret-password')) {
+            throw new RuntimeException('The Packeta authentication fault exposed the password or lost its code.');
+        }
+    }
 }
 echo "Packeta shipment tests passed.\n";

@@ -109,11 +109,7 @@ final class PacketaApiClient
             throw new RuntimeException('Zásilkovna vrátila nečitelnou odpověď. Zkontroluj zásilku v klientské sekci.');
         }
         if ((string) $parsed->status === 'fault') {
-            $message = trim((string) ($parsed->fault->string ?? $parsed->fault->message ?? ''));
-            $message = preg_replace('/[\x00-\x1f\x7f]/', ' ', $message) ?? '';
-            $message = str_replace($this->password, '[skryto]', $message);
-            throw new PacketaRejectedException('Zásilkovna odmítla požadavek: ' .
-                ($message !== '' && strlen($message) <= 300 ? $message : 'zkontroluj údaje a nastavení odesílatele.'));
+            throw new PacketaRejectedException($this->faultMessage($parsed, $response['status']));
         }
         if ((string) $parsed->status !== 'ok' || !isset($parsed->result)) {
             throw new RuntimeException('Zásilkovna nepotvrdila výsledek. Zkontroluj zásilku v klientské sekci.');
@@ -122,6 +118,71 @@ final class PacketaApiClient
             throw new RuntimeException('Zásilkovna nepotvrdila HTTP požadavek. Zkontroluj zásilku v klientské sekci.');
         }
         return $parsed->result;
+    }
+
+    private function faultMessage(SimpleXMLElement $response, int $httpStatus): string
+    {
+        $fault = $response->fault;
+        $code = '';
+        foreach (['faultCode', 'code', 'type'] as $key) {
+            $candidate = trim((string) $fault->{$key});
+            if (!str_contains($candidate, $this->password) &&
+                preg_match('/^[A-Za-z][A-Za-z0-9_]{0,63}$/D', $candidate) === 1) {
+                $code = $candidate;
+                break;
+            }
+        }
+        // Some responses put the fault type in a named detail element.
+        if ($code === '') {
+            foreach ($fault->xpath('.//*[local-name()="detail"]/*') ?: [] as $detail) {
+                if (preg_match('/^[A-Za-z][A-Za-z0-9_]*Fault$/D', $detail->getName()) === 1 ||
+                    $detail->getName() === 'SenderNotExists') {
+                    $code = $detail->getName();
+                    break;
+                }
+            }
+        }
+
+        $messages = [];
+        foreach (['faultString', 'string', 'message', 'description', 'reason'] as $key) {
+            $message = $this->safeFaultText((string) $fault->{$key});
+            if ($message !== '') $messages[] = $message;
+        }
+        $plain = $this->safeFaultText((string) $fault);
+        if ($plain !== '') $messages[] = $plain;
+
+        // Packeta's PacketAttributesFault contains one name/fault pair per invalid field.
+        foreach ($fault->xpath('.//*[local-name()="attributes"]/*[local-name()="fault"]') ?: [] as $field) {
+            $name = $this->safeFaultText((string) $field->name);
+            $reason = $this->safeFaultText((string) $field->fault);
+            if ($reason !== '') $messages[] = ($name !== '' ? $name . ': ' : '') . $reason;
+        }
+        $messages = array_values(array_unique($messages));
+        if ($messages === []) {
+            $messages[] = match ($code) {
+                'IncorrectApiPasswordFault' => 'Neplatné API heslo.',
+                'SenderNotExists' => 'Označení odesílatele (eshop) pod tímto účtem neexistuje.',
+                'PacketAttributesFault' => 'Neplatné údaje zásilky; API nevrátilo popis vadného pole.',
+                default => 'API nevrátilo bližší popis chyby.',
+            };
+        }
+        return self::shorten('Zásilkovna odmítla požadavek' .
+            ($code !== '' ? ' (' . $code . ')' : ' (HTTP ' . $httpStatus . ')') .
+            ': ' . implode('; ', $messages), 480);
+    }
+
+    private function safeFaultText(string $value): string
+    {
+        $value = str_replace($this->password, '[skryto]', $value);
+        return self::shorten(trim(preg_replace('/[\x00-\x1f\x7f]+/u', ' ', $value) ?? ''), 350);
+    }
+
+    private static function shorten(string $value, int $limit): string
+    {
+        if (strlen($value) <= $limit) return $value;
+        if (function_exists('mb_strcut')) return rtrim(mb_strcut($value, 0, $limit - 3, 'UTF-8')) . '…';
+        $cut = substr($value, 0, $limit - 3);
+        return rtrim(preg_replace('/[\xC0-\xF4]?[\x80-\xBF]*$/', '', $cut) ?? $cut) . '…';
     }
 
     private static function element(string $name, string $value): string
