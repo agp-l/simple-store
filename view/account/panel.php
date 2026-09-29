@@ -2,6 +2,7 @@
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $sectionNames = ['overview' => 'Přehled', 'orders' => 'Objednávky', 'addresses' => 'Moje adresy',
     'payments' => 'Platby', 'settings' => 'Nastavení účtu'];
+$checkoutReturn = $checkoutReturn ?? $accountUrl;
 ?>
 <div class="panel-area">
   <?php if ($screen === 'account'): ?>
@@ -104,14 +105,14 @@ $sectionNames = ['overview' => 'Přehled', 'orders' => 'Objednávky', 'addresses
       <?php else: ?>
         <p class="panel-eyebrow">Dobrodruzi / účet</p><h1><?= $screen === 'register' ? 'Vytvořit účet' : 'Přihlášení' ?></h1>
         <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
-        <form class="panel-form" method="post" action="<?= $escape($accountUrl . ($screen === 'register' ? '?mode=register' : '')) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="<?= $screen === 'register' ? 'register' : 'login' ?>">
+        <form class="panel-form" method="post" action="<?= $escape($accountUrl . ($screen === 'register' ? '?mode=register' : '') . (($checkoutReturn !== $accountUrl) ? ($screen === 'register' ? '&' : '?') . 'checkout=1' : '')) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="<?= $screen === 'register' ? 'register' : 'login' ?>">
           <?php if ($screen === 'register'): ?><label>Jméno <input name="display_name" maxlength="120" autocomplete="name" required></label><?php endif; ?>
           <label>E-mail <input type="email" name="email" maxlength="254" autocomplete="email" required autofocus></label>
           <label>Heslo <input type="password" name="password" <?= $screen === 'register' ? 'minlength="12" autocomplete="new-password"' : 'autocomplete="current-password"' ?> required></label>
           <?php if ($screen === 'register'): ?><label>Potvrdit heslo <input type="password" name="password_confirm" minlength="12" autocomplete="new-password" required></label><?php endif; ?>
           <button class="panel-button" type="submit"><?= $screen === 'register' ? 'Zaregistrovat se' : 'Přihlásit se' ?></button>
         </form>
-        <?php if ($screen === 'register' || $registrationAllowed): ?><p class="panel-auth-switch"><?= $screen === 'register' ? 'Už máš účet?' : 'Ještě nemáš účet?' ?> <?php if ($screen === 'register'): ?><a href="<?= $escape($accountUrl) ?>">Přihlásit se</a><?php else: ?><a href="<?= $escape($accountUrl) ?>?mode=register">Vytvořit účet</a><?php endif; ?></p><?php endif; ?>
+        <?php if ($screen === 'register' || $registrationAllowed): ?><p class="panel-auth-switch"><?= $screen === 'register' ? 'Už máš účet?' : 'Ještě nemáš účet?' ?> <?php if ($screen === 'register'): ?><a href="<?= $escape($accountUrl . ($checkoutReturn !== $accountUrl ? '?checkout=1' : '')) ?>">Přihlásit se</a><?php else: ?><a href="<?= $escape($accountUrl . '?mode=register' . ($checkoutReturn !== $accountUrl ? '&checkout=1' : '')) ?>">Vytvořit účet</a><?php endif; ?></p><?php endif; ?>
       <?php endif; ?>
     </section></main>
   <?php endif; ?>

@@ -83,6 +83,7 @@ final class PageRenderer
             'issues' => [], 'can_continue' => false];
         $delivery = $data['delivery'] ?? [];
         $customerAddresses = $data['customerAddresses'] ?? [];
+        $customerProfile = $data['customerProfile'] ?? [];
         $shippingOptions = $data['shippingOptions'] ?? [];
         $selectedShippingPrice = $data['selectedShippingPrice'] ?? null;
         $error = (string) ($data['error'] ?? '');

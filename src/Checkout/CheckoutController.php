@@ -251,6 +251,7 @@ final class CheckoutController
             'cartToken' => $this->cart->token(), 'cartCount' => $this->cart->count(),
             'checkout' => $summary, 'delivery' => $delivery,
             'customerAddresses' => $this->customerAddresses,
+            'customerProfile' => $this->customerProfile,
             'shippingOptions' => $this->shippingOptions, 'selectedShippingPrice' => $price,
             'shippingConfigured' => $shippingConfigured, 'bankConfigured' => $this->bank !== null,
             'checkoutReady' => $ready, 'testCheckout' => $testCheckout, 'termsUrl' => $this->termsUrl,

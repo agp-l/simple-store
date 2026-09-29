@@ -5,6 +5,11 @@ require __DIR__ . '/common.php';
 <main class="wrap checkout-page" id="produkty">
   <div class="checkout-heading"><span class="checkout-eyebrow">Vaše objednávka</span><h1>Doprava a kontaktní údaje</h1><p>Kam máme objednávku poslat a jak vás zastihneme?</p></div>
   <?php require __DIR__ . '/steps.php'; ?>
+  <aside class="checkout-account">
+    <?php if (!empty($customerProfile['email'])): ?>Přihlášeno jako <strong><?= $checkoutEscape($customerProfile['email']) ?></strong>. <a href="<?= $checkoutEscape($basePath . 'account.php') ?>">Můj účet</a>
+    <?php else: ?>Máte účet? <a href="<?= $checkoutEscape($basePath . 'account.php?checkout=1') ?>">Přihlásit se</a> · <a href="<?= $checkoutEscape($basePath . 'account.php?mode=register&checkout=1') ?>">Zaregistrovat se</a>. Košík po přihlášení zůstane zachovaný.
+    <?php endif; ?>
+  </aside>
   <?php if ($error !== ''): ?><p class="checkout-alert" role="alert"><?= $checkoutEscape($error) ?></p><?php endif; ?>
   <?php if (!($shippingConfigured ?? false) || $availableShippingOptions === []): ?>
     <p class="checkout-alert" role="alert">Doprava zatím není nastavená. Objednávku teď nelze dokončit.</p><p><a class="checkout-back" href="<?= $checkoutEscape($cartUrl) ?>">← Zpět do košíku</a></p>

@@ -104,7 +104,8 @@ try {
         } elseif (!in_array($action, ['create-content', 'create-translation', 'inline-content', 'create-product',
             'inline-product', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
             'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product',
-            'mark-order-paid', 'set-order-status', 'save-checkout-settings'], true) ||
+            'mark-order-paid', 'set-order-status', 'save-checkout-settings', 'customer-create',
+            'customer-update', 'customer-active', 'customer-password'], true) ||
             !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach'], true)) {
                 header('Content-Type: application/json; charset=utf-8');
@@ -179,6 +180,12 @@ try {
     }
     if ($action === 'save-checkout-settings' || ($method !== 'POST' && $section === 'settings')) {
         require __DIR__ . '/src/Admin/settings.php';
+        require __DIR__ . '/view/admin/layout.php';
+        exit;
+    }
+    if (in_array($action, ['customer-create', 'customer-update', 'customer-active', 'customer-password'], true) ||
+        ($method !== 'POST' && $section === 'users')) {
+        require __DIR__ . '/src/Admin/users.php';
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }

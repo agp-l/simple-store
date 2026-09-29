@@ -17,6 +17,8 @@ header('X-Frame-Options: DENY');
 
 $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/account.php'), '/') . '/';
 $accountUrl = $basePath . 'account.php';
+$checkoutReturn = ($_GET['checkout'] ?? '') === '1'
+    ? $basePath . $site['default_language'] . '/pokladna?step=shipping' : $accountUrl;
 $screen = 'login';
 $error = '';
 $chrome = [];
@@ -90,13 +92,13 @@ try {
                 }
                 $customers->register($input('email'), $password, $input('display_name'));
                 $auth->signIn($input('email'), $password);
-                $redirect($accountUrl);
+                $redirect($checkoutReturn);
             }
             if ($action === 'login' && $user === null) {
                 if (!$auth->signIn($input('email'), $input('password'))) {
                     throw new InvalidArgumentException('E-mail nebo heslo není správné. Po pěti pokusech počkej pět minut.');
                 }
-                $redirect($accountUrl);
+                $redirect($checkoutReturn);
             }
             if ($action === 'logout' && $user !== null) {
                 $auth->signOut();

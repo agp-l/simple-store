@@ -138,6 +138,9 @@
 .panel-order-filters { justify-content: start; margin-bottom: 18px; }
 .panel-order-filters a[aria-current="page"] { border-color: #83b77d; background: #e9f5e6; color: #20531f; }
 .panel-order-list { display: grid; }
+.panel-search { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; margin: 12px 0 18px; }
+.panel-search label { display: grid; flex: 1; min-width: 220px; gap: 6px; font-size: 13px; font-weight: 700; }
+.panel-search input { min-height: 42px; padding: 8px 12px; border: 1px solid var(--line); border-radius: 4px; }
 .panel-order-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
 .panel-order-tabs a { padding: 9px 15px; border: 1px solid var(--line); border-radius: 5px; color: var(--forest-dark); font-size: 13px; font-weight: 750; text-decoration: none; }
 .panel-order-tabs a[aria-current="page"] { border-color: #83b77d; background: #e9f5e6; }
