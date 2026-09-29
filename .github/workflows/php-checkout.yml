@@ -30,6 +30,7 @@ jobs:
           php tests/checkout-settings.php
           php tests/checkout-order.php
           php tests/catalog-render.php
+          php tests/footer-legal.php
           php tests/url-manager.php
           php tests/account-render.php
           php tests/admin-render.php

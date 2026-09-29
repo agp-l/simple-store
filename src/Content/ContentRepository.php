@@ -81,6 +81,26 @@ final class ContentRepository
         );
     }
 
+    /** Footer links must never expose drafts, even when they have a predictable URL. */
+    public function publishedPageSlugs(string $language, array $slugs): array
+    {
+        if ($slugs === []) {
+            return [];
+        }
+        foreach ($slugs as $slug) {
+            if (!is_string($slug) || preg_match('/^[a-z0-9]+(?:-[a-z0-9]+)*$/D', $slug) !== 1) {
+                throw new InvalidArgumentException('Invalid footer page slug.');
+            }
+        }
+        $placeholders = implode(', ', array_fill(0, count($slugs), '%s'));
+        $rows = $this->db->query(
+            'SELECT slug FROM content_revisions WHERE type=%s AND language=%s
+             AND active_document_key IS NOT NULL AND published=1 AND slug IN (' . $placeholders . ')',
+            'page', $language, ...$slugs
+        );
+        return array_column($rows, 'slug');
+    }
+
     /** Include drafts and hidden pages for the menu editor. */
     public function pagesForMenu(string $language): array
     {

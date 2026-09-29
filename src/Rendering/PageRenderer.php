@@ -30,6 +30,7 @@ final class PageRenderer
         $primaryMenu = $data['primaryMenu'] ?? [];
         $utilityMenu = $data['utilityMenu'] ?? [];
         $footerMenu = $data['footerMenu'] ?? [];
+        $footerInfoMenu = $data['footerInfoMenu'] ?? [];
         $manualPrimaryMenu = (bool) ($data['manualPrimaryMenu'] ?? false);
         $manualUtilityMenu = (bool) ($data['manualUtilityMenu'] ?? false);
         $manualFooterMenu = (bool) ($data['manualFooterMenu'] ?? false);

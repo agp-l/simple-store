@@ -22,12 +22,30 @@ final class StorefrontMenus
             'content_revisions'
         ) > 0;
 
+        $infoPages = [
+            'doprava-a-platba' => 'Doprava a platba',
+            'vymena-a-vraceni-zbozi' => 'Výměna a vrácení zboží',
+            'obchodni-podminky' => 'Obchodní podmínky',
+            'reklamacni-rad' => 'Reklamační řád',
+            'ochrana-osobnich-udaju' => 'Ochrana osobních údajů',
+            'kontakt' => 'Kontakt',
+        ];
+        $published = $hasContent ? array_flip($content->publishedPageSlugs(
+            $url->getLanguage(), array_keys($infoPages))) : [];
+        $footerInfoMenu = [];
+        foreach ($infoPages as $slug => $label) {
+            if (isset($published[$slug])) {
+                $footerInfoMenu[] = ['label' => $label, 'href' => $url->path($slug)];
+            }
+        }
+
         return [
             'manager' => $menus,
             'hasContent' => $hasContent,
             'primaryMenu' => $menus->links('primary'),
             'utilityMenu' => $hasContent ? $menus->links('utility') : [],
             'footerMenu' => $menus->links('footer'),
+            'footerInfoMenu' => $footerInfoMenu,
             'manualPrimaryMenu' => ($settings['primary']['source'] ?? '') === 'manual',
             'manualUtilityMenu' => ($settings['utility']['source'] ?? '') === 'manual',
             'manualFooterMenu' => ($settings['footer']['source'] ?? '') === 'manual',

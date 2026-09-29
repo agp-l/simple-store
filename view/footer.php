@@ -54,6 +54,16 @@ $drawFooterBranch = static function (array $links) use (&$drawFooterBranch, $foo
           <li><a href="#nahoru">Zpět nahoru ↑</a></li>
         </ul>
       </nav>
+      <?php if ($footerInfoMenu !== []): ?>
+      <nav aria-label="Informace o nákupu">
+        <h2>Informace</h2>
+        <ul>
+          <?php foreach ($footerInfoMenu as $link): ?>
+            <li><a href="<?= $footerEscape($link['href']) ?>"><?= $footerEscape($link['label']) ?></a></li>
+          <?php endforeach; ?>
+        </ul>
+      </nav>
+      <?php endif; ?>
     </div>
     <div class="wrap footer-bottom"><span>© 2026 dobrodruzi.cz</span><span>Na další cestu připraveni.</span></div>
   </footer>
