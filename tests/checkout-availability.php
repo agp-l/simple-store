@@ -110,6 +110,7 @@ $verified = new CheckoutController($url, $renderer,
         'status' => 200, 'body' => '{"isValid":true,"point":{"name":"Praha Hl. nádraží","address":{"street":"Wilsonova 1","city":"Praha","zip":"110 00","country":"cz"}}}',
     ]));
 $saveDelivery = new ReflectionMethod(CheckoutController::class, 'saveDelivery');
+$saveDelivery->setAccessible(true); // PHP 8.0 still requires this for private methods.
 $saveDelivery->invoke($verified);
 $delivery = $cart->state()['delivery'];
 if ($delivery['pickup_point'] !== 'Praha Hl. nádraží' ||
