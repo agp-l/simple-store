@@ -19,7 +19,7 @@ $packetaAction ??= '';
   <?php if ($order !== null): ?><div class="panel-quick"><a href="<?= $escape($orderBaseUrl) ?>">← Všechny objednávky</a></div><?php endif; ?>
 </div>
 <?php if (!$ordersReady): ?>
-  <p class="panel-error" role="alert">Pro objednávky nejdřív importuj aktuální <code>database/schema.sql</code>.</p>
+  <p class="panel-error" role="alert">Pro objednávky nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
 <?php endif; ?>
 <?php if ($orderError !== ''): ?><p class="panel-error" role="alert"><?= $escape($orderError) ?></p><?php endif; ?>
 <?php if ($order !== null): ?>
@@ -69,7 +69,7 @@ $packetaAction ??= '';
           <div class="panel-packeta-dispatch">
             <h3>Podání zásilky Zásilkovně</h3>
             <?php if (!$packetaReady): ?>
-              <p class="panel-help">Nejprve znovu importuj aktuální <code>database/schema.sql</code>, aby vznikla tabulka zásilek.</p>
+              <p class="panel-help">Nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>, aby vznikla tabulka zásilek.</p>
             <?php elseif (!$packetaConfigured): ?>
               <p class="panel-help">V <a href="<?= $escape($adminUrl . '?section=settings') ?>">nastavení obchodu</a> vyplň soukromé API heslo a označení odesílatele z klientské sekce Zásilkovny.</p>
             <?php endif; ?>

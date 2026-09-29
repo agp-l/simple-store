@@ -23,7 +23,7 @@ Konfigurace databáze je obyčejný PHP soubor, který `return [...]` vrací poj
 
 ## Administrace obsahu
 
-Administrace je na `http://localhost/simple-store/admin.php`. Účty jsou v tabulce `users`; ukládá se pouze hash hesla. Pro aktualizaci stávající instalace znovu importuj aktuální `database/schema.sql` do stejné databáze, kterou uvádí `config/database.php` (v phpMyAdmin nebo přes LAMPP):
+Administrace je na `http://localhost/simple-store/admin.php`. Účty jsou v tabulce `users`; ukládá se pouze hash hesla. **Po stažení nové verze projektu** otevři v administraci **Databáze** (`admin.php?section=database`) a klikni na **Aktualizovat SQL tabulky**, pokud nástroj ukáže dostupnou aktualizaci. Použije aktuální `database/schema.sql` a databázi z `config/database.php`. Příkazy `CREATE DATABASE` a `USE` z tohoto souboru na webu nespouští. Import přes terminál nebo phpMyAdmin je stále dostupný:
 
 ```bash
 cd /opt/lampp/htdocs/simple-store
@@ -35,7 +35,7 @@ Pokud má root účet bez hesla, vynech `-p`; pokud příkaz `/opt/lampp/bin/mys
 
 Pokud znáš původní heslo a chceš ho zachovat, místo `--reset` spusť jednorázově `/opt/lampp/bin/php tools/admin.php --migrate`. Převezme původní jméno a hash z `config/admin.php`, pokud ještě v databázi žádný správce není. Starý soubor pak web už nepoužívá; po ověření přihlášení jej můžeš smazat. Databázové přihlašovací údaje zůstávají v `config/database.php`. Administrace obsahuje seznam dokumentů a jejich přímou úpravu. Přihlášení chrání PHP session, zápisy ověřuje CSRF token. Před zveřejněním webu vypni režim `debug`.
 
-Po aktualizaci můžeš bezpečně znovu importovat aktuální `database/schema.sql`; import existující obsah ani heslo správce nemaže. Stránky a články žádné další tabulky nepotřebují. Rychlé kontroly: `/opt/lampp/bin/php tests/admin-auth.php`, `/opt/lampp/bin/php tests/database-connection.php` a `/opt/lampp/bin/php tests/url-manager.php`.
+V administraci se ukládá otisk posledního úspěšně použitého schématu. Po přerušení můžeš stejnou aktualizaci spustit znovu; současný soubor je opakovatelný a existující obsah ani heslo správce nemaže. Nová prázdná instalace stále potřebuje první import a založení správce mimo administraci, protože bez tabulky `users` se nelze přihlásit. Rychlé kontroly: `/opt/lampp/bin/php tests/schema-updater.php`, `/opt/lampp/bin/php tests/admin-auth.php` a `/opt/lampp/bin/php tests/database-connection.php`.
 
 ### Společný vzhled a zákaznický účet
 
@@ -45,7 +45,7 @@ Odkazy **Přihlášení / účet** a **Registrace** v hlavičce vedou na `accoun
 
 V `admin.php?section=users` lze zákazníky vyhledat, zobrazit jejich poslední objednávky, upravit kontakt, zablokovat nebo povolit přihlášení, změnit heslo a založit účet. Zablokování účet ani historii nemaže; změna hesla ukončí dřívější přihlášení.
 
-Aktuální `database/schema.sql` doplní do `users` zákaznický e-mail, jméno a telefon, vytvoří `customer_addresses` a rozšíří `shop_orders` o údaje skutečné objednávky a platby. Import je opakovatelný. Po stažení změn jej spusť **před použitím pokladny**. Pokud je databáze v `config/database.php` pojmenována jinak než `simple_store`, uprav první `CREATE DATABASE` a `USE` v kopii SQL. Zákaznické akce kontrolují roli, PHP session a CSRF token; každý dotaz na adresy a historii objednávek účtu je omezen ID přihlášeného zákazníka. Bez MySQL můžeš spustit `/opt/lampp/bin/php tests/customer-account.php` a `/opt/lampp/bin/php tests/account-render.php`.
+Aktuální `database/schema.sql` doplní do `users` zákaznický e-mail, jméno a telefon, vytvoří `customer_addresses` a rozšíří `shop_orders` o údaje objednávek. Po stažení změn spusť **Databáze → Aktualizovat SQL tabulky** před použitím nové pokladny. Při aktualizaci přes administraci není třeba upravovat název databáze uvnitř SQL. Při ručním importu do jiné databáze než `simple_store` změň první `CREATE DATABASE` a `USE` v lokální kopii SQL. Zákaznické akce kontrolují roli, PHP session a CSRF token; každý dotaz na adresy a historii objednávek účtu je omezen ID přihlášeného zákazníka. Bez MySQL můžeš spustit `/opt/lampp/bin/php tests/customer-account.php` a `/opt/lampp/bin/php tests/account-render.php`.
 
 ### Košík, objednávka a bankovní převod
 
@@ -55,7 +55,7 @@ V administraci lze každou dopravu zapnout či vypnout a určit její cenu. Výc
 
 Widget Zásilkovny **vyžaduje její 16znakový veřejný API klíč** a schválený účet; otevřený režim bez klíče Zásilkovna nenabízí. V klientské sekci najdi *API klíč* (nikoli API heslo) a vyplň jej v **Nastavení obchodu → Zásilkovna – mapa výdejních míst**. Klíč je záměrně viditelný ve stránce pro widget. Pokud chybí, doprava Zásilkovnou se zákazníkům nenabízí, i když ji máš zapnutou v seznamu metod. Ostatní způsoby dopravy fungují dál. PHP musí umět navázat odchozí HTTPS spojení s `widget.packeta.com` (přes cURL nebo `allow_url_fopen`); mapa se načítá v zákazníkově prohlížeči. Při nedostupném ověřování objednávka Zásilkovnou nepokračuje, aby se neuložila neplatná pobočka. Pro ověření na XAMPP potřebuješ připojení k internetu a platný klíč; samotný test kódu `php tests/packeta-pickup.php` používá simulovanou odpověď.
 
-Pro automatické podání znovu importuj aktuální `database/schema.sql` (přidá `shop_packeta_shipments`). V **Nastavení obchodu → Podávání zásilek** vyplň soukromé **API heslo** a **označení odesílatele** přesně podle klientské sekce Zásilkovny. Heslo se nikdy nevypisuje zpět do formuláře; prázdné pole při dalším uložení ponechá současné heslo. Hosting musí mít PHP SimpleXML a odchozí HTTPS na `www.zasilkovna.cz`; funguje cURL nebo povolené `allow_url_fopen`.
+Pro automatické podání použij v administraci **Databáze → Aktualizovat SQL tabulky** (přidá `shop_packeta_shipments`). V **Nastavení obchodu → Podávání zásilek** vyplň soukromé **API heslo** a **označení odesílatele** přesně podle klientské sekce Zásilkovny. Heslo se nikdy nevypisuje zpět do formuláře; prázdné pole při dalším uložení ponechá současné heslo. Hosting musí mít PHP SimpleXML a odchozí HTTPS na `www.zasilkovna.cz`; funguje cURL nebo povolené `allow_url_fopen`.
 
 V detailu zaplacené objednávky s dopravou Zásilkovnou zkontroluj jméno, e-mail a telefon příjemce a zadej hmotnost zabaleného balíku. Tlačítko **Vytvořit zásilku u Zásilkovny** odešle údaje pomocí `createPacket` s číslem objednávky, bez dobírky, a uloží vrácené číslo `Z…`. Lze stáhnout PDF štítek. U **Zásilkovna domů HD** se použije český dopravce `106`; před podáním zkontroluj rozdělenou ulici, číslo domu, město a PSČ. Údaje lze pro podání opravit bez přepsání původní objednávky. Po vytvoření zásilky vyžádej číslo dopravce tlačítkem a stáhni jeho přepravní štítek. Vytvoření zásilky samo nepřepne objednávku do stavu *Odesláno*; ten nastav až při předání balíku.
 
@@ -65,7 +65,7 @@ Technický podklad: [dokumentace widgetu a ověření bodu](https://docs.packeta
 
 Pro devět způsobů dopravy není potřeba nová tabulka: ceny a dostupnost se ukládají do již existující `shop_checkout_settings`. Pokud tuto tabulku instalace nemá, administrace ji při prvním uložení sama vytvoří.
 
-Před přijímáním objednávek znovu importuj `database/schema.sql` a založ místní nastavení:
+Před přijímáním objednávek aktualizuj schéma v administraci (při první instalaci proveď import `database/schema.sql`) a založ místní nastavení:
 
 ```bash
 cp config/checkout.example.php config/checkout.php
@@ -119,11 +119,11 @@ Tento krok **nemění databázové schéma**. Pokud již máš importované aktu
 
 ### Když chybí `details_json`
 
-`config/database.php` určuje databázi, do které se web připojuje. V phpMyAdmin vyber právě ji a importuj aktuální `database/schema.sql`; obsahuje opakovatelnou migraci sloupce `details_json` a existující produkty ani revize nemaže. Soubor na začátku používá databázi `simple_store`, takže pokud máš v konfiguraci jiný název, změň jej v lokální kopii SQL před importem.
+`config/database.php` určuje databázi, do které se web připojuje. V administraci otevři **Databáze** a spusť aktualizaci; obsahuje opakovatelnou migraci sloupce `details_json` a existující produkty ani revize nemaže. Při ručním importu do jiné databáze změň první `CREATE DATABASE` a `USE` v lokální kopii SQL.
 
 ## Kategorie a menu
 
-Po aktualizaci znovu importuj **jediný aktuální** soubor `database/schema.sql`. Obsahuje `CREATE TABLE catalog_categories` a jeden `INSERT IGNORE` se všemi 58 požadovanými sekcemi a podsekcemi. Import můžeš opakovat: existující produkty, stránky a jejich revize zůstanou zachované, stejně jako případné úpravy názvů kategorií. V LAMPP:
+Po stažení nové verze spusť aktualizaci přes **Databáze**. Použije jediný aktuální soubor `database/schema.sql`, který obsahuje `CREATE TABLE catalog_categories` a `INSERT IGNORE` se všemi 58 požadovanými sekcemi a podsekcemi. Opakování zachová existující produkty, stránky, revize i upravené názvy kategorií. Ruční import v LAMPP:
 
 ```bash
 cd /opt/lampp/htdocs/simple-store
@@ -149,7 +149,7 @@ Po přihlášení otevři **Kategorie** na `admin.php?section=categories`. Můž
 
 Na `admin.php?section=menus` nastavíš pro hlavičku, horní odkazy, podkategorie a patičku zdroj **Kategorie**, **Publikované stránky** nebo **Vlastní odkazy**. U kategorií měníš jejich skutečné pořadí ve správě kategorií. Horní odkazy se stránkami mají přímo v editoru menu pole **V menu** a **Pořadí**; uložení vytvoří novou revizi stránky. Vlastní odkazy mohou vést na kategorii, stránku či blog, lze je vnořit a seřadit. Vnořené vlastní odkazy v hlavičce se otevírají rozbalovacím prvkem, v patičce se vypisují pod rodičem a mezi podkategoriemi se zobrazí jako další odkazy. Nové pojmenované místo lze založit v administraci, ale jeho výpis v další části webu vyžaduje zavolat `MenuManager::links('nazev')` v odpovídající šabloně.
 
-Pro správu menu importuj `database/schema.sql` do databáze z `config/database.php`; tabulka `navigation_menus` uchovává vlastní odkazy. Všechny změny kategorií a menu ověřuje přihlášení správce a CSRF token.
+Pro správu menu aktualizuj tabulky v administraci; tabulka `navigation_menus` uchovává vlastní odkazy. Všechny změny kategorií a menu ověřuje přihlášení správce a CSRF token.
 
 Kontroly bez databáze: `/opt/lampp/bin/php tests/url-manager.php`, `/opt/lampp/bin/php tests/category-editor.php`, `/opt/lampp/bin/php tests/menu-definitions.php` a `/opt/lampp/bin/php tests/menu-manager.php`. Po importu také `/opt/lampp/bin/php tests/category-navigation.php`.
 
@@ -202,6 +202,7 @@ Webové adresy pak budou `/cs/o-nas` a `/cs/blog/prvni-vyprava`. Publikované č
 | `view/shell.php`, `view/panel/` | Jediný obal stránky a společné rozvržení obou soukromých částí. |
 | `account.php`, `view/account/` | Zákaznické přihlášení, nastavení a přehled nákupů. |
 | `database/schema.sql` | Vždy aktuální úplné schéma. |
+| `src/Database/SchemaUpdater.php`, `view/admin/database.php` | Aktualizace schématu přihlášeným správcem. |
 | `view/` | HTML pro obchod, blog, stránky, `<head>`, hlavičku, menu a patičku. |
 
 Košík a pokladna vytvářejí skutečné objednávky v `shop_orders`, pokud je importované aktuální schéma a vyplněný `config/checkout.php`. Katalog vypisuje jen publikované produkty z databáze; koncept se veřejně neukáže před publikováním.
@@ -214,4 +215,4 @@ Revize v `content_revisions` a `product_revisions` zůstávají celé v jednom �
 
 Tato podoba funguje pro **verzovaný obsah**. Objednávky mají vlastní trvalé číslo, náhodný přístupový token, snímky položek a ochranu proti dvojímu odeslání. Případné skladové pohyby a automatické platební služby budou vyžadovat další pravidla konzistence. Přidání dalšího jazyka vyžaduje přeložit i texty rozhraní; sloupec `language` počítá s dvoupísmenným kódem.
 
-Po této aktualizaci znovu importuj celý aktuální `database/schema.sql`: rozšiřuje `shop_orders` pro objednávky a bankovní platby, přičemž starší řádky zachová. Kontroly bez databáze: `/opt/lampp/bin/php tests/admin-render.php`, `/opt/lampp/bin/php tests/customer-account.php`, `/opt/lampp/bin/php tests/account-render.php`, `/opt/lampp/bin/php tests/checkout-cart.php` a `/opt/lampp/bin/php tests/checkout-order.php`.
+Po stažení této verze otevři **Databáze** v administraci a použij aktuální schéma. Rozšíří `shop_orders` pro objednávky a platby, přičemž starší řádky zachová. Kontroly bez databáze: `/opt/lampp/bin/php tests/admin-render.php`, `/opt/lampp/bin/php tests/schema-updater.php`, `/opt/lampp/bin/php tests/customer-account.php` a `/opt/lampp/bin/php tests/checkout-order.php`.

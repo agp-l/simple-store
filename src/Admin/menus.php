@@ -32,7 +32,7 @@ if ($method === 'POST') {
             }
             $content->saveMenuPosition($key, $language, $expected, isset($_POST['visible_in_menu']), $order);
         } elseif ($action === 'menu-slot') {
-            if (!$menuReady) throw new InvalidArgumentException('Nejdřív importuj database/schema.sql.');
+            if (!$menuReady) throw new InvalidArgumentException('Nejdřív aktualizuj SQL tabulky v sekci Databáze.');
             $source = $_POST['source'] ?? null;
             $parent = $_POST['parent_path'] ?? null;
             if (!is_string($source) || !is_string($parent)) {
@@ -42,7 +42,7 @@ if ($method === 'POST') {
             if ($title !== null && !is_string($title)) throw new InvalidArgumentException('Neplatný nadpis menu.');
             $definitions->saveSlot($language, $slot, $source, $parent, isset($_POST['include_blog']), $title);
         } elseif ($action === 'menu-item-save') {
-            if (!$menuReady) throw new InvalidArgumentException('Nejdřív importuj database/schema.sql.');
+            if (!$menuReady) throw new InvalidArgumentException('Nejdřív aktualizuj SQL tabulky v sekci Databáze.');
             $id = $_POST['id'] ?? '';
             if (!is_string($id) || ($id !== '' && preg_match('/^[a-f0-9]{16}$/D', $id) !== 1)) {
                 throw new InvalidArgumentException('Neplatný odkaz menu.');
@@ -70,7 +70,7 @@ if ($method === 'POST') {
             }
             $definitions->saveItem($language, $slot, $id === '' ? null : $id, $input);
         } elseif ($action === 'menu-item-remove') {
-            if (!$menuReady) throw new InvalidArgumentException('Nejdřív importuj database/schema.sql.');
+            if (!$menuReady) throw new InvalidArgumentException('Nejdřív aktualizuj SQL tabulky v sekci Databáze.');
             $id = $_POST['id'] ?? null;
             if (!is_string($id) || preg_match('/^[a-f0-9]{16}$/D', $id) !== 1) {
                 throw new InvalidArgumentException('Neplatný odkaz menu.');

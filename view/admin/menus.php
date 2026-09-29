@@ -8,7 +8,7 @@
           <button type="submit">Zobrazit</button>
         </form>
       </div>
-      <?php if (!$menuReady): ?><p class="panel-error">Pro změny menu importuj aktuální <code>database/schema.sql</code>. Výchozí menu zatím fungují dál.</p><?php endif; ?>
+      <?php if (!$menuReady): ?><p class="panel-error">Pro změny menu <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>. Výchozí menu zatím fungují dál.</p><?php endif; ?>
       <?php if ($menuError !== ''): ?><p class="panel-error" role="alert"><?= $escape($menuError) ?></p><?php endif; ?>
       <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Změna menu byla uložena.</p><?php endif; ?>
       <div class="panel-grid panel-grid-catalog">

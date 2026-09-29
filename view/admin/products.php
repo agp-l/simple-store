@@ -19,7 +19,7 @@
           <div class="panel-section-heading"><p class="panel-eyebrow">Nový koncept</p><h2 id="product-new-title">Začít přímo na stránce</h2></div>
           <p>Vznikne neveřejný produkt s ukázkovým textem, seznamem, tabulkou, fotografií a parametry. Všechno můžeš upravit nebo smazat.</p>
           <?php if (!$productSchemaReady): ?>
-            <p class="panel-error" role="alert">Nejdřív znovu importuj aktuální <code>database/schema.sql</code>.</p>
+            <p class="panel-error" role="alert">Nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
           <?php endif; ?>
           <form class="panel-start-product" method="post" action="<?= $escape($adminUrl) ?>">
             <input type="hidden" name="action" value="create-product">

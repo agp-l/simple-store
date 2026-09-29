@@ -106,7 +106,7 @@ try {
             'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product',
             'mark-order-paid', 'set-order-status', 'packeta-create', 'packeta-courier',
             'packeta-reconcile', 'packeta-retry', 'save-checkout-settings', 'customer-create',
-            'customer-update', 'customer-active', 'customer-password'], true) ||
+            'customer-update', 'customer-active', 'customer-password', 'schema-apply'], true) ||
             !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach'], true)) {
                 header('Content-Type: application/json; charset=utf-8');
@@ -182,6 +182,11 @@ try {
     }
     if ($action === 'save-checkout-settings' || ($method !== 'POST' && $section === 'settings')) {
         require __DIR__ . '/src/Admin/settings.php';
+        require __DIR__ . '/view/admin/layout.php';
+        exit;
+    }
+    if ($action === 'schema-apply' || ($method !== 'POST' && $section === 'database')) {
+        require __DIR__ . '/src/Admin/database.php';
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }

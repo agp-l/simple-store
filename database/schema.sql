@@ -78,6 +78,17 @@ CREATE TABLE IF NOT EXISTS shop_checkout_settings (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- The admin updater records the last completed version and progress here.
+CREATE TABLE IF NOT EXISTS shop_schema_updates (
+  id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+  schema_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  state VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  completed_statements SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  last_error VARCHAR(500) DEFAULT NULL,
+  started_at DATETIME NOT NULL,
+  finished_at DATETIME NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS shop_orders (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id BIGINT UNSIGNED NULL DEFAULT NULL,

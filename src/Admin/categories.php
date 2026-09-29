@@ -15,7 +15,7 @@ if (!is_string($language) || !in_array($language, $site['languages'], true)) {
 
 if ($method === 'POST' && in_array($_POST['action'] ?? '', ['category-create', 'category-update'], true)) {
     try {
-        if (!$categoryReady) throw new InvalidArgumentException('Nejdřív importuj database/schema.sql.');
+        if (!$categoryReady) throw new InvalidArgumentException('Nejdřív aktualizuj SQL tabulky v sekci Databáze.');
         $order = filter_var($_POST['sort_order'] ?? null, FILTER_VALIDATE_INT);
         $title = $_POST['title'] ?? null;
         if ($order === false || !is_string($title)) {

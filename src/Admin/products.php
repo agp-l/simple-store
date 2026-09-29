@@ -15,7 +15,7 @@ $repository = new ProductRepository($db, $site['languages'], $categories, $site[
 $productSchemaReady = $categories->installed() && $repository->detailsColumnExists();
 $language = $_POST['language'] ?? null;
 if (!$productSchemaReady || !is_string($language) || !in_array($language, $site['languages'], true)) {
-    throw new InvalidArgumentException('Nejprve importujte database/schema.sql a vyberte platný jazyk.');
+    throw new InvalidArgumentException('Nejdřív aktualizuj SQL tabulky v sekci Databáze a vyber platný jazyk.');
 }
 $category = $categories->find($language, 'batohy') ?? $categories->children($language)[0] ?? null;
 if ($category === null) {

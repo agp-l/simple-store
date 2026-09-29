@@ -7,7 +7,7 @@
           <button type="submit">Zobrazit</button>
         </form>
       </div>
-      <?php if (!$categoryReady): ?><p class="panel-error">Pro správu kategorií importuj aktuální <code>database/schema.sql</code>.</p><?php endif; ?>
+      <?php if (!$categoryReady): ?><p class="panel-error">Pro správu kategorií <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
       <?php if ($categoryError !== ''): ?><p class="panel-error" role="alert"><?= $escape($categoryError) ?></p><?php endif; ?>
       <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Kategorie byla uložena.</p><?php endif; ?>
       <div class="panel-grid panel-grid-catalog">

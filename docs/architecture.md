@@ -51,6 +51,7 @@ CMS řeší stránky, blog a produkty s revizemi. První nákupní proces vytvá
 | `src/Auth/RoleAuth.php` | Společná kontrola session a CSRF, s oddělenou cookie pro každou roli. |
 | `view/shell.php`, `view/panel/`, `assets/panel.css` | Jedno záhlaví a patička; jedna postranní navigace a styly obou soukromých částí. |
 | `database/schema.sql` | Jediný aktuální soubor pro vytvoření celé databáze. |
+| `src/Database/SchemaUpdater.php` | Administrátorem spouštěná opakovatelná aktualizace schématu v připojené databázi; ukládá otisk a průběh v `shop_schema_updates`. |
 | `view/` | HTML a malé výpisy proměnných; současná grafika obchodu. |
 
 ## Jedna šablona, dvě soukromé části

@@ -85,7 +85,7 @@ if (in_array($packetaAction, ['packeta-create', 'packeta-courier',
     try {
         if ($id === false || !$ordersReady || !$packetaReady ||
             ($targetOrder = $orders->findById($id)) === null) {
-            throw new InvalidArgumentException('Objednávka nebo tabulka zásilek nebyla nalezena. Importuj aktuální database/schema.sql.');
+            throw new InvalidArgumentException('Objednávka nebo tabulka zásilek nebyla nalezena. Aktualizuj SQL tabulky v sekci Databáze.');
         }
         if ($packetaAction === 'packeta-create') {
             if (!$packetaConfigured) throw new InvalidArgumentException('Doplň API heslo a označení odesílatele v nastavení obchodu.');

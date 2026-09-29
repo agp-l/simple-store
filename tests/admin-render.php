@@ -71,6 +71,30 @@ if (!str_contains($html, 'name="title"') || !str_contains($html, 'destination_pa
 }
 restore_error_handler();
 
+$screen = 'database';
+$databaseError = '';
+$databaseStatus = ['database' => 'hosting_ag_shop', 'count' => 136,
+    'current' => false, 'record' => null];
+set_error_handler(static function (int $severity, string $message): never {
+    throw new RuntimeException('Database view emitted a PHP warning: ' . $message);
+});
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'name="action" value="schema-apply"') ||
+    !str_contains($html, 'hosting_ag_shop') || !str_contains($html, 'name="csrf" value="test-token"') ||
+    !str_contains($html, '?section=database')) {
+    throw new RuntimeException('Database update screen is not integrated into the admin panel.');
+}
+$databaseStatus['current'] = true;
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (str_contains($html, 'name="action" value="schema-apply"') || !str_contains($html, 'Aktuální')) {
+    throw new RuntimeException('Current schema should not offer another update.');
+}
+restore_error_handler();
+
 $screen = 'orders';
 $ordersReady = true;
 $orderError = '';
