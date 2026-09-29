@@ -207,6 +207,17 @@ try {
     $rejected = true;
 }
 if (!$rejected) throw new RuntimeException('A test order was marked paid.');
+$pending = $repository->create(null, 'pending@example.org', $items, $shipping, 100,
+    str_repeat('e', 64));
+try {
+    $repository->setFulfillmentStatus((int) $pending['id'], 'shipped');
+    throw new RuntimeException('An unpaid order was marked as shipped.');
+} catch (InvalidArgumentException $expected) {
+}
+$repository->setFulfillmentStatus((int) $pending['id'], 'cancelled');
+if ($db->rows[(int) $pending['id'] - 1]['status'] !== 'cancelled') {
+    throw new RuntimeException('An unpaid order could not be cancelled.');
+}
 $rejected = false;
 try {
     (new OrderRepository($db))->create(null, 'eva@example.org', $items, $shipping, 100, str_repeat('d', 64));
