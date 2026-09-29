@@ -1,6 +1,9 @@
 <?php
 declare(strict_types=1);
 
+use SimpleStore\Admin\AdminUserRepository;
+use SimpleStore\Database\ConnectionFactory;
+
 if (PHP_SAPI !== 'cli') {
     http_response_code(403);
     exit;
@@ -8,34 +11,60 @@ if (PHP_SAPI !== 'cli') {
 
 $root = dirname(__DIR__);
 require $root . '/src/bootstrap.php';
-$file = $root . '/config/admin.php';
-if (is_file($file) && ($argv[1] ?? '') !== '--reset') {
-    fwrite(STDERR, "An administrator already exists. Use --reset to replace the password.\n");
-    exit(1);
-}
-if (isset($argv[1]) && $argv[1] !== '--reset') {
-    fwrite(STDERR, "Use: php tools/admin.php [--reset]\n");
+$command = $argv[1] ?? 'create';
+if (!in_array($command, ['create', '--reset', '--migrate'], true) || count($argv) > 2) {
+    fwrite(STDERR, "Use: php tools/admin.php [--reset|--migrate]\n");
     exit(1);
 }
 
-// Generate a long password without putting it in shell history or a process argument.
-$password = rtrim(strtr(base64_encode(random_bytes(24)), '+/', '-_'), '=');
-$settings = ['username' => 'admin', 'password_hash' => password_hash($password, PASSWORD_DEFAULT)];
-$contents = "<?php\ndeclare(strict_types=1);\n\n// Local administrator credentials. Never commit this file.\nreturn "
-    . var_export($settings, true) . ";\n";
-$temporary = tempnam($root . '/config', '.admin-');
-// Apache may run under another user; config/ is blocked from direct HTTP access.
-if ($temporary === false || file_put_contents($temporary, $contents, LOCK_EX) === false ||
-    !chmod($temporary, 0644) || !rename($temporary, $file)) {
-    if ($temporary !== false && is_file($temporary)) {
-        unlink($temporary);
+try {
+    if (!is_file($root . '/vendor/autoload.php') || !is_file($root . '/config/database.php')) {
+        throw new RuntimeException('Run composer install and configure config/database.php first.');
     }
-    fwrite(STDERR, "Could not write config/admin.php. Check the config directory permissions.\n");
-    exit(1);
-}
-if (!chmod($file, 0644)) {
-    fwrite(STDERR, "Could not make config/admin.php readable by Apache. Check its permissions.\n");
-    exit(1);
-}
+    $users = new AdminUserRepository(ConnectionFactory::create(require $root . '/config/database.php'));
+    if (!$users->installed()) {
+        throw new RuntimeException('Import database/schema.sql into the configured database first (users table missing).');
+    }
 
-echo "Username: admin\nPassword: {$password}\nSave the password now; it will not be displayed again.\n";
+    if ($command === '--migrate') {
+        if ($users->hasAdmin()) {
+            throw new RuntimeException('An administrator already exists in the database. Migration did not overwrite it.');
+        }
+        $oldFile = $root . '/config/admin.php';
+        if (!is_readable($oldFile)) {
+            throw new RuntimeException('Cannot read config/admin.php. Use --reset to create a new password instead.');
+        }
+        $old = require $oldFile;
+        if (!is_array($old) || !is_string($old['username'] ?? null) ||
+            !is_string($old['password_hash'] ?? null)) {
+            throw new RuntimeException('Invalid legacy administrator file. Use --reset to create a new password.');
+        }
+        $users->createAdmin($old['username'], $old['password_hash']);
+        echo "Administrator migrated. The old password still works. config/admin.php is no longer read by the web.\n";
+        exit;
+    }
+
+    $existing = $users->findAdminByUsername('admin');
+    if ($command === 'create' && $users->hasAdmin()) {
+        throw new RuntimeException('An administrator already exists. Use --reset to replace the password.');
+    }
+    if ($command === '--reset' && $existing === null && $users->hasAdmin()) {
+        throw new RuntimeException('An administrator with another username exists. No account was changed.');
+    }
+
+    // Generate a password without putting it in shell history or process arguments.
+    $password = rtrim(strtr(base64_encode(random_bytes(24)), '+/', '-_'), '=');
+    $hash = password_hash($password, PASSWORD_DEFAULT);
+    if ($existing === null) {
+        $users->createAdmin('admin', $hash);
+    } else {
+        $users->replacePassword((int) $existing['id'], $hash);
+    }
+    echo "Username: admin\nPassword: {$password}\nSave the password now; it will not be displayed again.\n";
+    if (is_file($root . '/config/admin.php')) {
+        echo "The old config/admin.php is not used. Remove it after verifying the new login.\n";
+    }
+} catch (Throwable $error) {
+    fwrite(STDERR, $error->getMessage() . PHP_EOL);
+    exit(1);
+}

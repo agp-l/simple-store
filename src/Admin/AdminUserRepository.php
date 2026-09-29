@@ -21,6 +21,13 @@ final class AdminUserRepository
         ) > 0;
     }
 
+    public function hasAdmin(): bool
+    {
+        return (int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM users WHERE role=%s AND is_active=1', 'admin'
+        ) > 0;
+    }
+
     public function findAdminByUsername(string $username): ?array
     {
         return $this->db->queryFirstRow(

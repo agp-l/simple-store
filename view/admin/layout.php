@@ -31,7 +31,7 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
     <?php if ($screen === 'setup'): ?>
       <section class="admin-panel admin-centered">
         <p class="admin-eyebrow">První spuštění</p><h1>Vytvoř administrátora</h1>
-        <p>V kořeni projektu spusť <code>/opt/lampp/bin/php tools/admin.php</code>. Příkaz jednou vypíše přístupové heslo; ulož si ho.</p>
+        <p>Nejdřív importuj <code>database/schema.sql</code>, pak v kořeni projektu spusť <code>/opt/lampp/bin/php tools/admin.php</code>. Příkaz jednou vypíše přístupové heslo; ulož si ho. Pokud už účet existoval v souboru, můžeš jej převést příkazem <code>/opt/lampp/bin/php tools/admin.php --migrate</code>.</p>
       </section>
     <?php elseif ($screen === 'forbidden'): ?>
       <section class="admin-panel admin-centered"><h1>Přístup odepřen</h1><p>Obnov stránku a zkus akci znovu.</p></section>

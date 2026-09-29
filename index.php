@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use SimpleStore\Content\ContentRepository;
 use SimpleStore\Admin\AdminAuth;
+use SimpleStore\Admin\AdminUserRepository;
 use SimpleStore\Category\CategoryPath;
 use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Database\ConnectionFactory;
@@ -64,9 +65,11 @@ try {
     $editRequested = ($_GET['edit'] ?? '') === '1';
     $auth = null;
     if (in_array($route['name'], ['product', 'page', 'post'], true)) {
-        $adminFile = __DIR__ . '/config/admin.php';
-        if (is_readable($adminFile) && ($editRequested || isset($_COOKIE['simple_store_admin']))) {
-            $auth = new AdminAuth(require $adminFile, $url->getBasePath());
+        if ($editRequested || isset($_COOKIE['simple_store_admin'])) {
+            $users = new AdminUserRepository($db);
+            if ($users->installed()) {
+                $auth = new AdminAuth($users, $url->getBasePath());
+            }
         }
     }
     $canEdit = $auth !== null && $auth->signedIn();

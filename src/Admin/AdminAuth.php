@@ -3,10 +3,10 @@ declare(strict_types=1);
 
 namespace SimpleStore\Admin;
 
-/** A single local administrator, protected by a password and a PHP session. */
+/** Database-backed administrator login, protected by a password and PHP session. */
 final class AdminAuth
 {
-    public function __construct(private array $credentials, string $cookiePath)
+    public function __construct(private AdminUserRepository $users, string $cookiePath)
     {
         ini_set('session.use_strict_mode', '1');
         session_name('simple_store_admin');
@@ -25,8 +25,17 @@ final class AdminAuth
 
     public function signedIn(): bool
     {
-        return ($_SESSION['admin'] ?? false) === true &&
-            ($_SESSION['admin_hash'] ?? '') === hash('sha256', (string) ($this->credentials['password_hash'] ?? ''));
+        $id = $_SESSION['admin_id'] ?? null;
+        $sessionHash = $_SESSION['admin_hash'] ?? null;
+        if (!is_int($id) || $id < 1 || !is_string($sessionHash)) {
+            return false;
+        }
+        $user = $this->users->findAdminById($id);
+        if ($user === null || !hash_equals(hash('sha256', $user['password_hash']), $sessionHash)) {
+            unset($_SESSION['admin_id'], $_SESSION['admin_hash']);
+            return false;
+        }
+        return true;
     }
 
     public function token(): string
@@ -45,11 +54,11 @@ final class AdminAuth
             return false;
         }
 
-        if (hash_equals((string) ($this->credentials['username'] ?? ''), $username) &&
-            password_verify($password, (string) ($this->credentials['password_hash'] ?? ''))) {
+        $user = $this->users->findAdminByUsername($username);
+        if ($user !== null && password_verify($password, $user['password_hash'])) {
             session_regenerate_id(true);
-            $_SESSION['admin'] = true;
-            $_SESSION['admin_hash'] = hash('sha256', $this->credentials['password_hash']);
+            $_SESSION['admin_id'] = (int) $user['id'];
+            $_SESSION['admin_hash'] = hash('sha256', $user['password_hash']);
             $_SESSION['csrf'] = bin2hex(random_bytes(32));
             unset($_SESSION['failed_logins'], $_SESSION['blocked_until']);
             return true;

@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use SimpleStore\Admin\AdminAuth;
+use SimpleStore\Admin\AdminUserRepository;
 use SimpleStore\Content\ContentRepository;
 use SimpleStore\Database\ConnectionFactory;
 
@@ -12,33 +13,36 @@ header('X-Frame-Options: DENY');
 
 $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/admin.php'), '/') . '/';
 $adminUrl = $basePath . 'admin.php';
-$adminFile = __DIR__ . '/config/admin.php';
 $screen = 'login';
 $error = '';
 $documents = [];
 $csrf = '';
 
-if (!is_file($adminFile)) {
-    if (!is_executable(dirname($adminFile))) {
-        http_response_code(503);
-        $screen = 'error';
-        $error = 'Apache nemůže procházet adresář config/. Zkontroluj jeho přístupová práva.';
-    } else {
-        $screen = 'setup';
-    }
-    require __DIR__ . '/view/admin/layout.php';
-    exit;
-}
-
-if (!is_readable($adminFile)) {
+if (!is_file(__DIR__ . '/config/database.php') || !is_file(__DIR__ . '/vendor/autoload.php')) {
     http_response_code(503);
     $screen = 'error';
-    $error = 'Apache nemůže číst config/admin.php. V terminálu spusť: chmod 644 config/admin.php';
+    $error = 'Nejdřív nastav config/database.php a spusť composer install.';
     require __DIR__ . '/view/admin/layout.php';
     exit;
 }
 
-$auth = new AdminAuth(require $adminFile, $basePath);
+try {
+    $db = ConnectionFactory::create(require __DIR__ . '/config/database.php');
+    $users = new AdminUserRepository($db);
+    if (!$users->installed() || !$users->hasAdmin()) {
+        $screen = 'setup';
+        require __DIR__ . '/view/admin/layout.php';
+        exit;
+    }
+    $auth = new AdminAuth($users, $basePath);
+} catch (Throwable $exception) {
+    error_log((string) $exception);
+    http_response_code(503);
+    $screen = 'error';
+    $error = $site['debug'] ? (string) $exception : 'Databázi nebo přihlášení se nepodařilo načíst.';
+    require __DIR__ . '/view/admin/layout.php';
+    exit;
+}
 $csrf = $auth->token();
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 if ($method === 'POST') {
@@ -90,10 +94,6 @@ if (!$auth->signedIn()) {
 }
 
 try {
-    if (!is_file(__DIR__ . '/config/database.php') || !is_file(__DIR__ . '/vendor/autoload.php')) {
-        throw new RuntimeException('Nejdřív nastav databázi a spusť composer install.');
-    }
-    $db = ConnectionFactory::create(require __DIR__ . '/config/database.php');
     $content = new ContentRepository($db, $site['languages'], $site['revision_limit']);
     $screen = 'editor';
 
