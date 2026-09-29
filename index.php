@@ -53,7 +53,8 @@ try {
     $categories = new CategoryRepository($db);
     $navigation = StorefrontMenus::load($db, $url, $contents, $categories);
     $menus = $navigation['manager'];
-    unset($navigation['manager']);
+    $hasContent = $navigation['hasContent'];
+    unset($navigation['manager'], $navigation['hasContent']);
     $shared = array_merge($shared, $navigation);
 
     // An authenticated preview may read drafts; ordinary routes never start an admin session.

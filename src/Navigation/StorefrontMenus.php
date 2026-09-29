@@ -24,6 +24,7 @@ final class StorefrontMenus
 
         return [
             'manager' => $menus,
+            'hasContent' => $hasContent,
             'primaryMenu' => $menus->links('primary'),
             'utilityMenu' => $hasContent ? $menus->links('utility') : [],
             'footerMenu' => $menus->links('footer'),
