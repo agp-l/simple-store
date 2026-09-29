@@ -48,7 +48,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
       <span>/</span><span><?= $escape($product['name']) ?></span></nav>
     <div class="product-detail">
       <div class="detail-media">
-        <div class="detail-gallery<?= $product['category'] === 'boty' ? ' detail-gallery--footwear' : '' ?>"><img id="detail-image" src="<?= $escape($image) ?>" data-image-path="<?= $escape($product['image_path']) ?>" alt="<?= $escape($product['name']) ?>" width="1200" height="1200"></div>
+        <div class="detail-gallery<?= $product['category'] === 'boty' ? ' detail-gallery--footwear' : '' ?>"><button type="button" class="detail-gallery-open" id="detail-image-open" aria-label="Zvětšit fotografii produktu"><img id="detail-image" src="<?= $escape($image) ?>" data-image-path="<?= $escape($product['image_path']) ?>" alt="<?= $escape($product['name']) ?>" width="1200" height="1200"><span class="detail-zoom-hint" aria-hidden="true">⤢ Zvětšit</span></button></div>
         <?php if ($editing): ?><div class="inline-image-actions"><button type="button" class="inline-small" data-editor-action="main-image">✎ Hlavní obrázek</button><button type="button" class="inline-small" data-editor-action="gallery-add">＋ Přidat fotografii</button></div><?php endif; ?>
         <?php if ($details['gallery'] !== []): ?><div class="detail-thumbs" aria-label="Fotografie produktu">
           <?php foreach (array_merge([$product['image_path']], $details['gallery']) as $i => $path): ?>
@@ -56,6 +56,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
               <?php if ($editing && $i > 0): ?><button type="button" class="inline-tiny" data-editor-action="gallery-set" data-editor-index="<?= $i - 1 ?>" data-editor-value="<?= $escape($path) ?>" aria-label="Upravit fotografii <?= $i + 1 ?>">✎</button><button type="button" class="inline-tiny" data-editor-action="gallery-remove" data-editor-index="<?= $i - 1 ?>" aria-label="Odebrat fotografii <?= $i + 1 ?>">×</button><?php endif; ?>
             </span>
           <?php endforeach; ?></div><?php endif; ?>
+        <dialog class="detail-lightbox" id="detail-lightbox" aria-label="Zvětšená fotografie produktu"><button type="button" class="detail-lightbox-close" id="detail-lightbox-close" aria-label="Zavřít zvětšenou fotografii">× Zavřít</button><img id="detail-lightbox-image" alt="<?= $escape($product['name']) ?>"></dialog>
       </div>
       <div class="detail-info">
         <p class="product-brand"><span<?= $editable('brand', $product['brand']) ?>><?= $escape($product['brand']) ?></span> · <?= $escape($categoryLabel) ?></p>

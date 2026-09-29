@@ -55,6 +55,11 @@ $check(str_contains($html, 'product-option-2') && str_contains($html, 'Technick�
     'The product detail did not render choices and specifications.');
 $check(!str_contains($html, '<script>alert(1)</script>') && str_contains($html, '&lt;script&gt;'),
     'The product title was not escaped.');
+$check(substr_count($html, 'data-gallery-image=') === 3 &&
+    str_contains($html, 'id="detail-image-open"') &&
+    str_contains($html, 'id="detail-lightbox"') &&
+    str_contains($html, 'id="detail-lightbox-image"'),
+    'A gallery with multiple photographs must expose its thumbnails and fullscreen image control.');
 $formatted = ProductText::inline('**Skvělé** <script> [více](https://example.org/?q=1&v=2)');
 $check(str_contains($formatted, '<strong>Skvělé</strong>') &&
     str_contains($formatted, '&lt;script&gt;') && str_contains($formatted, 'q=1&amp;v=2'),

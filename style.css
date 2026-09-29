@@ -1238,13 +1238,23 @@
     /* Product page: the same palette, header and footer as the catalog. */
     .detail-page { padding-bottom: 76px; }
     .product-detail { display:grid; grid-template-columns: minmax(0,1.05fr) minmax(340px,.95fr); gap: clamp(28px,5vw,70px); align-items:start; }
-    .detail-gallery { position:relative; border:1px solid var(--line); border-radius:13px; background:#fff; overflow:hidden; }
-    .detail-gallery img { display:block; width:100%; height:auto; aspect-ratio:1/1; object-fit:contain; }
-    .detail-gallery--footwear img { aspect-ratio:3/2; object-fit:cover; }
-    .detail-thumbs { display:flex; gap:10px; margin-top:13px; overflow-x:auto; padding-bottom:4px; }
-    .detail-thumb { flex:0 0 76px; padding:3px; border:2px solid var(--line); border-radius:8px; background:white; cursor:pointer; }
+    .detail-media { min-width:0; }
+    .detail-gallery { position:relative; width:100%; aspect-ratio:1; border:1px solid var(--line); border-radius:13px; background:#fff; overflow:hidden; }
+    .detail-gallery--footwear { aspect-ratio:3/2; }
+    .detail-gallery-open { position:absolute; inset:0; display:block; width:100%; height:100%; padding:0; border:0; background:transparent; cursor:zoom-in; }
+    .detail-gallery-open img { display:block; width:100%; height:100%; object-fit:contain; }
+    .detail-zoom-hint { position:absolute; right:14px; bottom:14px; padding:7px 10px; border-radius:4px; background:rgba(26,31,27,.82); color:#fff; font:700 12px var(--font-body); }
+    .detail-thumbs { display:flex; gap:10px; max-width:100%; margin-top:13px; overflow-x:auto; padding-bottom:4px; }
+    .detail-thumbs .inline-thumb { flex:0 0 76px; width:76px; }
+    .detail-thumb { display:block; flex:none; width:76px; height:76px; padding:3px; border:2px solid var(--line); border-radius:8px; background:white; cursor:pointer; }
     .detail-thumb[aria-pressed="true"] { border-color:var(--forest); }
-    .detail-thumb img { display:block; width:100%; aspect-ratio:1; object-fit:contain; }
+    .detail-thumb img { display:block; width:100%; height:100%; object-fit:contain; }
+    .detail-lightbox { position:fixed; inset:0; width:100vw; height:100dvh; max-width:none; max-height:none; margin:0; padding:62px clamp(16px,4vw,48px) 28px; border:0; background:rgba(18,23,20,.97); color:#fff; }
+    .detail-lightbox[open] { display:flex; align-items:center; justify-content:center; }
+    .detail-lightbox::backdrop { background:rgba(18,23,20,.8); }
+    .detail-lightbox img { display:block; max-width:100%; max-height:100%; width:auto; height:auto; object-fit:contain; }
+    .detail-lightbox-close { position:absolute; top:14px; right:clamp(16px,4vw,48px); padding:9px 14px; border:1px solid rgba(255,255,255,.55); border-radius:5px; background:rgba(18,23,20,.8); color:#fff; font:700 14px var(--font-body); cursor:pointer; }
+    .detail-lightbox-close:hover { background:#fff; color:var(--ink); }
     .detail-info { padding:5px 0; }
     .detail-info .product-brand { font-size:13px; text-transform:uppercase; letter-spacing:.1em; font-weight:700; }
     .detail-info h1 { margin:8px 0 13px; font:800 clamp(28px,3.2vw,43px)/1.13 var(--font-display); letter-spacing:-.035em; color:var(--ink); }
