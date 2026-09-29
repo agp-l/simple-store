@@ -9,6 +9,9 @@ $editing = (bool) ($editMode ?? false);
 $canEdit = (bool) ($canEditProduct ?? false);
 $imageUrl = static fn (string $path): string => str_starts_with($path, 'images/') ? $basePath . $path : $path;
 $image = $imageUrl($product['image_path']);
+$mediaLibraryUrl = $basePath . 'admin.php?' . http_build_query([
+    'section' => 'media', 'type' => 'product', 'key' => $product['product_key'], 'language' => $language,
+]);
 $details = ProductDetails::decode($product['details_json'] ?? null, $product['sizes'] ?? '');
 $categoryPath = CategoryPath::fromProduct($product);
 $categoryLabel = $categoryLabels[$categoryPath] ?? $categoryLabels[explode('/', $categoryPath)[0]] ?? 'Vybavení';
@@ -31,9 +34,10 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         <span class="inline-status" id="inline-status" role="status" aria-live="polite">Revize <?= (int) $product['revision_number'] ?></span>
         <button type="button" class="inline-small" data-editor-action="publish" data-value="<?= $product['published'] ? '0' : '1' ?>"><?= $product['published'] ? 'Skrýt produkt' : 'Publikovat produkt' ?></button>
         <button type="button" class="inline-small" data-editor-action="media-library">▧ Fotografie</button>
+        <a href="<?= $escape($mediaLibraryUrl) ?>">Knihovna tohoto produktu ↗</a>
         <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>" class="inline-create-product"><input type="hidden" name="action" value="create-product"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>"><button type="submit" class="inline-small">＋ Nový produkt</button></form>
         <?php if ($product['published']): ?><a href="<?= $escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug'])) ?>">Zobrazit jako návštěvník ↗</a><?php endif; ?>
-        <a href="<?= $escape($siteRoot . 'admin.php?section=products') ?>">Všechny produkty</a>
+        <a href="<?= $escape($siteRoot . $language . '?manage=1') ?>">Všechny produkty včetně skrytých</a>
       </div>
       <div class="inline-settings" aria-label="Nastavení produktu">
         <label>Kategorie <select data-editor-select="category_path">
@@ -44,6 +48,16 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         </select></label>
         <span>Adresa: <span class="inline-slug"<?= $editable('slug', $product['slug']) ?>><?= $escape($product['slug']) ?></span></span>
       </div>
+      <details class="inline-delete-product"><summary>Odstranit produkt</summary>
+        <p>Smazání odstraní produkt a všechny jeho revize v tomto jazyce. Nahrané obrázky zůstanou na disku, protože mohou mít zkopírované odkazy.</p>
+        <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>">
+          <input type="hidden" name="action" value="delete-product"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>">
+          <input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
+          <input type="hidden" name="revision" value="<?= (int) $product['revision_number'] ?>">
+          <label><input type="checkbox" name="confirm" value="1" required> Rozumím, že revize produktu už nepůjdou obnovit.</label>
+          <button type="submit" class="inline-small">Smazat produkt</button>
+        </form>
+      </details>
     <?php endif; ?>
     <nav class="breadcrumbs" aria-label="Drobečková navigace"><a href="<?= $escape($siteRoot . $language) ?>">Úvod</a>
       <?php foreach ($categoryTrail as $crumb): ?><span>/</span><a href="<?= $escape($siteRoot . $language . '/kategorie-produktu/' . $crumb['path']) ?>"><?= $escape($crumb['title']) ?></a><?php endforeach; ?>

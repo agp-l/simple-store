@@ -73,11 +73,22 @@ try {
         header('Cache-Control: private, no-store');
     }
     $shared['canManageMenu'] = $canEdit;
+    $shared['adminCreate'] = $canEdit ? ['csrf' => $auth->token(), 'language' => $url->getLanguage()] : null;
     $shared['menuAdminUrl'] = $url->getBasePath() . 'admin.php?' . http_build_query([
         'section' => 'menus', 'language' => $url->getLanguage(), 'slot' => 'primary',
     ]);
 
     if ($route['name'] === 'catalog' || $route['name'] === 'category') {
+        $managingCatalog = ($_GET['manage'] ?? '') === '1';
+        if ($managingCatalog && !$canEdit) {
+            $renderer->render('not-found', $shared, 404);
+            exit;
+        }
+        $visibility = $_GET['visibility'] ?? 'all';
+        if ($managingCatalog && (!is_string($visibility) || !in_array($visibility, ['all', 'draft', 'published'], true))) {
+            $renderer->render('not-found', $shared, 400);
+            exit;
+        }
         $path = $route['path'] ?? null;
         $selected = $path === null ? null : $categories->find($url->getLanguage(), $path);
         if ($path !== null && $selected === null) {
@@ -112,16 +123,23 @@ try {
         if (!is_string($sort) || !in_array($sort, ['default', 'price-asc', 'price-desc', 'name'], true)) {
             $sort = 'default';
         }
-        $batch = $hasProducts
-            ? (new ProductRepository($db, $site['languages']))->publishedPage(
-                $url->getLanguage(), $path, $search, $sort, $offset
-            ) : ['items' => [], 'nextOffset' => null];
+        $repository = new ProductRepository($db, $site['languages']);
+        $batch = !$hasProducts ? ['items' => [], 'nextOffset' => null] :
+            ($managingCatalog
+                ? $repository->managementPage($url->getLanguage(), $path, $search, $visibility, $offset)
+                : $repository->publishedPage($url->getLanguage(), $path, $search, $sort, $offset));
         $shared['products'] = $batch['items'];
+        $shared['managingCatalog'] = $managingCatalog;
+        $shared['catalogVisibility'] = $visibility;
+        $shared['managementCategories'] = $managingCatalog ? $categories->all($url->getLanguage()) : [];
+        $shared['privatePage'] = $managingCatalog;
+        $shared['productDeleted'] = $managingCatalog && ($_GET['deleted'] ?? '') === '1';
         $shared['searchTerm'] = $search;
         $shared['sortChoice'] = $sort;
         $shared['searchAction'] = $path === null ? $url->path() : $url->category($path);
         $nextUrl = $batch['nextOffset'] === null ? '' : $shared['searchAction'] . '?' . http_build_query(
-            array_filter(['search' => $search, 'sort' => $sort === 'default' ? '' : $sort,
+            array_filter(['manage' => $managingCatalog ? '1' : '', 'visibility' => $managingCatalog && $visibility !== 'all' ? $visibility : '',
+                'search' => $search, 'sort' => !$managingCatalog && $sort !== 'default' ? $sort : '',
                 'offset' => $batch['nextOffset']], static fn (mixed $value): bool => $value !== '')
         );
         $shared['nextUrl'] = $nextUrl;
@@ -140,7 +158,9 @@ try {
         } elseif (!$hasContent) {
             $shared['setupNotice'] = 'Pro blog a stránky importuj aktuální database/schema.sql.';
         }
-        if ($selected !== null) {
+        if ($managingCatalog) {
+            $shared['title'] = 'Správa produktů — dobrodruzi.cz';
+        } elseif ($selected !== null) {
             $shared['title'] = $selected['title'] . ' — dobrodruzi.cz';
         }
         $renderer->render('catalog', $shared);
@@ -172,14 +192,27 @@ try {
             ),
         ], $item === null ? 404 : 200);
     } elseif ($route['name'] === 'blog') {
+        $managingBlog = ($_GET['manage'] ?? '') === '1';
+        if ($managingBlog && !$canEdit) {
+            $renderer->render('not-found', $shared, 404);
+            exit;
+        }
         $offset = filter_var($_GET['offset'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 100000]]);
-        if ($offset === false) {
+        $draftOffset = filter_var($_GET['draft_offset'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 100000]]);
+        if ($offset === false || $draftOffset === false) {
             $renderer->render('not-found', $shared, 400);
             exit;
         }
         $batch = $hasContent ? $contents->publishedPostsPage($url->getLanguage(), $offset)
             : ['items' => [], 'nextOffset' => null];
-        $nextUrl = $batch['nextOffset'] === null ? '' : $url->path('blog') . '?offset=' . $batch['nextOffset'];
+        $draftBatch = $managingBlog && $hasContent
+            ? $contents->unpublishedPostsPage($url->getLanguage(), $draftOffset, 24)
+            : ['items' => [], 'nextOffset' => null];
+        $nextUrl = $batch['nextOffset'] === null ? '' : $url->path('blog') . '?' . http_build_query([
+            'manage' => $managingBlog ? '1' : null, 'draft_offset' => $managingBlog && $draftOffset > 0 ? $draftOffset : null,
+            'offset' => $batch['nextOffset'],
+        ]);
+        $shared['canManageContent'] = $canEdit;
         if (($_GET['partial'] ?? '') === '1') {
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
@@ -189,8 +222,12 @@ try {
             exit;
         }
         $renderer->render('blog', $shared + [
-            'title' => 'Blog — dobrodruzi.cz',
+            'title' => $managingBlog ? 'Správa blogu — dobrodruzi.cz' : 'Blog — dobrodruzi.cz',
             'posts' => $batch['items'], 'nextUrl' => $nextUrl,
+            'canManageContent' => $canEdit, 'adminCsrf' => $canEdit ? $auth->token() : '',
+            'draftPosts' => $draftBatch['items'],
+            'draftNextUrl' => $draftBatch['nextOffset'] === null ? '' : $url->path('blog') . '?manage=1&draft_offset=' . $draftBatch['nextOffset'],
+            'managingBlog' => $managingBlog, 'privatePage' => $managingBlog,
         ]);
     } elseif ($route['name'] === 'page' || $route['name'] === 'post') {
         $type = $route['name'];

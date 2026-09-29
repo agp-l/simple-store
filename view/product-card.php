@@ -4,7 +4,7 @@ use SimpleStore\Category\CategoryPath;
 use SimpleStore\Media\MediaPath;
 
 // This view uses a published product row from the catalog query.
-$productLink = $basePath . $language . '/produkt/' . rawurlencode($product['slug']);
+$productLink = $basePath . $language . '/produkt/' . rawurlencode($product['slug']) . (($managingCatalog ?? false) ? '?edit=1' : '');
 $cardPath = MediaPath::variant($product['image_path'], 'card');
 $productImage = str_starts_with($cardPath, 'images/')
     ? $basePath . $cardPath : $cardPath;
@@ -20,6 +20,7 @@ $hasOptions = ProductDetails::decode($product['details_json'] ?? null, $product[
             <img class="product-image" src="<?= $escape($productImage) ?>" alt="<?= $escape($product['name']) ?>" loading="lazy" decoding="async">
           </a>
           <span class="media-label"><?= $escape($categoryLabel) ?></span>
+          <?php if ($managingCatalog ?? false): ?><span class="manage-product-state <?= $product['published'] ? 'is-public' : '' ?>"><?= $product['published'] ? 'Zveřejněný' : 'Skrytý koncept' ?></span><?php endif; ?>
         </div>
         <div class="product-body">
           <p class="product-brand"><?= $escape($product['brand']) ?></p>
@@ -27,11 +28,14 @@ $hasOptions = ProductDetails::decode($product['details_json'] ?? null, $product[
           <?php if ($product['summary'] !== ''): ?><p><?= $escape($product['summary']) ?></p><?php endif; ?>
           <div class="product-meta"><span class="stock <?= $product['stock_status'] === 'in_stock' ? '' : 'stock-wait' ?>"><span class="stock-dot" aria-hidden="true"></span><?= $escape($stockText[$product['stock_status']] ?? '') ?></span></div>
           <div class="product-action"><strong><?= number_format((int) $product['price_czk'], 0, ',', ' ') ?> Kč</strong>
-            <?php if ($hasOptions): ?>
+            <?php if ($managingCatalog ?? false): ?>
+              <a class="add-button" href="<?= $escape($productLink) ?>">Upravit produkt →</a>
+            <?php elseif ($hasOptions): ?>
               <a class="add-button" href="<?= $escape($productLink) ?>" aria-label="Zobrazit produkt <?= $escape($product['name']) ?>"><?= $product['stock_status'] === 'out_of_stock' ? 'Zobrazit detail →' : 'Vybrat možnosti →' ?></a>
             <?php else: ?>
               <button class="add-button" type="button" data-add <?= $product['stock_status'] === 'out_of_stock' ? 'disabled' : '' ?> aria-label="Přidat <?= $escape($product['name']) ?> do ukázkového košíku"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 5h2l2 10h10l2-7H7M9 19h.01M18 19h.01" /></svg><span><?= $product['stock_status'] === 'out_of_stock' ? 'Není skladem' : 'Do košíku' ?></span></button>
             <?php endif; ?>
           </div>
+          <?php if (($canManageCatalog ?? false) && !($managingCatalog ?? false)): ?><a class="card-edit-link" href="<?= $escape($productLink . '?edit=1') ?>">✎ Upravit produkt</a><?php endif; ?>
         </div>
       </article>

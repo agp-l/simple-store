@@ -44,24 +44,9 @@ final class ProductRepository
         $where = 'language=%s AND published=1 AND active_product_key IS NOT NULL';
         $values = [$language];
         if ($category !== null) {
-            if (!CategoryPath::valid($category)) {
-                throw new InvalidArgumentException('Invalid category path.');
-            }
-            [$root, $child] = CategoryPath::forStorage($category);
-            $parts = [];
-            if ($child === '') {
-                $parts[] = 'category=%s';
-                $values[] = $root;
-            } else {
-                $parts[] = '(category=%s AND (subcategory=%s OR subcategory LIKE %s))';
-                array_push($values, $root, $child, $child . '/%');
-            }
-            foreach (CategoryPath::legacyProductPaths($category) as [$oldRoot, $oldChild]) {
-                $parts[] = $oldChild === null ? 'category=%s' : '(category=%s AND subcategory=%s)';
-                $values[] = $oldRoot;
-                if ($oldChild !== null) $values[] = $oldChild;
-            }
-            $where .= ' AND (' . implode(' OR ', $parts) . ')';
+            [$categoryWhere, $categoryValues] = self::categoryFilter($category);
+            $where .= ' AND ' . $categoryWhere;
+            array_push($values, ...$categoryValues);
         }
         $search = trim($search);
         if ($search !== '') {
@@ -85,6 +70,72 @@ final class ProductRepository
         return ['items' => array_slice($rows, 0, $limit), 'nextOffset' => $hasMore ? $offset + $limit : null];
     }
 
+    /** Authenticated product browser, including drafts; never use on a public route. */
+    public function managementPage(
+        string $language,
+        ?string $categoryPath = null,
+        string $search = '',
+        string $visibility = 'all',
+        int $offset = 0,
+        int $limit = 12
+    ): array
+    {
+        if (!in_array($language, $this->languages, true) ||
+            !in_array($visibility, ['all', 'draft', 'published'], true) ||
+            $offset < 0 || $offset > 100000 || $limit < 1 || $limit > 48 || strlen($search) > 200) {
+            throw new InvalidArgumentException('Invalid product management page.');
+        }
+        $where = 'language=%s AND active_product_key IS NOT NULL';
+        $values = [$language];
+        if ($visibility !== 'all') {
+            $where .= $visibility === 'published' ? ' AND published=1' : ' AND published=0';
+        }
+        if ($categoryPath !== null) {
+            [$categoryWhere, $categoryValues] = self::categoryFilter($categoryPath);
+            $where .= ' AND ' . $categoryWhere;
+            array_push($values, ...$categoryValues);
+        }
+        $search = trim($search);
+        if ($search !== '') {
+            $where .= ' AND (LOCATE(%s, name)>0 OR LOCATE(%s, brand)>0 OR LOCATE(%s, summary)>0)';
+            array_push($values, $search, $search, $search);
+        }
+        array_push($values, $limit + 1, $offset);
+        $rows = $this->db->query(
+            'SELECT product_key, language, slug, name, brand, summary, details_json,
+                    category, subcategory, price_czk, image_path, sizes, stock_status,
+                    published, revision_number, saved_at
+             FROM product_revisions WHERE ' . $where . ' ORDER BY id DESC LIMIT %i OFFSET %i',
+            ...$values
+        );
+        return ['items' => array_slice($rows, 0, $limit),
+            'nextOffset' => count($rows) > $limit ? $offset + $limit : null];
+    }
+
+    /** Product paths include descendants and legacy rows stored before nested categories. */
+    private static function categoryFilter(string $category): array
+    {
+        if (!CategoryPath::valid($category)) {
+            throw new InvalidArgumentException('Invalid category path.');
+        }
+        [$root, $child] = CategoryPath::forStorage($category);
+        $parts = [];
+        $values = [];
+        if ($child === '') {
+            $parts[] = 'category=%s';
+            $values[] = $root;
+        } else {
+            $parts[] = '(category=%s AND (subcategory=%s OR subcategory LIKE %s))';
+            array_push($values, $root, $child, $child . '/%');
+        }
+        foreach (CategoryPath::legacyProductPaths($category) as [$oldRoot, $oldChild]) {
+            $parts[] = $oldChild === null ? 'category=%s' : '(category=%s AND subcategory=%s)';
+            $values[] = $oldRoot;
+            if ($oldChild !== null) $values[] = $oldChild;
+        }
+        return ['(' . implode(' OR ', $parts) . ')', $values];
+    }
+
     public function findPublished(string $slug, string $language): ?array
     {
         return $this->db->queryFirstRow(
@@ -99,15 +150,6 @@ final class ProductRepository
         return $this->db->queryFirstRow(
             'SELECT * FROM product_revisions WHERE active_slug=%s AND language=%s
              AND active_product_key IS NOT NULL LIMIT 1', $slug, $language
-        );
-    }
-
-    public function currentProducts(): array
-    {
-        return $this->db->query(
-            'SELECT product_key, language, slug, name, category, subcategory,
-                    price_czk, published, revision_number, saved_at
-             FROM product_revisions WHERE active_product_key IS NOT NULL ORDER BY id DESC'
         );
     }
 
@@ -152,6 +194,37 @@ final class ProductRepository
              WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME=%s',
             'product_revisions', 'details_json'
         ) > 0;
+    }
+
+    /** Delete one language of a product and its revisions; media files are left untouched. */
+    public function deleteProduct(string $key, string $language, int $expectedRevision): void
+    {
+        if (preg_match('/^[a-f0-9]{32}$/D', $key) !== 1 ||
+            !in_array($language, $this->languages, true) || $expectedRevision < 1) {
+            throw new InvalidArgumentException('Neplatný produkt nebo číslo revize.');
+        }
+
+        $this->db->startTransaction();
+        try {
+            $current = $this->db->queryFirstRow(
+                'SELECT revision_number FROM product_revisions WHERE product_key=%s AND language=%s
+                 AND active_product_key IS NOT NULL LIMIT 1 FOR UPDATE', $key, $language
+            );
+            if ($current === null) {
+                throw new InvalidArgumentException('Produkt už neexistuje.');
+            }
+            if ((int) $current['revision_number'] !== $expectedRevision) {
+                throw new RuntimeException('Produkt se mezitím změnil. Obnov stránku a zkus to znovu.');
+            }
+            $this->db->query(
+                'DELETE FROM product_revisions WHERE product_key=%s AND language=%s',
+                $key, $language
+            );
+            $this->db->commit();
+        } catch (Throwable $error) {
+            $this->db->rollback();
+            throw $error;
+        }
     }
 
     public function saveRevision(array $fields, ?string $key = null, ?int $expected = null): array

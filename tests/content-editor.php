@@ -116,14 +116,23 @@ $documents = [['document_key' => str_repeat('a', 32), 'language' => 'cs',
     'type' => 'post', 'slug' => 'moje-adresa', 'title' => 'Můj článek',
     'revision_number' => 2, 'published' => 0]];
 $translations = [str_repeat('a', 32) => ['cs']];
+$filterLanguage = '';
+$filterType = '';
+$filterStatus = '';
+$filterSearch = '';
+$previousUrl = '';
+$nextUrl = '/shop/admin.php?section=contents&offset=24';
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $admin = ob_get_clean();
 if (!str_contains($admin, '/shop/cs/blog/moje-adresa?edit=1') ||
-    !str_contains($admin, 'value="create-content"') ||
+    !str_contains($admin, 'name="q"') ||
+    !str_contains($admin, 'value="draft"') ||
+    !str_contains($admin, 'section=contents&amp;offset=24') ||
     !str_contains($admin, 'value="create-translation"') ||
     !str_contains($admin, '<option value="en">en</option>') ||
+    str_contains($admin, 'value="create-content"') ||
     str_contains($admin, '<textarea')) {
-    throw new RuntimeException('The document list did not link to the editor or preserve translation creation.');
+    throw new RuntimeException('The content index lost search, editor links, pagination or translation creation.');
 }
 echo "Inline content editor tests passed.\n";

@@ -31,7 +31,8 @@ try {
     }
     $library = new MediaLibrary(__DIR__ . '/../..');
     if ($method === 'GET') {
-        $response = json_encode(['files' => $library->files($type, $key)], JSON_THROW_ON_ERROR);
+        $files = MediaAttachment::withUsage($current, $type, $library->files($type, $key));
+        $response = json_encode(['files' => $files], JSON_THROW_ON_ERROR);
         ob_end_clean();
         echo $response;
         return;
@@ -41,12 +42,18 @@ try {
     if ($revision === false || $revision < 1 || (int) $current['revision_number'] !== $revision) {
         throw new RuntimeException('Obsah se mezitím změnil. Obnov stránku a zkus to znovu.');
     }
+    $mode = $_POST['mode'] ?? ($type === 'product' ? 'main-image' : 'section-add-image');
+    $rawIndex = $_POST['index'] ?? null;
+    $index = $rawIndex === null ? null : filter_var($rawIndex, FILTER_VALIDATE_INT);
+    if (!is_string($mode) || $index === false) {
+        throw new InvalidArgumentException('Neplatné umístění fotografie.');
+    }
     $paths = [];
     try {
         if (($_POST['action'] ?? '') === 'media-upload') {
             $files = $_FILES['photos'] ?? [];
             $count = is_array($files['name'] ?? null) ? count($files['name']) : 0;
-            MediaAttachment::capacity($current, $type, $count);
+            MediaAttachment::capacity($current, $type, $count, $mode, $index);
             $paths = $library->storeUploaded($type, $key, $files);
         } elseif (($_POST['action'] ?? '') === 'media-attach') {
             $path = $_POST['path'] ?? null;
@@ -58,8 +65,8 @@ try {
             throw new InvalidArgumentException('Neznámá úprava fotografií.');
         }
         $form = $type === 'product'
-            ? MediaAttachment::product($current, $paths)
-            : MediaAttachment::document($current, $paths);
+            ? MediaAttachment::product($current, $paths, $mode, $index)
+            : MediaAttachment::document($current, $paths, $mode, $index);
         $saved = $type === 'product'
             ? $products->saveRevision($form, $key, $revision)
             : $content->saveRevision($form, $key, $revision);

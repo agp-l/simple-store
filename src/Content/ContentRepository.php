@@ -54,6 +54,23 @@ final class ContentRepository
         return ['items' => array_slice($rows, 0, $limit), 'nextOffset' => $hasMore ? $offset + $limit : null];
     }
 
+    /** Current unpublished articles are available only to authenticated storefront code. */
+    public function unpublishedPostsPage(string $language, int $offset = 0, int $limit = 6): array
+    {
+        if ($offset < 0 || $offset > 100000 || $limit < 1 || $limit > 48) {
+            throw new InvalidArgumentException('Invalid draft page.');
+        }
+        $rows = $this->db->query(
+            'SELECT document_key, language, slug, title, saved_at
+             FROM content_revisions WHERE type=%s AND language=%s
+             AND active_document_key IS NOT NULL AND published=0
+             ORDER BY id DESC LIMIT %i OFFSET %i',
+            'post', $language, $limit + 1, $offset
+        );
+        $hasMore = count($rows) > $limit;
+        return ['items' => array_slice($rows, 0, $limit), 'nextOffset' => $hasMore ? $offset + $limit : null];
+    }
+
     public function menuPages(string $language): array
     {
         return $this->db->query(
@@ -101,14 +118,71 @@ final class ContentRepository
         ], $key, $expected);
     }
 
-    /** List current versions, including drafts, for the editor only. */
-    public function currentDocuments(): array
+    /** A bounded index for the administrator; published content and drafts share one source. */
+    public function managementPage(?string $language = null, ?string $type = null,
+        ?bool $published = null, string $search = '', int $offset = 0, int $limit = 24): array
     {
-        return $this->db->query(
-            'SELECT document_key, language, type, slug, title, revision_number, published, saved_at
-             FROM content_revisions WHERE active_document_key IS NOT NULL
-             ORDER BY saved_at DESC, id DESC'
+        $search = trim($search);
+        if (($language !== null && !in_array($language, $this->languages, true)) ||
+            ($type !== null && !in_array($type, ['page', 'post'], true)) ||
+            strlen($search) > 200 || $offset < 0 || $offset > 100000 || $limit < 1 || $limit > 48) {
+            throw new InvalidArgumentException('Neplatný filtr obsahu.');
+        }
+
+        $conditions = ['active_document_key IS NOT NULL'];
+        $arguments = [];
+        if ($language !== null) {
+            $conditions[] = 'language=%s';
+            $arguments[] = $language;
+        }
+        if ($type !== null) {
+            $conditions[] = 'type=%s';
+            $arguments[] = $type;
+        }
+        if ($published !== null) {
+            $conditions[] = 'published=%i';
+            $arguments[] = (int) $published;
+        }
+        if ($search !== '') {
+            $conditions[] = '(LOCATE(%s, title)>0 OR LOCATE(%s, slug)>0)';
+            array_push($arguments, $search, $search);
+        }
+        array_push($arguments, $limit + 1, $offset);
+        $rows = $this->db->query(
+            'SELECT document_key, language, type, slug, title, revision_number, published, visible_in_menu, saved_at
+             FROM content_revisions WHERE ' . implode(' AND ', $conditions) . '
+             ORDER BY id DESC LIMIT %i OFFSET %i', ...$arguments
         );
+        $hasMore = count($rows) > $limit;
+        return ['items' => array_slice($rows, 0, $limit),
+            'nextOffset' => $hasMore && $offset + $limit <= 100000 ? $offset + $limit : null];
+    }
+
+    /** Find translations for displayed rows only, so a paginated index stays correct. */
+    public function translationLanguages(array $documentKeys): array
+    {
+        $keys = array_values(array_unique($documentKeys));
+        if ($keys === []) {
+            return [];
+        }
+        if (count($keys) > 48) {
+            throw new InvalidArgumentException('Příliš mnoho dokumentů.');
+        }
+        foreach ($keys as $key) {
+            if (!is_string($key) || preg_match('/^[a-f0-9]{32}$/D', $key) !== 1) {
+                throw new InvalidArgumentException('Neplatný dokument.');
+            }
+        }
+        $placeholders = implode(', ', array_fill(0, count($keys), '%s'));
+        $rows = $this->db->query(
+            'SELECT document_key, language FROM content_revisions
+             WHERE active_document_key IS NOT NULL AND document_key IN (' . $placeholders . ')', ...$keys
+        );
+        $translations = [];
+        foreach ($rows as $row) {
+            $translations[$row['document_key']][] = $row['language'];
+        }
+        return $translations;
     }
 
     public function currentDocument(string $documentKey, string $language): ?array

@@ -64,6 +64,9 @@ $editor = ob_get_clean();
 if (str_contains($public, 'inline-editor-config') || str_contains($public, 'test-token') ||
     !str_contains($editor, 'data-edit-field="section_body"') ||
     !str_contains($editor, 'data-editor-action="section-add"') ||
+    !str_contains($editor, 'section=media&amp;type=product&amp;key=' . str_repeat('a', 32)) ||
+    !str_contains($editor, 'value="delete-product"') ||
+    str_contains($public, 'value="delete-product"') ||
     !str_contains($editor, 'test-token')) {
     throw new RuntimeException('The on-page controls leaked publicly or were missing from editor preview.');
 }

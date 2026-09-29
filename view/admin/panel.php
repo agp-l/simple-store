@@ -1,7 +1,7 @@
 <?php
 // This body is framed by the shared storefront shell.
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-$inside = in_array($screen, ['editor', 'products', 'categories', 'menus', 'media'], true);
+$inside = in_array($screen, ['editor', 'categories', 'menus', 'media'], true);
 ?>
 <div class="panel-area">
   <?php if ($inside): ?>
@@ -14,7 +14,7 @@ $inside = in_array($screen, ['editor', 'products', 'categories', 'menus', 'media
     $panelCurrent = $screen;
     $panelLinks = [
         ['key' => 'editor', 'label' => 'Stránky a články', 'icon' => '▤', 'href' => $adminUrl],
-        ['key' => 'products', 'label' => 'Produkty', 'icon' => '▦', 'href' => $adminUrl . '?section=products'],
+        ['key' => 'products', 'label' => 'Produkty', 'icon' => '▦', 'href' => $basePath . $site['default_language'] . '?manage=1#produkty'],
         ['key' => 'media', 'label' => 'Fotografie', 'icon' => '▧', 'href' => $adminUrl . '?section=media'],
         ['key' => 'categories', 'label' => 'Kategorie', 'icon' => '⌁', 'href' => $adminUrl . '?section=categories'],
         ['key' => 'menus', 'label' => 'Menu', 'icon' => '☷', 'href' => $adminUrl . '?section=menus'],
@@ -46,8 +46,6 @@ $inside = in_array($screen, ['editor', 'products', 'categories', 'menus', 'media
         </form>
         <p>Zapomenuté heslo? Na serveru spusť <code>/opt/lampp/bin/php tools/admin.php --reset</code>.</p>
       </section>
-    <?php elseif ($screen === 'products'): ?>
-      <?php require __DIR__ . '/products.php'; ?>
     <?php elseif ($screen === 'categories'): ?>
       <?php require __DIR__ . '/categories.php'; ?>
     <?php elseif ($screen === 'media'): ?>

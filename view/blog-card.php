@@ -17,4 +17,5 @@ $coverUrl = str_starts_with($cover, 'images/') ? $basePath . $cover : $cover;
               <time datetime="<?= $escape(str_replace(' ', 'T', $post['saved_at'])) ?>"><?= $escape(date('j. n. Y', strtotime($post['saved_at']))) ?></time>
               <h2><a href="<?= $escape($siteRoot . $language . '/blog/' . rawurlencode($post['slug'])) ?>"><?= $escape($post['title']) ?></a></h2>
               <p><?= $escape($post['summary'] ?? '') ?></p>
+              <?php if ($canManageContent): ?><div class="inline-entry"><a href="<?= $escape($siteRoot . $language . '/blog/' . rawurlencode($post['slug']) . '?edit=1') ?>">✎ Upravit článek</a></div><?php endif; ?>
             </article>

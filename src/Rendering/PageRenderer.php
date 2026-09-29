@@ -37,6 +37,12 @@ final class PageRenderer
         $categoryMenuRoot = $data['categoryMenuRoot'] ?? null;
         $currentCategory = $data['currentCategory'] ?? null;
         $canManageCatalog = (bool) ($data['canManageCatalog'] ?? false);
+        $managingCatalog = (bool) ($data['managingCatalog'] ?? false);
+        $catalogVisibility = (string) ($data['catalogVisibility'] ?? 'all');
+        $managementCategories = $data['managementCategories'] ?? [];
+        $productDeleted = (bool) ($data['productDeleted'] ?? false);
+        $adminCreate = $data['adminCreate'] ?? null;
+        $privatePage = (bool) ($data['privatePage'] ?? false);
         $canManageMenu = (bool) ($data['canManageMenu'] ?? false);
         $categoryAdminUrl = (string) ($data['categoryAdminUrl'] ?? '');
         $newSubcategoryUrl = (string) ($data['newSubcategoryUrl'] ?? '');
@@ -55,6 +61,10 @@ final class PageRenderer
         $editMode = (bool) ($data['editMode'] ?? false);
         $contentEditMode = (bool) ($data['contentEditMode'] ?? false);
         $canEditContent = (bool) ($data['canEditContent'] ?? false);
+        $canManageContent = (bool) ($data['canManageContent'] ?? false);
+        $adminCsrf = (string) ($data['adminCsrf'] ?? '');
+        $draftPosts = $data['draftPosts'] ?? [];
+        $draftNextUrl = (string) ($data['draftNextUrl'] ?? '');
         $contentHistory = $data['contentHistory'] ?? [];
         $editToken = (string) ($data['editToken'] ?? '');
         $editorCategories = $data['editorCategories'] ?? [];
@@ -76,6 +86,9 @@ final class PageRenderer
         $language = (string) $data['language'];
         $siteRoot = htmlspecialchars($basePath, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $categoryLabels = $data['categoryLabels'] ?? [];
+        $canManageContent = (bool) ($data['canManageContent'] ?? false);
+        $managingCatalog = (bool) ($data['managingCatalog'] ?? false);
+        $canManageCatalog = (bool) ($data['canManageCatalog'] ?? false);
         ob_start();
         try {
             foreach ($items as $item) {

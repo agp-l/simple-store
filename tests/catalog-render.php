@@ -43,6 +43,21 @@ if (!str_contains($cards, '/shop/cs/produkt/bota') || str_contains($cards, '<htm
     throw new RuntimeException('The additional catalog batch must render only the reusable product cards.');
 }
 
+$draft = $product + ['published' => 0, 'product_key' => str_repeat('a', 32),
+    'revision_number' => 3];
+ob_start();
+$renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
+    'products' => [$draft], 'managingCatalog' => true, 'canManageCatalog' => true,
+    'privatePage' => true, 'catalogVisibility' => 'draft',
+    'searchAction' => '/shop/cs', 'nextUrl' => '/shop/cs?manage=1&offset=12']);
+$management = ob_get_clean();
+if (!str_contains($management, '/shop/cs/produkt/bota?edit=1') ||
+    !str_contains($management, 'Skrytý koncept') ||
+    !str_contains($management, 'name="robots" content="noindex, nofollow"') ||
+    str_contains($management, 'data-add') || str_contains($management, 'id="sort"')) {
+    throw new RuntimeException('Management must keep draft cards private and link to editing without cart controls.');
+}
+
 $posts = [['slug' => 'stezka', 'title' => 'Na stezce', 'summary' => 'Vyrazili jsme',
     'saved_at' => '2026-01-02 12:00:00']];
 ob_start();

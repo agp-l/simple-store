@@ -7,7 +7,7 @@
           <span class="logo">dobrodruzi</span>
         </a>
         <button class="menu-toggle" type="button" id="menu-toggle" aria-controls="main-nav" aria-expanded="false" aria-label="Otevřít nabídku"><span></span><span></span><span></span></button>
-        <form class="search" id="search-form" role="search" method="get" action="<?= htmlspecialchars($searchAction, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><svg viewBox="0 0 24 24" aria-hidden="true">
+        <form class="search" id="search-form" role="search" method="get" action="<?= htmlspecialchars($searchAction, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?php if ($managingCatalog ?? false): ?><input type="hidden" name="manage" value="1"><?php if ($catalogVisibility !== 'all'): ?><input type="hidden" name="visibility" value="<?= htmlspecialchars($catalogVisibility, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?php endif; ?><?php endif; ?><svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="10.5" cy="10.5" r="6.5" />
             <path d="m15.5 15.5 5 5" />
           </svg><input type="search" id="search-input" name="search" value="<?= htmlspecialchars($searchTerm, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="Hledat produkty" placeholder="Co hledáte do výbavy?"
@@ -45,3 +45,15 @@
       </svg>
     </div>
   </header>
+  <?php if ($adminCreate !== null): ?>
+    <nav class="site-admin-bar" aria-label="Správa webu">
+      <div class="wrap site-admin-inner"><strong>Správa webu</strong>
+        <form method="post" action="<?= $siteRoot ?>admin.php"><input type="hidden" name="csrf" value="<?= htmlspecialchars($adminCreate['csrf'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><input type="hidden" name="language" value="<?= htmlspecialchars($adminCreate['language'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><button type="submit" name="action" value="create-product">＋ Produkt</button></form>
+        <form method="post" action="<?= $siteRoot ?>admin.php"><input type="hidden" name="csrf" value="<?= htmlspecialchars($adminCreate['csrf'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><input type="hidden" name="language" value="<?= htmlspecialchars($adminCreate['language'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><input type="hidden" name="type" value="page"><button type="submit" name="action" value="create-content">＋ Stránka</button></form>
+        <form method="post" action="<?= $siteRoot ?>admin.php"><input type="hidden" name="csrf" value="<?= htmlspecialchars($adminCreate['csrf'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><input type="hidden" name="language" value="<?= htmlspecialchars($adminCreate['language'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><input type="hidden" name="type" value="post"><button type="submit" name="action" value="create-content">＋ Článek</button></form>
+        <a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>?manage=1">Produkty a koncepty</a>
+        <a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/blog?manage=1">Blog</a>
+        <a href="<?= $siteRoot ?>admin.php">Další obsah a nastavení</a>
+      </div>
+    </nav>
+  <?php endif; ?>

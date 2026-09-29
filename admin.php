@@ -98,7 +98,7 @@ try {
             exit;
         } elseif (!in_array($action, ['create-content', 'create-translation', 'inline-content', 'create-product',
             'inline-product', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
-            'menu-item-remove', 'page-menu', 'media-upload', 'media-attach'], true) ||
+            'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product'], true) ||
             !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach'], true)) {
                 header('Content-Type: application/json; charset=utf-8');
@@ -127,6 +127,10 @@ try {
     }
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'inline-content') {
         require __DIR__ . '/src/Admin/inline-content.php';
+        exit;
+    }
+    if ($method === 'POST' && ($_POST['action'] ?? '') === 'delete-product') {
+        require __DIR__ . '/src/Admin/delete-product.php';
         exit;
     }
     if (($method === 'POST' && in_array($_POST['action'] ?? '', ['media-upload', 'media-attach'], true)) ||
@@ -170,9 +174,14 @@ try {
         echo json_encode(['error' => $site['debug'] ? (string) $exception : 'Databázi se nepodařilo načíst.']);
         exit;
     }
-    http_response_code(500);
+    $deletingProduct = $method === 'POST' && ($_POST['action'] ?? '') === 'delete-product';
+    $knownDeleteError = $deletingProduct && ($exception instanceof InvalidArgumentException ||
+        ($exception instanceof RuntimeException && str_contains($exception->getMessage(), 'mezi')));
+    http_response_code($knownDeleteError
+        ? ($exception instanceof InvalidArgumentException ? 422 : 409) : 500);
     $screen = 'error';
-    $error = $site['debug'] ? (string) $exception : 'Administraci se nepodařilo načíst.';
+    $error = $knownDeleteError ? $exception->getMessage() :
+        ($site['debug'] ? (string) $exception : 'Administraci se nepodařilo načíst.');
 }
 
 require __DIR__ . '/view/admin/layout.php';

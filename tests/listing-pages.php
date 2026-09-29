@@ -53,4 +53,35 @@ if (count($page['items']) !== 6 || $page['nextOffset'] !== 6 ||
     throw new RuntimeException('Blog must request only one bounded batch of published posts.');
 }
 
+$db->rows = array_fill(0, 7, ['slug' => 'koncept']);
+$page = $posts->unpublishedPostsPage('cs', 6);
+if (count($page['items']) !== 6 || $page['nextOffset'] !== 12 ||
+    !str_contains($db->sql, 'active_document_key IS NOT NULL AND published=0') ||
+    !str_contains($db->sql, 'ORDER BY id DESC LIMIT %i OFFSET %i') ||
+    $db->parameters !== ['post', 'cs', 7, 6]) {
+    throw new RuntimeException('Draft articles must use a bounded administrative page.');
+}
+
+$renderer = new \SimpleStore\Rendering\PageRenderer(dirname(__DIR__) . '/view');
+$draft = ['slug' => 'koncept', 'title' => 'Rozepsaný článek'];
+$post = ['slug' => 'verejny', 'title' => 'Veřejný článek', 'summary' => '',
+    'body' => '', 'saved_at' => '2026-09-29 10:00:00'];
+ob_start();
+$renderer->render('blog', ['language' => 'cs', 'basePath' => '/shop/',
+    'posts' => [$post], 'draftPosts' => [$draft], 'canManageContent' => true,
+    'adminCsrf' => 'test-csrf', 'draftNextUrl' => '/shop/cs/blog?draft_offset=6']);
+$adminBlog = ob_get_clean();
+ob_start();
+$renderer->render('blog', ['language' => 'cs', 'basePath' => '/shop/',
+    'posts' => [$post], 'draftPosts' => [$draft]]);
+$publicBlog = ob_get_clean();
+if (!str_contains($adminBlog, 'name="action" value="create-content"') ||
+    !str_contains($adminBlog, '/shop/cs/blog/koncept?edit=1') ||
+    !str_contains($adminBlog, '/shop/cs/blog/verejny?edit=1') ||
+    str_contains($publicBlog, '/shop/cs/blog/koncept?edit=1') ||
+    str_contains($publicBlog, 'test-csrf') ||
+    str_contains($publicBlog, '✎ Upravit článek')) {
+    throw new RuntimeException('Blog controls must be visible only to an authenticated administrator.');
+}
+
 echo "Listing page tests passed.\n";

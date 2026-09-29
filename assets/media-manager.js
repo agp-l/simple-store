@@ -2,12 +2,14 @@
   const dialog = document.getElementById('media-picker');
   if (!dialog) return;
   const pageConfig = document.getElementById('media-page-config');
+  const pageSettings = pageConfig ? JSON.parse(pageConfig.textContent) : null;
   let context = window.SimpleStoreMediaContext;
   const pageGrid = document.getElementById('media-page-grid');
   const dialogGrid = document.getElementById('media-dialog-grid');
   const status = dialog.querySelector('[data-media-dialog-status]');
   const pageStatus = document.querySelector('[data-media-status]');
-  let mode = 'gallery-add';
+  let mode = pageSettings?.type === 'product'
+    ? 'main-image' : 'section-add-image';
   let index = null;
   let busy = false;
 
@@ -29,34 +31,33 @@
     return data;
   }
 
-  if (pageConfig) {
-    const config = JSON.parse(pageConfig.textContent);
+  if (pageSettings) {
+    const config = pageSettings;
     context = {
       ...config, getRevision: async () => config.revision,
-      choose: async path => {
-        const form = new FormData();
-        for (const [name, value] of Object.entries({action: 'media-attach', csrf: config.csrf,
-          key: config.key, type: config.type, language: config.language,
-          revision: String(config.revision), path})) form.set(name, value);
-        const result = await request(form);
+      uploaded: (result, action) => {
         config.revision = result.revision;
-        if (pageStatus) pageStatus.textContent = `Vloženo · revize ${config.revision}`;
-      },
-      uploaded: result => {
-        config.revision = result.revision;
-        if (pageStatus) pageStatus.textContent = `Nahráno a vloženo · revize ${config.revision}`;
+        const mainLink = document.querySelector('[data-media-main]');
+        if (mainLink && result.paths?.[0]) {
+          mainLink.href = absolute(result.paths[0]);
+          mainLink.textContent = result.paths[0];
+        }
+        if (pageStatus) pageStatus.textContent =
+          `${action === 'media-upload' ? 'Nahráno' : 'Vloženo'} · revize ${config.revision}`;
         load();
       }
     };
-    document.getElementById('media-target').addEventListener('change', event => {
-      location.assign(event.target.value);
-    });
-    document.querySelector('[data-media-open]').addEventListener('click', () => open('library'));
+    document.querySelector('[data-media-open]').addEventListener('click', () => open(mode));
     render(pageGrid, config.files);
   }
 
   function absolute(path) {
     return path.startsWith('https://') ? path : new URL(context.basePath + path, location.origin).href;
+  }
+
+  function promotesFirst() {
+    return mode === 'main-image' || (mode === 'gallery-add' && context.type === 'product' &&
+      document.getElementById('detail-image')?.dataset.imagePath === 'images/batoh.webp');
   }
 
   function render(container, files) {
@@ -71,26 +72,42 @@
     for (const file of files) {
       const card = document.createElement('article');
       card.className = 'media-item';
+      if (file.uses?.includes('main')) card.classList.add('media-item--main');
       const image = document.createElement('img');
       image.src = absolute(file.thumb);
       image.alt = file.label.replaceAll('-', ' ');
       image.loading = 'lazy';
       const title = document.createElement('strong');
       title.textContent = file.label.replaceAll('-', ' ');
+      const uses = document.createElement('span');
+      uses.className = 'media-item-usage';
+      const roleLabels = {main: 'Hlavní fotografie', gallery: 'V galerii', section: 'V bloku'};
+      uses.textContent = file.uses?.length
+        ? file.uses.map(role => roleLabels[role] || role).join(' · ')
+        : 'V aktuální verzi nepoužitá';
       const buttons = document.createElement('div');
       buttons.className = 'media-item-actions';
       const choose = document.createElement('button');
       choose.type = 'button';
-      choose.textContent = context.type === 'product' && (pageGrid || mode === 'main-image')
-        ? 'Použít jako hlavní' : 'Vložit obrázek';
+      choose.textContent = mode === 'main-image' ? 'Použít jako hlavní'
+        : promotesFirst() ? 'Nastavit jako první fotografii'
+        : mode === 'gallery-add' ? 'Přidat do galerie'
+        : mode === 'gallery-set' ? 'Nahradit v galerii'
+        : mode === 'section-image' ? 'Nahradit v bloku' : 'Vložit do popisu';
+      if (mode === 'main-image' && file.uses?.includes('main')) {
+        choose.textContent = 'Aktuální hlavní fotografie';
+        choose.disabled = true;
+      }
       choose.addEventListener('click', async () => {
         if (busy) return;
         try {
           busy = true;
-          await context.choose(file.path, mode, index);
+          await attach(file.path);
           if (dialog.open) dialog.close();
-          if (pageGrid) load();
-        } catch (error) { status.textContent = error.message; }
+        } catch (error) {
+          status.textContent = error.message;
+          if (!dialog.open && pageStatus) pageStatus.textContent = error.message;
+        }
         finally { busy = false; }
       });
       buttons.append(choose);
@@ -109,7 +126,7 @@
         });
         buttons.append(copy);
       }
-      card.append(image, title, buttons);
+      card.append(image, title, uses, buttons);
       container.append(card);
     }
   }
@@ -124,7 +141,10 @@
       if (!response.ok || !Array.isArray(data.files)) throw new Error(data.error || 'Fotografie se nepodařilo načíst.');
       render(dialogGrid, data.files);
       render(pageGrid, data.files);
-    } catch (error) { status.textContent = error.message; }
+    } catch (error) {
+      status.textContent = error.message;
+      if (pageStatus) pageStatus.textContent = error.message;
+    }
   }
 
   function open(nextMode, nextIndex = null, current = '') {
@@ -132,8 +152,24 @@
     index = nextIndex;
     status.textContent = '';
     dialog.querySelector('[name="path"]').value = current;
+    dialog.querySelector('.media-primary').textContent = promotesFirst()
+      ? 'Nahrát · první jako hlavní' : mode === 'gallery-add'
+        ? 'Nahrát do galerie' : mode === 'gallery-set'
+          ? 'Nahrát · první nahradí snímek' : mode === 'section-image'
+            ? 'Nahrát · první nahradí blok' : 'Nahrát do popisu';
     dialog.showModal();
     load();
+  }
+
+  async function attach(path) {
+    const revision = await context.getRevision();
+    const fields = new FormData();
+    for (const [name, value] of Object.entries({action: 'media-attach', csrf: context.csrf,
+      key: context.key, type: context.type, language: context.language,
+      revision: String(revision), mode, path})) fields.set(name, value);
+    if (index !== null) fields.set('index', String(index));
+    const result = await request(fields);
+    context.uploaded(result, 'media-attach');
   }
   window.SimpleStoreMedia = {open};
   dialog.querySelector('[data-media-close]').addEventListener('click', () => dialog.close());
@@ -155,11 +191,12 @@
       const fields = new FormData(form);
       for (const [name, value] of Object.entries({action: 'media-upload', csrf: context.csrf,
         key: context.key, type: context.type, language: context.language,
-        revision: String(revision)})) fields.set(name, value);
+        revision: String(revision), mode})) fields.set(name, value);
+      if (index !== null) fields.set('index', String(index));
       const result = await request(fields);
       form.reset();
       dialog.close();
-      context.uploaded(result);
+      context.uploaded(result, 'media-upload');
     } catch (error) { status.textContent = error.message; }
     finally { busy = false; }
   });
@@ -169,10 +206,8 @@
     if (busy) return;
     busy = true;
     try {
-      await context.getRevision();
-      await context.choose(event.currentTarget.elements.path.value.trim(), mode, index);
+      await attach(event.currentTarget.elements.path.value.trim());
       dialog.close();
-      if (pageGrid) load();
     } catch (error) { status.textContent = error.message; }
     finally { busy = false; }
   });

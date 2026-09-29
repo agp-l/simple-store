@@ -26,6 +26,7 @@ $searchAction ??= $basePath . $language;
 $editMode ??= false;
 $contentEditMode ??= false;
 $page ??= '';
+$adminCreate ??= null;
 ?>
 <!doctype html>
 <html lang="<?= htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
@@ -41,11 +42,11 @@ $page ??= '';
 <?php require $bodyView; ?>
 <?php require __DIR__ . '/footer.php'; ?>
 <?php require __DIR__ . '/cart.php'; ?>
-<script defer src="<?= $siteRoot ?>assets/app.js"></script>
+<script defer src="<?= $siteRoot ?>assets/app.js?v=<?= filemtime(__DIR__ . '/../assets/app.js') ?>"></script>
 <?php if ($page === 'catalog' || $page === 'blog'): ?><script defer src="<?= $siteRoot ?>assets/load-more.js"></script><?php endif; ?>
 <?php if ($page === 'product-record'): ?><script defer src="<?= $siteRoot ?>assets/product.js"></script><?php endif; ?>
-<?php if ($editMode): ?><script defer src="<?= $siteRoot ?>assets/inline-editor.js"></script><?php endif; ?>
-<?php if ($contentEditMode): ?><script defer src="<?= $siteRoot ?>assets/content-editor.js"></script><?php endif; ?>
+<?php if ($editMode): ?><script defer src="<?= $siteRoot ?>assets/inline-editor.js?v=<?= filemtime(__DIR__ . '/../assets/inline-editor.js') ?>"></script><?php endif; ?>
+<?php if ($contentEditMode): ?><script defer src="<?= $siteRoot ?>assets/content-editor.js?v=<?= filemtime(__DIR__ . '/../assets/content-editor.js') ?>"></script><?php endif; ?>
 <?php if ($editMode || $contentEditMode || ($mediaManager ?? false)): ?><script defer src="<?= $siteRoot ?>assets/media-manager.js?v=<?= filemtime(__DIR__ . '/../assets/media-manager.js') ?>"></script><?php endif; ?>
 </body>
 </html>

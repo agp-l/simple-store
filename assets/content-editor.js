@@ -42,10 +42,6 @@
   window.SimpleStoreMediaContext = {
     ...config, basePath: new URL('.', new URL(config.endpoint, location.href)).pathname,
     getRevision: async () => { await queue; if (failed) throw new Error('Nejdřív obnov stránku po chybě uložení.'); return config.revision; },
-    choose: (path, mode, index) => {
-      if (mode === 'section-image') save('section.set', 'section_body', path, index);
-      else save('section.image.add', '', path, index);
-    },
     uploaded: result => {
       config.revision = result.revision;
       nextUrl = result.url;

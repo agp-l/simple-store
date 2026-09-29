@@ -69,7 +69,7 @@
       `Načteno ${count} ${count === 1 ? 'produkt' : count > 1 && count < 5 ? 'produkty' : 'produktů'}`;
     document.getElementById('empty').hidden = count !== 0;
   }
-  sort.addEventListener('change', () => {
+  sort?.addEventListener('change', () => {
     const next = new URL(location.href);
     next.searchParams.delete('offset');
     if (sort.value === 'default') next.searchParams.delete('sort');

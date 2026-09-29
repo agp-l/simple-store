@@ -15,12 +15,15 @@
 .media-upload-form .media-primary:hover { background:#2d7130; color:#fff; }
 .media-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(175px, 1fr)); gap:13px; margin:16px 0; }
 .media-item { min-width:0; padding:9px; border:1px solid #d8e5d4; border-radius:5px; background:#fff; }
+.media-item--main { border-color:#489450; }
 .media-item > img { display:block; width:100%; height:145px; object-fit:contain; background:#f4f6f2; }
 .media-item strong { display:block; margin:9px 0; overflow-wrap:anywhere; font-size:13px; }
+.media-item-usage { display:block; min-height:2.5em; margin:-2px 0 10px; color:#536250; font-size:12px; line-height:1.25; }
+.media-item--main .media-item-usage { color:#267334; font-weight:700; }
 .media-item-actions { display:flex; flex-wrap:wrap; gap:5px; }
 .media-item-actions button { min-height:31px; padding:5px 7px; font-size:11px; }
 .media-item-actions button:first-child { width:100%; background:#e9f5e8; }
-.media-target-select { display:block; width:100%; margin:8px 0 14px; padding:10px; }
+.media-item-actions button:disabled { border-color:#bdd6bd; background:#eef4ed; color:#536b56; cursor:default; }
 .media-actions { display:flex; flex-wrap:wrap; align-items:center; gap:18px; }
 .media-picker [data-media-dialog-status], [data-media-status] { min-height:1.5em; color:#245e2c; font-weight:700; }
 @media (max-width:600px) { .media-picker { padding:15px; } .media-grid { grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; } .media-item > img { height:110px; } }

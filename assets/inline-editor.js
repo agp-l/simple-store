@@ -42,13 +42,6 @@
   window.SimpleStoreMediaContext = {
     ...config, basePath: new URL('.', new URL(config.endpoint, location.href)).pathname,
     getRevision: async () => { await queue; if (failed) throw new Error('Nejdřív obnov stránku po chybě uložení.'); return config.revision; },
-    choose: (path, mode, index) => {
-      if (mode === 'main-image') save('set', 'image_path', path);
-      else if (mode === 'gallery-set') save('gallery.set', '', path, index);
-      else if (mode === 'section-image') save('section.set', 'section_body', path, index);
-      else if (mode === 'section-add-image') save('section.image.add', '', path, index);
-      else save('gallery.add', '', path);
-    },
     uploaded: result => {
       config.revision = result.revision;
       nextUrl = result.url;
