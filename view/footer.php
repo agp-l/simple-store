@@ -31,36 +31,11 @@ $drawFooterBranch = static function (array $links) use (&$drawFooterBranch, $foo
         <a class="logo" href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><svg class="logo-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20 10 5l3 7 2-4 6 12Z" /></svg>dobrodruzi</a>
         <p>Batohy, stany a drobnosti pro chvíle, kdy jste nejraději venku. Vybavte se a vyrazte.</p>
       </div>
-      <nav aria-label="Kategorie v patičce">
-        <h2>Prozkoumat</h2>
+      <?php if ($footerMenu !== []): ?>
+      <nav aria-label="Odkazy v patičce">
+        <h2><?= $footerEscape($footerTitle) ?></h2>
         <ul>
-          <li><a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>#produkty">Všechny produkty</a></li>
-          <?php if ($manualFooterMenu): $drawFooterBranch(array_slice($footerMenu, 0, 3)); else: ?>
-          <?php foreach (array_slice($footerMenu, 0, 3) as $link): ?>
-            <li><a href="<?= htmlspecialchars($link['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>#produkty"><?= htmlspecialchars($link['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a></li>
-          <?php endforeach; ?>
-          <?php endif; ?>
-        </ul>
-      </nav>
-      <nav aria-label="Další odkazy v patičce">
-        <h2>Na cestu</h2>
-        <ul>
-          <?php if ($manualFooterMenu): $drawFooterBranch(array_slice($footerMenu, 3)); else: ?>
-          <?php foreach (array_slice($footerMenu, 3) as $link): ?>
-            <li><a href="<?= htmlspecialchars($link['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>#produkty"><?= htmlspecialchars($link['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a></li>
-          <?php endforeach; ?>
-          <?php endif; ?>
-          <li><a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>#kategorie">Kategorie</a></li>
-          <li><a href="#nahoru">Zpět nahoru ↑</a></li>
-        </ul>
-      </nav>
-      <?php if ($footerInfoMenu !== []): ?>
-      <nav aria-label="Informace o nákupu">
-        <h2>Informace</h2>
-        <ul>
-          <?php foreach ($footerInfoMenu as $link): ?>
-            <li><a href="<?= $footerEscape($link['href']) ?>"><?= $footerEscape($link['label']) ?></a></li>
-          <?php endforeach; ?>
+          <?php $drawFooterBranch($footerMenu); ?>
         </ul>
       </nav>
       <?php endif; ?>

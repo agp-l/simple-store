@@ -16,6 +16,7 @@ $skipTarget ??= 'produkty';
 $primaryMenu ??= [];
 $utilityMenu ??= [];
 $footerMenu ??= [];
+$footerTitle ??= 'Informace';
 $manualPrimaryMenu ??= false;
 $manualUtilityMenu ??= false;
 $manualFooterMenu ??= false;

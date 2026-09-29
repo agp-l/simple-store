@@ -7,5 +7,12 @@ return [
     'primary' => ['source' => 'categories', 'parent' => ''],
     'category_tabs' => ['source' => 'categories', 'parent' => '@context'],
     'utility' => ['source' => 'content', 'include_blog' => true],
-    'footer' => ['source' => 'categories', 'parent' => ''],
+    'footer' => ['source' => 'manual', 'title' => 'Informace', 'items' => [
+        ['label' => 'Doprava a platba', 'path' => 'doprava-a-platba', 'children' => []],
+        ['label' => 'Výměna a vrácení zboží', 'path' => 'vymena-a-vraceni-zbozi', 'children' => []],
+        ['label' => 'Obchodní podmínky', 'path' => 'obchodni-podminky', 'children' => []],
+        ['label' => 'Reklamační řád', 'path' => 'reklamacni-rad', 'children' => []],
+        ['label' => 'Ochrana osobních údajů', 'path' => 'ochrana-osobnich-udaju', 'children' => []],
+        ['label' => 'Kontakt', 'path' => 'kontakt', 'children' => []],
+    ]],
 ];

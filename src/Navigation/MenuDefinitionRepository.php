@@ -33,10 +33,16 @@ final class MenuDefinitionRepository
             'SELECT slot, source, parent_path, include_blog, items_json
              FROM navigation_menus WHERE language=%s', $language
         ) as $row) {
+            if ($this->legacyFooter($row)) {
+                $settings['footer'] = $this->defaults['footer'];
+                continue;
+            }
+            $title = $this->title($row['items_json'], $settings[$row['slot']]['title'] ?? 'Informace');
             $settings[$row['slot']] = match ($row['source']) {
-                'categories' => ['source' => 'categories', 'parent' => $row['parent_path']],
-                'content' => ['source' => 'content', 'include_blog' => (bool) $row['include_blog']],
-                'manual' => ['source' => 'manual', 'items' => $this->buildTree($this->decode($row['items_json']))],
+                'categories' => ['source' => 'categories', 'parent' => $row['parent_path'], 'title' => $title],
+                'content' => ['source' => 'content', 'include_blog' => (bool) $row['include_blog'], 'title' => $title],
+                'manual' => ['source' => 'manual', 'title' => $title,
+                    'items' => $this->buildTree($this->decode($row['items_json']))],
                 default => $settings[$row['slot']] ?? ['source' => 'manual', 'items' => []],
             };
         }
@@ -47,11 +53,14 @@ final class MenuDefinitionRepository
     public function itemsForAdmin(string $language, string $slot): array
     {
         $row = $this->row($language, $slot);
-        if ($row === null) return [];
+        if ($row === null || $this->legacyFooter(['slot' => $slot] + $row)) {
+            return $this->sorted($this->defaultItems($slot));
+        }
         return $this->sorted($this->decode($row['items_json']));
     }
 
-    public function saveSlot(string $language, string $slot, string $source, string $parent, bool $blog): void
+    public function saveSlot(string $language, string $slot, string $source, string $parent, bool $blog,
+        ?string $title = null): void
     {
         $this->validateSlot($language, $slot);
         if (!in_array($source, ['categories', 'content', 'manual'], true) ||
@@ -59,19 +68,37 @@ final class MenuDefinitionRepository
             ($parent !== '' && $parent !== '@context' && !CategoryPath::valid($parent))) {
             throw new InvalidArgumentException('Neplatný zdroj nebo kořen menu.');
         }
+        $existing = $this->row($language, $slot);
+        $title ??= $existing === null ? ($this->defaults[$slot]['title'] ?? 'Informace')
+            : $this->title($existing['items_json'], $this->defaults[$slot]['title'] ?? 'Informace');
+        $title = trim($title);
+        if ($title === '' || preg_match('/^.{1,80}$/usD', $title) !== 1) {
+            throw new InvalidArgumentException('Nadpis menu musí mít 1 až 80 znaků.');
+        }
+        $items = $existing === null ? $this->defaultItems($slot) : $this->decode($existing['items_json']);
+        if ($slot === 'footer' && $source === 'manual' && $existing !== null &&
+            $existing['source'] !== 'manual' && $items === []) {
+            $items = $this->defaultItems($slot);
+        }
+        $json = $this->encode($items, $title);
         $this->db->query(
             'INSERT INTO navigation_menus (language, slot, source, parent_path, include_blog, items_json)
              VALUES (%s, %s, %s, %s, %i, %s)
              ON DUPLICATE KEY UPDATE source=VALUES(source), parent_path=VALUES(parent_path),
-             include_blog=VALUES(include_blog)',
+             include_blog=VALUES(include_blog), items_json=VALUES(items_json)',
             $language, $slot, $source, $source === 'categories' ? $parent : '',
-            $source === 'content' ? (int) $blog : 0, '[]'
+            $source === 'content' ? (int) $blog : 0, $json
         );
     }
 
     public function saveItem(string $language, string $slot, ?string $id, array $input): string
     {
         $row = $this->row($language, $slot);
+        if (($row === null && ($this->defaults[$slot]['source'] ?? '') === 'manual') ||
+            ($row !== null && $this->legacyFooter(['slot' => $slot] + $row))) {
+            $this->saveSlot($language, $slot, 'manual', '', false);
+            $row = $this->row($language, $slot);
+        }
         if ($row === null || $row['source'] !== 'manual') {
             throw new InvalidArgumentException('Nejdřív nastav zdroj menu na vlastní odkazy.');
         }
@@ -82,9 +109,10 @@ final class MenuDefinitionRepository
         $parent = (string) ($input['parent_id'] ?? '');
         $order = filter_var($input['sort_order'] ?? null, FILTER_VALIDATE_INT);
         if ($label === '' || preg_match('/^.{1,80}$/usD', $label) !== 1 ||
-            !in_array($type, ['category', 'path'], true) ||
+            !in_array($type, ['category', 'path', 'external'], true) ||
             ($target === '' && $type !== 'path') ||
-            ($target !== '' && !CategoryPath::valid($target)) ||
+            ($type !== 'external' && $target !== '' && !CategoryPath::valid($target)) ||
+            ($type === 'external' && !self::validExternal($target)) ||
             $order === false || $order < 0 || $order > 65535) {
             throw new InvalidArgumentException('Zkontroluj název, cíl a pořadí odkazu.');
         }
@@ -119,6 +147,11 @@ final class MenuDefinitionRepository
     public function removeItem(string $language, string $slot, string $id): void
     {
         $row = $this->row($language, $slot);
+        if (($row === null && ($this->defaults[$slot]['source'] ?? '') === 'manual') ||
+            ($row !== null && $this->legacyFooter(['slot' => $slot] + $row))) {
+            $this->saveSlot($language, $slot, 'manual', '', false);
+            $row = $this->row($language, $slot);
+        }
         if ($row === null || $row['source'] !== 'manual') {
             throw new InvalidArgumentException('Vlastní menu neexistuje.');
         }
@@ -140,29 +173,79 @@ final class MenuDefinitionRepository
         $this->validateSlot($language, $slot);
         if (!$this->installed()) return null;
         return $this->db->queryFirstRow(
-            'SELECT source, items_json FROM navigation_menus WHERE language=%s AND slot=%s LIMIT 1',
+            'SELECT source, parent_path, items_json FROM navigation_menus WHERE language=%s AND slot=%s LIMIT 1',
             $language, $slot
         );
     }
 
     private function storeItems(string $language, string $slot, array $items): void
     {
+        $row = $this->row($language, $slot);
         $this->db->query(
             'UPDATE navigation_menus SET items_json=%s WHERE language=%s AND slot=%s',
-            json_encode(array_values($items), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), $language, $slot
+            $this->encode($items, $this->title($row['items_json'], $this->defaults[$slot]['title'] ?? 'Informace')),
+            $language, $slot
         );
+    }
+
+    private function title(string $json, string $fallback): string
+    {
+        $data = json_decode($json, true);
+        return is_array($data) && is_string($data['title'] ?? null) ? $data['title'] : $fallback;
+    }
+
+    /** The old footer default listed categories in two fixed columns. */
+    private function legacyFooter(array $row): bool
+    {
+        return ($row['slot'] ?? '') === 'footer' && ($row['source'] ?? '') === 'categories' &&
+            ($row['parent_path'] ?? '') === '' &&
+            $this->decode($row['items_json'] ?? '[]') === [];
+    }
+
+    private function encode(array $items, string $title): string
+    {
+        return json_encode(['title' => $title, 'items' => array_values($items)],
+            JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    }
+
+    private function defaultItems(string $slot): array
+    {
+        $items = [];
+        $walk = static function (array $links, string $parent) use (&$walk, &$items, $slot): void {
+            foreach ($links as $link) {
+                $id = substr(hash('sha256', $slot . ':' . count($items)), 0, 16);
+                $type = isset($link['category']) ? 'category' : (isset($link['external']) ? 'external' : 'path');
+                $items[$id] = ['id' => $id, 'parent_id' => $parent, 'label' => $link['label'],
+                    'target_type' => $type, 'target' => $link[$type === 'category' ? 'category' :
+                        ($type === 'external' ? 'external' : 'path')],
+                    'sort_order' => count($items) * 10];
+                $walk($link['children'] ?? [], $id);
+            }
+        };
+        $walk($this->defaults[$slot]['items'] ?? [], '');
+        return $items;
+    }
+
+    public static function validExternal(string $url): bool
+    {
+        if (strlen($url) > 2000 || preg_match('/[\x00-\x20\x7f]/', $url)) return false;
+        if (str_starts_with($url, 'mailto:')) {
+            return filter_var(substr($url, 7), FILTER_VALIDATE_EMAIL) !== false;
+        }
+        return str_starts_with($url, 'https://') && filter_var($url, FILTER_VALIDATE_URL) !== false;
     }
 
     private function decode(string $json): array
     {
         $rows = json_decode($json, true);
+        if (isset($rows['items'])) $rows = $rows['items'];
         if (!is_array($rows)) throw new RuntimeException('Neplatná data menu v databázi.');
         $items = [];
         foreach ($rows as $row) {
             if (!is_array($row) || !is_string($row['id'] ?? null) ||
                 preg_match('/^[a-f0-9]{16}$/D', $row['id']) !== 1 ||
                 !is_string($row['parent_id'] ?? null) || !is_string($row['label'] ?? null) ||
-                !in_array($row['target_type'] ?? null, ['category', 'path'], true) ||
+                !in_array($row['target_type'] ?? null, ['category', 'path', 'external'], true) ||
                 !is_string($row['target'] ?? null) || !is_int($row['sort_order'] ?? null) ||
                 isset($items[$row['id']])) {
                 throw new RuntimeException('Neplatná položka menu v databázi.');
@@ -207,7 +290,7 @@ final class MenuDefinitionRepository
             foreach ($ordered as $row) {
                 if ($row['parent_id'] !== $parent) continue;
                 $link = ['label' => $row['label'], 'children' => $build($row['id'])];
-                $link[$row['target_type'] === 'category' ? 'category' : 'path'] = $row['target'];
+                $link[$row['target_type']] = $row['target'];
                 $links[] = $link;
             }
             return $links;

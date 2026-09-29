@@ -20,6 +20,9 @@ $categories = new class {
 };
 
 $screen = 'categories';
+set_error_handler(static function (int $severity, string $message): never {
+    throw new RuntimeException('A shared admin view emitted a PHP warning: ' . $message);
+});
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
@@ -49,9 +52,23 @@ require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
 if (!str_contains($html, 'value="menu-slot"') ||
     !str_contains($html, 'value="page-menu"') ||
-    !str_contains($html, 'Pořadí horních odkazů')) {
+    !str_contains($html, 'Pořadí horních odkazů') ||
+    str_contains($html, 'Prozkoumat') || str_contains($html, 'Na cestu')) {
     throw new RuntimeException('Menu administration must include placement and page ordering.');
 }
+$slot = 'footer';
+$menuSlots = ['footer' => ['source' => 'manual', 'title' => 'Informace']];
+$activeSlot = $menuSlots[$slot];
+$menuItems = [['id' => str_repeat('a', 16), 'label' => 'Kontakt', 'target_type' => 'path',
+    'target' => 'kontakt', 'parent_id' => '', 'sort_order' => 10, 'depth' => 0]];
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'name="title"') || !str_contains($html, 'destination_page') ||
+    !str_contains($html, 'destination_external') || !str_contains($html, 'Kontakt')) {
+    throw new RuntimeException('Footer editing must offer a heading and selectable destinations.');
+}
+restore_error_handler();
 
 $screen = 'orders';
 $ordersReady = true;

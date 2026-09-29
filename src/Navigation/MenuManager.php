@@ -75,10 +75,14 @@ final class MenuManager
         foreach ($items as $item) {
             $path = $item['path'] ?? null;
             $category = $item['category'] ?? null;
+            $external = $item['external'] ?? null;
             if (!is_string($item['label'] ?? null) || !is_array($item['children'] ?? [])) {
                 throw new InvalidArgumentException('Invalid manual menu item.');
             }
-            if (is_string($category)) {
+            if (is_string($external) && MenuDefinitionRepository::validExternal($external)) {
+                $href = $external;
+                $active = false;
+            } elseif (is_string($category)) {
                 $href = $this->url->category($category);
                 $active = $this->url->categoryPath() !== null &&
                     CategoryPath::contains($category, $this->url->categoryPath());

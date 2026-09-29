@@ -22,30 +22,46 @@ final class StorefrontMenus
             'content_revisions'
         ) > 0;
 
-        $infoPages = [
-            'doprava-a-platba' => 'Doprava a platba',
-            'vymena-a-vraceni-zbozi' => 'Výměna a vrácení zboží',
-            'obchodni-podminky' => 'Obchodní podmínky',
-            'reklamacni-rad' => 'Reklamační řád',
-            'ochrana-osobnich-udaju' => 'Ochrana osobních údajů',
-            'kontakt' => 'Kontakt',
-        ];
-        $published = $hasContent ? array_flip($content->publishedPageSlugs(
-            $url->getLanguage(), array_keys($infoPages))) : [];
-        $footerInfoMenu = [];
-        foreach ($infoPages as $slug => $label) {
-            if (isset($published[$slug])) {
-                $footerInfoMenu[] = ['label' => $label, 'href' => $url->path($slug)];
+        $footer = $menus->links('footer');
+        // A page selected for the footer becomes a link only once it is published.
+        $pageSlugs = [];
+        $prefix = $url->path() . '/';
+        $collect = static function (array $links) use (&$collect, &$pageSlugs, $prefix): void {
+            foreach ($links as $link) {
+                if (str_starts_with($link['href'], $prefix)) {
+                    $relative = substr($link['href'], strlen($prefix));
+                    if (!str_contains($relative, '/') &&
+                        !in_array($relative, ['blog', 'kosik', 'pokladna'], true)) {
+                        $pageSlugs[$relative] = true;
+                    }
+                }
+                $collect($link['children']);
             }
+        };
+        $collect($footer);
+        $published = $hasContent ? array_flip($content->publishedPageSlugs(
+            $url->getLanguage(), array_keys($pageSlugs))) : [];
+        $hiddenUrls = [];
+        foreach (array_keys($pageSlugs) as $slug) {
+            if (!isset($published[$slug])) $hiddenUrls[$url->path($slug)] = true;
         }
+        $filter = static function (array $links) use (&$filter, $hiddenUrls): array {
+            $visible = [];
+            foreach ($links as $link) {
+                if (isset($hiddenUrls[$link['href']])) continue;
+                $link['children'] = $filter($link['children']);
+                $visible[] = $link;
+            }
+            return $visible;
+        };
 
         return [
             'manager' => $menus,
             'hasContent' => $hasContent,
             'primaryMenu' => $menus->links('primary'),
             'utilityMenu' => $hasContent ? $menus->links('utility') : [],
-            'footerMenu' => $menus->links('footer'),
-            'footerInfoMenu' => $footerInfoMenu,
+            'footerMenu' => $filter($footer),
+            'footerTitle' => $settings['footer']['title'] ?? 'Informace',
             'manualPrimaryMenu' => ($settings['primary']['source'] ?? '') === 'manual',
             'manualUtilityMenu' => ($settings['utility']['source'] ?? '') === 'manual',
             'manualFooterMenu' => ($settings['footer']['source'] ?? '') === 'manual',

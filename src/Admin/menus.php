@@ -38,14 +38,37 @@ if ($method === 'POST') {
             if (!is_string($source) || !is_string($parent)) {
                 throw new InvalidArgumentException('Neplatné nastavení menu.');
             }
-            $definitions->saveSlot($language, $slot, $source, $parent, isset($_POST['include_blog']));
+            $title = $_POST['title'] ?? null;
+            if ($title !== null && !is_string($title)) throw new InvalidArgumentException('Neplatný nadpis menu.');
+            $definitions->saveSlot($language, $slot, $source, $parent, isset($_POST['include_blog']), $title);
         } elseif ($action === 'menu-item-save') {
             if (!$menuReady) throw new InvalidArgumentException('Nejdřív importuj database/schema.sql.');
             $id = $_POST['id'] ?? '';
             if (!is_string($id) || ($id !== '' && preg_match('/^[a-f0-9]{16}$/D', $id) !== 1)) {
                 throw new InvalidArgumentException('Neplatný odkaz menu.');
             }
-            $definitions->saveItem($language, $slot, $id === '' ? null : $id, $_POST);
+            $input = $_POST;
+            if (isset($_POST['destination_type'])) {
+                $choice = $_POST['destination_type'];
+                if (!is_string($choice) || !in_array($choice,
+                    ['page', 'category', 'home', 'blog', 'custom', 'external'], true)) {
+                    throw new InvalidArgumentException('Vyber, kam má odkaz vést.');
+                }
+                $field = ['page' => 'destination_page', 'category' => 'destination_category',
+                    'custom' => 'destination_custom', 'external' => 'destination_external'][$choice] ?? null;
+                $target = $choice === 'home' ? '' : ($choice === 'blog' ? 'blog' : $_POST[$field] ?? null);
+                if (!is_string($target)) throw new InvalidArgumentException('Vyber cíl odkazu.');
+                $input['target_type'] = $choice === 'category' ? 'category' :
+                    ($choice === 'external' ? 'external' : 'path');
+                $input['target'] = $target;
+                if ($choice === 'page') {
+                    $validPages = array_column($content->pagesForMenu($language), 'slug');
+                    if (!in_array($target, $validPages, true)) {
+                        throw new InvalidArgumentException('Vyber existující stránku.');
+                    }
+                }
+            }
+            $definitions->saveItem($language, $slot, $id === '' ? null : $id, $input);
         } elseif ($action === 'menu-item-remove') {
             if (!$menuReady) throw new InvalidArgumentException('Nejdřív importuj database/schema.sql.');
             $id = $_POST['id'] ?? null;

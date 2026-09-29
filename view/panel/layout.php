@@ -14,6 +14,7 @@ $skipTarget = 'obsah';
 $primaryMenu = $chrome['primaryMenu'] ?? [];
 $utilityMenu = $chrome['utilityMenu'] ?? [];
 $footerMenu = $chrome['footerMenu'] ?? [];
+$footerTitle = $chrome['footerTitle'] ?? 'Informace';
 $manualPrimaryMenu = $chrome['manualPrimaryMenu'] ?? false;
 $manualUtilityMenu = $chrome['manualUtilityMenu'] ?? false;
 $manualFooterMenu = $chrome['manualFooterMenu'] ?? false;

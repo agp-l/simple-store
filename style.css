@@ -832,7 +832,7 @@
       position: relative;
       z-index: 1;
       display: grid;
-      grid-template-columns: minmax(210px, 1.45fr) repeat(3, minmax(135px, 1fr));
+      grid-template-columns: minmax(230px, 1.5fr) minmax(200px, 1fr);
       gap: clamp(35px, 6vw, 90px);
       padding: 74px 0 66px;
     }
