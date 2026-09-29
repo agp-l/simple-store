@@ -208,8 +208,8 @@ final class CheckoutController
             $error = 'Celková částka včetně dopravy přesahuje limit objednávky. Uprav počet kusů v košíku.';
         }
         $installed = $this->orders->installed();
-        $shippingConfigured = $this->shippingOptions !== [] && $installed;
-        $ready = $summary['can_continue'] && $shippingConfigured && $price !== null &&
+        $shippingConfigured = $this->shippingOptions !== [];
+        $ready = $summary['can_continue'] && $shippingConfigured && $installed && $price !== null &&
             $summary['subtotal_czk'] + $price <= 9999999 &&
             $this->bank !== null && $this->termsUrl !== '';
         $data = array_merge($this->shared, [
@@ -225,7 +225,6 @@ final class CheckoutController
             'checkout' => $summary, 'delivery' => $delivery,
             'shippingOptions' => $this->shippingOptions, 'selectedShippingPrice' => $price,
             'shippingConfigured' => $shippingConfigured, 'bankConfigured' => $this->bank !== null,
-            'checkoutAvailable' => $shippingConfigured && $this->bank !== null && $this->termsUrl !== '',
             'checkoutReady' => $ready, 'termsUrl' => $this->termsUrl,
             'error' => $error, 'step' => $step,
             'setupNotice' => !$installed ? 'Pro objednávky znovu importuj aktuální database/schema.sql.' : '',

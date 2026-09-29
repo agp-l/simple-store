@@ -1,8 +1,8 @@
 <?php
 declare(strict_types=1);
 
-// Copy to config/checkout.php, set the real bank account, legal page and shipping prices.
-// The checkout stays disabled while these required settings are empty.
+// Copy to config/checkout.php to set the real bank account, legal page and shipping price.
+// Home delivery is enabled for development; adjust its price before taking orders.
 return [
     'terms_url' => '', // Local published page, e.g. /cs/obchodni-podminky (adjust for subdirectory).
     'bank_transfer' => [
@@ -12,12 +12,12 @@ return [
         'payment_due_days' => 7,
     ],
     'shipping_methods' => [
-        // Enable only shipping methods that you can really fulfill. Prices are whole CZK.
-        // 'home' => [
-        //     'label' => 'Doručení na adresu',
-        //     'price_czk' => 99,
-        //     'requires_address' => true,
-        // ],
+        // Prices are whole CZK.
+        'home' => [
+            'label' => 'Doručení na adresu',
+            'price_czk' => 99,
+            'requires_address' => true,
+        ],
         // Pickup requires a verified pickup-point selector; the current checkout offers home only.
         // 'pickup' => [
         //     'label' => 'Výdejní místo',

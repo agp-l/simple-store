@@ -88,7 +88,12 @@ try {
             $bank = new BankTransferPayment((string) $bankSettings['iban'],
                 (string) $bankSettings['account_display'], (string) $bankSettings['recipient']);
         }
-        $shipping = new ShippingPolicy($checkoutConfig['shipping_methods'] ?? []);
+        $shippingMethods = $checkoutConfig['shipping_methods'] ?? [];
+        // Existing local checkout.php files copied from the old example have an empty list.
+        if ($route['name'] !== 'order' && $shippingMethods === []) {
+            $shippingMethods = (require __DIR__ . '/config/checkout.example.php')['shipping_methods'];
+        }
+        $shipping = new ShippingPolicy($shippingMethods);
         $dueDays = $bankSettings['payment_due_days'] ?? 7;
         $orders = new OrderRepository($db, $bank, $dueDays);
         $customerId = null;

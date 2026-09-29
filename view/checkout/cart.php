@@ -50,9 +50,8 @@ require __DIR__ . '/common.php';
       </section>
       <div class="checkout-sidebar">
         <?php require __DIR__ . '/summary.php'; ?>
-        <?php if ($checkoutCanContinue && ($checkoutAvailable ?? false) && $availableShippingOptions !== []): ?><a class="checkout-primary" href="<?= $checkoutEscape($checkoutUrl . '?step=shipping') ?>">Pokračovat k dopravě <span aria-hidden="true">→</span></a>
+        <?php if ($checkoutCanContinue && ($shippingConfigured ?? false) && $availableShippingOptions !== []): ?><a class="checkout-primary" href="<?= $checkoutEscape($checkoutUrl . '?step=shipping') ?>">Pokračovat k dopravě <span aria-hidden="true">→</span></a>
         <?php elseif (!($shippingConfigured ?? false) || $availableShippingOptions === []): ?><p class="checkout-alert" role="alert">Doprava na adresu zatím není nastavená. Objednávku teď nelze dokončit.</p>
-        <?php elseif (!($checkoutAvailable ?? false)): ?><p class="checkout-alert" role="alert">Platba nebo obchodní podmínky zatím nejsou nastavené. Objednávku teď nelze dokončit.</p>
         <?php else: ?><p class="checkout-fineprint">Před pokračováním upravte produkty označené upozorněním.</p><?php endif; ?>
         <a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Pokračovat v nákupu</a>
       </div>

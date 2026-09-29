@@ -87,7 +87,6 @@ final class PageRenderer
         $step = (string) ($data['step'] ?? '');
         $bankConfigured = (bool) ($data['bankConfigured'] ?? false);
         $shippingConfigured = (bool) ($data['shippingConfigured'] ?? false);
-        $checkoutAvailable = (bool) ($data['checkoutAvailable'] ?? false);
         $termsUrl = (string) ($data['termsUrl'] ?? '');
         $order = $data['order'] ?? [];
         $bankPayment = $data['bankPayment'] ?? [];

@@ -25,6 +25,7 @@ jobs:
       - name: Test checkout and shared views
         run: |
           php tests/checkout-cart.php
+          php tests/checkout-render.php
           php tests/checkout-order.php
           php tests/catalog-render.php
           php tests/url-manager.php
