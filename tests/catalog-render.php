@@ -24,13 +24,33 @@ $product = ['slug' => 'bota', 'name' => 'Lehká bota', 'brand' => 'Topo',
     'sizes' => '', 'stock_status' => 'in_stock'];
 ob_start();
 $renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
-    'products' => [$product], 'categoryLabels' => ['boty' => 'Boty']]);
+    'products' => [$product], 'categoryLabels' => ['boty' => 'Boty'],
+    'nextUrl' => '/shop/cs?offset=12']);
 $html = ob_get_clean();
 if (!str_contains($html, '/shop/cs/produkt/bota') ||
     !str_contains($html, 'data-name="Lehká bota"') ||
     !str_contains($html, 'data-add') ||
-    !str_contains($html, 'Načteno 1 produkt')) {
+    !str_contains($html, 'Načteno 1 produkt') ||
+    !str_contains($html, 'data-load-more data-target="catalog" href="/shop/cs?offset=12"')) {
     throw new RuntimeException('Published database rows must render as usable product cards.');
+}
+
+$cards = $renderer->cards('product', [$product], [
+    'basePath' => '/shop/', 'language' => 'cs', 'categoryLabels' => ['boty' => 'Boty'],
+]);
+if (!str_contains($cards, '/shop/cs/produkt/bota') || str_contains($cards, '<html')) {
+    throw new RuntimeException('The additional catalog batch must render only the reusable product cards.');
+}
+
+$posts = [['slug' => 'stezka', 'title' => 'Na stezce', 'summary' => 'Vyrazili jsme',
+    'saved_at' => '2026-01-02 12:00:00']];
+ob_start();
+$renderer->render('blog', ['basePath' => '/shop/', 'language' => 'cs',
+    'posts' => $posts, 'nextUrl' => '/shop/cs/blog?offset=6']);
+$html = ob_get_clean();
+if (!str_contains($html, '/shop/cs/blog/stezka') ||
+    !str_contains($html, 'data-load-more data-target="cms-post-list"')) {
+    throw new RuntimeException('Blog must link to articles and the next batch.');
 }
 
 echo "Catalog rendering tests passed.\n";
