@@ -84,6 +84,20 @@ $orderPaymentLabel = static fn (mixed $status): string => match ($status) {
         </form>
       <?php endif; ?>
       <p class="panel-help">Stav platby se z banky nenačítá automaticky.</p>
+      <?php if (!in_array($order['status'], ['completed', 'cancelled', 'test'], true)): ?>
+      <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+        <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="set-order-status"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
+        <label>Vyřízení objednávky <select name="order_status">
+          <?php if ($paid): ?>
+            <option value="processing" <?= $order['status'] === 'processing' ? 'selected' : '' ?>>Připravuje se</option>
+            <option value="shipped" <?= $order['status'] === 'shipped' ? 'selected' : '' ?>>Odesláno</option>
+            <option value="completed">Dokončeno</option>
+          <?php else: ?><option value="cancelled">Zrušeno (bez přijaté platby)</option><?php endif; ?>
+        </select></label>
+        <button class="panel-button" type="submit">Uložit stav</button>
+        <p class="panel-help">Odesláno vyber až po skutečném odeslání zásilky. Dokončené a zrušené objednávky se zákazníkovi přesunou do historie.</p>
+      </form>
+      <?php endif; ?>
     </aside>
   </div>
 <?php elseif ($ordersReady): ?>

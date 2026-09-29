@@ -40,4 +40,25 @@ if (!str_contains($html, 'aria-current="page"') ||
     // Real shell scripts carry a defer attribute; an unescaped user script does not.
     throw new RuntimeException('Customer address view is incomplete or rendered an unsafe user name.');
 }
+$section = 'orders';
+$orderHistory = false;
+$orderOffset = 0;
+$orderPage = ['items' => [], 'nextOffset' => null];
+$orders = [];
+$orderDetail = null;
+ob_start();
+require dirname(__DIR__) . '/view/account/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'Aktivní objednávky') ||
+    !str_contains($html, 'Historie') || !str_contains($html, 'name="action" value="claim-order"')) {
+    throw new RuntimeException('Customer orders screen is incomplete.');
+}
+$section = 'settings';
+ob_start();
+require dirname(__DIR__) . '/view/account/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'name="action" value="email"') ||
+    !str_contains($html, 'name="action" value="password"')) {
+    throw new RuntimeException('Customer email or password settings are missing.');
+}
 echo "Customer rendering tests passed.\n";

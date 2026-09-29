@@ -9,6 +9,11 @@ require __DIR__ . '/common.php';
   <?php if (!($shippingConfigured ?? false) || $availableShippingOptions === []): ?>
     <p class="checkout-alert" role="alert">Doprava zatím není nastavená. Objednávku teď nelze dokončit.</p><p><a class="checkout-back" href="<?= $checkoutEscape($cartUrl) ?>">← Zpět do košíku</a></p>
   <?php else: ?>
+    <?php if (!empty($customerAddresses)): ?><div class="checkout-saved-addresses"><strong>Použít uloženou adresu</strong><div>
+      <?php foreach ($customerAddresses as $savedAddress): ?><?php if (($savedAddress['country'] ?? '') !== 'CZ') continue; ?>
+        <a href="<?= $checkoutEscape($checkoutUrl . '?step=shipping&address=' . (int) $savedAddress['id']) ?>"><?= $checkoutEscape($savedAddress['label']) ?> · <?= $checkoutEscape($savedAddress['street']) ?>, <?= $checkoutEscape($savedAddress['city']) ?></a>
+      <?php endforeach; ?>
+    </div></div><?php endif; ?>
     <div class="checkout-columns">
       <form class="checkout-panel checkout-form" method="post" action="<?= $checkoutEscape($checkoutUrl) ?>">
         <input type="hidden" name="csrf" value="<?= $checkoutEscape($cartToken) ?>"><input type="hidden" name="action" value="delivery"><input type="hidden" name="country" value="CZ">

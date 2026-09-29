@@ -93,6 +93,7 @@ ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
 if (!str_contains($html, 'name="action" value="mark-order-paid"') ||
+    !str_contains($html, 'name="action" value="set-order-status"') ||
     !str_contains($html, 'name="csrf" value="test-token"') ||
     !str_contains($html, 'bank_checked') || !str_contains($html, '&lt;img src=x onerror=alert(1)&gt;') ||
     str_contains($html, '<img src=x onerror=alert(1)>')) {
@@ -102,7 +103,9 @@ $order['payment_status'] = 'paid';
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
-if (str_contains($html, 'name="action" value="mark-order-paid"') || !str_contains($html, 'Zaplaceno')) {
+if (str_contains($html, 'name="action" value="mark-order-paid"') ||
+    !str_contains($html, 'name="action" value="set-order-status"') ||
+    !str_contains($html, 'value="completed"') || !str_contains($html, 'Zaplaceno')) {
     throw new RuntimeException('Paid bank transfers must not show the confirmation form.');
 }
 $orderPage = ['items' => [$order], 'nextOffset' => 25];

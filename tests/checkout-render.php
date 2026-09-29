@@ -41,6 +41,15 @@ if (!str_contains($shipping, 'value="home"') || !str_contains($shipping, '99 Kč
     !str_contains($shipping, 'Pokračovat k platbě')) {
     throw new RuntimeException('Home delivery form must show the configured price and continue action.');
 }
+$data['customerAddresses'] = [['id' => 4, 'label' => 'Domů', 'street' => 'Polní 1',
+    'city' => 'Brno', 'country' => 'CZ']];
+ob_start();
+$renderer->render('shipping', $data);
+$shipping = ob_get_clean();
+if (!str_contains($shipping, '?step=shipping&amp;address=4') ||
+    !str_contains($shipping, 'Polní 1')) {
+    throw new RuntimeException('The saved address cannot be selected in checkout.');
+}
 
 ob_start();
 $renderer->render('payment', $data + ['delivery' => ['method' => 'home'], 'selectedShippingPrice' => 99]);

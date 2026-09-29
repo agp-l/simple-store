@@ -72,6 +72,24 @@ final class CustomerRepository
         );
     }
 
+    /** Reconfirm the account password before changing its login identifier. */
+    public function changeEmail(int $userId, string $currentPassword, string $replacement): void
+    {
+        $user = $this->byId($userId);
+        if ($user === null || !password_verify($currentPassword, $user['password_hash'])) {
+            throw new InvalidArgumentException('Současné heslo není správné.');
+        }
+        $replacement = self::email($replacement);
+        if ($replacement === $user['email']) return;
+        if ($this->db->queryFirstRow('SELECT id FROM users WHERE email=%s LIMIT 1', $replacement) !== null) {
+            throw new InvalidArgumentException('Tento e-mail už používá jiný účet.');
+        }
+        $this->db->query(
+            'UPDATE users SET email=%s WHERE id=%i AND role=%s AND is_active=1',
+            $replacement, $userId, 'customer'
+        );
+    }
+
     public function changePassword(int $userId, string $current, string $replacement): void
     {
         $user = $this->byId($userId);
@@ -149,9 +167,64 @@ final class CustomerRepository
             'shop_orders', 'order_token', 'payment_status'
         ) === 2;
         return $this->db->query(
-            'SELECT order_number, status, total_czk, created_at' .
+            'SELECT id, order_number, status, total_czk, created_at' .
             ($checkoutColumns ? ', order_token, payment_status' : '') . ' FROM shop_orders
              WHERE user_id=%i ORDER BY id DESC LIMIT 50', $userId
+        );
+    }
+
+    /** Pages stay scoped to the signed-in user, including old and active orders. */
+    public function orderPage(int $userId, bool $history, int $offset = 0, int $limit = 20): array
+    {
+        if ($userId < 1 || $offset < 0 || $offset > 100000 || $limit < 1 || $limit > 50) {
+            throw new InvalidArgumentException('Neplatná stránka objednávek.');
+        }
+        $condition = $history ? 'IN' : 'NOT IN';
+        $rows = $this->db->query(
+            'SELECT id, order_number, status, total_czk, created_at, order_token, payment_status
+             FROM shop_orders WHERE user_id=%i AND status ' . $condition .
+            ' (%s, %s, %s) ORDER BY id DESC LIMIT %i OFFSET %i',
+            $userId, 'completed', 'cancelled', 'test', $limit + 1, $offset
+        );
+        return ['items' => array_slice($rows, 0, $limit),
+            'nextOffset' => count($rows) > $limit ? $offset + $limit : null];
+    }
+
+    public function order(int $userId, int $id): ?array
+    {
+        if ($userId < 1 || $id < 1) return null;
+        $row = $this->db->queryFirstRow(
+            'SELECT id, order_number, status, created_at, total_czk, subtotal_czk,
+                    shipping_czk, items_json, shipping_json, payment_method, payment_status,
+                    order_token, variable_symbol, payment_due_at
+             FROM shop_orders WHERE user_id=%i AND id=%i LIMIT 1', $userId, $id
+        );
+        if ($row === null) return null;
+        $row['items'] = json_decode((string) $row['items_json'], true);
+        $row['shipping'] = json_decode((string) $row['shipping_json'], true);
+        $row['items'] = is_array($row['items']) ? $row['items'] : [];
+        $row['shipping'] = is_array($row['shipping']) ? $row['shipping'] : [];
+        unset($row['items_json'], $row['shipping_json']);
+        return $row;
+    }
+
+    /** A guest order requires possession of its private receipt token and the matching email. */
+    public function claimGuestOrder(int $userId, string $token): void
+    {
+        if (preg_match('/^[a-f0-9]{64}$/D', $token) !== 1) {
+            throw new InvalidArgumentException('Zadej platný soukromý odkaz na objednávku.');
+        }
+        $user = $this->byId($userId);
+        $row = $this->db->queryFirstRow(
+            'SELECT id, user_id, customer_email FROM shop_orders WHERE order_token=%s LIMIT 1', $token
+        );
+        if ($user === null || $row === null || $row['user_id'] !== null ||
+            strtolower((string) $row['customer_email']) !== $user['email']) {
+            throw new InvalidArgumentException('Objednávku nelze přiřadit. Zkontroluj její odkaz a e-mail.');
+        }
+        $this->db->query(
+            'UPDATE shop_orders SET user_id=%i WHERE id=%i AND user_id IS NULL AND order_token=%s',
+            $userId, (int) $row['id'], $token
         );
     }
 

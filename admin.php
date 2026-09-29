@@ -104,7 +104,7 @@ try {
         } elseif (!in_array($action, ['create-content', 'create-translation', 'inline-content', 'create-product',
             'inline-product', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
             'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product',
-            'mark-order-paid', 'save-checkout-settings'], true) ||
+            'mark-order-paid', 'set-order-status', 'save-checkout-settings'], true) ||
             !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach'], true)) {
                 header('Content-Type: application/json; charset=utf-8');
@@ -171,7 +171,8 @@ try {
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }
-    if ($action === 'mark-order-paid' || ($method !== 'POST' && $section === 'orders')) {
+    if (in_array($action, ['mark-order-paid', 'set-order-status'], true) ||
+        ($method !== 'POST' && $section === 'orders')) {
         require __DIR__ . '/src/Admin/orders.php';
         require __DIR__ . '/view/admin/layout.php';
         exit;

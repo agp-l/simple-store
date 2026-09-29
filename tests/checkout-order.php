@@ -52,6 +52,15 @@ class MeekroDB
 
     public function query(string $sql, mixed ...$values): array
     {
+        if (str_contains($sql, 'UPDATE shop_orders SET status=')) {
+            foreach ($this->rows as &$row) {
+                if ($row['id'] === $values[1] && $row['status'] === $values[2]) {
+                    $row['status'] = $values[0];
+                }
+            }
+            unset($row);
+            return [];
+        }
         if (str_contains($sql, 'UPDATE shop_orders')) {
             $hasAdmin = str_contains($sql, 'payment_verified_by=%i');
             $id = $hasAdmin ? $values[2] : $values[1];
@@ -137,6 +146,17 @@ if ($db->rows[0]['payment_status'] !== 'paid' || $db->rows[0]['status'] !== 'new
     $repository->managementPage(0, 20, 'paid')['items'][0]['id'] !== 1 ||
     $repository->managementPage(0, 20, 'pending')['items'] !== []) {
     throw new RuntimeException('Manual reconciliation changed the wrong status or filter.');
+}
+$repository->setFulfillmentStatus(1, 'processing');
+$repository->setFulfillmentStatus(1, 'shipped');
+$repository->setFulfillmentStatus(1, 'completed');
+if ($db->rows[0]['status'] !== 'completed') {
+    throw new RuntimeException('Fulfillment status did not advance.');
+}
+try {
+    $repository->setFulfillmentStatus(1, 'cancelled');
+    throw new RuntimeException('A completed and paid order was cancelled.');
+} catch (InvalidArgumentException $expected) {
 }
 $db->rows[0]['payment_method'] = 'comgate';
 try {

@@ -26,7 +26,9 @@ final class CheckoutController
         private ?BankTransferPayment $bank,
         private ?int $customerId,
         string $termsUrl,
-        private bool $allowLocalPreview = false
+        private bool $allowLocalPreview = false,
+        private array $customerProfile = [],
+        private array $customerAddresses = []
     ) {
         $this->cartUrl = $url->path('kosik');
         $this->checkoutUrl = $url->path('pokladna');
@@ -200,6 +202,26 @@ final class CheckoutController
         $summary = $this->cartService->summary($this->cart);
         $delivery = $this->cart->state()['delivery'] ?? null;
         $delivery = is_array($delivery) ? $delivery : [];
+        if ($step === 'shipping' && $this->customerId !== null) {
+            $delivery += [
+                'name' => (string) ($this->customerProfile['display_name'] ?? ''),
+                'email' => (string) ($this->customerProfile['email'] ?? ''),
+                'phone' => (string) ($this->customerProfile['phone'] ?? ''),
+            ];
+            $chosen = $_GET['address'] ?? null;
+            if (is_string($chosen) && ctype_digit($chosen)) {
+                foreach ($this->customerAddresses as $address) {
+                    if ((int) ($address['id'] ?? 0) !== (int) $chosen ||
+                        ($address['country'] ?? '') !== 'CZ') continue;
+                    $delivery = array_merge($delivery, [
+                        'name' => $address['recipient'], 'phone' => $address['phone'] ?: $delivery['phone'],
+                        'street' => $address['street'], 'city' => $address['city'],
+                        'postal_code' => $address['postal_code'], 'country' => 'CZ',
+                    ]);
+                    break;
+                }
+            }
+        }
         if ($step === 'shipping' && $error !== '' && is_array($_POST)) {
             // Keep submitted contact details visible after a validation error.
             foreach (['method', 'name', 'email', 'phone', 'street', 'city', 'postal_code', 'country'] as $field) {
@@ -228,6 +250,7 @@ final class CheckoutController
             'cartUrl' => $this->cartUrl, 'checkoutUrl' => $this->checkoutUrl,
             'cartToken' => $this->cart->token(), 'cartCount' => $this->cart->count(),
             'checkout' => $summary, 'delivery' => $delivery,
+            'customerAddresses' => $this->customerAddresses,
             'shippingOptions' => $this->shippingOptions, 'selectedShippingPrice' => $price,
             'shippingConfigured' => $shippingConfigured, 'bankConfigured' => $this->bank !== null,
             'checkoutReady' => $ready, 'testCheckout' => $testCheckout, 'termsUrl' => $this->termsUrl,

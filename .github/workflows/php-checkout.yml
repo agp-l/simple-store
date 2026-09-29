@@ -36,6 +36,8 @@ jobs:
           php tests/storefront-footer.php
           php tests/url-manager.php
           php tests/account-render.php
+          php tests/customer-account.php
+          php tests/customer-orders.php
           php tests/admin-render.php
           php tests/admin-auth.php
       - name: Test cart cookie across HTTP requests

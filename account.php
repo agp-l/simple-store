@@ -25,6 +25,12 @@ $csrf = '';
 $user = null;
 $addresses = [];
 $orders = [];
+$orderPage = ['items' => [], 'nextOffset' => null];
+$orderDetail = null;
+$orderHistory = ($_GET['history'] ?? '') === '1';
+$orderOffset = filter_var($_GET['offset'] ?? '0', FILTER_VALIDATE_INT,
+    ['options' => ['min_range' => 0, 'max_range' => 100000]]);
+if ($orderOffset === false) $orderOffset = 0;
 $editAddress = null;
 $registrationAllowed = (bool) ($site['customer_registration'] ?? true);
 $section = $_GET['section'] ?? 'overview';
@@ -105,6 +111,14 @@ try {
                 $customers->updateProfile($userId, $input('display_name'), $input('phone'));
                 $redirect($accountUrl . '?section=settings&saved=1');
             }
+            if ($action === 'email') {
+                $newEmail = $input('new_email');
+                if (strcasecmp(trim($newEmail), trim($input('email_confirm'))) !== 0) {
+                    throw new InvalidArgumentException('Nové e-mailové adresy se neshodují.');
+                }
+                $customers->changeEmail($userId, $input('current_password'), $newEmail);
+                $redirect($accountUrl . '?section=settings&saved=1');
+            }
             if ($action === 'password') {
                 $replacement = $input('new_password');
                 if ($replacement !== $input('password_confirm')) {
@@ -132,6 +146,15 @@ try {
                 }
                 $redirect($accountUrl . '?section=addresses&saved=1');
             }
+            if ($action === 'claim-order') {
+                $reference = $input('order_reference');
+                $path = parse_url($reference, PHP_URL_PATH);
+                $token = preg_match('/^[a-f0-9]{64}$/D', $reference) === 1 ? $reference :
+                    (is_string($path) && preg_match('~(?:^|/)([a-f0-9]{64})/?$~D', $path, $matches) === 1
+                        ? $matches[1] : '');
+                $customers->claimGuestOrder($userId, $token);
+                $redirect($accountUrl . '?section=orders&saved=1');
+            }
             http_response_code(400);
             throw new InvalidArgumentException('Neznámá akce účtu.');
         } catch (InvalidArgumentException $exception) {
@@ -146,7 +169,22 @@ try {
             $addresses = $customers->addresses((int) $user['id']);
         }
         if ($section === 'orders' || $section === 'overview') {
-            $orders = $customers->orders((int) $user['id']);
+            if ($section === 'orders') {
+                $orderPage = $customers->orderPage((int) $user['id'], $orderHistory, $orderOffset);
+                $orders = $orderPage['items'];
+                if (isset($_GET['id'])) {
+                    $rawId = $_GET['id'];
+                    $id = is_string($rawId) ? filter_var($rawId, FILTER_VALIDATE_INT,
+                        ['options' => ['min_range' => 1]]) : false;
+                    $orderDetail = $id === false ? null : $customers->order((int) $user['id'], $id);
+                    if ($orderDetail === null) {
+                        http_response_code(404);
+                        $error = 'Objednávka nebyla nalezena.';
+                    }
+                }
+            } else {
+                $orders = $customers->orderPage((int) $user['id'], false, 0, 5)['items'];
+            }
         }
         if ($section === 'addresses' && isset($_GET['edit'])) {
             $editId = filter_var($_GET['edit'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);

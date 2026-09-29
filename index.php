@@ -101,12 +101,18 @@ try {
         $localPreview = LocalCheckoutPreview::available($_SERVER, (bool) $site['debug'],
             ($checkoutConfig['local_test_checkout'] ?? true) === true);
         $customerId = null;
+        $customerProfile = [];
+        $customerAddresses = [];
         if ($route['name'] !== 'order' && isset($_COOKIE['simple_store_customer'])) {
             $customers = new CustomerRepository($db);
             if ($customers->installed()) {
                 $customerAuth = new CustomerAuth($customers, $url->getBasePath());
                 $customerId = $customerAuth->user()['id'] ?? null;
                 $customerId = $customerId === null ? null : (int) $customerId;
+                if ($customerId !== null) {
+                    $customerProfile = $customers->byId($customerId) ?? [];
+                    $customerAddresses = $customers->addresses($customerId);
+                }
                 session_write_close();
                 session_id('');
             }
@@ -114,7 +120,7 @@ try {
         $controller = new CheckoutController($url, $renderer, $shared, $cart,
             new CartService(new ProductRepository($db, $site['languages']), $site['languages']),
             $shipping, $orders, $bank, $customerId, (string) ($checkoutConfig['terms_url'] ?? ''),
-            $localPreview);
+            $localPreview, $customerProfile, $customerAddresses);
         $controller->handle($route);
         exit;
     }

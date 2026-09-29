@@ -287,6 +287,31 @@ final class OrderRepository
         }
     }
 
+    /** Manual fulfillment state; a bank transfer must be verified before shipping. */
+    public function setFulfillmentStatus(int $id, string $status): void
+    {
+        if ($id < 1 || !in_array($status, ['processing', 'shipped', 'completed', 'cancelled'], true)) {
+            throw new InvalidArgumentException('Neplatný stav objednávky.');
+        }
+        $this->db->startTransaction();
+        try {
+            $row = $this->db->queryFirstRow(
+                'SELECT status, payment_status FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $id
+            );
+            if ($row === null || in_array($row['status'], ['completed', 'cancelled', 'test'], true) ||
+                ($status === 'cancelled' && $row['payment_status'] === 'paid') ||
+                ($status !== 'cancelled' && $row['payment_status'] !== 'paid')) {
+                throw new InvalidArgumentException('Tento přechod stavu není možný. Zaplacenou objednávku před zrušením nejprve vyřeš individuálně.');
+            }
+            $this->db->query('UPDATE shop_orders SET status=%s WHERE id=%i AND status=%s',
+                $status, $id, $row['status']);
+            $this->db->commit();
+        } catch (Throwable $error) {
+            $this->db->rollback();
+            throw $error;
+        }
+    }
+
     private function byIdempotencyKey(string $key): ?array
     {
         return $this->db->queryFirstRow(
