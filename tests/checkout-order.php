@@ -7,6 +7,7 @@ class MeekroDB
     public int $transactions = 0;
     public int $commits = 0;
     public int $rollbacks = 0;
+    public ?array $shipment = null;
     private array $before = [];
 
     public function queryFirstField(string $sql, mixed ...$values): int { return 1; }
@@ -35,6 +36,7 @@ class MeekroDB
 
     public function queryFirstRow(string $sql, mixed ...$values): ?array
     {
+        if (str_contains($sql, 'FROM shop_packeta_shipments')) return $this->shipment;
         foreach ($this->rows as $row) {
             if (str_contains($sql, 'idempotency_key=%s') && $row['idempotency_key'] === $values[0] ||
                 str_contains($sql, 'order_token=%s') && $row['order_token'] === $values[0] ||
@@ -242,5 +244,24 @@ if ($pickupOrder['shipping_czk'] !== 59 || $pickupOrder['total_czk'] !== 1059 ||
     $pickupOrder['user_id'] !== 7 ||
     $pickupOrder['shipping']['pickup_address'] !== 'Nádražní 1, 602 00 Brno') {
     throw new RuntimeException('Pickup point, customer and shipping price were not captured in the order.');
+}
+$packetaShipping = array_replace($pickupShipping, ['method' => 'zasilkovna_pickup',
+    'label' => 'Zásilkovna', 'pickup_verified' => true]);
+$packetaOrder = $repository->create(null, 'eva@example.org', $items, $packetaShipping, 90,
+    str_repeat('1', 64));
+$repository->markPaid((int) $packetaOrder['id'], 4);
+try {
+    $repository->setFulfillmentStatus((int) $packetaOrder['id'], 'ready_to_ship');
+    throw new RuntimeException('Packeta order was ready without an active parcel.');
+} catch (InvalidArgumentException $expected) {}
+$db->shipment = ['status' => 'cancel_uncertain'];
+try {
+    $repository->setFulfillmentStatus((int) $packetaOrder['id'], 'shipped');
+    throw new RuntimeException('Packeta order shipped while cancellation is unresolved.');
+} catch (InvalidArgumentException $expected) {}
+$db->shipment = ['status' => 'created'];
+$repository->setFulfillmentStatus((int) $packetaOrder['id'], 'ready_to_ship');
+if ($db->rows[(int) $packetaOrder['id'] - 1]['status'] !== 'ready_to_ship') {
+    throw new RuntimeException('A confirmed Packeta parcel was not ready to ship.');
 }
 echo "Checkout order and bank transfer tests passed.\n";
