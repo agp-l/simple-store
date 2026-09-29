@@ -1,0 +1,84 @@
+<?php
+$escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+$sectionNames = ['overview' => 'Přehled', 'orders' => 'Objednávky', 'addresses' => 'Moje adresy',
+    'payments' => 'Uložené karty', 'settings' => 'Nastavení účtu'];
+?>
+<div class="panel-area">
+  <?php if ($screen === 'account'): ?>
+    <div class="panel-shell panel-wrap">
+      <?php
+      $panelHeading = 'Můj účet';
+      $panelSubtitle = 'ZÁKAZNICKÁ ZÓNA';
+      $panelIdentity = $user['display_name'];
+      $panelLogoutUrl = $accountUrl;
+      $panelCurrent = $section;
+      $panelLinks = [
+          ['key' => 'overview', 'label' => 'Přehled', 'icon' => '⌂', 'href' => $accountUrl],
+          ['key' => 'orders', 'label' => 'Objednávky', 'icon' => '▤', 'href' => $accountUrl . '?section=orders'],
+          ['key' => 'addresses', 'label' => 'Moje adresy', 'icon' => '⌖', 'href' => $accountUrl . '?section=addresses'],
+          ['key' => 'payments', 'label' => 'Uložené karty', 'icon' => '▣', 'href' => $accountUrl . '?section=payments'],
+          ['key' => 'settings', 'label' => 'Nastavení účtu', 'icon' => '⚙', 'href' => $accountUrl . '?section=settings'],
+      ];
+      require __DIR__ . '/../panel/sidebar.php';
+      ?>
+      <main class="panel-main" id="obsah">
+        <div class="panel-intro"><div><p class="panel-eyebrow">Zákaznická zóna</p><h1><?= $escape($sectionNames[$section]) ?></h1><p><?= $escape($user['display_name']) ?> · <?= $escape($user['email']) ?></p></div></div>
+        <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
+        <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Změny byly uloženy.</p><?php endif; ?>
+
+        <?php if ($section === 'overview'): ?>
+          <div class="panel-grid panel-overview">
+            <section class="panel-panel"><p class="panel-eyebrow">Na cestu</p><h2>Ahoj, <?= $escape($user['display_name']) ?>.</h2><p>Vítej ve svém účtu. Zůstáváš v obchodě a vše důležité máš tady po ruce.</p><a class="panel-button" href="<?= $escape($basePath . $language) ?>#produkty">Prohlédnout vybavení →</a></section>
+            <section class="panel-panel"><p class="panel-eyebrow">Tvůj přehled</p><h2>Vše na jednom místě</h2><div class="panel-metrics"><a href="<?= $escape($accountUrl) ?>?section=orders"><strong><?= count($orders) ?></strong><span>objednávek</span></a><a href="<?= $escape($accountUrl) ?>?section=addresses"><strong><?= count($addresses) ?></strong><span>uložených adres</span></a></div><p class="panel-help">Objednávky se objeví, až obchod nabídne dokončení nákupu.</p></section>
+          </div>
+        <?php elseif ($section === 'orders'): ?>
+          <section class="panel-panel"><h2>Historie objednávek</h2>
+            <?php if ($orders === []): ?><p class="panel-empty">Zatím tu není žádná objednávka. Košík je nyní pouze ukázkový a nákup ještě nelze dokončit.</p><a class="panel-text-link" href="<?= $escape($basePath . $language) ?>#produkty">Vrátit se k vybavení →</a>
+            <?php else: ?><div class="panel-order-list"><?php foreach ($orders as $order): ?><div class="panel-order"><strong>Objednávka <?= $escape($order['order_number']) ?></strong><span><?= $escape($order['created_at']) ?> · <?= $escape($order['status']) ?></span><strong><?= number_format((int) $order['total_czk'], 0, ',', ' ') ?> Kč</strong></div><?php endforeach; ?></div><?php endif; ?>
+          </section>
+        <?php elseif ($section === 'addresses'): ?>
+          <div class="panel-grid panel-grid-catalog">
+            <section class="panel-panel"><h2>Uložené adresy</h2>
+              <?php if ($addresses === []): ?><p class="panel-empty">Zatím nemáš uloženou žádnou adresu.</p><?php endif; ?>
+              <?php foreach ($addresses as $address): ?><div class="panel-address-row"><div><strong><?= $escape($address['label']) ?></strong><p><?= $escape($address['recipient']) ?><br><?= $escape($address['street']) ?><br><?= $escape($address['postal_code'] . ' ' . $address['city'] . ', ' . $address['country']) ?></p></div><div class="panel-address-actions"><a href="<?= $escape($accountUrl . '?section=addresses&edit=' . $address['id']) ?>">Upravit</a><form method="post" action="<?= $escape($accountUrl . '?section=addresses') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="address-remove"><input type="hidden" name="id" value="<?= (int) $address['id'] ?>"><button type="submit">Smazat</button></form></div></div><?php endforeach; ?>
+            </section>
+            <section class="panel-panel"><p class="panel-eyebrow">Adresa</p><h2><?= $editAddress === null ? 'Přidat adresu' : 'Upravit adresu' ?></h2>
+              <form class="panel-form" method="post" action="<?= $escape($accountUrl . '?section=addresses') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="address-save"><input type="hidden" name="id" value="<?= (int) ($editAddress['id'] ?? 0) ?: '' ?>">
+                <label>Označení <input name="label" maxlength="60" required placeholder="Domů nebo práce" value="<?= $escape($editAddress['label'] ?? '') ?>"></label>
+                <label>Jméno příjemce <input name="recipient" maxlength="120" autocomplete="name" required value="<?= $escape($editAddress['recipient'] ?? $user['display_name']) ?>"></label>
+                <label>Ulice a číslo <input name="street" maxlength="190" autocomplete="street-address" required value="<?= $escape($editAddress['street'] ?? '') ?>"></label>
+                <div class="panel-fields-two"><label>Město <input name="city" maxlength="120" autocomplete="address-level2" required value="<?= $escape($editAddress['city'] ?? '') ?>"></label><label>PSČ <input name="postal_code" maxlength="20" autocomplete="postal-code" required value="<?= $escape($editAddress['postal_code'] ?? '') ?>"></label></div>
+                <div class="panel-fields-two"><label>Země (kód) <input name="country" maxlength="2" autocomplete="country" required value="<?= $escape($editAddress['country'] ?? 'CZ') ?>"></label><label>Telefon (volitelný) <input name="phone" type="tel" maxlength="40" autocomplete="tel" value="<?= $escape($editAddress['phone'] ?? $user['phone']) ?>"></label></div>
+                <button class="panel-button" type="submit">Uložit adresu</button>
+              </form>
+            </section>
+          </div>
+        <?php elseif ($section === 'payments'): ?>
+          <section class="panel-panel panel-payment"><p class="panel-eyebrow">Platební metody</p><h2>Uložené karty</h2><p>Dobrodruzi nyní přijímají pouze bitcoin. Údaje o platebních kartách se na tomto webu neukládají. Pokud v budoucnu přibude platba kartou, propojí se s platebním poskytovatelem.</p><a class="panel-text-link" href="<?= $escape($accountUrl) ?>">Zpět na přehled →</a></section>
+        <?php elseif ($section === 'settings'): ?>
+          <div class="panel-grid panel-grid-catalog">
+            <section class="panel-panel"><h2>Osobní údaje</h2><form class="panel-form" method="post" action="<?= $escape($accountUrl . '?section=settings') ?>"><input type="hidden" name="action" value="profile"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><label>E-mail <input type="email" value="<?= $escape($user['email']) ?>" readonly></label><p class="panel-help">E-mail je přihlašovací údaj. Jeho změna bude dostupná po zavedení ověření e-mailu.</p><label>Jméno <input name="display_name" maxlength="120" autocomplete="name" required value="<?= $escape($user['display_name']) ?>"></label><label>Telefon (volitelný) <input name="phone" type="tel" maxlength="40" autocomplete="tel" value="<?= $escape($user['phone']) ?>"></label><button class="panel-button" type="submit">Uložit profil</button></form></section>
+            <section class="panel-panel"><h2>Změnit heslo</h2><form class="panel-form" method="post" action="<?= $escape($accountUrl . '?section=settings') ?>"><input type="hidden" name="action" value="password"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><label>Současné heslo <input type="password" name="current_password" autocomplete="current-password" required></label><label>Nové heslo <input type="password" name="new_password" minlength="12" autocomplete="new-password" required></label><label>Potvrdit nové heslo <input type="password" name="password_confirm" minlength="12" autocomplete="new-password" required></label><button class="panel-button" type="submit">Změnit heslo</button></form></section>
+          </div>
+        <?php endif; ?>
+      </main>
+    </div>
+  <?php else: ?>
+    <main class="panel-wrap panel-auth-main" id="obsah"><section class="panel-panel panel-centered">
+      <?php if ($screen === 'setup'): ?><p class="panel-eyebrow">Příprava účtu</p><h1>Klientská zóna zatím není připravená</h1><p>Importuj aktuální <code>database/schema.sql</code> do databáze obchodu.</p>
+      <?php elseif ($screen === 'error'): ?><p class="panel-eyebrow">Účet</p><h1>Stránku se nepodařilo načíst</h1><p class="panel-error" role="alert"><?= $escape($error) ?></p>
+      <?php else: ?>
+        <p class="panel-eyebrow">Dobrodruzi / účet</p><h1><?= $screen === 'register' ? 'Vytvořit účet' : 'Přihlášení' ?></h1>
+        <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
+        <form class="panel-form" method="post" action="<?= $escape($accountUrl . ($screen === 'register' ? '?mode=register' : '')) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="<?= $screen === 'register' ? 'register' : 'login' ?>">
+          <?php if ($screen === 'register'): ?><label>Jméno <input name="display_name" maxlength="120" autocomplete="name" required></label><?php endif; ?>
+          <label>E-mail <input type="email" name="email" maxlength="254" autocomplete="email" required autofocus></label>
+          <label>Heslo <input type="password" name="password" <?= $screen === 'register' ? 'minlength="12" autocomplete="new-password"' : 'autocomplete="current-password"' ?> required></label>
+          <?php if ($screen === 'register'): ?><label>Potvrdit heslo <input type="password" name="password_confirm" minlength="12" autocomplete="new-password" required></label><?php endif; ?>
+          <button class="panel-button" type="submit"><?= $screen === 'register' ? 'Zaregistrovat se' : 'Přihlásit se' ?></button>
+        </form>
+        <?php if ($screen === 'register' || $registrationAllowed): ?><p class="panel-auth-switch"><?= $screen === 'register' ? 'Už máš účet?' : 'Ještě nemáš účet?' ?> <?php if ($screen === 'register'): ?><a href="<?= $escape($accountUrl) ?>">Přihlásit se</a><?php else: ?><a href="<?= $escape($accountUrl) ?>?mode=register">Vytvořit účet</a><?php endif; ?></p><?php endif; ?>
+      <?php endif; ?>
+    </section></main>
+  <?php endif; ?>
+</div>

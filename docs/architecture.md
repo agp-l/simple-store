@@ -2,7 +2,7 @@
 
 ## Smysl první etapy
 
-CMS řeší stránky, blog a nyní také produktové karty a detail. Produkty mají vlastní revize; skladové pohyby, objednávky a platby budou samostatné další etapy. Přístup správce je v tabulce `users`; heslo se ukládá pouze jako hash. Reset provádí příkaz `tools/admin.php --reset` z terminálu a zneplatní staré přihlášené relace.
+CMS řeší stránky, blog a produktové karty. Produkty mají vlastní revize; nákupní proces a platby budou samostatné další etapy. Správce i zákazníci mají roli v `users`; heslo se ukládá pouze jako hash. Reset hesla správce provádí `tools/admin.php --reset` z terminálu.
 
 ## Jak jde požadavek aplikací
 
@@ -10,7 +10,7 @@ CMS řeší stránky, blog a nyní také produktové karty a detail. Produkty ma
 2. `UrlManager` rozdělí cestu na úseky, určí jazyk a udrží správný prefix, pokud je projekt v podsložce.
 3. `UrlManager::route()` určí obchod, kategorii, produkt, seznam článků, článek, stránku nebo 404; `index.php` vybere odpovídající databázový obsah.
 4. `CategoryRepository` načte strom kategorií a `ContentRepository` aktuální publikovanou revizi. `MenuDefinitionRepository` spojí výchozí místa s případnými změnami v SQL; `MenuManager` z nich sestaví odkazy.
-5. `PageRenderer` pošle data do stávajících PHP pohledů ve `view/`. Nepoužívá Twig ani databázi.
+5. `PageRenderer` pošle data do schválených PHP pohledů ve `view/`. `view/shell.php` společně vykreslí head, hlavičku a patičku. Nepoužívá Twig ani databázi.
 
 ## Složky a názvy
 
@@ -22,6 +22,7 @@ CMS řeší stránky, blog a nyní také produktové karty a detail. Produkty ma
 | `src/Category/CategoryPath.php` | Ověření cesty, její rodič, podstrom a převod starých kódů produktů při čtení. |
 | `config/menus.php` | Přiřazuje zdroj a kořen kategorického stromu ke jménu každého menu. |
 | `src/Navigation/MenuDefinitionRepository.php` | Načte nastavení menu pro jazyk z `navigation_menus`; bez řádku použije výchozí soubor. |
+| `src/Navigation/StorefrontMenus.php` | Připraví stejnou navigaci pro veřejný web, správu a zákaznický účet. |
 | `src/Navigation/Slugger.php` | Navrhne adresu z českého nadpisu; ruční slug má přednost. |
 | `src/Content/ContentRepository.php` | SQL dotazy, publikovaný obsah a ukládání revizí. |
 | `src/Content/ContentBody.php` | Bloky textu, seznamu, tabulky a fotografie v jediném sloupci body; starý prostý text se načítá jako jeden blok. |
@@ -35,9 +36,20 @@ CMS řeší stránky, blog a nyní také produktové karty a detail. Produkty ma
 | `config/database.php` | Místní údaje k DB, není ve verzovacím systému. |
 | `src/Admin/AdminUserRepository.php` | Čte účet správce z `users`, zakládá ho a mění hash hesla. |
 | `tools/admin.php` | První účet, import starého souboru a reset hesla. |
-| `admin.php`, `view/admin/` | Přihlášení a úpravy obsahu, bez zásahu do veřejného vzhledu. |
+| `admin.php`, `view/admin/` | Správcovské akce a jejich obsahový panel. |
+| `account.php`, `src/Customer/`, `view/account/` | Registrace, zákaznická role, profil, adresy a čtení objednávek. |
+| `src/Auth/RoleAuth.php` | Společná kontrola session a CSRF, s oddělenou cookie pro každou roli. |
+| `view/shell.php`, `view/panel/`, `assets/panel.css` | Jedno záhlaví a patička; jedna postranní navigace a styly obou soukromých částí. |
 | `database/schema.sql` | Jediný aktuální soubor pro vytvoření celé databáze. |
 | `view/` | HTML a malé výpisy proměnných; současná grafika obchodu. |
+
+## Jedna šablona, dvě soukromé části
+
+`view/shell.php` vkládá jediný `<head>`, hlavičku, zvolený obsah, patičku a společné skripty. Veřejný `PageRenderer` předává svůj pohled přes `view/layout.php`. `view/admin/layout.php` a `view/account/layout.php` nastavují jen titulek, text v hero a obsah pro `view/panel/layout.php`. Obě soukromé části používají `view/panel/sidebar.php`; odkazy a aktivní položky mu dodávají samostatně. Styly panelů žijí v `assets/panel.css` pod `.panel-area`, takže se vzhled formulářů nemíchá do katalogu. Změna loga, patičky nebo hlavního menu se dělá pouze ve společných souborech.
+
+Zákaznický účet je na `account.php`, administrativa na `admin.php`. Oba používají `RoleAuth`, ale jiné názvy cookie a repository, která vracejí pouze správnou roli. Případná klientská session tedy nikdy nepovolí správcovský zápis. Registrační a editační POST požadavky ověřují CSRF; dotazy na adresy a objednávky vždy filtrují `user_id`. `users` obsahuje e-mail, jméno a telefon zákazníka; více adres je v `customer_addresses`. `shop_orders` má základní pole pro pozdější snímky objednávek, ale současný ukázkový košík do něj nic nezapisuje.
+
+Karty nejsou zapojeny do plateb. Klientská záložka je pouze informativní; při budoucím přidání karet bude třeba integrace s poskytovatelem plateb a uchování jeho tokenů místo zadávání údajů o kartách do tohoto PHP systému. Současná implementace neukládá čísla karet ani bezpečnostní kódy. Více o zákazu uchovávat ověřovací kódy po autorizaci je v [FAQ PCI Security Standards Council](https://www.pcisecuritystandards.org/faqs/1280/).
 
 ## Jedna tabulka pro stránky, články a historii
 
@@ -71,7 +83,7 @@ Revize jednoho dokumentu či produktu jsou úplné snímky. Společný `document
 
 Kategorie používají stabilní řetězcovou cestu a překlady mají stejné cesty. Repository před uložením produktu ověřuje, že zapnutá kategorie a její rodiče existují. Kdyby někdo ručně smazal kategorii SQL příkazem, neexistuje cizí klíč, který by změnu zastavil; navázané produkty bude třeba najít a přiřadit znovu. U objednávek, plateb a skladových pohybů už tato volnost nedává smysl: musí mít vlastní identitu, přesná pravidla konzistence a vazbu na produkt nebo jeho snímek v okamžiku nákupu.
 
-Veřejný katalog čte 12 produktů a blog 6 článků v jedné dávce. SQL používá `LIMIT` a `OFFSET`; současně kontroluje jeden další řádek kvůli zobrazení odkazu na další dávku. Odkaz funguje i bez JavaScriptu, s JavaScriptem načte JSON s HTML kartami ze stejné URL a připojí je k seznamu. Pokud během procházení někdo mění publikovaný obsah, posun mezi dávkami může některou kartu zopakovat či přeskočit; při větším provozu lze přejít na kurzorové stránkování. `database/schema.sql` zůstává jediným aktuálním schématem; tento krok nepřidává tabulky.
+Veřejný katalog čte 12 produktů a blog 6 článků v jedné dávce. SQL používá `LIMIT` a `OFFSET`; současně kontroluje jeden další řádek kvůli zobrazení odkazu na další dávku. Odkaz funguje i bez JavaScriptu, s JavaScriptem načte JSON s HTML kartami ze stejné URL a připojí je k seznamu. Pokud během procházení někdo mění publikovaný obsah, posun mezi dávkami může některou kartu zopakovat či přeskočit; při větším provozu lze přejít na kurzorové stránkování. `database/schema.sql` zůstává jediným aktuálním schématem.
 
 ## Hranice zabezpečení
 

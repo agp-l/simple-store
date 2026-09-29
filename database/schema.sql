@@ -3,17 +3,86 @@ CREATE DATABASE IF NOT EXISTS simple_store
   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE simple_store;
 
--- Administrator accounts. Only password hashes are stored, never plaintext passwords.
+-- Admin and customer accounts share a role-scoped identity table.
 CREATE TABLE IF NOT EXISTS users (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   username VARCHAR(80) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  email VARCHAR(254) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL,
+  display_name VARCHAR(120) NOT NULL DEFAULT '',
+  phone VARCHAR(40) NOT NULL DEFAULT '',
   password_hash VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   role VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   password_changed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (id),
-  UNIQUE KEY users_username (username)
+  UNIQUE KEY users_username (username),
+  UNIQUE KEY users_customer_email (email)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Add customer fields to installations created before customer accounts existed.
+SET @customer_email_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='email');
+SET @customer_email_upgrade = IF(@customer_email_column=0,
+  'ALTER TABLE users ADD COLUMN email VARCHAR(254) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL AFTER username',
+  'SELECT 1');
+PREPARE customer_email_statement FROM @customer_email_upgrade;
+EXECUTE customer_email_statement;
+DEALLOCATE PREPARE customer_email_statement;
+
+SET @customer_name_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='display_name');
+SET @customer_name_upgrade = IF(@customer_name_column=0,
+  'ALTER TABLE users ADD COLUMN display_name VARCHAR(120) NOT NULL DEFAULT '''' AFTER email', 'SELECT 1');
+PREPARE customer_name_statement FROM @customer_name_upgrade;
+EXECUTE customer_name_statement;
+DEALLOCATE PREPARE customer_name_statement;
+
+SET @customer_phone_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='phone');
+SET @customer_phone_upgrade = IF(@customer_phone_column=0,
+  'ALTER TABLE users ADD COLUMN phone VARCHAR(40) NOT NULL DEFAULT '''' AFTER display_name', 'SELECT 1');
+PREPARE customer_phone_statement FROM @customer_phone_upgrade;
+EXECUTE customer_phone_statement;
+DEALLOCATE PREPARE customer_phone_statement;
+
+SET @customer_email_index = (SELECT COUNT(*) FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND INDEX_NAME='users_customer_email');
+SET @customer_index_upgrade = IF(@customer_email_index=0,
+  'ALTER TABLE users ADD UNIQUE KEY users_customer_email (email)', 'SELECT 1');
+PREPARE customer_index_statement FROM @customer_index_upgrade;
+EXECUTE customer_index_statement;
+DEALLOCATE PREPARE customer_index_statement;
+
+-- Addresses are owned by one customer and are always queried with user_id.
+CREATE TABLE IF NOT EXISTS customer_addresses (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id BIGINT UNSIGNED NOT NULL,
+  label VARCHAR(60) NOT NULL,
+  recipient VARCHAR(120) NOT NULL,
+  street VARCHAR(190) NOT NULL,
+  city VARCHAR(120) NOT NULL,
+  postal_code VARCHAR(20) NOT NULL,
+  country CHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'CZ',
+  phone VARCHAR(40) NOT NULL DEFAULT '',
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  KEY addresses_for_customer (user_id, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Future checkout will write immutable order snapshots; customers only read their own rows.
+CREATE TABLE IF NOT EXISTS shop_orders (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  user_id BIGINT UNSIGNED NOT NULL,
+  order_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  status VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  total_czk INT UNSIGNED NOT NULL,
+  items_json LONGTEXT NOT NULL,
+  shipping_json LONGTEXT NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY order_number (order_number),
+  KEY orders_for_customer (user_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Each save inserts a complete snapshot of a page or blog post.

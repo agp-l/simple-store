@@ -42,6 +42,7 @@ class MeekroDB
 }
 
 require dirname(__DIR__) . '/src/Admin/AdminUserRepository.php';
+require dirname(__DIR__) . '/src/Auth/RoleAuth.php';
 require dirname(__DIR__) . '/src/Admin/AdminAuth.php';
 
 use SimpleStore\Admin\AdminAuth;

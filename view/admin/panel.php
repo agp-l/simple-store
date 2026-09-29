@@ -6,16 +6,20 @@ $inside = in_array($screen, ['editor', 'products', 'categories', 'menus'], true)
 <div class="panel-area">
   <?php if ($inside): ?>
   <div class="panel-shell panel-wrap">
-    <aside class="panel-sidebar">
-      <div class="panel-sidebar-heading"><span>Ovládací panel</span><small>OBCHOD A OBSAH</small></div>
-      <nav aria-label="Správa webu">
-        <a href="<?= $escape($adminUrl) ?>" <?= $screen === 'editor' ? 'aria-current="page"' : '' ?>><span aria-hidden="true">▤</span> Stránky a články</a>
-        <a href="<?= $escape($adminUrl . '?section=products') ?>" <?= $screen === 'products' ? 'aria-current="page"' : '' ?>><span aria-hidden="true">▦</span> Produkty</a>
-        <a href="<?= $escape($adminUrl . '?section=categories') ?>" <?= $screen === 'categories' ? 'aria-current="page"' : '' ?>><span aria-hidden="true">⌁</span> Kategorie</a>
-        <a href="<?= $escape($adminUrl . '?section=menus') ?>" <?= $screen === 'menus' ? 'aria-current="page"' : '' ?>><span aria-hidden="true">☷</span> Menu</a>
-      </nav>
-      <div class="panel-sidebar-foot"><span class="panel-status-dot"></span> Přihlášený správce<form method="post" action="<?= $escape($adminUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><button class="panel-quiet" type="submit" name="action" value="logout">Odhlásit se</button></form></div>
-    </aside>
+    <?php
+    $panelHeading = 'Správa webu';
+    $panelSubtitle = 'OBCHOD A OBSAH';
+    $panelIdentity = 'Přihlášený správce';
+    $panelLogoutUrl = $adminUrl;
+    $panelCurrent = $screen;
+    $panelLinks = [
+        ['key' => 'editor', 'label' => 'Stránky a články', 'icon' => '▤', 'href' => $adminUrl],
+        ['key' => 'products', 'label' => 'Produkty', 'icon' => '▦', 'href' => $adminUrl . '?section=products'],
+        ['key' => 'categories', 'label' => 'Kategorie', 'icon' => '⌁', 'href' => $adminUrl . '?section=categories'],
+        ['key' => 'menus', 'label' => 'Menu', 'icon' => '☷', 'href' => $adminUrl . '?section=menus'],
+    ];
+    require __DIR__ . '/../panel/sidebar.php';
+    ?>
     <main class="panel-main" id="obsah">
   <?php else: ?>
     <main class="panel-wrap panel-auth-main" id="obsah">

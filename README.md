@@ -1,6 +1,6 @@
 # Dobrodruzi — jednoduchý obchod a CMS
 
-První základ vlastního redakčního systému v PHP 8 a MySQL. Grafika obchodu zůstává ve `view/`. Architektura a důvody jednotlivých rozhodnutí jsou popsané v [docs/architecture.md](docs/architecture.md).
+Jednoduchý obchod, redakční systém a zákaznický účet v PHP 8 a MySQL. Obchod, administrace i účet používají stejnou hlavičku a patičku z `view/`. Architektura a důvody jednotlivých rozhodnutí jsou popsané v [docs/architecture.md](docs/architecture.md).
 
 **Nejdřív spusť v kořeni projektu:**
 
@@ -23,19 +23,27 @@ Konfigurace databáze je obyčejný PHP soubor, který `return [...]` vrací poj
 
 ## Administrace obsahu
 
-Administrace je na `http://localhost/simple-store/admin.php`. Účty jsou v tabulce `users`; ukládá se pouze hash hesla. Pro aktualizaci stávající instalace nejdřív znovu importuj aktuální `database/schema.sql` do stejné databáze, kterou uvádí `config/database.php` (v phpMyAdmin nebo přes LAMPP):
+Administrace je na `http://localhost/simple-store/admin.php`. Účty jsou v tabulce `users`; ukládá se pouze hash hesla. Pro aktualizaci stávající instalace znovu importuj aktuální `database/schema.sql` do stejné databáze, kterou uvádí `config/database.php` (v phpMyAdmin nebo přes LAMPP):
 
 ```bash
 cd /opt/lampp/htdocs/simple-store
+git pull
 /opt/lampp/bin/mysql -u root -p < database/schema.sql
-/opt/lampp/bin/php tools/admin.php --reset
 ```
 
-Pokud má root účet bez hesla, vynech `-p`; pokud příkaz `/opt/lampp/bin/mysql` neexistuje, importuj soubor v phpMyAdmin. **Zapomenuté heslo nelze přečíst zpět.** Příkaz `--reset` vytvoří účet `admin`, pokud ještě není v databázi, nebo mu nastaví nové náhodné heslo. Heslo se zobrazí jednou v terminálu a předchozí přihlášené relace přestanou fungovat. Při prvním nasazení funguje také `/opt/lampp/bin/php tools/admin.php`.
+Pokud má root účet bez hesla, vynech `-p`; pokud příkaz `/opt/lampp/bin/mysql` neexistuje, importuj soubor v phpMyAdmin. **Zapomenuté heslo nelze přečíst zpět.** Jen pokud chceš změnit heslo správce, spusť `/opt/lampp/bin/php tools/admin.php --reset`: vytvoří účet `admin`, pokud ještě není v databázi, nebo mu nastaví nové náhodné heslo. Heslo se zobrazí jednou v terminálu a předchozí přihlášené relace přestanou fungovat. Při prvním nasazení funguje také `/opt/lampp/bin/php tools/admin.php`.
 
 Pokud znáš původní heslo a chceš ho zachovat, místo `--reset` spusť jednorázově `/opt/lampp/bin/php tools/admin.php --migrate`. Převezme původní jméno a hash z `config/admin.php`, pokud ještě v databázi žádný správce není. Starý soubor pak web už nepoužívá; po ověření přihlášení jej můžeš smazat. Databázové přihlašovací údaje zůstávají v `config/database.php`. Administrace obsahuje seznam dokumentů a jejich přímou úpravu. Přihlášení chrání PHP session, zápisy ověřuje CSRF token. Před zveřejněním webu vypni režim `debug`.
 
-Po aktualizaci můžeš bezpečně znovu importovat aktuální `database/schema.sql`; import existující obsah nemaže a přidá tabulku `users`. Stránky a články žádné další tabulky nepotřebují. Rychlé kontroly: `/opt/lampp/bin/php tests/admin-auth.php`, `/opt/lampp/bin/php tests/database-connection.php` a `/opt/lampp/bin/php tests/url-manager.php`.
+Po aktualizaci můžeš bezpečně znovu importovat aktuální `database/schema.sql`; import existující obsah ani heslo správce nemaže. Stránky a články žádné další tabulky nepotřebují. Rychlé kontroly: `/opt/lampp/bin/php tests/admin-auth.php`, `/opt/lampp/bin/php tests/database-connection.php` a `/opt/lampp/bin/php tests/url-manager.php`.
+
+### Společný vzhled a zákaznický účet
+
+Hlavička, hlavní kategorie, horní odkazy, patička a košík se vykreslují v jediné šabloně `view/shell.php`. `view/head.php`, `view/header.php`, `view/menu.php` a `view/footer.php` jsou stejné pro obchod, administraci i zákaznickou zónu. Administrace má vlastní pracovní menu v levém panelu pod hlavičkou; na mobilu je panel nad obsahem. Zákazník na stejném místě uvidí jiné menu. Oba panely sdílejí `view/panel/layout.php`, `view/panel/sidebar.php` a `assets/panel.css`. Navigaci obchodu připravuje jedna třída `StorefrontMenus`, aby se změna menu projevila ve všech třech částech.
+
+Odkaz **Můj účet** v hlavičce vede na `account.php`. Registrace používá e-mail, jméno a heslo alespoň o 12 znacích; v `config/site.php` ji lze vypnout volbou `customer_registration`. Zákazník se přihlašuje odděleně od správce. Může změnit jméno, telefon a heslo a přidávat, upravovat či mazat své adresy. Sekce **Objednávky** čte jen jeho řádky ze `shop_orders`; košík stále neodesílá objednávky, takže nový účet má prázdnou historii. Sekce **Uložené karty** zobrazuje stav současného obchodu přijímajícího bitcoin; čísla karet ani CVV se zde nezadávají a neukládají. E-mail účtu zatím nelze měnit bez ověření nové adresy a automatický reset zákaznického hesla e-mailem ještě není připraven.
+
+Aktuální `database/schema.sql` doplní do `users` zákaznický e-mail, jméno a telefon, vytvoří `customer_addresses` a `shop_orders`. Import je opakovatelný. Po stažení změn jej spusť **před prvním otevřením `account.php`**. Pokud je databáze v `config/database.php` pojmenována jinak než `simple_store`, uprav první `CREATE DATABASE` a `USE` v kopii SQL. Zákaznické akce kontrolují roli, PHP session a CSRF token; každý dotaz na adresy a objednávky je omezen ID přihlášeného zákazníka. Bez MySQL můžeš spustit `/opt/lampp/bin/php tests/customer-account.php` a `/opt/lampp/bin/php tests/account-render.php`.
 
 ### Stránky a články: úpravy přímo na stránce
 
@@ -93,7 +101,7 @@ Po přihlášení otevři **Kategorie** na `admin.php?section=categories`. Můž
 
 Na `admin.php?section=menus` nastavíš pro hlavičku, horní odkazy, podkategorie a patičku zdroj **Kategorie**, **Publikované stránky** nebo **Vlastní odkazy**. U kategorií měníš jejich skutečné pořadí ve správě kategorií. Horní odkazy se stránkami mají přímo v editoru menu pole **V menu** a **Pořadí**; uložení vytvoří novou revizi stránky. Vlastní odkazy mohou vést na kategorii, stránku či blog, lze je vnořit a seřadit. Vnořené vlastní odkazy v hlavičce se otevírají rozbalovacím prvkem, v patičce se vypisují pod rodičem a mezi podkategoriemi se zobrazí jako další odkazy. Nové pojmenované místo lze založit v administraci, ale jeho výpis v další části webu vyžaduje zavolat `MenuManager::links('nazev')` v odpovídající šabloně.
 
-Pro tuto aktualizaci importuj `database/schema.sql` do databáze z `config/database.php`. Přidá pouze tabulku `navigation_menus`; `catalog_categories` a `content_revisions` už existují. Pokud máš jiný název databáze než `simple_store`, uprav v lokální kopii SQL příkaz `USE` nebo spusť jen vytvoření nové tabulky ve vybrané databázi v phpMyAdmin. Všechny změny kategorií a menu ověřuje přihlášení správce a CSRF token. Správa klientů a jejich přihlašování zatím nejsou součástí této etapy; současná šablona a pole `role` v `users` nechávají pro samostatný klientský portál prostor.
+Pro správu menu importuj `database/schema.sql` do databáze z `config/database.php`; tabulka `navigation_menus` uchovává vlastní odkazy. Všechny změny kategorií a menu ověřuje přihlášení správce a CSRF token.
 
 Kontroly bez databáze: `/opt/lampp/bin/php tests/url-manager.php`, `/opt/lampp/bin/php tests/category-editor.php`, `/opt/lampp/bin/php tests/menu-definitions.php` a `/opt/lampp/bin/php tests/menu-manager.php`. Po importu také `/opt/lampp/bin/php tests/category-navigation.php`.
 
@@ -124,11 +132,13 @@ Webové adresy pak budou `/cs/o-nas` a `/cs/blog/prvni-vyprava`. Publikované č
 | `src/Navigation/UrlManager.php` | Části URL, jazyk a odkazy při instalaci v podsložce. |
 | `src/Navigation/MenuManager.php` | Pojmenovaná menu kategorií, publikovaných stránek a ručních odkazů. |
 | `src/Navigation/MenuDefinitionRepository.php` | Databázové nastavení menu po jazycích a vlastní vnořené odkazy. |
+| `src/Navigation/StorefrontMenus.php` | Stejné navigační položky pro všechny části webu. |
 | `src/Category/CategoryRepository.php` | Jedna tabulka s kategoriemi a jejich stromem. |
 | `src/Category/CategoryPath.php` | Práce s vnořenými cestami a čtení starých produktů. |
 | `config/menus.php` | Určení zdroje pro jednotlivá místa menu. |
 | `src/Database/ConnectionFactory.php` | Vytvoření připojení MeekroDB z lokální konfigurace. |
 | `src/Admin/AdminAuth.php`, `src/Admin/AdminUserRepository.php` | Přihlášení správce z tabulky `users`, session, CSRF token a změna hesla z terminálu. |
+| `src/Auth/RoleAuth.php`, `src/Customer/` | Sdílená práce se session, oddělená role zákazníka, profil a adresy. |
 | `src/Product/ProductRepository.php` | Katalog, detail a každá revize produktu. |
 | `src/Product/ProductInlineEditor.php` | Vzor konceptu a převod jedné přímé úpravy na celou produktovou revizi. |
 | `src/Admin/inline-product.php` | Zabezpečené uložení a obnova revize při úpravě na stránce. |
@@ -138,6 +148,8 @@ Webové adresy pak budou `/cs/o-nas` a `/cs/blog/prvni-vyprava`. Publikované č
 | `src/Admin/inline-content.php` | Kontrolovaný zápis a obnova stránek a článků po přihlášení. |
 | `src/Admin/categories.php`, `src/Admin/menus.php` | Správa kategorií, zdrojů menu a pořadí stránek. |
 | `src/Rendering/PageRenderer.php` | PHP pohledy bez Twig. |
+| `view/shell.php`, `view/panel/` | Jediný obal stránky a společné rozvržení obou soukromých částí. |
+| `account.php`, `view/account/` | Zákaznické přihlášení, nastavení a přehled nákupů. |
 | `database/schema.sql` | Vždy aktuální úplné schéma. |
 | `view/` | HTML pro obchod, blog, stránky, `<head>`, hlavičku, menu a patičku. |
 
@@ -151,4 +163,4 @@ Revize v `content_revisions` a `product_revisions` zůstávají celé v jednom �
 
 Tohle je rozumná podoba pro **verzovaný obsah**, ale neznamená to, že každou budoucí tabulku lze držet bez vztahů. Objednávky, platby a skladové pohyby budou potřebovat trvalé identifikátory produktů, pravidla konzistence a pravděpodobně i vztahy mezi záznamy. Přidání dalšího jazyka vyžaduje přeložit i texty rozhraní; sloupec `language` počítá s dvoupísmenným kódem.
 
-Po této aktualizaci je potřeba vytvořit tabulku `navigation_menus` z aktuálního `database/schema.sql`. Kontroly bez databáze: `/opt/lampp/bin/php tests/url-manager.php`, `/opt/lampp/bin/php tests/menu-definitions.php`, `/opt/lampp/bin/php tests/revision-guards.php` a `/opt/lampp/bin/php tests/catalog-render.php`.
+Po této aktualizaci znovu importuj celý aktuální `database/schema.sql`: přidává zákaznické sloupce do `users` a tabulky `customer_addresses` a `shop_orders`. Kontroly bez databáze: `/opt/lampp/bin/php tests/admin-render.php`, `/opt/lampp/bin/php tests/customer-account.php`, `/opt/lampp/bin/php tests/account-render.php` a `/opt/lampp/bin/php tests/catalog-render.php`.
