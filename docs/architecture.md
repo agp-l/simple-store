@@ -2,7 +2,7 @@
 
 ## Smysl první etapy
 
-CMS řeší stránky, blog a nyní také produktové karty a detail. Produkty mají vlastní revize; skladové pohyby, objednávky a platby budou samostatné další etapy. Jediný administrátor má jméno a hash hesla v místním `config/admin.php`, vytvořeném příkazem v terminálu. To nepotřebuje další tabulku ani vztahy mezi tabulkami.
+CMS řeší stránky, blog a nyní také produktové karty a detail. Produkty mají vlastní revize; skladové pohyby, objednávky a platby budou samostatné další etapy. Přístup správce je v tabulce `users`; heslo se ukládá pouze jako hash. Reset provádí příkaz `tools/admin.php --reset` z terminálu a zneplatní staré přihlášené relace.
 
 ## Jak jde požadavek aplikací
 
@@ -32,7 +32,8 @@ CMS řeší stránky, blog a nyní také produktové karty a detail. Produkty ma
 | `src/Admin/inline-product.php` | Přijme ověřený požadavek z náhledu, uloží revizi a vrátí její číslo. |
 | `config/site.php` | Výchozí a podporované jazyky. |
 | `config/database.php` | Místní údaje k DB, není ve verzovacím systému. |
-| `config/admin.php` | Místní jméno a hash hesla administrátora; není ve verzovacím systému. |
+| `src/Admin/AdminUserRepository.php` | Čte účet správce z `users`, zakládá ho a mění hash hesla. |
+| `tools/admin.php` | První účet, import starého souboru a reset hesla. |
 | `admin.php`, `view/admin/` | Přihlášení a úpravy obsahu, bez zásahu do veřejného vzhledu. |
 | `database/schema.sql` | Jediný aktuální soubor pro vytvoření celé databáze. |
 | `view/` | HTML a malé výpisy proměnných; současná grafika obchodu. |

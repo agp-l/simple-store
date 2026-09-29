@@ -23,17 +23,19 @@ Konfigurace databáze je obyčejný PHP soubor, který `return [...]` vrací poj
 
 ## Administrace obsahu
 
-Administrace je na `http://localhost/simple-store/admin.php`. Jednoho administrátora vytvoříš příkazem v kořeni projektu:
+Administrace je na `http://localhost/simple-store/admin.php`. Účty jsou v tabulce `users`; ukládá se pouze hash hesla. Pro aktualizaci stávající instalace nejdřív znovu importuj aktuální `database/schema.sql` do stejné databáze, kterou uvádí `config/database.php` (v phpMyAdmin nebo přes LAMPP):
 
 ```bash
-/opt/lampp/bin/php tools/admin.php
+cd /opt/lampp/htdocs/simple-store
+/opt/lampp/bin/mysql -u root -p < database/schema.sql
+/opt/lampp/bin/php tools/admin.php --reset
 ```
 
-Příkaz jednou vypíše jméno `admin` a náhodně vygenerované heslo. Ulož si je; konfigurace ukládá jen jeho hash do `config/admin.php`, který se nesmí nahrávat na GitHub. Pro změnu hesla spusť `/opt/lampp/bin/php tools/admin.php --reset` a přihlas se novým heslem. Administrace obsahuje seznam aktuálních dokumentů, jejich založení a odkazy na přímou úpravu stránky či článku. Přihlášení chrání PHP session, zápisy ověřuje CSRF token. Před zveřejněním webu vypni režim `debug`.
+Pokud má root účet bez hesla, vynech `-p`; pokud příkaz `/opt/lampp/bin/mysql` neexistuje, importuj soubor v phpMyAdmin. **Zapomenuté heslo nelze přečíst zpět.** Příkaz `--reset` vytvoří účet `admin`, pokud ještě není v databázi, nebo mu nastaví nové náhodné heslo. Heslo se zobrazí jednou v terminálu a předchozí přihlášené relace přestanou fungovat. Při prvním nasazení funguje také `/opt/lampp/bin/php tools/admin.php`.
 
-Pokud administrace hlásí `Permission denied` při čtení `config/admin.php`, spusť v kořeni projektu `chmod 644 config/admin.php`. Apache obvykle běží pod jiným uživatelem než tvůj terminál; soubor musí být pro Apache čitelný. Přímé stažení souborů ze složky `config/` zakazuje `.htaccess`.
+Pokud znáš původní heslo a chceš ho zachovat, místo `--reset` spusť jednorázově `/opt/lampp/bin/php tools/admin.php --migrate`. Převezme původní jméno a hash z `config/admin.php`, pokud ještě v databázi žádný správce není. Starý soubor pak web už nepoužívá; po ověření přihlášení jej můžeš smazat. Databázové přihlašovací údaje zůstávají v `config/database.php`. Administrace obsahuje seznam dokumentů a jejich přímou úpravu. Přihlášení chrání PHP session, zápisy ověřuje CSRF token. Před zveřejněním webu vypni režim `debug`.
 
-Po aktualizaci můžeš bezpečně znovu importovat aktuální `database/schema.sql`; import existující obsah nemaže. Stránky a články žádné další tabulky nepotřebují. Rychlé kontroly: `/opt/lampp/bin/php tests/admin-auth.php`, `/opt/lampp/bin/php tests/database-connection.php` a `/opt/lampp/bin/php tests/url-manager.php`.
+Po aktualizaci můžeš bezpečně znovu importovat aktuální `database/schema.sql`; import existující obsah nemaže a přidá tabulku `users`. Stránky a články žádné další tabulky nepotřebují. Rychlé kontroly: `/opt/lampp/bin/php tests/admin-auth.php`, `/opt/lampp/bin/php tests/database-connection.php` a `/opt/lampp/bin/php tests/url-manager.php`.
 
 ### Stránky a články: úpravy přímo na stránce
 
@@ -117,7 +119,7 @@ Webové adresy pak budou `/cs/o-nas` a `/cs/blog/prvni-vyprava`. Publikované č
 | `src/Category/CategoryPath.php` | Práce s vnořenými cestami a čtení starých produktů. |
 | `config/menus.php` | Určení zdroje pro jednotlivá místa menu. |
 | `src/Database/ConnectionFactory.php` | Vytvoření připojení MeekroDB z lokální konfigurace. |
-| `src/Admin/AdminAuth.php` | Přihlášení jediného administrátora, session a CSRF token. |
+| `src/Admin/AdminAuth.php`, `src/Admin/AdminUserRepository.php` | Přihlášení správce z tabulky `users`, session, CSRF token a změna hesla z terminálu. |
 | `src/Product/ProductRepository.php` | Katalog, detail a každá revize produktu. |
 | `src/Product/ProductInlineEditor.php` | Vzor konceptu a převod jedné přímé úpravy na celou produktovou revizi. |
 | `src/Admin/inline-product.php` | Zabezpečené uložení a obnova revize při úpravě na stránce. |

@@ -47,6 +47,7 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
           <label>Heslo<input type="password" name="password" autocomplete="current-password" required></label>
           <button class="admin-button" name="action" value="login">Přihlásit se</button>
         </form>
+        <p>Zapomenuté heslo? Na serveru spusť <code>/opt/lampp/bin/php tools/admin.php --reset</code>.</p>
       </section>
     <?php elseif ($screen === 'products'): ?>
       <?php require __DIR__ . '/products.php'; ?>
