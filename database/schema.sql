@@ -3,6 +3,19 @@ CREATE DATABASE IF NOT EXISTS simple_store
   CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE simple_store;
 
+-- Administrator accounts. Only password hashes are stored, never plaintext passwords.
+CREATE TABLE IF NOT EXISTS users (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  username VARCHAR(80) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  password_hash VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  role VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'admin',
+  is_active TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  password_changed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY users_username (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Each save inserts a complete snapshot of a page or blog post.
 -- Older inactive snapshots are pruned to config/site.php revision_limit after saving.
 CREATE TABLE IF NOT EXISTS content_revisions (
