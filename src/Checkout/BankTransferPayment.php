@@ -14,9 +14,28 @@ final class BankTransferPayment
 
     public function __construct(string $iban, string $accountDisplay, string $recipient)
     {
+        if (trim($iban) === '' && trim($accountDisplay) !== '') {
+            $iban = self::ibanForCzechAccount($accountDisplay);
+        }
         $this->iban = self::validatedIban($iban);
         $this->accountDisplay = self::validatedAccountDisplay($accountDisplay, $this->iban);
         $this->recipient = self::text($recipient, 120, 'Příjemce platby');
+    }
+
+    /** Derive Czech IBAN check digits from the domestic prefix, account and bank code. */
+    public static function ibanForCzechAccount(string $account): string
+    {
+        $account = str_replace(' ', '', trim($account));
+        if (preg_match('/^(?:([0-9]{1,6})-)?([0-9]{1,10})\/([0-9]{4})$/D', $account, $parts) !== 1) {
+            throw new InvalidArgumentException('Zadej číslo účtu ve formátu předčíslí-číslo/kód banky.');
+        }
+        $bban = $parts[3] . str_pad($parts[1] ?? '', 6, '0', STR_PAD_LEFT) .
+            str_pad($parts[2], 10, '0', STR_PAD_LEFT);
+        $modulo = 0;
+        foreach (str_split($bban . '123500') as $digit) {
+            $modulo = ($modulo * 10 + (int) $digit) % 97;
+        }
+        return 'CZ' . str_pad((string) (98 - $modulo), 2, '0', STR_PAD_LEFT) . $bban;
     }
 
     /** Persist this snapshot with the order rather than reading current config on confirmation. */

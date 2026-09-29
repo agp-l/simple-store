@@ -25,7 +25,8 @@ final class CheckoutController
         private OrderRepository $orders,
         private ?BankTransferPayment $bank,
         private ?int $customerId,
-        string $termsUrl
+        string $termsUrl,
+        private bool $allowLocalPreview = false
     ) {
         $this->cartUrl = $url->path('kosik');
         $this->checkoutUrl = $url->path('pokladna');
@@ -60,7 +61,8 @@ final class CheckoutController
                 'title' => 'Objednávka ' . $order['order_number'] . ' — dobrodruzi.cz',
                 'privatePage' => true, 'compactHeader' => true, 'order' => $order,
                 'orderUrl' => $this->url->path('objednavka/' . $order['order_token']),
-                'bankPayment' => BankTransferPayment::fromOrder($order)->details($order),
+                'bankPayment' => ($order['payment_method'] ?? '') === 'bank_transfer'
+                    ? BankTransferPayment::fromOrder($order)->details($order) : [],
             ]);
             return;
         }
@@ -164,7 +166,8 @@ final class CheckoutController
 
     private function placeOrder(): void
     {
-        if (self::field('terms') !== '1') {
+        $testOrder = $this->testCheckout();
+        if (!$testOrder && self::field('terms') !== '1') {
             throw new InvalidArgumentException('Pro odeslání objednávky potvrďte obchodní podmínky.');
         }
         $summary = $this->cartService->summary($this->cart);
@@ -172,7 +175,8 @@ final class CheckoutController
         $price = is_array($delivery) && ($delivery['method'] ?? '') === 'home'
             ? $this->shipping->quote('home') : null;
         if (!$summary['can_continue'] || !is_array($delivery) || $price === null ||
-            $this->bank === null || $this->termsUrl === '' || !$this->orders->installed()) {
+            (!$testOrder && ($this->bank === null || $this->termsUrl === '')) ||
+            !$this->orders->installed()) {
             throw new InvalidArgumentException('Objednávku nyní nelze dokončit. Zkontrolujte košík, doručení a nastavení obchodu.');
         }
         if ($summary['subtotal_czk'] + $price > 9999999) {
@@ -186,7 +190,7 @@ final class CheckoutController
         $shipping['label'] = $label;
         $shipping['recipient'] = $delivery['name'];
         $order = $this->orders->create($this->customerId, $delivery['email'], $summary['items'],
-            $shipping, $price, $this->cart->checkoutKey());
+            $shipping, $price, $this->cart->checkoutKey(), $testOrder);
         $this->cart->clear();
         $this->redirect($this->url->path('objednavka/' . $order['order_token']));
     }
@@ -209,9 +213,10 @@ final class CheckoutController
         }
         $installed = $this->orders->installed();
         $shippingConfigured = $this->shippingOptions !== [];
+        $testCheckout = $this->testCheckout();
         $ready = $summary['can_continue'] && $shippingConfigured && $installed && $price !== null &&
             $summary['subtotal_czk'] + $price <= 9999999 &&
-            $this->bank !== null && $this->termsUrl !== '';
+            ($testCheckout || ($this->bank !== null && $this->termsUrl !== ''));
         $data = array_merge($this->shared, [
             'title' => match ($step) {
                 'cart' => 'Košík — dobrodruzi.cz',
@@ -225,11 +230,16 @@ final class CheckoutController
             'checkout' => $summary, 'delivery' => $delivery,
             'shippingOptions' => $this->shippingOptions, 'selectedShippingPrice' => $price,
             'shippingConfigured' => $shippingConfigured, 'bankConfigured' => $this->bank !== null,
-            'checkoutReady' => $ready, 'termsUrl' => $this->termsUrl,
+            'checkoutReady' => $ready, 'testCheckout' => $testCheckout, 'termsUrl' => $this->termsUrl,
             'error' => $error, 'step' => $step,
             'setupNotice' => !$installed ? 'Pro objednávky znovu importuj aktuální database/schema.sql.' : '',
         ]);
         $this->renderer->render($step, $data, $status);
+    }
+
+    private function testCheckout(): bool
+    {
+        return $this->allowLocalPreview && ($this->bank === null || $this->termsUrl === '');
     }
 
     private static function field(string $name): string

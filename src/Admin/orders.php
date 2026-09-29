@@ -10,15 +10,15 @@ $ordersReady = $orders->installed();
 $orderError = '';
 $order = null;
 $orderPage = ['items' => [], 'nextOffset' => null];
-$statusFilter = $_GET['status'] ?? 'pending';
+$statusFilter = $_GET['status'] ?? 'all';
 $rawOffset = $_GET['offset'] ?? '0';
 $offset = is_string($rawOffset) ? filter_var($rawOffset, FILTER_VALIDATE_INT,
     ['options' => ['min_range' => 0, 'max_range' => 100000]]) : false;
-if (!is_string($statusFilter) || !in_array($statusFilter, ['pending', 'paid', 'all'], true) ||
+if (!is_string($statusFilter) || !in_array($statusFilter, ['pending', 'paid', 'test', 'all'], true) ||
     $offset === false) {
     http_response_code(422);
     $orderError = 'Neplatný filtr objednávek.';
-    $statusFilter = 'pending';
+    $statusFilter = 'all';
     $offset = 0;
 }
 

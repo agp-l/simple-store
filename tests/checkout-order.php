@@ -152,7 +152,7 @@ try {
     throw new RuntimeException('A legacy order was manually confirmed.');
 } catch (InvalidArgumentException $expected) {
 }
-foreach (['CZ5955000000001265098001', '', 'GB82WEST12345698765432'] as $invalidIban) {
+foreach (['CZ5955000000001265098001', 'GB82WEST12345698765432'] as $invalidIban) {
     $rejected = false;
     try {
         new BankTransferPayment($invalidIban, '1265098001/5500', 'Obchod');
@@ -168,9 +168,28 @@ try {
     $rejected = true;
 }
 if (!$rejected) throw new RuntimeException('Bank details mismatch was accepted.');
+$derived = new BankTransferPayment('', '1265098001/5500', 'Obchod');
+if ($derived->snapshot()['iban'] !== 'CZ5855000000001265098001') {
+    throw new RuntimeException('Domestic account did not produce the correct Czech IBAN.');
+}
+$preview = (new OrderRepository($db))->create(null, 'test@example.org', $items, $shipping, 100,
+    str_repeat('c', 64), true);
+if ($preview['payment_method'] !== 'test' || $preview['payment_status'] !== 'test' ||
+    $preview['payment_details'] !== [] || $preview['payment_due_at'] !== null ||
+    $preview['variable_symbol'] !== null ||
+    $preview['status'] !== 'test' || $repository->managementPage(0, 20, 'test')['items'][0]['id'] !== $preview['id']) {
+    throw new RuntimeException('Test order must be distinguishable and have no payment instructions.');
+}
 $rejected = false;
 try {
-    (new OrderRepository($db))->create(null, 'eva@example.org', $items, $shipping, 100, str_repeat('c', 64));
+    (new OrderRepository($db))->markPaid((int) $preview['id'], 4);
+} catch (InvalidArgumentException $expected) {
+    $rejected = true;
+}
+if (!$rejected) throw new RuntimeException('A test order was marked paid.');
+$rejected = false;
+try {
+    (new OrderRepository($db))->create(null, 'eva@example.org', $items, $shipping, 100, str_repeat('d', 64));
 } catch (RuntimeException $expected) {
     $rejected = true;
 }

@@ -72,6 +72,12 @@ CREATE TABLE IF NOT EXISTS customer_addresses (
 
 -- Checkout keeps immutable prices, recipient, delivery and bank details at the time of purchase.
 -- Existing customer history continues to work; a guest order has no user_id.
+CREATE TABLE IF NOT EXISTS shop_checkout_settings (
+  id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+  settings_json LONGTEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS shop_orders (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id BIGINT UNSIGNED NULL DEFAULT NULL,

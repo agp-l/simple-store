@@ -36,11 +36,11 @@ $sectionNames = ['overview' => 'Přehled', 'orders' => 'Objednávky', 'addresses
             <?php if ($orders === []): ?><p class="panel-empty">Zatím tu není žádná objednávka.</p><a class="panel-text-link" href="<?= $escape($basePath . $language) ?>#produkty">Vrátit se k vybavení →</a>
             <?php else: ?><div class="panel-order-list"><?php foreach ($orders as $order): ?>
               <?php $orderLabel = match ($order['payment_status'] ?? '') {
-                  'pending' => 'Čeká na platbu', 'paid' => 'Zaplaceno',
+                  'pending' => 'Čeká na platbu', 'paid' => 'Zaplaceno', 'test' => 'Testovací objednávka',
                   default => (($order['status'] ?? '') === 'new' ? 'Přijata' : 'Stav: ' . ($order['status'] ?? 'neuveden')),
               }; ?>
               <div class="panel-order"><strong>Objednávka <?= $escape($order['order_number']) ?></strong><span><?= $escape($order['created_at']) ?> · <?= $escape($orderLabel) ?></span><strong><?= number_format((int) $order['total_czk'], 0, ',', ' ') ?> Kč</strong>
-                <?php if (!empty($order['order_token'])): ?><a href="<?= $escape($basePath . $language . '/objednavka/' . $order['order_token']) ?>">Zobrazit platbu a objednávku →</a><?php endif; ?>
+                <?php if (!empty($order['order_token'])): ?><a href="<?= $escape($basePath . $language . '/objednavka/' . $order['order_token']) ?>"><?= ($order['payment_status'] ?? '') === 'test' ? 'Zobrazit testovací objednávku →' : 'Zobrazit platbu a objednávku →' ?></a><?php endif; ?>
               </div>
             <?php endforeach; ?></div><?php endif; ?>
           </section>

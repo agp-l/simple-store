@@ -17,18 +17,18 @@ require __DIR__ . '/common.php';
         <address><?= $checkoutEscape($delivery['name'] ?? '') ?><br><?= $checkoutEscape($delivery['street'] ?? '') ?><br><?= $checkoutEscape($delivery['postal_code'] ?? '') ?> <?= $checkoutEscape($delivery['city'] ?? '') ?><br>Česká republika</address>
         <p><?= $checkoutEscape($delivery['email'] ?? '') ?><br><?= $checkoutEscape($delivery['phone'] ?? '') ?></p>
       </section>
-      <section class="checkout-panel"><div class="checkout-panel-title"><h2>Platba</h2><a href="<?= $checkoutEscape($checkoutUrl . '?step=payment') ?>">Zpět k platbě</a></div><p>Bankovní převod. Platební údaje a QR kód se zobrazí po vytvoření objednávky.</p></section>
+      <section class="checkout-panel"><div class="checkout-panel-title"><h2>Platba</h2><a href="<?= $checkoutEscape($checkoutUrl . '?step=payment') ?>">Zpět k platbě</a></div><p><?= ($testCheckout ?? false) ? 'Místní testovací objednávka. Platba se neprovádí.' : 'Bankovní převod. Platební údaje a QR kód se zobrazí po vytvoření objednávky.' ?></p></section>
     </div>
     <div class="checkout-sidebar">
       <?php require __DIR__ . '/summary.php'; ?>
-      <?php if ($checkoutCanContinue && ($checkoutReady ?? false) && ($termsUrl ?? '') !== '' && $summaryShippingPrice !== null): ?>
+      <?php if ($checkoutCanContinue && ($checkoutReady ?? false) && $summaryShippingPrice !== null): ?>
       <form class="checkout-place" method="post" action="<?= $checkoutEscape($checkoutUrl) ?>">
         <input type="hidden" name="csrf" value="<?= $checkoutEscape($cartToken) ?>"><input type="hidden" name="action" value="place">
-        <label><input type="checkbox" name="terms" value="1" required> Souhlasím s <a href="<?= $checkoutEscape($termsUrl) ?>" target="_blank" rel="noopener">obchodními podmínkami</a>.</label>
-        <button type="submit" class="checkout-primary">Objednat s povinností platby</button>
+        <?php if (!($testCheckout ?? false)): ?><label><input type="checkbox" name="terms" value="1" required> Souhlasím s <a href="<?= $checkoutEscape($termsUrl) ?>" target="_blank" rel="noopener">obchodními podmínkami</a>.</label><?php endif; ?>
+        <button type="submit" class="checkout-primary"><?= ($testCheckout ?? false) ? 'Vytvořit testovací objednávku' : 'Objednat s povinností platby' ?></button>
       </form>
       <?php else: ?><p class="checkout-alert" role="alert">Objednávku nyní nelze vytvořit. Vraťte se do košíku a zkontrolujte údaje.</p><?php endif; ?>
-      <p class="checkout-fineprint">Objednávka vznikne až po potvrzení. K zaplacení pak použijete údaje na další stránce.</p>
+      <p class="checkout-fineprint"><?= ($testCheckout ?? false) ? 'Testovací objednávku uvidíš v administraci. Neplať ji a nevyřizuj ji jako skutečný nákup.' : 'Objednávka vznikne až po potvrzení. K zaplacení pak použijete údaje na další stránce.' ?></p>
     </div>
   </div>
 </main>

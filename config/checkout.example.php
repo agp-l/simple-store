@@ -4,11 +4,12 @@ declare(strict_types=1);
 // Copy to config/checkout.php to set the real bank account, legal page and shipping price.
 // Home delivery is enabled for development; adjust its price before taking orders.
 return [
+    'local_test_checkout' => true, // Only on localhost in debug mode; no payment is requested.
     'terms_url' => '', // Local published page, e.g. /cs/obchodni-podminky (adjust for subdirectory).
     'bank_transfer' => [
-        'iban' => '',             // Czech IBAN in CZK, with valid check digits.
-        'account_display' => '',  // Domestic account number as customers see it, e.g. 123456789/0100.
-        'recipient' => '',        // Account holder shown on the payment page.
+        'iban' => '', // Calculated from the Czech account number if left empty.
+        'account_display' => '', // Enter in administration; do not commit a private account.
+        'recipient' => '',
         'payment_due_days' => 7,
     ],
     'shipping_methods' => [

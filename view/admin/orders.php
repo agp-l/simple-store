@@ -5,6 +5,7 @@ $orderMoney = static fn (mixed $amount): string => number_format((int) $amount, 
 $orderPaymentLabel = static fn (mixed $status): string => match ($status) {
     'paid' => 'Zaplaceno',
     'pending' => 'Čeká na platbu',
+    'test' => 'Testovací objednávka',
     default => 'Stav platby: ' . (string) $status,
 };
 ?>
@@ -67,9 +68,9 @@ $orderPaymentLabel = static fn (mixed $status): string => match ($status) {
       <dl class="panel-order-facts">
         <div><dt>Metoda</dt><dd><?= $bankTransfer ? 'Bankovní převod' : $escape($order['payment_method'] ?? 'Neuvedeno') ?></dd></div>
         <div><dt>Částka</dt><dd><strong><?= $orderMoney($order['total_czk'] ?? 0) ?></strong></dd></div>
-        <div><dt>Variabilní symbol</dt><dd><strong><?= $escape($order['variable_symbol'] ?? 'Neuveden') ?></strong></dd></div>
+        <?php if ($bankTransfer): ?><div><dt>Variabilní symbol</dt><dd><strong><?= $escape($order['variable_symbol'] ?? 'Neuveden') ?></strong></dd></div><?php endif; ?>
         <?php if ($paid && !empty($order['payment_paid_at'])): ?><div><dt>Ověřeno</dt><dd><?= $escape($order['payment_paid_at']) ?><?php if (!empty($order['payment_verified_by'])): ?> · správce #<?= (int) $order['payment_verified_by'] ?><?php endif; ?></dd></div><?php endif; ?>
-        <div><dt>Účet</dt><dd><?= $escape($payment['account_display'] ?? 'Neuveden') ?></dd></div>
+        <?php if ($bankTransfer): ?><div><dt>Účet</dt><dd><?= $escape($payment['account_display'] ?? 'Neuveden') ?></dd></div><?php endif; ?>
         <?php if (!empty($payment['iban'])): ?><div><dt>IBAN</dt><dd><?= $escape($payment['iban']) ?></dd></div><?php endif; ?>
         <?php if (!empty($order['payment_due_at'])): ?><div><dt>Splatnost</dt><dd><?= $escape($order['payment_due_at']) ?></dd></div><?php endif; ?>
       </dl>
@@ -87,7 +88,7 @@ $orderPaymentLabel = static fn (mixed $status): string => match ($status) {
   </div>
 <?php elseif ($ordersReady): ?>
   <nav class="panel-quick panel-order-filters" aria-label="Stav platby">
-    <?php foreach (['pending' => 'Čeká na platbu', 'paid' => 'Zaplaceno', 'all' => 'Všechny'] as $filter => $label): ?>
+    <?php foreach (['all' => 'Všechny', 'pending' => 'Čeká na platbu', 'paid' => 'Zaplaceno', 'test' => 'Testovací'] as $filter => $label): ?>
       <a href="<?= $escape($orderBaseUrl . '&status=' . $filter) ?>" <?= $statusFilter === $filter ? 'aria-current="page"' : '' ?>><?= $escape($label) ?></a>
     <?php endforeach; ?>
   </nav>
@@ -99,7 +100,7 @@ $orderPaymentLabel = static fn (mixed $status): string => match ($status) {
         <?php $listedPaid = ($listed['payment_status'] ?? '') === 'paid'; ?>
         <a class="panel-order-row" href="<?= $escape($orderBaseUrl . '&id=' . (int) $listed['id']) ?>">
           <span><strong><?= $escape($listed['order_number'] ?? '') ?></strong><small><?= $escape($listed['created_at'] ?? '') ?> · <?= $escape($listed['customer_email'] ?? '') ?></small></span>
-          <span class="panel-order-symbol">VS <?= $escape($listed['variable_symbol'] ?? '–') ?></span>
+          <span class="panel-order-symbol"><?= ($listed['payment_method'] ?? '') === 'test' ? 'TEST' : 'VS ' . $escape($listed['variable_symbol'] ?? '–') ?></span>
           <strong><?= $orderMoney($listed['total_czk'] ?? 0) ?></strong>
           <span class="panel-order-state <?= $listedPaid ? 'is-paid' : 'is-pending' ?>"><?= $escape($orderPaymentLabel($listed['payment_status'] ?? '')) ?></span>
         </a>

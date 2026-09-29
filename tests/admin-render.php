@@ -101,4 +101,19 @@ if (!str_contains($html, 'DB-20260929-1') ||
     throw new RuntimeException('Admin order list must show payment references and pagination.');
 }
 
+$screen = 'settings';
+$settingsError = '';
+$form = ['home_label' => 'Kurýr', 'home_price_czk' => '120',
+    'account_display' => '123456/0100', 'iban' => '', 'recipient' => 'Test',
+    'payment_due_days' => '7', 'terms_url' => '', 'local_test_checkout' => '1'];
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'Nastavení obchodu') ||
+    !str_contains($html, 'value="save-checkout-settings"') ||
+    !str_contains($html, 'value="123456/0100"') ||
+    !str_contains($html, 'name="csrf" value="test-token"')) {
+    throw new RuntimeException('Authenticated checkout settings form is missing.');
+}
+
 echo "Admin rendering tests passed.\n";

@@ -73,9 +73,10 @@ final class OrderRepository
         array $items,
         array $shipping,
         int $shippingCzk,
-        string $idempotencyKey
+        string $idempotencyKey,
+        bool $testOrder = false
     ): array {
-        if ($this->bank === null) {
+        if (!$testOrder && $this->bank === null) {
             throw new RuntimeException('Platba převodem není nastavena.');
         }
         if ($userId !== null && $userId < 1) {
@@ -155,6 +156,7 @@ final class OrderRepository
             'items_json' => $itemsJson,
             'shipping_json' => $shippingJson,
             'shipping_czk' => $shippingCzk,
+            'payment_method' => $testOrder ? 'test' : 'bank_transfer',
         ];
 
         $this->db->startTransaction();
@@ -170,21 +172,22 @@ final class OrderRepository
                 'user_id' => $userId,
                 'order_number' => 'DB-' . $now->format('Ymd') . '-' . strtoupper(bin2hex(random_bytes(5))),
                 'order_token' => bin2hex(random_bytes(32)),
-                'status' => 'new',
+                'status' => $testOrder ? 'test' : 'new',
                 'customer_email' => $email,
                 'subtotal_czk' => $subtotal,
                 'shipping_czk' => $shippingCzk,
                 'total_czk' => $subtotal + $shippingCzk,
                 'items_json' => $itemsJson,
                 'shipping_json' => $shippingJson,
-                'payment_method' => 'bank_transfer',
-                'payment_status' => 'pending',
-                'payment_details_json' => self::json($this->bank->snapshot(), 2048),
-                'payment_due_at' => $now->modify('+' . $this->dueDays . ' days')->format('Y-m-d H:i:s'),
+                'payment_method' => $request['payment_method'],
+                'payment_status' => $testOrder ? 'test' : 'pending',
+                'payment_details_json' => $testOrder ? null : self::json($this->bank->snapshot(), 2048),
+                'payment_due_at' => $testOrder ? null :
+                    $now->modify('+' . $this->dueDays . ' days')->format('Y-m-d H:i:s'),
                 'payment_paid_at' => null,
                 'payment_verified_by' => null,
                 'provider_reference' => null,
-                'variable_symbol' => (string) random_int(1000000000, 9999999999),
+                'variable_symbol' => $testOrder ? null : (string) random_int(1000000000, 9999999999),
                 'idempotency_key' => $idempotencyKey,
             ]);
             $saved = $this->byIdempotencyKey($idempotencyKey);
@@ -230,7 +233,7 @@ final class OrderRepository
     public function managementPage(int $offset = 0, int $limit = 20, ?string $paymentStatus = null): array
     {
         if ($offset < 0 || $offset > 100000 || $limit < 1 || $limit > 100 ||
-            !in_array($paymentStatus, [null, 'pending', 'paid'], true)) {
+            !in_array($paymentStatus, [null, 'pending', 'paid', 'test'], true)) {
             throw new InvalidArgumentException('Neplatný filtr objednávek.');
         }
         $fields = 'SELECT id, order_number, status, customer_email, subtotal_czk, shipping_czk,

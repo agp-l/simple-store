@@ -93,6 +93,7 @@ final class PageRenderer
         $orderUrl = (string) ($data['orderUrl'] ?? '');
         $qrMarkup = (string) ($data['qrMarkup'] ?? '');
         $checkoutReady = (bool) ($data['checkoutReady'] ?? false);
+        $testCheckout = (bool) ($data['testCheckout'] ?? false);
         $compactHeader = (bool) ($data['compactHeader'] ?? false);
         $skipTarget = (string) ($data['skipTarget'] ?? 'produkty');
         require $this->viewPath . '/layout.php';

@@ -7,6 +7,8 @@ use SimpleStore\Checkout\CartService;
 use SimpleStore\Checkout\CartSession;
 use SimpleStore\Checkout\CheckoutController;
 use SimpleStore\Checkout\OrderRepository;
+use SimpleStore\Checkout\LocalCheckoutPreview;
+use SimpleStore\Checkout\CheckoutSettingsRepository;
 use SimpleStore\Checkout\ShippingPolicy;
 use SimpleStore\Admin\AdminAuth;
 use SimpleStore\Admin\AdminUserRepository;
@@ -77,25 +79,27 @@ try {
 
     if (in_array($route['name'], ['cart', 'checkout', 'order'], true)) {
         $checkoutFile = __DIR__ . '/config/checkout.php';
+        $exampleCheckout = require __DIR__ . '/config/checkout.example.php';
         $checkoutConfig = $route['name'] === 'order'
             ? ['bank_transfer' => [], 'shipping_methods' => [], 'terms_url' => '']
-            : (require (is_file($checkoutFile) ? $checkoutFile : __DIR__ . '/config/checkout.example.php'));
+            : (is_file($checkoutFile) ? require $checkoutFile : $exampleCheckout);
+        if ($route['name'] !== 'order') {
+            $checkoutConfig = (new CheckoutSettingsRepository($db))->load(
+                CheckoutSettingsRepository::withDefaults($checkoutConfig, $exampleCheckout));
+        }
         $bankSettings = $checkoutConfig['bank_transfer'] ?? [];
         $bank = null;
         if (is_array($bankSettings) &&
-            ($bankSettings['iban'] ?? '') !== '' && ($bankSettings['account_display'] ?? '') !== '' &&
-            ($bankSettings['recipient'] ?? '') !== '') {
-            $bank = new BankTransferPayment((string) $bankSettings['iban'],
+            ($bankSettings['account_display'] ?? '') !== '' && ($bankSettings['recipient'] ?? '') !== '') {
+            $bank = new BankTransferPayment((string) ($bankSettings['iban'] ?? ''),
                 (string) $bankSettings['account_display'], (string) $bankSettings['recipient']);
         }
         $shippingMethods = $checkoutConfig['shipping_methods'] ?? [];
-        // Existing local checkout.php files copied from the old example have an empty list.
-        if ($route['name'] !== 'order' && $shippingMethods === []) {
-            $shippingMethods = (require __DIR__ . '/config/checkout.example.php')['shipping_methods'];
-        }
         $shipping = new ShippingPolicy($shippingMethods);
         $dueDays = $bankSettings['payment_due_days'] ?? 7;
         $orders = new OrderRepository($db, $bank, $dueDays);
+        $localPreview = LocalCheckoutPreview::available($_SERVER, (bool) $site['debug'],
+            ($checkoutConfig['local_test_checkout'] ?? true) === true);
         $customerId = null;
         if ($route['name'] !== 'order' && isset($_COOKIE['simple_store_customer'])) {
             $customers = new CustomerRepository($db);
@@ -109,7 +113,8 @@ try {
         }
         $controller = new CheckoutController($url, $renderer, $shared, $cart,
             new CartService(new ProductRepository($db, $site['languages']), $site['languages']),
-            $shipping, $orders, $bank, $customerId, (string) ($checkoutConfig['terms_url'] ?? ''));
+            $shipping, $orders, $bank, $customerId, (string) ($checkoutConfig['terms_url'] ?? ''),
+            $localPreview);
         $controller->handle($route);
         exit;
     }

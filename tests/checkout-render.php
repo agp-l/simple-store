@@ -50,4 +50,26 @@ if (!str_contains($payment, 'Platba nebo obchodní podmínky zatím nejsou nasta
     throw new RuntimeException('Only order submission needs the real bank and legal settings.');
 }
 
+$testData = $data + ['delivery' => ['method' => 'home', 'name' => 'Eva Nová',
+    'street' => 'Polní 1', 'postal_code' => '11000', 'city' => 'Praha',
+    'email' => 'eva@example.org', 'phone' => '123'], 'selectedShippingPrice' => 99];
+$testData['testCheckout'] = true;
+$testData['checkoutReady'] = true;
+ob_start();
+$renderer->render('review', $testData);
+$review = ob_get_clean();
+if (!str_contains($review, 'Vytvořit testovací objednávku') ||
+    str_contains($review, 'Objednat s povinností platby') ||
+    str_contains($review, 'name="terms"')) {
+    throw new RuntimeException('Local preview must clearly distinguish test orders from payments.');
+}
+ob_start();
+$renderer->render('complete', $testData + ['order' => ['payment_method' => 'test',
+    'order_number' => 'DB-TEST', 'payment_status' => 'test']]);
+$complete = ob_get_clean();
+if (!str_contains($complete, 'Testovací objednávka vytvořena') ||
+    str_contains($complete, 'Naskenovat QR platbu') || str_contains($complete, 'Číslo účtu')) {
+    throw new RuntimeException('Test order confirmation must never suggest a bank payment.');
+}
+
 echo "Checkout rendering tests passed.\n";

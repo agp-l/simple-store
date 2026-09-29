@@ -6,6 +6,7 @@ use SimpleStore\Admin\AdminUserRepository;
 use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Content\ContentRepository;
 use SimpleStore\Checkout\CartSession;
+use SimpleStore\Checkout\CheckoutSettingsRepository;
 use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Navigation\StorefrontMenus;
 use SimpleStore\Navigation\UrlManager;
@@ -103,7 +104,7 @@ try {
         } elseif (!in_array($action, ['create-content', 'create-translation', 'inline-content', 'create-product',
             'inline-product', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
             'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product',
-            'mark-order-paid'], true) ||
+            'mark-order-paid', 'save-checkout-settings'], true) ||
             !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach'], true)) {
                 header('Content-Type: application/json; charset=utf-8');
@@ -172,6 +173,11 @@ try {
     }
     if ($action === 'mark-order-paid' || ($method !== 'POST' && $section === 'orders')) {
         require __DIR__ . '/src/Admin/orders.php';
+        require __DIR__ . '/view/admin/layout.php';
+        exit;
+    }
+    if ($action === 'save-checkout-settings' || ($method !== 'POST' && $section === 'settings')) {
+        require __DIR__ . '/src/Admin/settings.php';
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }

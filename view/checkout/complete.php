@@ -6,11 +6,13 @@ $paymentAmount = (int) ($bankPayment['amount_czk'] ?? 0);
 $qrPayload = (string) ($bankPayment['spayd'] ?? '');
 $qrReady = str_starts_with($qrPayload, 'SPD*1.0*') && strlen($qrPayload) <= 512 && !preg_match('/[\x00-\x1F\x7F]/', $qrPayload);
 $paymentPaid = ($order['payment_status'] ?? '') === 'paid';
+$testOrder = ($order['payment_method'] ?? '') === 'test';
 ?>
 <main class="wrap checkout-page checkout-complete" id="produkty">
-  <div class="checkout-heading"><span class="checkout-eyebrow">Objednávka přijata</span><h1>Děkujeme za objednávku</h1><p>Objednávka<?= $orderNumber !== '' ? ' č. ' . $checkoutEscape($orderNumber) : '' ?> <?= $paymentPaid ? 'je zaplacená. Děkujeme.' : 'čeká na úhradu. Zaplaťte bankovním převodem podle údajů níže.' ?></p></div>
+  <div class="checkout-heading"><span class="checkout-eyebrow"><?= $testOrder ? 'Místní test' : 'Objednávka přijata' ?></span><h1><?= $testOrder ? 'Testovací objednávka vytvořena' : 'Děkujeme za objednávku' ?></h1><p>Objednávka<?= $orderNumber !== '' ? ' č. ' . $checkoutEscape($orderNumber) : '' ?> <?= $testOrder ? 'je testovací. Nic neplaťte; nebyly vytvořeny platební údaje ani QR kód.' : ($paymentPaid ? 'je zaplacená. Děkujeme.' : 'čeká na úhradu. Zaplaťte bankovním převodem podle údajů níže.') ?></p></div>
   <div class="checkout-columns<?= $paymentPaid ? ' checkout-columns-paid' : '' ?>">
-    <?php if (!$paymentPaid): ?>
+    <?php if ($testOrder): ?><section class="checkout-panel"><h2>Jen pro testování</h2><p>Objednávku najdete v administraci mezi testovacími objednávkami. K placení ani expedici neslouží.</p><?php if ($orderUrl !== ''): ?><label class="checkout-return-link">Odkaz na objednávku <input type="text" readonly value="<?= $checkoutEscape($orderUrl) ?>"></label><?php endif; ?><a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a></section>
+    <?php elseif (!$paymentPaid): ?>
     <section class="checkout-panel checkout-bank" aria-labelledby="checkout-bank-title">
       <h2 id="checkout-bank-title">Údaje pro platbu</h2>
       <dl>
