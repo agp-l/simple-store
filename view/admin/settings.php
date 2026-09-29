@@ -18,9 +18,9 @@ declare(strict_types=1);
   <label>Splatnost v dnech<input type="number" name="payment_due_days" value="<?= $escape($form['payment_due_days']) ?>" min="1" max="60" required></label>
   <h2>Obchodní podmínky</h2>
   <label>Adresa publikované stránky<input name="terms_url" value="<?= $escape($form['terms_url']) ?>" placeholder="<?= $escape($basePath . 'cs/obchodni-podminky') ?>"></label>
-  <p class="panel-help">Vytvoř a publikuj stránku obchodních podmínek, pak sem vlož její cestu začínající <?= $escape($basePath) ?>.</p>
+  <p class="panel-help">Můžeš je doplnit později. Až stránku vytvoříš a publikuješ, vlož sem její cestu začínající <?= $escape($basePath) ?>.</p>
   <h2>Místní vývoj</h2>
-  <label class="panel-check"><input type="checkbox" name="local_test_checkout" value="1" <?= $form['local_test_checkout'] === '1' ? 'checked' : '' ?>> Povolit testovací objednávky na localhostu, pokud chybí účet nebo obchodní podmínky</label>
+  <label class="panel-check"><input type="checkbox" name="local_test_checkout" value="1" <?= $form['local_test_checkout'] === '1' ? 'checked' : '' ?>> Povolit testovací objednávky na localhostu, pokud chybí bankovní účet</label>
   <p class="panel-help">Testovací objednávka nemá platební údaje ani QR kód. Mimo localhost je tento režim vypnutý.</p>
   <button class="panel-button" type="submit">Uložit nastavení</button>
 </form>

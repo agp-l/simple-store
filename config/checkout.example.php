@@ -5,7 +5,7 @@ declare(strict_types=1);
 // Home delivery is enabled for development; adjust its price before taking orders.
 return [
     'local_test_checkout' => true, // Only on localhost in debug mode; no payment is requested.
-    'terms_url' => '', // Local published page, e.g. /cs/obchodni-podminky (adjust for subdirectory).
+    'terms_url' => '', // Optional local published page, e.g. /cs/obchodni-podminky.
     'bank_transfer' => [
         'iban' => '', // Calculated from the Czech account number if left empty.
         'account_display' => '', // Enter in administration; do not commit a private account.

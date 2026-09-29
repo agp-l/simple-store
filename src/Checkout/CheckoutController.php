@@ -167,7 +167,7 @@ final class CheckoutController
     private function placeOrder(): void
     {
         $testOrder = $this->testCheckout();
-        if (!$testOrder && self::field('terms') !== '1') {
+        if (!$testOrder && $this->termsUrl !== '' && self::field('terms') !== '1') {
             throw new InvalidArgumentException('Pro odeslání objednávky potvrďte obchodní podmínky.');
         }
         $summary = $this->cartService->summary($this->cart);
@@ -175,7 +175,7 @@ final class CheckoutController
         $price = is_array($delivery) && ($delivery['method'] ?? '') === 'home'
             ? $this->shipping->quote('home') : null;
         if (!$summary['can_continue'] || !is_array($delivery) || $price === null ||
-            (!$testOrder && ($this->bank === null || $this->termsUrl === '')) ||
+            (!$testOrder && $this->bank === null) ||
             !$this->orders->installed()) {
             throw new InvalidArgumentException('Objednávku nyní nelze dokončit. Zkontrolujte košík, doručení a nastavení obchodu.');
         }
@@ -216,7 +216,7 @@ final class CheckoutController
         $testCheckout = $this->testCheckout();
         $ready = $summary['can_continue'] && $shippingConfigured && $installed && $price !== null &&
             $summary['subtotal_czk'] + $price <= 9999999 &&
-            ($testCheckout || ($this->bank !== null && $this->termsUrl !== ''));
+            ($testCheckout || $this->bank !== null);
         $data = array_merge($this->shared, [
             'title' => match ($step) {
                 'cart' => 'Košík — dobrodruzi.cz',
@@ -239,7 +239,7 @@ final class CheckoutController
 
     private function testCheckout(): bool
     {
-        return $this->allowLocalPreview && ($this->bank === null || $this->termsUrl === '');
+        return $this->allowLocalPreview && $this->bank === null;
     }
 
     private static function field(string $name): string

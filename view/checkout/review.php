@@ -24,7 +24,7 @@ require __DIR__ . '/common.php';
       <?php if ($checkoutCanContinue && ($checkoutReady ?? false) && $summaryShippingPrice !== null): ?>
       <form class="checkout-place" method="post" action="<?= $checkoutEscape($checkoutUrl) ?>">
         <input type="hidden" name="csrf" value="<?= $checkoutEscape($cartToken) ?>"><input type="hidden" name="action" value="place">
-        <?php if (!($testCheckout ?? false)): ?><label><input type="checkbox" name="terms" value="1" required> Souhlasím s <a href="<?= $checkoutEscape($termsUrl) ?>" target="_blank" rel="noopener">obchodními podmínkami</a>.</label><?php endif; ?>
+        <?php if (!($testCheckout ?? false) && ($termsUrl ?? '') !== ''): ?><label><input type="checkbox" name="terms" value="1" required> Souhlasím s <a href="<?= $checkoutEscape($termsUrl) ?>" target="_blank" rel="noopener">obchodními podmínkami</a>.</label><?php endif; ?>
         <button type="submit" class="checkout-primary"><?= ($testCheckout ?? false) ? 'Vytvořit testovací objednávku' : 'Objednat s povinností platby' ?></button>
       </form>
       <?php else: ?><p class="checkout-alert" role="alert">Objednávku nyní nelze vytvořit. Vraťte se do košíku a zkontrolujte údaje.</p><?php endif; ?>

@@ -45,9 +45,30 @@ if (!str_contains($shipping, 'value="home"') || !str_contains($shipping, '99 Kč
 ob_start();
 $renderer->render('payment', $data + ['delivery' => ['method' => 'home'], 'selectedShippingPrice' => 99]);
 $payment = ob_get_clean();
-if (!str_contains($payment, 'Platba nebo obchodní podmínky zatím nejsou nastavené') ||
+if (!str_contains($payment, 'Bankovní převod není nastavený') ||
     str_contains($payment, 'Zkontrolovat objednávku')) {
-    throw new RuntimeException('Only order submission needs the real bank and legal settings.');
+    throw new RuntimeException('Checkout without bank settings must explain what to configure.');
+}
+
+$bankData = $data + ['delivery' => ['method' => 'home', 'name' => 'Eva Nová',
+    'street' => 'Polní 1', 'postal_code' => '11000', 'city' => 'Praha',
+    'email' => 'eva@example.org', 'phone' => '123'], 'selectedShippingPrice' => 99];
+$bankData['bankConfigured'] = true;
+$bankData['checkoutReady'] = true;
+ob_start();
+$renderer->render('payment', $bankData);
+$payment = ob_get_clean();
+if (!str_contains($payment, 'Zkontrolovat objednávku') ||
+    str_contains($payment, 'Bankovní převod není nastavený')) {
+    throw new RuntimeException('Configured bank transfer must continue without a terms page.');
+}
+ob_start();
+$renderer->render('review', $bankData);
+$review = ob_get_clean();
+if (!str_contains($review, 'Objednat s povinností platby') ||
+    str_contains($review, 'name="terms"') ||
+    str_contains($review, 'Vytvořit testovací objednávku')) {
+    throw new RuntimeException('Bank checkout without a terms page must submit as a real order.');
 }
 
 $testData = $data + ['delivery' => ['method' => 'home', 'name' => 'Eva Nová',
