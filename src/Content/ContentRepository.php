@@ -44,7 +44,7 @@ final class ContentRepository
             throw new InvalidArgumentException('Invalid blog page.');
         }
         $rows = $this->db->query(
-            'SELECT document_key, language, slug, title, summary, saved_at
+            'SELECT document_key, language, slug, title, summary, body, saved_at
              FROM content_revisions WHERE type=%s AND language=%s
              AND active_document_key IS NOT NULL AND published=1
              ORDER BY id DESC LIMIT %i OFFSET %i',

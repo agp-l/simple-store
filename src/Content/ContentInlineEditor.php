@@ -5,6 +5,7 @@ namespace SimpleStore\Content;
 
 use InvalidArgumentException;
 use SimpleStore\Navigation\Slugger;
+use SimpleStore\Product\ProductDetails;
 
 /** Apply a small edit to a complete page or article before saving another revision. */
 final class ContentInlineEditor
@@ -54,6 +55,15 @@ final class ContentInlineEditor
     public static function change(array $form, string $operation, string $field = '',
         string $value = '', ?int $index = null): array
     {
+        if ($operation === 'section.image.add' && ProductDetails::imagePath(trim($value))) {
+            $position = $index === null ? count($form['sections']) : $index + 1;
+            if ($position < 0 || $position > count($form['sections'])) {
+                throw new InvalidArgumentException('Neplatné místo pro fotografii.');
+            }
+            array_splice($form['sections'], $position, 0,
+                [['type' => 'image', 'heading' => 'Fotografie', 'body' => trim($value)]]);
+            return $form;
+        }
         if ($operation === 'set' && in_array($field, self::FIELDS, true)) {
             if (in_array($field, ['published', 'visible_in_menu'], true)) {
                 if (!in_array($value, ['0', '1'], true) ||

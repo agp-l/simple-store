@@ -1,6 +1,7 @@
 <?php
 use SimpleStore\Content\ContentBody;
 use SimpleStore\Product\ProductText;
+use SimpleStore\Media\MediaPath;
 
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $editing = $contentEditMode;
@@ -24,6 +25,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         <div><strong><?= $page === 'post' ? 'Článek' : 'Stránka' ?> · <?= !empty($content['published']) ? 'publikováno' : 'koncept' ?></strong><p>Klikni do textu; úprava se uloží při opuštění pole.</p></div>
         <span class="inline-status" id="content-editor-status" role="status" aria-live="polite">Revize <?= (int) $content['revision_number'] ?></span>
         <button type="button" class="inline-small" data-content-action="publish" data-value="<?= $content['published'] ? '0' : '1' ?>"><?= $content['published'] ? 'Skrýt' : 'Publikovat' ?></button>
+        <button type="button" class="inline-small" data-content-action="media-library">▧ Fotografie</button>
         <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>">
           <input type="hidden" name="action" value="create-content"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>">
           <input type="hidden" name="type" value="<?= $escape($page) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
@@ -65,7 +67,8 @@ $editable = static function (string $field, string $value, ?int $index = null, s
             </div><?php endif; ?>
             <?php if ($editing || $section['heading'] !== ''): ?><h2 class="cms-block-title"<?= $editable('section_heading', $section['heading'], $i, 'section.set') ?>><?= $escape($section['heading'] ?: 'Nadpis bloku…') ?></h2><?php endif; ?>
             <?php if ($section['type'] === 'image'): ?>
-              <figure class="cms-block-image"><img src="<?= $escape(str_starts_with($section['body'], 'images/') ? $basePath . $section['body'] : $section['body']) ?>" alt="<?= $escape($section['heading'] ?: $content['title']) ?>" loading="lazy"></figure>
+              <?php $fullImage = str_starts_with($section['body'], 'images/') ? $basePath . $section['body'] : $section['body']; $cardPath = MediaPath::variant($section['body'], 'card'); $cardImage = str_starts_with($cardPath, 'images/') ? $basePath . $cardPath : $cardPath; ?>
+              <figure class="cms-block-image"><img src="<?= $escape($cardImage) ?>" <?= MediaPath::isManaged($section['body']) ? 'srcset="' . $escape($cardImage) . ' 960w, ' . $escape($fullImage) . ' 1800w" sizes="(max-width: 760px) 100vw, 850px"' : '' ?> alt="<?= $escape($section['heading'] ?: $content['title']) ?>" loading="lazy"></figure>
               <?php if ($editing): ?><button type="button" class="inline-small" data-content-action="section-image" data-index="<?= $i ?>" data-value="<?= $escape($section['body']) ?>">✎ Změnit fotografii</button><?php endif; ?>
             <?php else: ?>
               <div class="cms-block-text"<?= $editable('section_body', $section['body'], $i, 'section.set') ?>>
@@ -87,5 +90,6 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         'endpoint' => $basePath . 'admin.php', 'key' => $content['document_key'],
         'type' => $page, 'language' => $language, 'revision' => (int) $content['revision_number'],
         'csrf' => $editToken,
-      ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script><?php endif; ?>
+      ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script>
+      <?php require __DIR__ . '/media/picker.php'; ?><?php endif; ?>
   </main>

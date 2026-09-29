@@ -26,7 +26,8 @@
   function refreshWhenReady() {
     clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => {
-      if (pending || document.activeElement?.matches('[data-edit-operation], [data-content-select], [data-content-input], [data-content-type]')) {
+      if (pending || document.getElementById('media-picker')?.open ||
+          document.activeElement?.matches('[data-edit-operation], [data-content-select], [data-content-input], [data-content-type]')) {
         refreshWhenReady();
         return;
       }
@@ -37,6 +38,21 @@
       location.assign(nextUrl + (location.hash || ''));
     }, 380);
   }
+
+  window.SimpleStoreMediaContext = {
+    ...config, basePath: new URL('.', new URL(config.endpoint, location.href)).pathname,
+    getRevision: async () => { await queue; if (failed) throw new Error('Nejdřív obnov stránku po chybě uložení.'); return config.revision; },
+    choose: (path, mode, index) => {
+      if (mode === 'section-image') save('section.set', 'section_body', path, index);
+      else save('section.image.add', '', path, index);
+    },
+    uploaded: result => {
+      config.revision = result.revision;
+      nextUrl = result.url;
+      status.textContent = `Uloženo · revize ${config.revision}`;
+      refreshWhenReady();
+    }
+  };
 
   function save(operation, field = '', value = '', index = null) {
     if (failed) return;
@@ -142,10 +158,11 @@
       return;
     }
     if (action === 'section-image') {
-      const value = prompt('Cesta v images/ nebo HTTPS adresa fotografie:', button.dataset.value);
-      if (value !== null && value.trim() !== button.dataset.value) {
-        save('section.set', 'section_body', value.trim(), index);
-      }
+      window.SimpleStoreMedia.open('section-image', index, button.dataset.value);
+      return;
+    }
+    if (action === 'media-library' || action === 'section-add-image') {
+      window.SimpleStoreMedia.open('section-add-image', index);
       return;
     }
     if (action === 'publish') {
@@ -169,7 +186,10 @@
       save('section.move', '', action === 'section-up' ? 'up' : 'down', index);
       return;
     }
-    if (action === 'section-add') save('section.add', '', button.dataset.value, index);
+    if (action === 'section-add') {
+      if (button.dataset.value === 'image') window.SimpleStoreMedia.open('section-add-image', index);
+      else save('section.add', '', button.dataset.value, index);
+    }
   });
 
   window.addEventListener('beforeunload', event => {

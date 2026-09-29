@@ -98,6 +98,17 @@ final class ProductInlineEditor
             $form['gallery'] = implode("\n", $gallery);
             return $form;
         }
+        if ($operation === 'section.image.add' && ProductDetails::imagePath(trim($value))) {
+            $position = $index === null ? count($form['section_type']) : $index + 1;
+            if ($position < 0 || $position > count($form['section_type'])) {
+                throw new InvalidArgumentException('Neplatné místo pro fotografii.');
+            }
+            foreach (['section_type' => 'image', 'section_heading' => 'Fotografie',
+                'section_body' => trim($value)] as $fieldName => $item) {
+                array_splice($form[$fieldName], $position, 0, [$item]);
+            }
+            return $form;
+        }
         foreach (self::GROUPS as $group => $keys) {
             if ($operation === $group . '.add') {
                 $defaults = self::defaults($group, $value, count($form[$keys[0]]));

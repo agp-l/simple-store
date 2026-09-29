@@ -20,6 +20,12 @@ final class MediaPath
         return preg_match('~^images/media/(?:products|pages|posts)/[a-f0-9]{32}/[a-z0-9-]{1,50}--[a-f0-9]{24}\.webp$~D', $path) === 1;
     }
 
+    public static function isAsset(string $path): bool
+    {
+        return self::isManaged($path) ||
+            preg_match('~^images/media/(?:products|pages|posts)/[a-f0-9]{32}/[a-z0-9-]{1,50}--[a-f0-9]{24}-(?:card|thumb)\.webp$~D', $path) === 1;
+    }
+
     public static function variant(string $path, string $size): string
     {
         if (!in_array($size, ['card', 'thumb'], true) || !self::isManaged($path)) {

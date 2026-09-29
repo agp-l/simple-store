@@ -2,6 +2,7 @@
 use SimpleStore\Product\ProductDetails;
 use SimpleStore\Category\CategoryPath;
 use SimpleStore\Product\ProductText;
+use SimpleStore\Media\MediaPath;
 
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $editing = (bool) ($editMode ?? false);
@@ -29,6 +30,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         <div><strong>Upravuješ <?= !empty($product['published']) ? 'veřejný produkt' : 'neveřejný koncept' ?></strong><p>Klikni do textu; úprava se uloží při opuštění pole.</p></div>
         <span class="inline-status" id="inline-status" role="status" aria-live="polite">Revize <?= (int) $product['revision_number'] ?></span>
         <button type="button" class="inline-small" data-editor-action="publish" data-value="<?= $product['published'] ? '0' : '1' ?>"><?= $product['published'] ? 'Skrýt produkt' : 'Publikovat produkt' ?></button>
+        <button type="button" class="inline-small" data-editor-action="media-library">▧ Fotografie</button>
         <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>" class="inline-create-product"><input type="hidden" name="action" value="create-product"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>"><button type="submit" class="inline-small">＋ Nový produkt</button></form>
         <?php if ($product['published']): ?><a href="<?= $escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug'])) ?>">Zobrazit jako návštěvník ↗</a><?php endif; ?>
         <a href="<?= $escape($siteRoot . 'admin.php?section=products') ?>">Všechny produkty</a>
@@ -52,7 +54,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         <?php if ($editing): ?><div class="inline-image-actions"><button type="button" class="inline-small" data-editor-action="main-image">✎ Hlavní obrázek</button><button type="button" class="inline-small" data-editor-action="gallery-add">＋ Přidat fotografii</button></div><?php endif; ?>
         <?php if ($details['gallery'] !== []): ?><div class="detail-thumbs" aria-label="Fotografie produktu">
           <?php foreach (array_merge([$product['image_path']], $details['gallery']) as $i => $path): ?>
-            <span class="inline-thumb"><button type="button" class="detail-thumb" data-gallery-image="<?= $escape($imageUrl($path)) ?>" aria-label="Zobrazit fotografii <?= $i + 1 ?>" aria-pressed="<?= $i === 0 ? 'true' : 'false' ?>"><img src="<?= $escape($imageUrl($path)) ?>" alt="" loading="lazy"></button>
+            <span class="inline-thumb"><button type="button" class="detail-thumb" data-gallery-image="<?= $escape($imageUrl($path)) ?>" aria-label="Zobrazit fotografii <?= $i + 1 ?>" aria-pressed="<?= $i === 0 ? 'true' : 'false' ?>"><img src="<?= $escape($imageUrl(MediaPath::variant($path, 'thumb'))) ?>" alt="" loading="lazy"></button>
               <?php if ($editing && $i > 0): ?><button type="button" class="inline-tiny" data-editor-action="gallery-set" data-editor-index="<?= $i - 1 ?>" data-editor-value="<?= $escape($path) ?>" aria-label="Upravit fotografii <?= $i + 1 ?>">✎</button><button type="button" class="inline-tiny" data-editor-action="gallery-remove" data-editor-index="<?= $i - 1 ?>" aria-label="Odebrat fotografii <?= $i + 1 ?>">×</button><?php endif; ?>
             </span>
           <?php endforeach; ?></div><?php endif; ?>
@@ -97,7 +99,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
               </div><?php endif; ?>
               <?php if ($editing || $section['heading'] !== ''): ?><h3<?= $editable('section_heading', $section['heading'], $i, 'section.set') ?>><?= $escape($section['heading'] ?: 'Nadpis bloku…') ?></h3><?php endif; ?>
               <?php if ($section['type'] === 'image'): ?>
-                <figure class="product-story-image"><img src="<?= $escape($imageUrl($section['body'])) ?>" alt="<?= $escape($section['heading'] !== '' ? $section['heading'] : $product['name']) ?>" loading="lazy"></figure>
+                <figure class="product-story-image"><img src="<?= $escape($imageUrl(MediaPath::variant($section['body'], 'card'))) ?>" <?= MediaPath::isManaged($section['body']) ? 'srcset="' . $escape($imageUrl(MediaPath::variant($section['body'], 'card'))) . ' 960w, ' . $escape($imageUrl($section['body'])) . ' 1800w" sizes="(max-width: 760px) 100vw, 800px"' : '' ?> alt="<?= $escape($section['heading'] !== '' ? $section['heading'] : $product['name']) ?>" loading="lazy"></figure>
                 <?php if ($editing): ?><button type="button" class="inline-small" data-editor-action="section-image" data-editor-index="<?= $i ?>" data-editor-value="<?= $escape($section['body']) ?>">✎ Změnit fotografii v bloku</button><?php endif; ?>
               <?php else: ?><div class="inline-block-text"<?= $editable('section_body', $section['body'], $i, 'section.set') ?>>
                 <?php if ($section['type'] === 'list'): ?><ul class="feature-list">
@@ -124,7 +126,8 @@ $editable = static function (string $field, string $value, ?int $index = null, s
     <p><a href="<?= $escape($siteRoot . $language . ($categoryTrail !== [] ? '/kategorie-produktu/' . $categoryPath : '')) ?>#produkty">← Zpět na produkty</a></p>
     <?php if ($editing): ?><script type="application/json" id="inline-editor-config"><?= json_encode([
         'endpoint' => $basePath . 'admin.php', 'key' => $product['product_key'],
-        'language' => $language, 'revision' => (int) $product['revision_number'],
+        'type' => 'product', 'language' => $language, 'revision' => (int) $product['revision_number'],
         'csrf' => $editToken,
-      ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script><?php endif; ?>
+      ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script>
+      <?php require __DIR__ . '/media/picker.php'; ?><?php endif; ?>
   </main>

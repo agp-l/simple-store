@@ -26,7 +26,8 @@
   function refreshWhenReady() {
     clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => {
-      if (pending || document.activeElement?.matches('[data-edit-operation], [data-editor-select], [data-editor-type]')) {
+      if (pending || document.getElementById('media-picker')?.open ||
+          document.activeElement?.matches('[data-edit-operation], [data-editor-select], [data-editor-type]')) {
         refreshWhenReady();
         return;
       }
@@ -37,6 +38,24 @@
       location.assign(nextUrl + (location.hash || ''));
     }, 380);
   }
+
+  window.SimpleStoreMediaContext = {
+    ...config, basePath: new URL('.', new URL(config.endpoint, location.href)).pathname,
+    getRevision: async () => { await queue; if (failed) throw new Error('Nejdřív obnov stránku po chybě uložení.'); return config.revision; },
+    choose: (path, mode, index) => {
+      if (mode === 'main-image') save('set', 'image_path', path);
+      else if (mode === 'gallery-set') save('gallery.set', '', path, index);
+      else if (mode === 'section-image') save('section.set', 'section_body', path, index);
+      else if (mode === 'section-add-image') save('section.image.add', '', path, index);
+      else save('gallery.add', '', path);
+    },
+    uploaded: result => {
+      config.revision = result.revision;
+      nextUrl = result.url;
+      status.textContent = `Uloženo · revize ${config.revision}`;
+      refreshWhenReady();
+    }
+  };
 
   function save(operation, field = '', value = '', index = null) {
     if (failed) return;
@@ -151,13 +170,16 @@
     }
     if (action === 'main-image' || action === 'gallery-add' || action === 'gallery-set' || action === 'section-image') {
       const old = action === 'main-image' ? document.getElementById('detail-image').dataset.imagePath :
-        (button.dataset.editorValue || 'images/batoh.webp');
-      const value = prompt('Cesta v images/ nebo HTTPS adresa fotografie:', old);
-      if (value === null || value.trim() === old) return;
-      if (action === 'main-image') save('set', 'image_path', value.trim());
-      else if (action === 'gallery-add') save('gallery.add', '', value.trim());
-      else if (action === 'gallery-set') save('gallery.set', '', value.trim(), index);
-      else save('section.set', 'section_body', value.trim(), index);
+        (button.dataset.editorValue || '');
+      window.SimpleStoreMedia.open(action, index, old);
+      return;
+    }
+    if (action === 'media-library') {
+      window.SimpleStoreMedia.open('gallery-add');
+      return;
+    }
+    if (action === 'section-add-image') {
+      window.SimpleStoreMedia.open('section-add-image', index);
       return;
     }
     if (action === 'publish') {
@@ -181,7 +203,10 @@
       save('section.move', '', action === 'section-up' ? 'up' : 'down', index);
       return;
     }
-    if (action === 'section-add') save('section.add', '', button.dataset.editorValue, index);
+    if (action === 'section-add') {
+      if (button.dataset.editorValue === 'image') window.SimpleStoreMedia.open('section-add-image', index);
+      else save('section.add', '', button.dataset.editorValue, index);
+    }
     if (action === 'option-add') save('option.add');
     if (action === 'spec-add') save('spec.add');
   });

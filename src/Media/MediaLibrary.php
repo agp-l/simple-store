@@ -12,7 +12,7 @@ final class MediaLibrary
 {
     private const MAX_FILES = 12;
     private const MAX_BYTES = 12 * 1024 * 1024;
-    private const MAX_PIXELS = 36000000;
+    private const MAX_PIXELS = 20000000;
 
     public function __construct(private string $root) {}
 
@@ -86,12 +86,15 @@ final class MediaLibrary
         if ($info === false || $info[0] < 1 || $info[1] < 1 ||
             $info[0] * $info[1] > self::MAX_PIXELS ||
             !in_array($info[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP], true)) {
-            throw new InvalidArgumentException('Použij JPG, PNG nebo WebP s rozlišením nejvýše 36 megapixelů.');
+            throw new InvalidArgumentException('Použij JPG, PNG nebo WebP s rozlišením nejvýše 20 megapixelů.');
         }
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($source);
         $expected = [IMAGETYPE_JPEG => 'image/jpeg', IMAGETYPE_PNG => 'image/png', IMAGETYPE_WEBP => 'image/webp'];
         if ($mime !== $expected[$info[2]]) {
             throw new InvalidArgumentException('Soubor neodpovídá formátu fotografie.');
+        }
+        if ($info[2] === IMAGETYPE_WEBP && !function_exists('imagecreatefromwebp')) {
+            throw new RuntimeException('Rozšíření PHP GD nemá podporu čtení WebP.');
         }
         $image = match ($info[2]) {
             IMAGETYPE_JPEG => @imagecreatefromjpeg($source),
@@ -118,7 +121,7 @@ final class MediaLibrary
             $this->prepareDirectory($relative);
             $created = [];
             try {
-                foreach ([[$path, 1800], [MediaPath::variant($path, 'card'), 640],
+                foreach ([[$path, 1800], [MediaPath::variant($path, 'card'), 960],
                     [MediaPath::variant($path, 'thumb'), 240]] as [$target, $size]) {
                     $this->writeSize($image, $folder . '/' . basename($target), $size);
                     $created[] = $target;

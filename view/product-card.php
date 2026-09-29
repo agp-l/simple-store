@@ -1,11 +1,13 @@
 <?php
 use SimpleStore\Product\ProductDetails;
 use SimpleStore\Category\CategoryPath;
+use SimpleStore\Media\MediaPath;
 
 // This view uses a published product row from the catalog query.
 $productLink = $basePath . $language . '/produkt/' . rawurlencode($product['slug']);
-$productImage = str_starts_with($product['image_path'], 'images/')
-    ? $basePath . $product['image_path'] : $product['image_path'];
+$cardPath = MediaPath::variant($product['image_path'], 'card');
+$productImage = str_starts_with($cardPath, 'images/')
+    ? $basePath . $cardPath : $cardPath;
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $categoryPath = CategoryPath::fromProduct($product);
 $categoryLabel = $categoryLabels[$categoryPath] ?? $categoryLabels[explode('/', $categoryPath)[0]] ?? 'Vybavení';

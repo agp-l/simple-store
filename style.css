@@ -1399,6 +1399,8 @@
 .cms-content.is-editing .inline-history { max-width:850px; }
 .cms-post-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 17px; margin-top: 31px; }
 .cms-post-list article { padding: 25px; border: 1px solid var(--line); border-radius: 9px; background: white; }
+.cms-post-image { display:block; margin:-25px -25px 20px; overflow:hidden; border-radius:8px 8px 0 0; background:#f2f5f0; }
+.cms-post-image img { display:block; width:100%; height:230px; object-fit:cover; }
 .cms-post-list time { color: var(--muted); font-size: 12px; }
 .cms-post-list h2 { margin: 12px 0 10px; font-size: 21px; line-height: 1.3; }
 .cms-post-list h2 a { color: var(--ink); text-decoration: none; }

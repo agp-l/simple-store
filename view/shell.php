@@ -46,5 +46,6 @@ $page ??= '';
 <?php if ($page === 'product-record'): ?><script defer src="<?= $siteRoot ?>assets/product.js"></script><?php endif; ?>
 <?php if ($editMode): ?><script defer src="<?= $siteRoot ?>assets/inline-editor.js"></script><?php endif; ?>
 <?php if ($contentEditMode): ?><script defer src="<?= $siteRoot ?>assets/content-editor.js"></script><?php endif; ?>
+<?php if ($editMode || $contentEditMode || ($mediaManager ?? false)): ?><script defer src="<?= $siteRoot ?>assets/media-manager.js"></script><?php endif; ?>
 </body>
 </html>

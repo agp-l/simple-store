@@ -105,7 +105,8 @@ final class ProductRepository
     public function currentProducts(): array
     {
         return $this->db->query(
-            'SELECT product_key, language, slug, name, price_czk, published, revision_number, saved_at
+            'SELECT product_key, language, slug, name, category, subcategory,
+                    price_czk, published, revision_number, saved_at
              FROM product_revisions WHERE active_product_key IS NOT NULL ORDER BY id DESC'
         );
     }

@@ -1,7 +1,7 @@
 <?php
 // This body is framed by the shared storefront shell.
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-$inside = in_array($screen, ['editor', 'products', 'categories', 'menus'], true);
+$inside = in_array($screen, ['editor', 'products', 'categories', 'menus', 'media'], true);
 ?>
 <div class="panel-area">
   <?php if ($inside): ?>
@@ -15,6 +15,7 @@ $inside = in_array($screen, ['editor', 'products', 'categories', 'menus'], true)
     $panelLinks = [
         ['key' => 'editor', 'label' => 'Stránky a články', 'icon' => '▤', 'href' => $adminUrl],
         ['key' => 'products', 'label' => 'Produkty', 'icon' => '▦', 'href' => $adminUrl . '?section=products'],
+        ['key' => 'media', 'label' => 'Fotografie', 'icon' => '▧', 'href' => $adminUrl . '?section=media'],
         ['key' => 'categories', 'label' => 'Kategorie', 'icon' => '⌁', 'href' => $adminUrl . '?section=categories'],
         ['key' => 'menus', 'label' => 'Menu', 'icon' => '☷', 'href' => $adminUrl . '?section=menus'],
     ];
@@ -49,6 +50,8 @@ $inside = in_array($screen, ['editor', 'products', 'categories', 'menus'], true)
       <?php require __DIR__ . '/products.php'; ?>
     <?php elseif ($screen === 'categories'): ?>
       <?php require __DIR__ . '/categories.php'; ?>
+    <?php elseif ($screen === 'media'): ?>
+      <?php require __DIR__ . '/media.php'; ?>
     <?php elseif ($screen === 'menus'): ?>
       <?php require __DIR__ . '/menus.php'; ?>
     <?php else: ?>
