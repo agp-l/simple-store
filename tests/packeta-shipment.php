@@ -56,19 +56,29 @@ $shipping = ['method' => 'zasilkovna_pickup', 'pickup_verified' => true,
 $order = ['order_number' => 'DB-20260929-ABC', 'customer_email' => 'eva@example.test',
     'subtotal_czk' => 1200, 'shipping' => $shipping,
     'payment_method' => 'bank_transfer', 'payment_status' => 'paid', 'status' => 'processing'];
-$form = ['first_name' => 'Eva', 'surname' => 'Nová', 'weight_kg' => '0,750'];
+$form = ['first_name' => 'Eva', 'surname' => 'Nová', 'weight_kg' => '0,750',
+    'email' => 'eva@example.test', 'phone' => '+420 777-111-222'];
 $pickup = PacketaShipmentDraft::fromOrder($order, $form, 'Dobrodruzi');
 if ($pickup['attributes']['addressId'] !== '12345' || $pickup['attributes']['weight'] !== '0.750' ||
+    $pickup['attributes']['phone'] !== '+420777111222' ||
     $pickup['attributes']['cod'] !== '0' || $pickup['attributes']['value'] !== '1200') {
     throw new RuntimeException('Pickup packet has wrong destination or financial attributes.');
 }
 $home = PacketaShipmentDraft::fromOrder(array_replace($order, ['shipping' => [
     'method' => 'zasilkovna_home', 'phone' => '+420777111222', 'country' => 'CZ',
     'city' => 'Praha', 'postal_code' => '190 00']]), $form + [
-    'street' => 'Českomoravská', 'house_number' => '2408/1a'], 'Dobrodruzi');
+    'street' => 'Českomoravská', 'house_number' => '2408/1a',
+    'city' => 'Praha', 'postal_code' => '190 00'], 'Dobrodruzi');
 if ($home['attributes']['addressId'] !== '106' || $home['attributes']['zip'] !== '19000' ||
     $home['attributes']['houseNumber'] !== '2408/1a') {
     throw new RuntimeException('HD destination was not normalized.');
+}
+$corrected = PacketaShipmentDraft::fromOrder($order, array_replace($form, [
+    'email' => 'oprava@example.test', 'phone' => '+420 (777) 444-555']), 'Dobrodruzi');
+if ($corrected['attributes']['email'] !== 'oprava@example.test' ||
+    $corrected['attributes']['phone'] !== '+420777444555' ||
+    $order['customer_email'] !== 'eva@example.test') {
+    throw new RuntimeException('Contact correction changed the order or was not sent to Packeta.');
 }
 foreach ([array_replace($order, ['payment_status' => 'pending']),
     array_replace($order, ['shipping' => array_replace($shipping, ['pickup_verified' => false])])] as $invalid) {

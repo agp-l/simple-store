@@ -30,15 +30,16 @@ final class PacketaShipmentDraft
             (float) $weight <= 0 || (float) $weight > $weightLimit) {
             throw new InvalidArgumentException('Vyplň jméno, příjmení a hmotnost balíku od 0,001 do ' . $weightLimit . ' kg.');
         }
-        $email = (string) ($order['customer_email'] ?? '');
-        $phone = trim((string) ($shipping['phone'] ?? ''));
+        $email = self::field($input, 'email', 254);
+        $phone = self::field($input, 'phone', 40);
+        $phone = preg_replace('/[\s().-]+/', '', $phone) ?? '';
         $number = (string) ($order['order_number'] ?? '');
         $value = (int) ($order['subtotal_czk'] ?? 0);
         if (filter_var($email, FILTER_VALIDATE_EMAIL) === false ||
             preg_match('/^\+?[0-9 ]{9,20}$/D', $phone) !== 1 ||
             preg_match('/^[A-Za-z0-9-]{1,40}$/D', $number) !== 1 ||
             $value < 1 || $value > 9999999) {
-            throw new InvalidArgumentException('Objednávce chybí platný kontakt nebo hodnota.');
+            throw new InvalidArgumentException('Zadej platný e-mail, telefon a zkontroluj hodnotu objednávky.');
         }
         $attributes = ['number' => $number, 'name' => $name, 'surname' => $surname,
             'email' => $email, 'phone' => $phone, 'addressId' => '',
@@ -57,8 +58,8 @@ final class PacketaShipmentDraft
             }
             $street = self::field($input, 'street', 120);
             $house = self::field($input, 'house_number', 30);
-            $city = self::savedField($shipping['city'] ?? null, 120);
-            $zip = preg_replace('/\s+/', '', (string) ($shipping['postal_code'] ?? ''));
+            $city = self::field($input, 'city', 120);
+            $zip = preg_replace('/\s+/', '', self::field($input, 'postal_code', 20));
             if ($street === '' || $house === '' || $city === '' ||
                 preg_match('/^[0-9]{5}$/D', $zip) !== 1) {
                 throw new InvalidArgumentException('Pro doručení domů vyplň zvlášť ulici a číslo domu; ověř město a PSČ v objednávce.');

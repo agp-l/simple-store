@@ -75,12 +75,19 @@ $packetaAction ??= '';
             <?php endif; ?>
             <?php if (($_GET['packeta_saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Údaje zásilky byly uloženy. Stav odeslání objednávky se nastavuje zvlášť po předání balíku.</p><?php endif; ?>
             <?php if ($packetaShipment !== null && $packetaShipment['status'] === 'created'): ?>
+              <?php $submittedPacket = json_decode((string) ($packetaShipment['submitted_json'] ?? ''), true); ?>
               <p class="panel-help">Zásilka je vytvořená v systému Zásilkovny. Po zabalení označ balík čitelným číslem nebo na něj nalep štítek.</p>
               <dl class="panel-order-facts">
                 <div><dt>Číslo na balík</dt><dd><strong><?= $escape($packetaShipment['barcode_text'] ?: $packetaShipment['barcode']) ?></strong></dd></div>
                 <div><dt>Kód zásilky</dt><dd><strong><?= $escape($packetaShipment['barcode']) ?></strong></dd></div>
                 <?php if ($packetaShipment['courier_number']): ?><div><dt>Číslo dopravce</dt><dd><?= $escape($packetaShipment['courier_number']) ?></dd></div><?php endif; ?>
                 <div><dt>Hmotnost</dt><dd><?= $escape($packetaShipment['weight_kg']) ?> kg</dd></div>
+                <?php if (is_array($submittedPacket)): ?>
+                  <div><dt>Podaný kontakt</dt><dd><?= $escape(trim((string) ($submittedPacket['name'] ?? '') . ' ' . (string) ($submittedPacket['surname'] ?? ''))) ?><br><?= $escape($submittedPacket['email'] ?? '') ?><br><?= $escape($submittedPacket['phone'] ?? '') ?></dd></div>
+                  <?php if ($packetaShipment['method'] === 'zasilkovna_home'): ?>
+                    <div><dt>Podaná adresa HD</dt><dd><?= $escape(trim((string) ($submittedPacket['street'] ?? '') . ' ' . (string) ($submittedPacket['houseNumber'] ?? ''))) ?><br><?= $escape(trim((string) ($submittedPacket['zip'] ?? '') . ' ' . (string) ($submittedPacket['city'] ?? ''))) ?></dd></div>
+                  <?php else: ?><div><dt>ID výdejního místa</dt><dd><?= $escape($submittedPacket['addressId'] ?? '') ?></dd></div><?php endif; ?>
+                <?php endif; ?>
               </dl>
               <?php if ($packetaConfigured && $packetaShipment['method'] === 'zasilkovna_home' && !$packetaShipment['courier_number']): ?>
                 <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
@@ -111,7 +118,11 @@ $packetaAction ??= '';
             <?php else: ?>
               <?php if ($packetaShipment !== null && $packetaShipment['status'] === 'rejected'): ?><p class="panel-error" role="alert"><?= $escape($packetaShipment['last_error'] ?: 'Zásilkovna zásilku odmítla.') ?></p><?php endif; ?>
               <?php if (!$paid): ?><p class="panel-help">Nejdřív ověř platbu na bankovním výpisu a označ ji jako přijatou.</p><?php endif; ?>
-              <?php if ($packetaReady && $packetaConfigured && $paid && !in_array($order['status'], ['cancelled', 'completed', 'test'], true)): ?>
+              <?php if (($shipping['method'] ?? '') === 'zasilkovna_pickup' &&
+                  (($shipping['pickup_verified'] ?? false) !== true ||
+                  preg_match('/^[0-9]{1,12}$/D', (string) ($shipping['pickup_code'] ?? '')) !== 1)): ?>
+                <p class="panel-help">U této starší objednávky nebylo výdejní místo ověřeno přes widget. Před podáním ho ověř v klientské sekci Zásilkovny; automatické podání této objednávky není dostupné.</p>
+              <?php elseif ($packetaReady && $packetaConfigured && $paid && !in_array($order['status'], ['cancelled', 'completed', 'test'], true)): ?>
                 <?php
                 $recipientParts = preg_split('/\s+/u', trim((string) ($shipping['recipient'] ?? $shipping['name'] ?? ''))) ?: [];
                 $defaultSurname = count($recipientParts) > 1 ? array_pop($recipientParts) : '';
@@ -123,16 +134,20 @@ $packetaAction ??= '';
                     (string) ($_POST['id'] ?? '') === (string) $order['id'] ?
                     array_filter($_POST, 'is_string') : [];
                 ?>
-                <p class="panel-help">Zkontroluj příjemce, telefon <?= $escape($shipping['phone'] ?? '') ?>, adresu a hmotnost již zabaleného balíku. API použije číslo objednávky <?= $escape($order['order_number']) ?> a platbu bez dobírky.</p>
+                <p class="panel-help">Zkontroluj údaje příjemce a hmotnost již zabaleného balíku. API použije číslo objednávky <?= $escape($order['order_number']) ?> a platbu bez dobírky. Případné opravy kontaktu a adresy níže se uloží k zásilce; původní objednávka zůstane v historii.</p>
                 <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="packeta-create"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                   <label>Jméno<input name="first_name" value="<?= $escape($entered['first_name'] ?? $defaultFirstName) ?>" maxlength="70" required></label>
                   <label>Příjmení<input name="surname" value="<?= $escape($entered['surname'] ?? $defaultSurname) ?>" maxlength="70" required></label>
+                  <label>E-mail<input name="email" type="email" value="<?= $escape($entered['email'] ?? $order['customer_email']) ?>" maxlength="254" required></label>
+                  <label>Telefon<input name="phone" type="tel" value="<?= $escape($entered['phone'] ?? $shipping['phone'] ?? '') ?>" maxlength="40" required></label>
                   <label>Hmotnost balíku v kg<input name="weight_kg" type="text" inputmode="decimal" value="<?= $escape($entered['weight_kg'] ?? '1') ?>" placeholder="např. 0,75" required></label>
                   <?php if ($shipping['method'] === 'zasilkovna_home'): ?>
                     <label>Ulice<input name="street" value="<?= $escape($entered['street'] ?? ($streetSplit ? $streetMatch[1] : $streetOriginal)) ?>" maxlength="120" required></label>
                     <label>Číslo domu<input name="house_number" value="<?= $escape($entered['house_number'] ?? ($streetSplit ? $streetMatch[2] : '')) ?>" maxlength="30" required></label>
-                    <p class="panel-help">HD doručí na <?= $escape(trim((string) ($shipping['postal_code'] ?? '') . ' ' . (string) ($shipping['city'] ?? ''))) ?>. Ověř rozdělení ulice a čísla domu. Pokud je město nebo PSČ chybně, zásilku zatím nepodávej.</p>
+                    <label>Město<input name="city" value="<?= $escape($entered['city'] ?? $shipping['city'] ?? '') ?>" maxlength="120" required></label>
+                    <label>PSČ<input name="postal_code" value="<?= $escape($entered['postal_code'] ?? $shipping['postal_code'] ?? '') ?>" maxlength="20" required></label>
+                    <p class="panel-help">Ověř rozdělení ulice a čísla domu a úplnou dodací adresu před podáním.</p>
                   <?php else: ?>
                     <p class="panel-help">Výdejní místo: <?= $escape($shipping['pickup_point'] ?? '') ?> (ID <?= $escape($shipping['pickup_code'] ?? '') ?>).</p>
                   <?php endif; ?>
