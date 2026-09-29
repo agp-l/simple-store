@@ -31,18 +31,6 @@ use SimpleStore\Navigation\UrlManager;
 use SimpleStore\Product\ProductRepository;
 use SimpleStore\Rendering\PageRenderer;
 
-class CaptureRenderer extends PageRenderer
-{
-    public string $page = '';
-    public array $data = [];
-
-    public function render(string $page, array $data = [], int $status = 200): void
-    {
-        $this->page = $page;
-        $this->data = $data;
-    }
-}
-
 $db = new MeekroDB();
 $cart = new CartSession('/simple-store/');
 $cart->clear();
@@ -52,7 +40,7 @@ $cart->setDelivery(['method' => 'home', 'name' => 'Eva Nová', 'email' => 'eva@e
     'postal_code' => '11000', 'country' => 'CZ']);
 $bank = new BankTransferPayment('CZ5855000000001265098001', '1265098001/5500', 'Test');
 $url = new UrlManager('/simple-store/cs/pokladna?step=payment', '/simple-store/index.php');
-$renderer = new CaptureRenderer(dirname(__DIR__) . '/view');
+$renderer = new PageRenderer(dirname(__DIR__) . '/view');
 $controller = new CheckoutController($url, $renderer,
     ['basePath' => '/simple-store/', 'language' => 'cs'], $cart,
     new CartService(new ProductRepository($db), ['cs']),
@@ -61,10 +49,13 @@ $controller = new CheckoutController($url, $renderer,
     new OrderRepository($db, $bank), $bank, null, '', false);
 $_SERVER['REQUEST_METHOD'] = 'GET';
 $_GET['step'] = 'payment';
+ob_start();
 $controller->handle(['name' => 'checkout']);
-if ($renderer->page !== 'payment' || !$renderer->data['checkoutReady'] ||
-    $renderer->data['testCheckout'] || !$renderer->data['bankConfigured'] ||
-    $renderer->data['termsUrl'] !== '') {
+$html = ob_get_clean();
+if (!str_contains($html, 'Bankovní převod') ||
+    !str_contains($html, 'Zkontrolovat objednávku') ||
+    str_contains($html, 'Testovací objednávka') ||
+    str_contains($html, 'Bankovní převod není nastavený')) {
     throw new RuntimeException('Real bank transfer must be available when test mode is off and terms are unset.');
 }
 $previewEnabled = new CheckoutController($url, $renderer,
@@ -73,8 +64,11 @@ $previewEnabled = new CheckoutController($url, $renderer,
     new ShippingPolicy(['home' => ['label' => 'Doručení na adresu',
         'price_czk' => 99, 'requires_address' => true]]),
     new OrderRepository($db, $bank), $bank, null, '', true);
+ob_start();
 $previewEnabled->handle(['name' => 'checkout']);
-if (!$renderer->data['checkoutReady'] || $renderer->data['testCheckout']) {
+$html = ob_get_clean();
+if (!str_contains($html, 'Zkontrolovat objednávku') ||
+    str_contains($html, 'Testovací objednávka')) {
     throw new RuntimeException('Local preview must not replace a configured bank transfer.');
 }
 
