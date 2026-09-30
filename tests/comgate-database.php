@@ -59,6 +59,7 @@ $items = [[
 ]];
 $shipping = [
     'method' => 'gls_home', 'label' => 'GLS domů', 'name' => 'Eva Nová',
+    'phone' => '123',
     'street' => 'Polní 1', 'city' => 'Praha', 'postal_code' => '11000', 'country' => 'CZ',
 ];
 $orders = new OrderRepository($db);
@@ -76,6 +77,7 @@ $url = $payments->initiate($order);
 expectComgate($url === $redirect && count($calls) === 1 && $calls[0][0] === 'POST' &&
     $calls[0][3] === 'test-merchant' && $calls[0][4] === 'test-only-secret' &&
     $calls[0][2]['test'] === true && $calls[0][2]['price'] === 107900 &&
+    !isset($calls[0][2]['phone']) &&
     $calls[0][2]['curr'] === 'CZK' && $calls[0][2]['refId'] === $order['order_number'],
     'Comgate request lost credentials, test flag or the order amount/reference.');
 expectComgate($payments->initiate($order) === $redirect && count($calls) === 1,

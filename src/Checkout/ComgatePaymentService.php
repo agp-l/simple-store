@@ -119,8 +119,10 @@ final class ComgatePaymentService
             'category' => 'PHYSICAL_GOODS_ONLY', 'lang' => 'cs',
             'url_paid' => $return, 'url_cancelled' => $return, 'url_pending' => $return,
         ];
-        if (is_string($shipping['phone'] ?? null) && $shipping['phone'] !== '') {
-            $payload['phone'] = $shipping['phone'];
+        $phone = is_string($shipping['phone'] ?? null)
+            ? preg_replace('/[\s()-]+/', '', $shipping['phone']) : '';
+        if (is_string($phone) && preg_match('/^\+[1-9][0-9]{6,14}$/D', $phone) === 1) {
+            $payload['phone'] = $phone;
         }
         if ($payload['delivery'] === 'HOME_DELIVERY') {
             $payload['homeDeliveryCity'] = (string) ($shipping['city'] ?? '');
