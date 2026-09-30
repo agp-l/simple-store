@@ -64,17 +64,21 @@ $renderer->render('product-record', $data + [
     'editorCategories' => [['path' => 'boty', 'title' => 'Boty']],
 ]);
 $editor = ob_get_clean();
-if (str_contains($public, 'inline-editor-config') || str_contains($public, 'test-token') ||
-    !str_contains($editor, 'data-edit-field="section_body"') ||
-    !str_contains($editor, 'data-editor-action="section-add"') ||
-    !str_contains($editor, 'section=media&amp;type=product&amp;key=' . str_repeat('a', 32)) ||
-    !str_contains($editor, 'value="delete-product"') ||
-    !str_contains($editor, 'value="set-product-stock"') ||
-    !str_contains($editor, 'value="12"') ||
-    str_contains($public, 'value="set-product-stock"') ||
-    str_contains($public, '12 ks') ||
-    str_contains($public, 'value="delete-product"') ||
-    !str_contains($editor, 'test-token')) {
-    throw new RuntimeException('The on-page controls leaked publicly or were missing from editor preview.');
+$checks = [
+    'no_public_editor_config' => !str_contains($public, 'inline-editor-config'),
+    'no_public_token' => !str_contains($public, 'test-token'),
+    'edit_body' => str_contains($editor, 'data-edit-field="section_body"'),
+    'add_section' => str_contains($editor, 'data-editor-action="section-add"'),
+    'media_link' => str_contains($editor, 'section=media&amp;type=product&amp;key=' . str_repeat('a', 32)),
+    'delete_product' => str_contains($editor, 'value="delete-product"'),
+    'set_stock' => str_contains($editor, 'value="set-product-stock"'),
+    'stock_quantity' => str_contains($editor, 'value="12"'),
+    'no_public_stock_form' => !str_contains($public, 'value="set-product-stock"'),
+    'no_public_quantity' => !str_contains($public, '12 ks'),
+    'no_public_delete' => !str_contains($public, 'value="delete-product"'),
+    'editor_token' => str_contains($editor, 'test-token'),
+];
+foreach ($checks as $name => $valid) {
+    if (!$valid) throw new RuntimeException('Inline product rendering failed: ' . $name);
 }
 echo "Inline product editor tests passed.\n";
