@@ -168,9 +168,15 @@ final class OrderRepository
                 return self::hydrate($existing);
             }
             $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+            // The payment reference stays stable and immediately visible in new order numbers.
+            // Existing orders keep their original numbers and payment references.
+            $variableSymbol = $testOrder ? null : (string) random_int(1000000000, 9999999999);
+            $orderNumber = $testOrder
+                ? 'TEST-' . $now->format('y') . '-' . strtoupper(bin2hex(random_bytes(4)))
+                : 'DB-' . $now->format('y') . '-' . $variableSymbol;
             $this->db->insert('shop_orders', [
                 'user_id' => $userId,
-                'order_number' => 'DB-' . $now->format('Ymd') . '-' . strtoupper(bin2hex(random_bytes(5))),
+                'order_number' => $orderNumber,
                 'order_token' => bin2hex(random_bytes(32)),
                 'status' => $testOrder ? 'test' : 'new',
                 'customer_email' => $email,
@@ -187,7 +193,7 @@ final class OrderRepository
                 'payment_paid_at' => null,
                 'payment_verified_by' => null,
                 'provider_reference' => null,
-                'variable_symbol' => $testOrder ? null : (string) random_int(1000000000, 9999999999),
+                'variable_symbol' => $variableSymbol,
                 'idempotency_key' => $idempotencyKey,
             ]);
             $saved = $this->byIdempotencyKey($idempotencyKey);
@@ -276,10 +282,11 @@ final class OrderRepository
         $this->db->startTransaction();
         try {
             $row = $this->db->queryFirstRow(
-                'SELECT payment_method, payment_status, order_token, variable_symbol, payment_details_json
+                'SELECT status, payment_method, payment_status, order_token, variable_symbol, payment_details_json
                  FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $id
             );
-            if ($row === null || $row['payment_method'] !== 'bank_transfer' ||
+            if ($row === null || in_array($row['status'], ['cancelled', 'test'], true) ||
+                $row['payment_method'] !== 'bank_transfer' ||
                 !in_array($row['payment_status'], ['pending', 'paid'], true) ||
                 !is_string($row['order_token']) ||
                 preg_match('/^[a-f0-9]{64}$/D', $row['order_token']) !== 1 ||

@@ -158,6 +158,22 @@ CREATE TABLE IF NOT EXISTS shop_packeta_cancelled_shipments (
   CONSTRAINT cancelled_packeta_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Manual corrections and permitted hard deletions leave a minimal audit trail.
+-- No foreign key: deleting a disposable test order must retain its action record.
+CREATE TABLE IF NOT EXISTS shop_order_admin_events (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  order_id BIGINT UNSIGNED NOT NULL,
+  order_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  action VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  old_status VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  new_status VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  reason VARCHAR(500) NOT NULL,
+  admin_id BIGINT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY order_admin_events_order (order_id, id),
+  KEY order_admin_events_created (created_at, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Additive upgrade for installations with the older customer order placeholder.
 -- Nullable new columns preserve historical rows without inventing payment details.
 SET @order_user_nullable = (SELECT IS_NULLABLE FROM information_schema.COLUMNS

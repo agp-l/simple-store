@@ -42,9 +42,9 @@ class MeekroDB
             if (str_contains($sql, 'idempotency_key=%s') && $row['idempotency_key'] === $values[0] ||
                 str_contains($sql, 'order_token=%s') && $row['order_token'] === $values[0] ||
                 str_contains($sql, 'WHERE id=%i') && $row['id'] === $values[0]) {
-                return str_contains($sql, 'SELECT payment_method, payment_status')
+                return str_contains($sql, 'SELECT status, payment_method, payment_status')
                     ? array_intersect_key($row, array_flip([
-                        'payment_method', 'payment_status', 'order_token',
+                        'status', 'payment_method', 'payment_status', 'order_token',
                         'variable_symbol', 'payment_details_json',
                     ]))
                     : $row;
@@ -120,6 +120,8 @@ if (count($db->rows) !== 1 || $db->commits !== 1 || $order['total_czk'] !== 1100
     $order['status'] !== 'new' || $order['customer_email'] !== 'eva@example.org' ||
     $order['shipping']['recipient'] !== 'Eva Nová' ||
     !preg_match('/^[0-9]{10}$/D', $order['variable_symbol']) ||
+    !preg_match('/^DB-[0-9]{2}-[0-9]{10}$/D', $order['order_number']) ||
+    !str_ends_with($order['order_number'], $order['variable_symbol']) ||
     !preg_match('/^[a-f0-9]{64}$/D', $order['order_token'])) {
     throw new RuntimeException('Order snapshot, total, token or payment state is wrong.');
 }
@@ -214,6 +216,7 @@ $preview = (new OrderRepository($db))->create(null, 'test@example.org', $items, 
 if ($preview['payment_method'] !== 'test' || $preview['payment_status'] !== 'test' ||
     $preview['payment_details'] !== [] || $preview['payment_due_at'] !== null ||
     $preview['variable_symbol'] !== null ||
+    !preg_match('/^TEST-[0-9]{2}-[A-F0-9]{8}$/D', $preview['order_number']) ||
     $preview['status'] !== 'test' || $repository->managementPage(0, 20, 'test')['items'][0]['id'] !== $preview['id']) {
     throw new RuntimeException('Test order must be distinguishable and have no payment instructions.');
 }
@@ -234,6 +237,14 @@ try {
 $repository->setFulfillmentStatus((int) $pending['id'], 'cancelled');
 if ($db->rows[(int) $pending['id'] - 1]['status'] !== 'cancelled') {
     throw new RuntimeException('An unpaid order could not be cancelled.');
+}
+try {
+    $repository->markPaid((int) $pending['id'], 4);
+    throw new RuntimeException('Cancelled order was falsely marked paid.');
+} catch (InvalidArgumentException $expected) {
+    if ($db->rows[(int) $pending['id'] - 1]['payment_status'] !== 'pending') {
+        throw new RuntimeException('Cancelled order payment was altered.');
+    }
 }
 $rejected = false;
 try {
