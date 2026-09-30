@@ -318,6 +318,20 @@ CREATE TABLE IF NOT EXISTS shop_sale_lines (
   CONSTRAINT sale_lines_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- A paid real sale keeps its itemized evidence if an administrator removes the order UI record.
+CREATE TABLE IF NOT EXISTS shop_deleted_sale_lines (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  order_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  quantity SMALLINT UNSIGNED NOT NULL,
+  unit_price_czk INT UNSIGNED NOT NULL,
+  order_status VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  order_created_at DATETIME NOT NULL,
+  KEY deleted_sale_lines_order (order_number, id),
+  KEY deleted_sale_lines_date (order_created_at, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS shop_stock_movements (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,

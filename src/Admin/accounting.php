@@ -136,6 +136,23 @@ if ($method === 'POST') {
 
 try {
     TaxEvidenceRepository::year($taxYear);
+    if (($_GET['download'] ?? '') === 'ledger' && $accountingTab === 'money') {
+        if (!$taxReady) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky.');
+        $stream = fopen('php://temp/maxmemory:2097152', 'w+b');
+        if ($stream === false) throw new RuntimeException('CSV se nepodařilo připravit.');
+        try {
+            $tax->writeLedgerCsv($stream, $taxYear);
+            rewind($stream);
+            header('Content-Type: text/csv; charset=UTF-8');
+            header('Content-Disposition: attachment; filename="penezni-denik-' . $taxYear . '.csv"');
+            header('Cache-Control: private, no-store');
+            header('X-Content-Type-Options: nosniff');
+            fpassthru($stream);
+        } finally {
+            fclose($stream);
+        }
+        exit;
+    }
     if ($taxReady) {
         $taxSettings = $tax->settings();
         $taxSummary = $tax->summary($taxYear);

@@ -6,6 +6,7 @@ namespace SimpleStore\Accounting;
 use DateTimeImmutable;
 use InvalidArgumentException;
 use MeekroDB;
+use RuntimeException;
 
 /** Cash-basis tax records for a Czech sole trader who is not a VAT payer. */
 final class TaxEvidenceRepository
@@ -17,7 +18,7 @@ final class TaxEvidenceRepository
     public function installed(): bool
     {
         foreach (['shop_tax_settings', 'shop_tax_entries', 'shop_tax_balances',
-            'shop_stock_movements', 'shop_sale_lines'] as $table) {
+            'shop_stock_movements', 'shop_sale_lines', 'shop_deleted_sale_lines'] as $table) {
             if ((int) $this->db->queryFirstField(
                 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
                 $table
@@ -141,6 +142,42 @@ final class TaxEvidenceRepository
         );
     }
 
+    /** Export the complete annual money journal, capped to a reviewable file size. */
+    public function writeLedgerCsv(mixed $stream, int $year): int
+    {
+        self::year($year);
+        if (!is_resource($stream) || get_resource_type($stream) !== 'stream') {
+            throw new InvalidArgumentException('Neplatný výstup CSV.');
+        }
+        if (fwrite($stream, "\xEF\xBB\xBF") !== 3 ||
+            fputcsv($stream, ['Datum', 'Účet', 'Pohyb', 'Zařazení', 'Částka Kč',
+                'Popis', 'Protistrana', 'Doklad', 'Objednávka ID'], ';', '"', '') === false) {
+            throw new RuntimeException('CSV se nepodařilo vytvořit.');
+        }
+        $offset = 0;
+        do {
+            $rows = $this->db->query('SELECT entry_date, account, direction, tax_kind,
+                    amount_czk, description, counterparty, reference, order_id
+                FROM shop_tax_entries WHERE entry_date >= %s AND entry_date < %s
+                ORDER BY entry_date ASC, id ASC LIMIT %i OFFSET %i',
+                $year . '-01-01', ($year + 1) . '-01-01', 200, $offset);
+            foreach ($rows as $row) {
+                if ($offset >= 50000) throw new InvalidArgumentException('Deník je příliš dlouhý pro jediný export.');
+                $values = [
+                    $row['entry_date'], $row['account'], $row['direction'], $row['tax_kind'],
+                    $row['amount_czk'], self::safeCsvCell($row['description']),
+                    self::safeCsvCell($row['counterparty']), self::safeCsvCell($row['reference']),
+                    $row['order_id'] ?? '',
+                ];
+                if (fputcsv($stream, $values, ';', '"', '') === false) {
+                    throw new RuntimeException('CSV se nepodařilo vytvořit.');
+                }
+                $offset++;
+            }
+        } while (count($rows) === 200);
+        return $offset;
+    }
+
     public function summary(int $year): array
     {
         self::year($year);
@@ -224,12 +261,19 @@ final class TaxEvidenceRepository
     {
         self::year($year);
         return $this->db->query(
-            'SELECT l.order_id, o.order_number, l.product_key, l.name, l.quantity,
+            'SELECT * FROM (
+                SELECT l.order_id, o.order_number, l.product_key, l.name, l.quantity,
                     l.unit_price_czk, o.created_at, o.status
-             FROM shop_sale_lines l JOIN shop_orders o ON o.id=l.order_id
-             WHERE o.created_at >= %s AND o.created_at < %s AND o.status NOT IN (%s,%s)
-             ORDER BY o.id DESC, l.line_no ASC LIMIT %i',
-            $year . '-01-01', ($year + 1) . '-01-01', 'cancelled', 'test', 500
+                FROM shop_sale_lines l JOIN shop_orders o ON o.id=l.order_id
+                WHERE o.created_at >= %s AND o.created_at < %s AND o.status NOT IN (%s,%s)
+                UNION ALL
+                SELECT NULL AS order_id, a.order_number, a.product_key, a.name, a.quantity,
+                    a.unit_price_czk, a.order_created_at AS created_at, a.order_status AS status
+                FROM shop_deleted_sale_lines a
+                WHERE a.order_created_at >= %s AND a.order_created_at < %s
+            ) AS sold ORDER BY created_at DESC, order_number DESC LIMIT %i',
+            $year . '-01-01', ($year + 1) . '-01-01', 'cancelled', 'test',
+            $year . '-01-01', ($year + 1) . '-01-01', 500
         );
     }
 
@@ -287,6 +331,11 @@ final class TaxEvidenceRepository
     public static function year(int $year): void
     {
         if ($year < 2000 || $year > 2100) throw new InvalidArgumentException('Neplatný rok evidence.');
+    }
+
+    private static function safeCsvCell(string $cell): string
+    {
+        return preg_match('/^[\x00-\x20]*[=+\-@]/', $cell) === 1 ? "'" . $cell : $cell;
     }
 
     private static function date(mixed $value): string

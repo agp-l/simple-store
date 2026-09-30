@@ -39,6 +39,7 @@ jobs:
           php tests/checkout-order.php
           php tests/order-controls.php
           php tests/accounting.php
+          php tests/tax-invoice-mail.php
           php tests/catalog-render.php
           php tests/footer-legal.php
           php tests/menu-definitions.php

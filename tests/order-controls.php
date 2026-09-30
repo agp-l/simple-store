@@ -11,6 +11,7 @@ class MeekroDB
     public array $carriers = [];
     public array $events = [];
     public array $financialEvents = [];
+    public array $archivedSales = [];
     public bool $failEvent = false;
     public bool $failDelete = false;
     public bool $eventsInstalled = true;
@@ -20,7 +21,8 @@ class MeekroDB
 
     public function startTransaction(): void
     {
-        $this->snapshot = [$this->orders, $this->events, $this->financialEvents, $this->carriers];
+        $this->snapshot = [$this->orders, $this->events, $this->financialEvents,
+            $this->carriers, $this->archivedSales];
     }
 
     public function commit(): void
@@ -31,7 +33,8 @@ class MeekroDB
     public function rollback(): void
     {
         if ($this->snapshot !== null) {
-            [$this->orders, $this->events, $this->financialEvents, $this->carriers] = $this->snapshot;
+            [$this->orders, $this->events, $this->financialEvents,
+                $this->carriers, $this->archivedSales] = $this->snapshot;
             $this->snapshot = null;
         }
     }
@@ -46,7 +49,8 @@ class MeekroDB
                 'shop_invoices' => 1,
                 'shop_packeta_shipments', 'shop_packeta_cancelled_shipments',
                 'shop_carrier_shipments' => 1,
-                'shop_tax_entries', 'shop_mail_outbox', 'shop_sale_lines', 'shop_stock_movements' => 0,
+                'shop_sale_lines', 'shop_deleted_sale_lines' => 1,
+                'shop_tax_entries', 'shop_mail_outbox', 'shop_stock_movements' => 0,
                 default => throw new RuntimeException('Unknown table check.'),
             };
         }
@@ -86,6 +90,7 @@ class MeekroDB
                 $this->events, static fn (array $event): bool => $event['order_id'] === $args[0]
             )));
         }
+        if (str_contains($sql, 'FROM shop_sale_lines')) return [];
         if (str_contains($sql, 'UPDATE shop_orders SET status=')) {
             [$target, $id, $old, $source, $payment] = $args;
             $row = $this->orders[$id] ?? null;
@@ -134,14 +139,17 @@ class MeekroDB
 
     public function insert(string $table, array $values): void
     {
-        if (!in_array($table, ['shop_order_admin_events', 'shop_order_financial_events'], true)) {
+        if (!in_array($table, ['shop_order_admin_events', 'shop_order_financial_events',
+            'shop_deleted_sale_lines'], true)) {
             throw new RuntimeException('Unexpected table.');
         }
         if ($this->failEvent) throw new RuntimeException('Audit storage failed.');
         if ($table === 'shop_order_admin_events') {
             $this->events[] = $values + ['created_at' => '2026-09-30 00:00:00'];
-        } else {
+        } elseif ($table === 'shop_order_financial_events') {
             $this->financialEvents[] = $values + ['created_at' => '2026-09-30 00:00:00'];
+        } else {
+            $this->archivedSales[] = $values;
         }
     }
 }
@@ -168,7 +176,10 @@ function orderRow(int $id, string $status, string $method = 'bank_transfer',
         'payment_method' => $method, 'payment_status' => $payment,
         'payment_paid_at' => null, 'payment_verified_by' => null,
         'provider_reference' => null, 'fulfillment_source' => $source,
-        'shipping_json' => json_encode(['method' => 'zasilkovna_pickup'], JSON_THROW_ON_ERROR)];
+        'shipping_json' => json_encode(['method' => 'zasilkovna_pickup'], JSON_THROW_ON_ERROR),
+        'created_at' => '2026-09-30 12:00:00',
+        'items_json' => json_encode([['product_key' => str_repeat('a', 32),
+            'name' => 'Testovací zboží', 'quantity' => 2, 'unit_price_czk' => 895]], JSON_THROW_ON_ERROR)];
 }
 
 $db = new MeekroDB();
@@ -264,7 +275,8 @@ $db->orders[19]['payment_paid_at'] = '2026-09-29 13:00:00';
 $controls->deleteOrder(19, 'DB-20260930-19', 4, 'Přímé smazání duplicitní platby.');
 $deletionEvent = $db->financialEvents[array_key_last($db->financialEvents)];
 if (isset($db->orders[19]) || $deletionEvent['payment_status_before'] !== 'paid' ||
-    $deletionEvent['total_czk'] !== 1790) {
+    $deletionEvent['total_czk'] !== 1790 ||
+    $db->archivedSales[array_key_last($db->archivedSales)]['quantity'] !== 2) {
     throw new RuntimeException('Paid deletion lost its financial snapshot.');
 }
 

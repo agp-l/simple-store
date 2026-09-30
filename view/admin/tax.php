@@ -49,16 +49,15 @@ $balanceKind = ['receivable'=>'Pohledávka', 'liability'=>'Dluh', 'asset'=>'Maje
       </form>
       <p class="panel-help">Příjem z objednávky zapiš na jejím detailu, aby se propojil s číslem objednávky. Zde eviduj další příjmy, výdaje a převody mezi bankou a pokladnou jako nedaňové pohyby.</p>
     </section>
-    <section class="panel-panel"><h2>Peněžní deník <?= (int) $taxYear ?></h2>
+    <section class="panel-panel"><div class="panel-panel-head"><h2>Peněžní deník <?= (int) $taxYear ?></h2><a class="panel-button" href="<?= $escape($taxUrl . '&tab=money&year=' . $taxYear . '&download=ledger') ?>">Stáhnout CSV</a></div>
       <?php if ($taxEntries === []): ?><p class="panel-empty">Zatím tu nejsou peněžní pohyby.</p><?php endif; ?>
-      <div class="panel-order-list">
-        <?php foreach ($taxEntries as $entry): ?>
-          <div class="panel-order-row"><span><strong><?= $escape($entry['entry_date']) ?></strong><small><?= $escape($entry['account'] === 'bank' ? 'Banka' : 'Hotovost') ?> · <?= $escape($entry['reference']) ?></small></span>
-            <span><strong><?= $escape($entry['description']) ?></strong><small><?= $escape($entry['counterparty']) ?><?php if ($entry['order_id'] !== null): ?> · <a href="<?= $escape($adminUrl . '?section=orders&id=' . (int) $entry['order_id']) ?>">Objednávka #<?= (int) $entry['order_id'] ?></a><?php endif; ?></small></span>
-            <span><?= $escape($taxKind[$entry['tax_kind']] ?? $entry['tax_kind']) ?></span>
-            <strong><?= $escape($entry['direction'] === 'income' ? '+' : '−') ?><?= $taxMoney($entry['amount_czk']) ?></strong></div>
-        <?php endforeach; ?>
-      </div>
+      <div class="panel-table-wrap"><table class="panel-table"><thead><tr><th>Datum</th><th>Účet / doklad</th><th>Popis / protistrana</th><th>Zařazení</th><th>Částka</th></tr></thead><tbody>
+      <?php foreach ($taxEntries as $entry): ?><tr><td><?= $escape($entry['entry_date']) ?></td>
+        <td><?= $escape($entry['account'] === 'bank' ? 'Banka' : 'Hotovost') ?><br><small><?= $escape($entry['reference']) ?></small></td>
+        <td><strong><?= $escape($entry['description']) ?></strong><br><small><?= $escape($entry['counterparty']) ?><?php if ($entry['order_id'] !== null): ?> · <a href="<?= $escape($adminUrl . '?section=orders&id=' . (int) $entry['order_id']) ?>">Objednávka #<?= (int) $entry['order_id'] ?></a><?php endif; ?></small></td>
+        <td><?= $escape($taxKind[$entry['tax_kind']] ?? $entry['tax_kind']) ?></td>
+        <td class="panel-table-money"><?= $entry['direction'] === 'income' ? '+' : '−' ?><?= $taxMoney($entry['amount_czk']) ?></td></tr><?php endforeach; ?>
+      </tbody></table></div>
       <p class="panel-help">Zobrazuje se posledních 500 pohybů ve vybraném roce.</p>
     </section>
   <?php elseif ($accountingTab === 'balances'): ?>
@@ -106,8 +105,15 @@ $balanceKind = ['receivable'=>'Pohledávka', 'liability'=>'Dluh', 'asset'=>'Maje
       <form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="stock"><input type="hidden" name="action" value="tax-backfill-sales"><button class="panel-button" type="submit">Doplnit položky starších objednávek (max. 100)</button></form>
     </section>
     <section class="panel-panel"><h2>Položky objednávek <?= (int) $taxYear ?></h2>
-      <?php foreach ($saleLines as $line): ?><div class="panel-order-row"><a href="<?= $escape($adminUrl . '?section=orders&id=' . (int) $line['order_id']) ?>"><?= $escape($line['order_number']) ?></a><span><?= (int) $line['quantity'] ?> × <?= $escape($line['name']) ?></span><strong><?= $taxMoney((int) $line['quantity'] * (int) $line['unit_price_czk']) ?></strong><span><?= $escape($line['status']) ?></span></div><?php endforeach; ?>
+      <div class="panel-table-wrap"><table class="panel-table"><thead><tr><th>Objednávka</th><th>Produkt</th><th>Kusů</th><th>Cena/ks</th><th>Celkem</th><th>Stav</th></tr></thead><tbody>
+      <?php foreach ($saleLines as $line): ?><tr><td><?php if ($line['order_id'] !== null): ?><a href="<?= $escape($adminUrl . '?section=orders&id=' . (int) $line['order_id']) ?>"><?= $escape($line['order_number']) ?></a><?php else: ?><?= $escape($line['order_number']) ?> <small>(smazaná)</small><?php endif; ?></td><td><?= $escape($line['name']) ?></td><td><?= (int) $line['quantity'] ?></td><td><?= $taxMoney($line['unit_price_czk']) ?></td><td><?= $taxMoney((int) $line['quantity'] * (int) $line['unit_price_czk']) ?></td><td><?= $escape($line['status']) ?></td></tr><?php endforeach; ?>
+      </tbody></table></div>
       <?php if ($saleLines === []): ?><p class="panel-empty">Zatím žádné zachycené položky.</p><?php endif; ?>
+    </section>
+    <section class="panel-panel"><h2>Poslední skladové pohyby</h2>
+      <div class="panel-table-wrap"><table class="panel-table"><thead><tr><th>Datum</th><th>Produktový klíč</th><th>Změna</th><th>Pořizovací cena/ks</th><th>Důvod / doklad</th></tr></thead><tbody>
+      <?php foreach ($stockMovements as $movement): ?><tr><td><?= $escape($movement['movement_date']) ?></td><td><?= $escape($movement['product_key']) ?></td><td><?= (int) $movement['quantity_change'] ?> ks</td><td><?= $movement['unit_cost_czk'] === null ? '—' : $taxMoney($movement['unit_cost_czk']) ?></td><td><?= $escape($movement['description']) ?> · <?= $escape($movement['reference']) ?></td></tr><?php endforeach; ?>
+      </tbody></table></div>
     </section>
   <?php elseif ($accountingTab === 'invoices'): ?>
     <section class="panel-panel"><h2>Vystavené faktury <?= (int) $taxYear ?></h2>

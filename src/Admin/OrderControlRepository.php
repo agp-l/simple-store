@@ -171,9 +171,34 @@ final class OrderControlRepository
                 $this->hasRelatedRow('shop_invoices', $orderId)) {
                 throw new InvalidArgumentException('Nejdřív vyřeš navázaný doklad nebo zásilku u dopravce; podklady bez čísla lze smazat spolu s objednávkou.');
             }
+            if (!$test && $order['payment_status'] === 'paid' &&
+                (!$this->tableExists('shop_sale_lines') || !$this->tableExists('shop_deleted_sale_lines'))) {
+                throw new InvalidArgumentException('Před smazáním zaplacené objednávky aktualizuj SQL tabulky pro zachování položek prodeje.');
+            }
 
             if ($bankTransfer) {
                 $this->recordFinancialEvent($order, 'order_deleted', $adminId, $reason);
+            }
+
+            $soldLines = [];
+            if (!$test && $order['payment_status'] === 'paid') {
+                $soldLines = $this->db->query('SELECT product_key, name, quantity, unit_price_czk
+                    FROM shop_sale_lines WHERE order_id=%i ORDER BY line_no', $orderId);
+                if ($soldLines === []) {
+                    $snapshot = json_decode((string) $order['items_json'], true);
+                    if (!is_array($snapshot) || $snapshot === []) {
+                        throw new InvalidArgumentException('Položky objednávky chybí. Objednávku nelze bezpečně smazat.');
+                    }
+                    $soldLines = $snapshot;
+                }
+                foreach ($soldLines as $line) {
+                    $this->db->insert('shop_deleted_sale_lines', [
+                        'order_number' => $order['order_number'], 'product_key' => $line['product_key'],
+                        'name' => $line['name'], 'quantity' => $line['quantity'],
+                        'unit_price_czk' => $line['unit_price_czk'], 'order_status' => $order['status'],
+                        'order_created_at' => $order['created_at'],
+                    ]);
+                }
             }
 
             if ($test) {
@@ -202,8 +227,7 @@ final class OrderControlRepository
                 }
                 if (in_array($order['status'], ['shipped', 'completed'], true) &&
                     $this->tableExists('shop_sale_lines') && $this->tableExists('shop_stock_movements')) {
-                    foreach ($this->db->query('SELECT product_key, quantity FROM shop_sale_lines WHERE order_id=%i',
-                        $orderId) as $line) {
+                    foreach ($soldLines as $line) {
                         $this->db->insert('shop_stock_movements', [
                             'product_key' => $line['product_key'],
                             'movement_date' => gmdate('Y-m-d'),
