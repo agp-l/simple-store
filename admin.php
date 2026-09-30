@@ -65,7 +65,7 @@ try {
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $orderActions = ['mark-order-paid', 'set-order-status', 'correct-order-status', 'delete-order', 'packeta-create',
     'packeta-courier', 'packeta-reconcile', 'packeta-retry', 'packeta-cancel',
-    'packeta-cancel-confirmed', 'packeta-cancel-not-done'];
+    'packeta-cancel-confirmed', 'packeta-cancel-not-done', 'carrier-save', 'carrier-register'];
 try {
     $csrf = $auth->token();
     if ($method === 'POST' && $_POST === [] && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0 &&
