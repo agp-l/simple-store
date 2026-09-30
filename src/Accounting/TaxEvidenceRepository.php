@@ -17,7 +17,7 @@ final class TaxEvidenceRepository
 
     public function installed(): bool
     {
-        foreach (['shop_tax_settings', 'shop_tax_entries', 'shop_tax_balances',
+        foreach (['shop_tax_settings', 'shop_tax_entries', 'shop_tax_entry_events', 'shop_tax_balances',
             'shop_stock_movements', 'shop_sale_lines', 'shop_deleted_sale_lines'] as $table) {
             if ((int) $this->db->queryFirstField(
                 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
@@ -68,6 +68,12 @@ final class TaxEvidenceRepository
 
     public function addEntry(array $input): void
     {
+        $fields = self::entryFields($input);
+        $this->db->insert('shop_tax_entries', $fields + ['order_id' => null]);
+    }
+
+    private static function entryFields(array $input): array
+    {
         $date = self::date($input['entry_date'] ?? null);
         $direction = $input['direction'] ?? '';
         $account = $input['account'] ?? '';
@@ -82,13 +88,82 @@ final class TaxEvidenceRepository
         }
         $description = self::text($input['description'] ?? '', 255);
         if ($description === '') throw new InvalidArgumentException('Popiš peněžní pohyb.');
-        $this->db->insert('shop_tax_entries', [
+        return [
             'entry_date' => $date, 'direction' => $direction, 'account' => $account,
             'tax_kind' => $kind, 'amount_czk' => $amount, 'description' => $description,
             'counterparty' => self::text($input['counterparty'] ?? '', 190),
             'reference' => self::text($input['reference'] ?? '', 100),
-            'order_id' => null,
+        ];
+    }
+
+    public function entry(int $id): ?array
+    {
+        if ($id < 1) return null;
+        return $this->db->queryFirstRow('SELECT * FROM shop_tax_entries WHERE id=%i LIMIT 1', $id);
+    }
+
+    public function amendEntry(int $id, array $input, int $adminId, string $reason): void
+    {
+        $fields = self::entryFields($input);
+        self::assertReason($id, $adminId, $reason);
+        $this->db->startTransaction();
+        try {
+            $old = $this->db->queryFirstRow('SELECT * FROM shop_tax_entries WHERE id=%i FOR UPDATE', $id);
+            if ($old === null) throw new InvalidArgumentException('Peněžní zápis neexistuje.');
+            $this->db->query('UPDATE shop_tax_entries SET entry_date=%s, direction=%s, account=%s,
+                    tax_kind=%s, amount_czk=%i, description=%s, counterparty=%s, reference=%s WHERE id=%i',
+                $fields['entry_date'], $fields['direction'], $fields['account'], $fields['tax_kind'],
+                $fields['amount_czk'], $fields['description'], $fields['counterparty'], $fields['reference'], $id);
+            $this->recordEntryEvent($old, $fields, 'amended', $adminId, $reason);
+            $this->db->commit();
+        } catch (\Throwable $error) {
+            $this->db->rollback();
+            throw $error;
+        }
+    }
+
+    public function voidEntry(int $id, int $adminId, string $reason): void
+    {
+        self::assertReason($id, $adminId, $reason);
+        $this->db->startTransaction();
+        try {
+            $old = $this->db->queryFirstRow('SELECT * FROM shop_tax_entries WHERE id=%i FOR UPDATE', $id);
+            if ($old === null) throw new InvalidArgumentException('Peněžní zápis neexistuje.');
+            $this->recordEntryEvent($old, null, 'voided', $adminId, $reason);
+            $this->db->query('DELETE FROM shop_tax_entries WHERE id=%i', $id);
+            $this->db->commit();
+        } catch (\Throwable $error) {
+            $this->db->rollback();
+            throw $error;
+        }
+    }
+
+    public function entryHistory(int $year): array
+    {
+        self::year($year);
+        return $this->db->query('SELECT entry_id, action, old_json, new_json, reason, admin_id, created_at
+            FROM shop_tax_entry_events WHERE created_at >= %s AND created_at < %s
+            ORDER BY id DESC LIMIT %i', $year . '-01-01', ($year + 1) . '-01-01', 100);
+    }
+
+    private function recordEntryEvent(array $old, ?array $new, string $action,
+        int $adminId, string $reason): void
+    {
+        $this->db->insert('shop_tax_entry_events', [
+            'entry_id' => (int) $old['id'], 'action' => $action,
+            'old_json' => json_encode($old, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+            'new_json' => $new === null ? null : json_encode($new, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+            'reason' => trim($reason), 'admin_id' => $adminId, 'created_at' => gmdate('Y-m-d H:i:s'),
         ]);
+    }
+
+    private static function assertReason(int $id, int $adminId, string $reason): void
+    {
+        $reason = trim($reason);
+        if ($id < 1 || $adminId < 1 || preg_match('/^.{8,190}$/usD', $reason) !== 1 ||
+            preg_match('/\p{C}/u', $reason) !== 0) {
+            throw new InvalidArgumentException('Vyplň důvod opravy (8–190 znaků).');
+        }
     }
 
     /** Link a verified bank receipt to its order; never infer bank activity from checkout. */

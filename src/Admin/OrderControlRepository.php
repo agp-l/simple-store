@@ -206,6 +206,10 @@ final class OrderControlRepository
                 $this->db->query('DELETE FROM shop_order_admin_events WHERE order_id=%i', $orderId);
                 $this->db->query('DELETE FROM shop_order_financial_events WHERE order_id=%i', $orderId);
                 if ($this->tableExists('shop_tax_entries')) {
+                    if ($this->tableExists('shop_tax_entry_events')) {
+                        $this->db->query('DELETE e FROM shop_tax_entry_events e
+                            JOIN shop_tax_entries t ON t.id=e.entry_id WHERE t.order_id=%i', $orderId);
+                    }
                     $this->db->query('DELETE FROM shop_tax_entries WHERE order_id=%i', $orderId);
                 }
                 if ($this->tableExists('shop_mail_outbox')) {

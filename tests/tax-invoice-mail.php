@@ -8,11 +8,14 @@ class MeekroDB
     public array $history = [];
     public array $outbox = [];
     public array $sequences = [];
+    public array $entries = [];
+    public array $entryEvents = [];
     private ?array $snapshot = null;
 
     public function startTransaction(): void
     {
-        $this->snapshot = [$this->invoices, $this->history, $this->outbox, $this->sequences];
+        $this->snapshot = [$this->invoices, $this->history, $this->outbox,
+            $this->sequences, $this->entries, $this->entryEvents];
     }
 
     public function commit(): void { $this->snapshot = null; }
@@ -20,7 +23,8 @@ class MeekroDB
     public function rollback(): void
     {
         if ($this->snapshot !== null) {
-            [$this->invoices, $this->history, $this->outbox, $this->sequences] = $this->snapshot;
+            [$this->invoices, $this->history, $this->outbox,
+                $this->sequences, $this->entries, $this->entryEvents] = $this->snapshot;
             $this->snapshot = null;
         }
     }
@@ -63,6 +67,9 @@ class MeekroDB
         if (str_contains($sql, 'FROM shop_mail_outbox WHERE id=')) {
             return $this->outbox[$args[0]] ?? null;
         }
+        if (str_contains($sql, 'FROM shop_tax_entries WHERE id=')) {
+            return $this->entries[$args[0]] ?? null;
+        }
         throw new RuntimeException('Unexpected first row: ' . $sql);
     }
 
@@ -74,6 +81,11 @@ class MeekroDB
             $this->invoices[$row['id']] = $row;
         } elseif ($table === 'shop_invoice_number_events') {
             $this->history[] = $row;
+        } elseif ($table === 'shop_tax_entries') {
+            $row['id'] = count($this->entries) + 1;
+            $this->entries[$row['id']] = $row;
+        } elseif ($table === 'shop_tax_entry_events') {
+            $this->entryEvents[] = $row;
         } else {
             throw new RuntimeException('Unexpected insert: ' . $table);
         }
@@ -108,6 +120,18 @@ class MeekroDB
             $this->outbox[$args[3]]['last_error'] = $args[1];
         } elseif (str_contains($sql, 'UPDATE shop_invoices SET emailed_at=')) {
             $this->invoices[$args[0]]['emailed_at'] = '2026-09-30 12:00:00';
+        } elseif (str_contains($sql, 'UPDATE shop_tax_entries SET entry_date=')) {
+            $this->entries[$args[8]] = array_replace($this->entries[$args[8]],
+                array_combine(['entry_date', 'direction', 'account', 'tax_kind', 'amount_czk',
+                    'description', 'counterparty', 'reference'], array_slice($args, 0, 8)));
+        } elseif (str_contains($sql, 'DELETE FROM shop_tax_entries WHERE id=')) {
+            unset($this->entries[$args[0]]);
+        } elseif (str_contains($sql, 'FROM shop_tax_entries WHERE entry_date')) {
+            $rows = array_values(array_filter($this->entries, static fn (array $row): bool =>
+                $row['entry_date'] >= $args[0] && $row['entry_date'] < $args[1]));
+            return array_slice($rows, $args[3], $args[2]);
+        } elseif (str_contains($sql, 'FROM shop_tax_entry_events WHERE created_at')) {
+            return array_reverse($this->entryEvents);
         } else {
             throw new RuntimeException('Unexpected SQL: ' . $sql);
         }
@@ -119,6 +143,7 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 
 use SimpleStore\Accounting\InvoiceRepository;
 use SimpleStore\Accounting\OrderMailQueue;
+use SimpleStore\Accounting\TaxEvidenceRepository;
 
 $db = new MeekroDB();
 $db->orders[9] = ['id' => 9, 'order_number' => 'DB-26-1234567890',
@@ -133,6 +158,7 @@ $seller = ['name' => 'Jan Novák', 'ico' => '12345678', 'street' => 'Hlavní 1',
 $buyer = ['name' => 'Eva Nová', 'street' => '', 'city' => '', 'postal_code' => '', 'ico' => ''];
 $repository = new InvoiceRepository($db);
 $invoice = $repository->issue(9, $seller, $buyer);
+$invoiceYear = (int) (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format('Y');
 if (!preg_match('/^F[0-9]{4}-000001$/D', $invoice['document_number']) ||
     $invoice['total_czk'] !== 990 || $invoice['seller']['bank_account'] !== 'TEST-ACCOUNT-ORDER') {
     throw new RuntimeException('Invoice did not use a stable order and bank snapshot.');
@@ -144,11 +170,11 @@ try {
 
 $queue = new OrderMailQueue($db, static function (): bool { return false; });
 $mailId = $queue->enqueueInvoice($invoice);
-$repository->renumber((int) $invoice['id'], 'F2026-000123', 1, 'Oprava číselné řady');
+$repository->renumber((int) $invoice['id'], 'F' . $invoiceYear . '-000123', 1, 'Oprava číselné řady');
 $fixed = $repository->byId((int) $invoice['id']);
 $queue->enqueueInvoice($fixed);
-if ($db->outbox[$mailId]['subject'] !== 'Faktura F2026-000123' ||
-    count($db->history) !== 1 || $db->sequences[2026] < 124) {
+if ($db->outbox[$mailId]['subject'] !== 'Faktura F' . $invoiceYear . '-000123' ||
+    count($db->history) !== 1 || $db->sequences[$invoiceYear] < 124) {
     throw new RuntimeException('Renumbering did not refresh the queued mail and sequence.');
 }
 try {
@@ -181,5 +207,33 @@ $html = (string) ob_get_clean();
 if (!str_contains($html, '&lt;Stan&gt;') || str_contains($html, '<Stan>') ||
     !str_contains($html, '990 Kč')) {
     throw new RuntimeException('Printable invoice is not escaped or has the wrong amount.');
+}
+$tax = new TaxEvidenceRepository($db);
+$movement = ['entry_date' => '2026-09-30', 'direction' => 'income', 'account' => 'bank',
+    'tax_kind' => 'taxable', 'amount_czk' => 990, 'description' => '=PAYLOAD',
+    'counterparty' => 'Eva Nová', 'reference' => 'bank-1'];
+$tax->addEntry($movement);
+$csv = fopen('php://temp', 'w+b');
+$tax->writeLedgerCsv($csv, 2026);
+rewind($csv);
+$data = stream_get_contents($csv);
+fclose($csv);
+if (!str_contains($data, "'=PAYLOAD") || count($db->entries) !== 1) {
+    throw new RuntimeException('Journal CSV allowed spreadsheet formulas.');
+}
+try {
+    $tax->addEntry(array_replace($movement, ['direction' => 'expense']));
+    throw new RuntimeException('Expense was accepted with income classification.');
+} catch (InvalidArgumentException $expected) {}
+$tax->amendEntry(1, array_replace($movement, ['amount_czk' => 995,
+    'description' => 'Opravená úhrada']), 1, 'Oprava podle banky');
+if ($db->entries[1]['amount_czk'] !== 995 || count($db->entryEvents) !== 1 ||
+    !str_contains($db->entryEvents[0]['old_json'], '=PAYLOAD')) {
+    throw new RuntimeException('Journal correction lost the previous entry.');
+}
+$tax->voidEntry(1, 1, 'Duplicitní záznam');
+if ($db->entries !== [] || count($db->entryEvents) !== 2 ||
+    $db->entryEvents[1]['action'] !== 'voided') {
+    throw new RuntimeException('Voided journal entry still affects the ledger.');
 }
 echo "Tax invoice and mail tests passed.\n";

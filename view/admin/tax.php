@@ -49,16 +49,45 @@ $balanceKind = ['receivable'=>'Pohledávka', 'liability'=>'Dluh', 'asset'=>'Maje
       </form>
       <p class="panel-help">Příjem z objednávky zapiš na jejím detailu, aby se propojil s číslem objednávky. Zde eviduj další příjmy, výdaje a převody mezi bankou a pokladnou jako nedaňové pohyby.</p>
     </section>
+    <?php if ($taxEditEntry !== null): ?>
+      <section class="panel-panel"><h2>Opravit peněžní zápis #<?= (int) $taxEditEntry['id'] ?></h2>
+        <p class="panel-help">Oprava zachová původní údaje a důvod v historii. U úhrady objednávky po opravě ověř soulad s výpisem banky.</p>
+        <form class="panel-form" method="post" action="<?= $escape($taxUrl) ?>">
+          <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="tax-amend-entry"><input type="hidden" name="id" value="<?= (int) $taxEditEntry['id'] ?>">
+          <label>Datum<input type="date" name="entry_date" value="<?= $escape($taxEditEntry['entry_date']) ?>" required></label>
+          <label>Pohyb<select name="direction"><option value="income" <?= $taxEditEntry['direction'] === 'income' ? 'selected' : '' ?>>Příjem</option><option value="expense" <?= $taxEditEntry['direction'] === 'expense' ? 'selected' : '' ?>>Výdaj</option></select></label>
+          <label>Účet<select name="account"><option value="bank" <?= $taxEditEntry['account'] === 'bank' ? 'selected' : '' ?>>Banka</option><option value="cash" <?= $taxEditEntry['account'] === 'cash' ? 'selected' : '' ?>>Hotovost</option></select></label>
+          <label>Daňové zařazení<select name="tax_kind"><?php foreach ($taxKind as $value=>$label): ?><option value="<?= $escape($value) ?>" <?= $taxEditEntry['tax_kind'] === $value ? 'selected' : '' ?>><?= $escape($label) ?></option><?php endforeach; ?></select></label>
+          <label>Částka Kč<input type="number" name="amount_czk" min="1" value="<?= (int) $taxEditEntry['amount_czk'] ?>" required></label>
+          <label>Popis<input name="description" maxlength="255" value="<?= $escape($taxEditEntry['description']) ?>" required></label>
+          <label>Protistrana<input name="counterparty" maxlength="190" value="<?= $escape($taxEditEntry['counterparty']) ?>"></label>
+          <label>Doklad / reference<input name="reference" maxlength="100" value="<?= $escape($taxEditEntry['reference']) ?>"></label>
+          <label>Důvod opravy<textarea name="reason" minlength="8" maxlength="190" required></textarea></label>
+          <button class="panel-button" type="submit">Uložit opravu</button>
+        </form>
+        <form class="panel-form" method="post" action="<?= $escape($taxUrl) ?>">
+          <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="tax-void-entry"><input type="hidden" name="id" value="<?= (int) $taxEditEntry['id'] ?>">
+          <label>Důvod vyřazení chybného záznamu<textarea name="reason" minlength="8" maxlength="190" required></textarea></label>
+          <label class="panel-check"><input type="checkbox" name="confirmed" value="1" required> Potvrzuji, že tento zápis nemá být v peněžním deníku.</label>
+          <button class="panel-button" type="submit">Vyřadit chybný zápis</button>
+        </form>
+      </section>
+    <?php endif; ?>
     <section class="panel-panel"><div class="panel-panel-head"><h2>Peněžní deník <?= (int) $taxYear ?></h2><a class="panel-button" href="<?= $escape($taxUrl . '&tab=money&year=' . $taxYear . '&download=ledger') ?>">Stáhnout CSV</a></div>
       <?php if ($taxEntries === []): ?><p class="panel-empty">Zatím tu nejsou peněžní pohyby.</p><?php endif; ?>
-      <div class="panel-table-wrap"><table class="panel-table"><thead><tr><th>Datum</th><th>Účet / doklad</th><th>Popis / protistrana</th><th>Zařazení</th><th>Částka</th></tr></thead><tbody>
+      <div class="panel-table-wrap"><table class="panel-table"><thead><tr><th>Datum</th><th>Účet / doklad</th><th>Popis / protistrana</th><th>Zařazení</th><th>Částka</th><th>Úprava</th></tr></thead><tbody>
       <?php foreach ($taxEntries as $entry): ?><tr><td><?= $escape($entry['entry_date']) ?></td>
         <td><?= $escape($entry['account'] === 'bank' ? 'Banka' : 'Hotovost') ?><br><small><?= $escape($entry['reference']) ?></small></td>
         <td><strong><?= $escape($entry['description']) ?></strong><br><small><?= $escape($entry['counterparty']) ?><?php if ($entry['order_id'] !== null): ?> · <a href="<?= $escape($adminUrl . '?section=orders&id=' . (int) $entry['order_id']) ?>">Objednávka #<?= (int) $entry['order_id'] ?></a><?php endif; ?></small></td>
         <td><?= $escape($taxKind[$entry['tax_kind']] ?? $entry['tax_kind']) ?></td>
-        <td class="panel-table-money"><?= $entry['direction'] === 'income' ? '+' : '−' ?><?= $taxMoney($entry['amount_czk']) ?></td></tr><?php endforeach; ?>
+        <td class="panel-table-money"><?= $entry['direction'] === 'income' ? '+' : '−' ?><?= $taxMoney($entry['amount_czk']) ?></td>
+        <td><a href="<?= $escape($taxUrl . '&tab=money&year=' . $taxYear . '&edit_entry=' . (int) $entry['id']) ?>">Opravit</a></td></tr><?php endforeach; ?>
       </tbody></table></div>
       <p class="panel-help">Zobrazuje se posledních 500 pohybů ve vybraném roce.</p>
+    </section>
+    <section class="panel-panel"><h2>Historie oprav deníku</h2>
+      <?php if ($taxEntryHistory === []): ?><p class="panel-empty">Žádné opravy ve vybraném roce.</p><?php endif; ?>
+      <?php foreach ($taxEntryHistory as $change): ?><p>Zápis #<?= (int) $change['entry_id'] ?> · <?= $change['action'] === 'voided' ? 'Vyřazeno' : 'Opraveno' ?> · <?= $escape($change['created_at']) ?> UTC · správce #<?= (int) $change['admin_id'] ?><br><?= $escape($change['reason']) ?></p><?php endforeach; ?>
     </section>
   <?php elseif ($accountingTab === 'balances'): ?>
     <section class="panel-panel"><h2>Nový majetek, pohledávka nebo dluh</h2>

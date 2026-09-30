@@ -233,6 +233,19 @@ CREATE TABLE IF NOT EXISTS shop_tax_entries (
   KEY tax_entries_order (order_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS shop_tax_entry_events (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  entry_id BIGINT UNSIGNED NOT NULL,
+  action VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  old_json LONGTEXT NOT NULL,
+  new_json LONGTEXT NULL,
+  reason VARCHAR(190) NOT NULL,
+  admin_id BIGINT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY tax_entry_events_entry (entry_id, id),
+  KEY tax_entry_events_date (created_at, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS shop_tax_balances (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   kind VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,

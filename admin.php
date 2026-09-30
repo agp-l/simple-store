@@ -68,7 +68,7 @@ $orderActions = ['mark-order-paid', 'set-order-status', 'correct-order-status', 
     'packeta-cancel-confirmed', 'packeta-cancel-not-done', 'carrier-save', 'carrier-register'];
 $taxActions = ['tax-save-settings', 'tax-add-entry', 'tax-add-balance', 'tax-close-balance',
     'tax-add-stock', 'tax-backfill-sales', 'tax-link-payment', 'invoice-issue',
-    'invoice-renumber', 'invoice-email', 'mail-retry'];
+    'invoice-renumber', 'invoice-email', 'mail-retry', 'tax-amend-entry', 'tax-void-entry'];
 try {
     $csrf = $auth->token();
     if ($method === 'POST' && $_POST === [] && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0 &&

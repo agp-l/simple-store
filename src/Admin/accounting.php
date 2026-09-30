@@ -24,6 +24,8 @@ if (!is_string($accountingTab) || !in_array($accountingTab,
 $rawYear = $_GET['year'] ?? (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format('Y');
 $taxYear = is_string($rawYear) && ctype_digit($rawYear) ? (int) $rawYear : 0;
 $taxEntries = $taxBalances = $taxProducts = $saleLines = $stockMovements = [];
+$taxEntryHistory = [];
+$taxEditEntry = null;
 $taxReceivables = [];
 $invoiceRows = $mailRows = $invoiceHistory = [];
 $taxSummary = ['income' => 0, 'expenses' => 0];
@@ -60,6 +62,17 @@ if ($method === 'POST') {
                 break;
             case 'tax-add-entry':
                 $tax->addEntry($_POST);
+                $accountingTab = 'money';
+                break;
+            case 'tax-amend-entry':
+                $tax->amendEntry($id, $_POST, (int) $admin['id'], (string) ($_POST['reason'] ?? ''));
+                $accountingTab = 'money';
+                break;
+            case 'tax-void-entry':
+                if (($_POST['confirmed'] ?? '') !== '1') {
+                    throw new InvalidArgumentException('Potvrď vyřazení chybného zápisu.');
+                }
+                $tax->voidEntry($id, (int) $admin['id'], (string) ($_POST['reason'] ?? ''));
                 $accountingTab = 'money';
                 break;
             case 'tax-add-balance':
@@ -156,7 +169,14 @@ try {
     if ($taxReady) {
         $taxSettings = $tax->settings();
         $taxSummary = $tax->summary($taxYear);
-        if ($accountingTab === 'money') $taxEntries = $tax->entries($taxYear);
+        if ($accountingTab === 'money') {
+            $taxEntries = $tax->entries($taxYear);
+            $taxEntryHistory = $tax->entryHistory($taxYear);
+            $editRaw = $_GET['edit_entry'] ?? null;
+            if (is_string($editRaw) && ctype_digit($editRaw)) {
+                $taxEditEntry = $tax->entry((int) $editRaw);
+            }
+        }
         if ($accountingTab === 'balances' || $accountingTab === 'overview') {
             $taxBalances = $tax->balances($taxYear);
             $taxReceivables = $tax->orderReceivables();
