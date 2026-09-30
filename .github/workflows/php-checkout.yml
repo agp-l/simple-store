@@ -64,3 +64,32 @@ jobs:
         run: node --test tests/gls-checkout.mjs
       - name: Test Balíkovna pickup selection
         run: node --test tests/balikovna-checkout.mjs
+
+  database:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: ci-only-password
+          MYSQL_DATABASE: simple_store
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h localhost -pci-only-password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mysqli
+          tools: composer:v2
+          coverage: none
+      - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Verify full schema and tax workflow against MySQL
+        env:
+          MYSQL_TEST_PASSWORD: ci-only-password
+        run: php tests/tax-database.php
