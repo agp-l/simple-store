@@ -47,6 +47,9 @@ final class InvoiceRepository
             if (!is_array($items) || $items === [] || !is_string($order['customer_email'] ?? null)) {
                 throw new InvalidArgumentException('Položky nebo kontakt objednávky nejsou úplné.');
             }
+            $payment = json_decode((string) ($order['payment_details_json'] ?? '{}'), true);
+            $seller['bank_account'] = is_array($payment) && is_string($payment['account_display'] ?? null)
+                ? $payment['account_display'] : (string) ($seller['bank_account'] ?? '');
             $today = new DateTimeImmutable('now', new DateTimeZone('Europe/Prague'));
             $year = (int) $today->format('Y');
             $this->db->query('INSERT IGNORE INTO shop_invoice_sequence (calendar_year, next_number) VALUES (%i, %i)',
@@ -100,7 +103,10 @@ final class InvoiceRepository
             $row = $this->db->queryFirstRow('SELECT document_number FROM shop_invoices WHERE id=%i FOR UPDATE', $id);
             if ($row === null || $row['document_number'] === $newNumber ||
                 (int) $this->db->queryFirstField(
-                    'SELECT COUNT(*) FROM shop_invoices WHERE document_number=%s', $newNumber) > 0) {
+                    'SELECT COUNT(*) FROM shop_invoices WHERE document_number=%s', $newNumber) > 0 ||
+                (int) $this->db->queryFirstField(
+                    'SELECT COUNT(*) FROM shop_invoice_number_events
+                     WHERE old_number=%s OR new_number=%s', $newNumber, $newNumber) > 0) {
                 throw new InvalidArgumentException('Doklad neexistuje nebo je nové číslo již obsazené.');
             }
             $this->db->query('UPDATE shop_invoices SET document_number=%s WHERE id=%i', $newNumber, $id);

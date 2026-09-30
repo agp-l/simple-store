@@ -100,6 +100,7 @@ final class PageRenderer
         $order = $data['order'] ?? [];
         $bankPayment = $data['bankPayment'] ?? [];
         $orderUrl = (string) ($data['orderUrl'] ?? '');
+        $invoiceUrl = (string) ($data['invoiceUrl'] ?? '');
         $qrMarkup = (string) ($data['qrMarkup'] ?? '');
         $checkoutReady = (bool) ($data['checkoutReady'] ?? false);
         $testCheckout = (bool) ($data['testCheckout'] ?? false);

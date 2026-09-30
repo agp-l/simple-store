@@ -200,6 +200,18 @@ final class OrderRepository
             if ($saved === null) {
                 throw new RuntimeException('Uloženou objednávku se nepodařilo načíst.');
             }
+            if ((int) $this->db->queryFirstField(
+                'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
+                'shop_sale_lines'
+            ) > 0) {
+                foreach ($snapshots as $index => $item) {
+                    $this->db->insert('shop_sale_lines', [
+                        'order_id' => (int) $saved['id'], 'line_no' => $index + 1,
+                        'product_key' => $item['product_key'], 'name' => $item['name'],
+                        'quantity' => $item['quantity'], 'unit_price_czk' => $item['unit_price_czk'],
+                    ]);
+                }
+            }
             $this->db->commit();
             return self::hydrate($saved);
         } catch (Throwable $error) {

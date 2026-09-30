@@ -23,14 +23,14 @@ $testOrder = ($order['payment_method'] ?? '') === 'test';
         <?php if (!empty($bankPayment['due_at'])): ?><div><dt>Splatnost (UTC)</dt><dd><?= $checkoutEscape($bankPayment['due_at']) ?></dd></div><?php endif; ?>
       </dl>
       <p class="checkout-fineprint">Uveďte variabilní symbol, abychom mohli platbu přiřadit k objednávce. Objednávku začneme vyřizovat po přijetí platby.</p>
-      <?php if ($orderUrl !== ''): ?><p class="checkout-fineprint">Uložte si odkaz na tuto stránku, abyste se mohli k platebním údajům vrátit. Potvrzení e-mailem zatím neposíláme.</p><label class="checkout-return-link">Odkaz na objednávku <input type="text" readonly value="<?= $checkoutEscape($orderUrl) ?>"></label><?php endif; ?>
+      <?php if ($orderUrl !== ''): ?><p class="checkout-fineprint">Uložte si odkaz na tuto stránku, abyste se mohli k platebním údajům vrátit. Potvrzení objednávky odesíláme e-mailem, pokud je poštovní služba obchodu nastavena.</p><label class="checkout-return-link">Odkaz na objednávku <input type="text" readonly value="<?= $checkoutEscape($orderUrl) ?>"></label><?php endif; ?>
       <a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a>
     </section>
     <aside class="checkout-panel checkout-qr" aria-labelledby="checkout-qr-title"><h2 id="checkout-qr-title">Naskenovat QR platbu</h2>
       <?php if ($qrReady): ?><div class="checkout-qr-canvas" data-qr-payload="<?= $checkoutEscape($qrPayload) ?>"></div><noscript><p>QR kód vyžaduje JavaScript. Platební údaje vlevo lze použít i bez něj.</p></noscript><p class="checkout-fineprint">Zkontrolujte údaje v bankovní aplikaci před potvrzením platby.</p>
       <?php else: ?><p>QR platba není dostupná. Použijte údaje pro ruční převod.</p><?php endif; ?>
     </aside>
-    <?php else: ?><section class="checkout-panel"><h2>Platba přijata</h2><p>Za tuto objednávku už neplaťte znovu.</p><a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a></section><?php endif; ?>
+    <?php else: ?><section class="checkout-panel"><h2>Platba přijata</h2><p>Za tuto objednávku už neplaťte znovu.</p><?php if (($invoiceUrl ?? '') !== ''): ?><p><a class="checkout-back" href="<?= $checkoutEscape($invoiceUrl) ?>">Zobrazit fakturu a uložit ji jako PDF</a></p><?php endif; ?><a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a></section><?php endif; ?>
   </div>
   <?php if (isset($order['subtotal_czk'], $order['shipping_czk'], $order['total_czk'])): ?>
   <section class="checkout-panel checkout-receipt"><h2>Souhrn nákupu</h2><dl>

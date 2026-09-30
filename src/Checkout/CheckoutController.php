@@ -6,6 +6,9 @@ namespace SimpleStore\Checkout;
 use InvalidArgumentException;
 use SimpleStore\Navigation\UrlManager;
 use SimpleStore\Rendering\PageRenderer;
+use SimpleStore\Accounting\OrderMailQueue;
+use SimpleStore\Accounting\InvoiceRepository;
+use Throwable;
 
 /** HTTP boundary for the cart, delivery form, bank transfer and order receipt. */
 final class CheckoutController
@@ -36,7 +39,10 @@ final class CheckoutController
         ?PacketaPickupPoint $packeta = null,
         ?PplPickupPoint $ppl = null,
         ?GlsPickupPoint $gls = null,
-        ?BalikovnaPickupPoint $balikovna = null
+        ?BalikovnaPickupPoint $balikovna = null,
+        private ?OrderMailQueue $mailQueue = null,
+        private string $mailSender = '',
+        private ?InvoiceRepository $invoices = null
     ) {
         $this->cartUrl = $url->path('kosik');
         $this->checkoutUrl = $url->path('pokladna');
@@ -69,10 +75,22 @@ final class CheckoutController
                 $this->renderer->render('not-found', $this->shared, 404);
                 return;
             }
+            $invoice = $this->invoices?->byOrder((int) $order['id']);
+            if (($_GET['invoice'] ?? '') === '1') {
+                if ($invoice === null) {
+                    $this->renderer->render('not-found', $this->shared, 404);
+                    return;
+                }
+                $selectedInvoice = $invoice;
+                require __DIR__ . '/../../view/admin/invoice-print.php';
+                return;
+            }
             $this->renderer->render('complete', $this->shared + [
                 'title' => 'Objednávka ' . $order['order_number'] . ' — dobrodruzi.cz',
                 'privatePage' => true, 'compactHeader' => true, 'order' => $order,
                 'orderUrl' => $this->url->path('objednavka/' . $order['order_token']),
+                'invoiceUrl' => $invoice !== null ? $this->url->path(
+                    'objednavka/' . $order['order_token']) . '?invoice=1' : '',
                 'bankPayment' => ($order['payment_method'] ?? '') === 'bank_transfer'
                     ? BankTransferPayment::fromOrder($order)->details($order) : [],
             ]);
@@ -257,6 +275,16 @@ final class CheckoutController
         if ($methodCode === 'balikovna_pickup') $shipping['pickup_source'] = 'balikovna_map';
         $order = $this->orders->create($this->customerId, $delivery['email'], $summary['items'],
             $shipping, $price, $this->cart->checkoutKey(), $testOrder);
+        if ($this->mailQueue !== null && !$testOrder) {
+            try {
+                $messageId = $this->mailQueue->enqueueOrder($order);
+                if ($messageId !== null && $this->mailSender !== '') {
+                    $this->mailQueue->dispatch($messageId, $this->mailSender);
+                }
+            } catch (Throwable $error) {
+                error_log('Order ' . $order['order_number'] . ' notification failed: ' . $error->getMessage());
+            }
+        }
         $this->cart->clear();
         $this->redirect($this->url->path('objednavka/' . $order['order_token']));
     }

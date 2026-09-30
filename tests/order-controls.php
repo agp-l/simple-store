@@ -7,6 +7,7 @@ class MeekroDB
     public array $shipments = [];
     public array $cancelledShipments = [];
     public array $documents = [];
+    public array $invoices = [];
     public array $carriers = [];
     public array $events = [];
     public array $financialEvents = [];
@@ -42,8 +43,10 @@ class MeekroDB
                 'shop_order_admin_events' => $this->eventsInstalled ? 1 : 0,
                 'shop_order_financial_events' => $this->financialInstalled ? 1 : 0,
                 'shop_documents' => $this->documentsInstalled ? 1 : 0,
+                'shop_invoices' => 1,
                 'shop_packeta_shipments', 'shop_packeta_cancelled_shipments',
                 'shop_carrier_shipments' => 1,
+                'shop_tax_entries', 'shop_mail_outbox', 'shop_sale_lines', 'shop_stock_movements' => 0,
                 default => throw new RuntimeException('Unknown table check.'),
             };
         }
@@ -57,6 +60,9 @@ class MeekroDB
         if (str_contains($sql, 'FROM shop_carrier_shipments')) return isset($this->carriers[$id]) ? 1 : 0;
         if (str_contains($sql, 'FROM shop_documents')) {
             return isset($this->documents[$id]) ? 1 : 0;
+        }
+        if (str_contains($sql, 'FROM shop_invoices')) {
+            return isset($this->invoices[$id]) ? 1 : 0;
         }
         throw new RuntimeException('Unexpected COUNT query.');
     }
@@ -97,6 +103,16 @@ class MeekroDB
                 $this->orders[$id]['payment_paid_at'] = null;
                 $this->orders[$id]['payment_verified_by'] = null;
             }
+            return [];
+        }
+        if (str_contains($sql, 'DELETE FROM shop_order_admin_events')) {
+            $this->events = array_values(array_filter($this->events,
+                static fn (array $event): bool => $event['order_id'] !== $args[0]));
+            return [];
+        }
+        if (str_contains($sql, 'DELETE FROM shop_order_financial_events')) {
+            $this->financialEvents = array_values(array_filter($this->financialEvents,
+                static fn (array $event): bool => $event['order_id'] !== $args[0]));
             return [];
         }
         if (str_contains($sql, 'DELETE FROM shop_carrier_shipments')) {
@@ -209,19 +225,18 @@ try {
 $db->failEvent = false;
 
 $db->orders[14] = orderRow(14, 'test', 'test', 'test');
+$eventCount = count($db->events);
 $controls->deleteOrder(14, 'DB-20260930-14', 3, 'Testovací nákup již nepotřebuji.');
-if (isset($db->orders[14]) || $db->events[count($db->events) - 1]['new_status'] !== 'deleted' ||
-    $db->events[count($db->events) - 1]['order_number'] !== 'DB-20260930-14' ||
-    isset($db->events[count($db->events) - 1]['customer_email'])) {
-    throw new RuntimeException('Test order deletion did not leave a minimal audit event.');
-}
-if ($controls->recentDeletions(1)[0]['order_number'] !== 'DB-20260930-14') {
-    throw new RuntimeException('Deleted order audit is not visible to administrators.');
+if (isset($db->orders[14]) || count($db->events) !== $eventCount) {
+    throw new RuntimeException('Test order deletion left an accounting or audit event.');
 }
 $db->orders[15] = orderRow(15, 'new', 'bank_transfer', 'pending');
 $controls->deleteOrder(15, 'DB-20260930-15', 3, 'Nesprávně vytvořená neplacená objednávka.');
 $db->orders[16] = orderRow(16, 'cancelled', 'bank_transfer', 'pending');
 $controls->deleteOrder(16, 'DB-20260930-16', 3, 'Duplicitní neplacená objednávka zákazníka.');
+if ($controls->recentDeletions(1)[0]['order_number'] !== 'DB-20260930-16') {
+    throw new RuntimeException('Deleted real order audit is not visible to administrators.');
+}
 
 $db->orders[18] = orderRow(18, 'completed');
 $db->orders[18]['payment_paid_at'] = '2026-09-29 12:00:00';
@@ -253,13 +268,14 @@ if (isset($db->orders[19]) || $deletionEvent['payment_status_before'] !== 'paid'
     throw new RuntimeException('Paid deletion lost its financial snapshot.');
 }
 
-foreach (['shipment', 'cancelled_shipment', 'document', 'carrier_registered',
+foreach (['shipment', 'cancelled_shipment', 'document', 'invoice', 'carrier_registered',
     'not_genuine_test', 'wrong_number'] as $index => $case) {
     $id = $index + 100;
     $db->orders[$id] = orderRow($id, 'new', 'bank_transfer', 'pending');
     if ($case === 'shipment') $db->shipments[$id] = ['status' => 'rejected'];
     if ($case === 'cancelled_shipment') $db->cancelledShipments[$id] = ['status' => 'cancelled'];
     if ($case === 'document') $db->documents[$id] = ['number' => '2026-001'];
+    if ($case === 'invoice') $db->invoices[$id] = ['number' => 'F2026-000001'];
     if ($case === 'carrier_registered') $db->carriers[$id] = ['status' => 'registered'];
     if ($case === 'not_genuine_test') {
         $db->orders[$id]['payment_method'] = 'test';

@@ -15,7 +15,7 @@ final class OrderMailQueue
     public function __construct(private MeekroDB $db, ?callable $transport = null)
     {
         $this->transport = $transport ?? static fn (string $to, string $subject,
-            string $body, string $headers): bool => mail($to, $subject, $body, $headers);
+            string $body, string $headers): bool => @mail($to, $subject, $body, $headers);
     }
 
     public function installed(): bool
@@ -72,9 +72,14 @@ final class OrderMailQueue
         $lines[] = 'Celkem: ' . (int) $invoice['total_czk'] . ' Kč';
         $lines[] = 'Uhrazeno bankovním převodem · VS: ' . ($invoice['variable_symbol'] ?? '');
         $lines[] = 'Nejsem plátce DPH.';
-        return $this->enqueue('invoice:' . (int) $invoice['id'], (int) $invoice['order_id'],
-            (string) $buyer['email'], 'Faktura ' . $invoice['document_number'],
-            implode("\n", $lines) . "\n");
+        $subject = 'Faktura ' . $invoice['document_number'];
+        $body = implode("\n", $lines) . "\n";
+        $id = $this->enqueue('invoice:' . (int) $invoice['id'], (int) $invoice['order_id'],
+            (string) $buyer['email'], $subject, $body);
+        // A corrected number must also reach the queued message. Never rewrite sent mail.
+        $this->db->query('UPDATE shop_mail_outbox SET subject=%s, body_text=%s
+            WHERE id=%i AND state IN (%s,%s)', $subject, $body, $id, 'queued', 'failed');
+        return $id;
     }
 
     public function dispatch(int $id, string $sender): bool

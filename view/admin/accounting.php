@@ -17,15 +17,26 @@ $accountingFulfillmentLabel = static fn (mixed $status): string => match ($statu
     'cancelled' => 'Zrušeno',
     default => (string) $status,
 };
+$accountingTab ??= 'orders';
+$taxYear ??= (int) date('Y');
 ?>
 <div class="panel-intro">
-  <div><p class="panel-eyebrow">Prodej</p><h1>Účetní podklady</h1>
-    <p>Přehled podle dne, kdy správce potvrdil platbu (UTC). Součty zahrnují zboží i dopravu.</p></div>
+  <div><p class="panel-eyebrow">OSVČ</p><h1>Daňová evidence</h1>
+    <p>Příjmy, výdaje, pohledávky, závazky, zásoby, vystavené faktury a e-maily.</p></div>
 </div>
+<nav class="panel-quick panel-order-filters" aria-label="Části daňové evidence">
+  <?php foreach (['overview'=>'Přehled', 'money'=>'Peněžní deník', 'balances'=>'Majetek a dluhy',
+      'stock'=>'Sklad a prodeje', 'invoices'=>'Faktury', 'mail'=>'E-maily',
+      'orders'=>'Přehled objednávek', 'settings'=>'Údaje OSVČ'] as $key=>$label): ?>
+    <a href="<?= $escape($adminUrl . '?section=accounting&tab=' . $key . '&year=' . $taxYear) ?>" <?= $accountingTab === $key ? 'aria-current="page"' : '' ?>><?= $escape($label) ?></a>
+  <?php endforeach; ?>
+</nav>
+<?php if ($accountingTab === 'orders'): ?>
 <section class="panel-panel">
   <h2>Období</h2>
   <form class="panel-search" method="get" action="<?= $escape($adminUrl) ?>">
     <input type="hidden" name="section" value="accounting">
+    <input type="hidden" name="tab" value="orders">
     <label>Od <input type="date" name="from" value="<?= $escape($accountingFrom) ?>" required></label>
     <label>Do <input type="date" name="to" value="<?= $escape($accountingTo) ?>" required></label>
     <button class="panel-button" type="submit">Zobrazit</button>
@@ -84,4 +95,7 @@ $accountingFulfillmentLabel = static fn (mixed $status): string => match ($statu
       <?php if ($financialNextUrl !== ''): ?><a href="<?= $escape($financialNextUrl) ?>">Další zásahy →</a><?php endif; ?>
     </nav>
   </section>
+<?php endif; ?>
+<?php else: ?>
+  <?php require __DIR__ . '/tax.php'; ?>
 <?php endif; ?>

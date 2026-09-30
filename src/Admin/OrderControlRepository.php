@@ -139,7 +139,7 @@ final class OrderControlRepository
         }
     }
 
-    /** Purge an order, including a paid one, while keeping a financial audit snapshot. */
+    /** Test orders leave no accounting trace; actual sales retain their financial evidence. */
     public function deleteOrder(int $orderId, string $typedNumber, int $adminId, string $reason): void
     {
         self::assertActorAndReason($orderId, $adminId, $reason);
@@ -167,7 +167,8 @@ final class OrderControlRepository
                 $this->hasRelatedRow('shop_packeta_shipments', $orderId) ||
                 ($carrier !== null && $carrier['status'] !== 'draft') ||
                 $this->hasRelatedRow('shop_packeta_cancelled_shipments', $orderId) ||
-                $this->hasRelatedRow('shop_documents', $orderId)) {
+                $this->hasRelatedRow('shop_documents', $orderId) ||
+                $this->hasRelatedRow('shop_invoices', $orderId)) {
                 throw new InvalidArgumentException('Nejdřív vyřeš navázaný doklad nebo zásilku u dopravce; podklady bez čísla lze smazat spolu s objednávkou.');
             }
 
@@ -175,15 +176,45 @@ final class OrderControlRepository
                 $this->recordFinancialEvent($order, 'order_deleted', $adminId, $reason);
             }
 
-            $this->db->insert('shop_order_admin_events', [
-                'order_id' => $orderId,
-                'order_number' => $order['order_number'],
-                'action' => 'order_deleted',
-                'old_status' => $order['status'],
-                'new_status' => 'deleted',
-                'reason' => trim($reason),
-                'admin_id' => $adminId,
-            ]);
+            if ($test) {
+                // Any earlier changes to this artificial order are also only development data.
+                $this->db->query('DELETE FROM shop_order_admin_events WHERE order_id=%i', $orderId);
+                $this->db->query('DELETE FROM shop_order_financial_events WHERE order_id=%i', $orderId);
+                if ($this->tableExists('shop_tax_entries')) {
+                    $this->db->query('DELETE FROM shop_tax_entries WHERE order_id=%i', $orderId);
+                }
+                if ($this->tableExists('shop_mail_outbox')) {
+                    $this->db->query('DELETE FROM shop_mail_outbox WHERE order_id=%i', $orderId);
+                }
+            } else {
+                $this->db->insert('shop_order_admin_events', [
+                    'order_id' => $orderId, 'order_number' => $order['order_number'],
+                    'action' => 'order_deleted', 'old_status' => $order['status'],
+                    'new_status' => 'deleted', 'reason' => trim($reason), 'admin_id' => $adminId,
+                ]);
+                if ($this->tableExists('shop_tax_entries')) {
+                    $this->db->query('UPDATE shop_tax_entries SET order_id=NULL WHERE order_id=%i', $orderId);
+                }
+                if ($this->tableExists('shop_mail_outbox')) {
+                    $this->db->query('DELETE FROM shop_mail_outbox WHERE order_id=%i AND state IN (%s,%s,%s)',
+                        $orderId, 'queued', 'failed', 'sending');
+                    $this->db->query('UPDATE shop_mail_outbox SET order_id=NULL WHERE order_id=%i', $orderId);
+                }
+                if (in_array($order['status'], ['shipped', 'completed'], true) &&
+                    $this->tableExists('shop_sale_lines') && $this->tableExists('shop_stock_movements')) {
+                    foreach ($this->db->query('SELECT product_key, quantity FROM shop_sale_lines WHERE order_id=%i',
+                        $orderId) as $line) {
+                        $this->db->insert('shop_stock_movements', [
+                            'product_key' => $line['product_key'],
+                            'movement_date' => gmdate('Y-m-d'),
+                            'quantity_change' => -(int) $line['quantity'],
+                            'unit_cost_czk' => null,
+                            'description' => 'Dříve odeslaná smazaná objednávka ' . $order['order_number'],
+                            'reference' => (string) $order['order_number'],
+                        ]);
+                    }
+                }
+            }
             if ($carrier !== null) {
                 $this->db->query('DELETE FROM shop_carrier_shipments WHERE order_id=%i AND status=%s',
                     $orderId, 'draft');

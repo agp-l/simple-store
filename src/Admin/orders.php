@@ -12,6 +12,8 @@ use SimpleStore\Checkout\PacketaRejectedException;
 use SimpleStore\Checkout\PacketaShipmentDraft;
 use SimpleStore\Checkout\PacketaShipmentRepository;
 use SimpleStore\Admin\OrderControlRepository;
+use SimpleStore\Accounting\InvoiceRepository;
+use SimpleStore\Accounting\TaxEvidenceRepository;
 
 // admin.php has already authenticated the administrator and verified POST CSRF.
 $screen = 'orders';
@@ -41,6 +43,11 @@ $packetaTrackingUrl = null;
 $orderControls = new OrderControlRepository($db);
 $orderControlsReady = $orderControls->installed();
 $orderEvents = [];
+$orderInvoice = null;
+$orderReceipt = null;
+$orderTaxReady = false;
+$orderInvoiceReady = false;
+$sellerSettings = [];
 $deletedOrders = [];
 $orderPage = ['items' => [], 'nextOffset' => null];
 $statusFilter = $_GET['status'] ?? 'all';
@@ -329,6 +336,17 @@ if ($rawId !== null) {
     }
     if ($order !== null && $orderControlsReady) {
         $orderEvents = $orderControls->eventsForOrder($id);
+    }
+    if ($order !== null) {
+        $taxEvidence = new TaxEvidenceRepository($db);
+        $invoiceStore = new InvoiceRepository($db);
+        $orderTaxReady = $taxEvidence->installed();
+        $orderInvoiceReady = $invoiceStore->installed();
+        if ($orderTaxReady) {
+            $sellerSettings = $taxEvidence->settings();
+            $orderReceipt = $taxEvidence->orderReceipt($id);
+        }
+        if ($orderInvoiceReady) $orderInvoice = $invoiceStore->byOrder($id);
     }
 } elseif ($ordersReady && $orderError === '') {
     $orderPage = $orders->managementPage($offset, 25, $statusFilter === 'all' ? null : $statusFilter);

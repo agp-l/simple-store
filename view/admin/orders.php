@@ -27,6 +27,11 @@ $fulfillmentSourceReady ??= false;
 $orderControlsReady ??= false;
 $orderEvents ??= [];
 $deletedOrders ??= [];
+$orderTaxReady ??= false;
+$orderInvoiceReady ??= false;
+$orderReceipt ??= null;
+$orderInvoice ??= null;
+$sellerSettings ??= [];
 ?>
 <div class="panel-intro">
   <div><p class="panel-eyebrow">Prodej</p><h1>Objednávky</h1>
@@ -37,7 +42,7 @@ $deletedOrders ??= [];
   <p class="panel-error" role="alert">Pro objednávky nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
 <?php endif; ?>
 <?php if ($orderError !== ''): ?><p class="panel-error" role="alert"><?= $escape($orderError) ?></p><?php endif; ?>
-<?php if ($order === null && ($_GET['deleted'] ?? '') === '1'): ?><p class="panel-notice" role="status">Objednávka byla smazána. Záznam o zásahu správce zůstal v databázi.</p><?php endif; ?>
+<?php if ($order === null && ($_GET['deleted'] ?? '') === '1'): ?><p class="panel-notice" role="status">Objednávka byla smazána. Skutečný obchod má zachovanou účetní stopu.</p><?php endif; ?>
 <?php if ($order !== null): ?>
   <?php
   $shipping = is_array($order['shipping'] ?? null) ? $order['shipping'] : [];
@@ -48,6 +53,7 @@ $deletedOrders ??= [];
   <?php if (($_GET['paid'] ?? null) === '1' && $paid): ?><p class="panel-notice" role="status">Platba byla ručně označena jako přijatá.</p><?php endif; ?>
   <?php if (($_GET['corrected'] ?? null) === '1'): ?><p class="panel-notice" role="status">Stav byl opraven. Důvod a původní stav jsou v historii zásahů níže.</p><?php endif; ?>
   <?php if (($_GET['payment_corrected'] ?? null) === '1'): ?><p class="panel-notice" role="status">Potvrzení platby bylo opraveno. Původní údaj je v historii zásahů a v účetních podkladech.</p><?php endif; ?>
+  <?php if (($_GET['tax_saved'] ?? null) === '1'): ?><p class="panel-notice" role="status">Účetní údaj byl uložen.</p><?php endif; ?>
   <div class="panel-grid panel-order-detail">
     <div class="panel-workspace">
       <section class="panel-panel">
@@ -329,6 +335,37 @@ $deletedOrders ??= [];
         </section>
       <?php endif; ?>
       <p class="panel-help">Stav platby se z banky nenačítá automaticky.</p>
+      <?php if ($bankTransfer && $paid && $orderTaxReady && ($order['status'] ?? '') !== 'test'): ?>
+        <section class="panel-order-controls" aria-label="Daňová evidence objednávky">
+          <h2>Daňová evidence</h2>
+          <?php if ($orderReceipt !== null): ?>
+            <p class="panel-notice">Bankovní příjem <?= $orderMoney($orderReceipt['amount_czk']) ?> ze dne <?= $escape($orderReceipt['entry_date']) ?> je zapsaný v <a href="<?= $escape($adminUrl . '?section=accounting&tab=money') ?>">peněžním deníku</a>.</p>
+          <?php else: ?>
+            <p class="panel-help">Zaplaceno je stav objednávky. Do deníku zapiš skutečné datum připsání částky podle bankovního výpisu.</p>
+            <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=accounting') ?>">
+              <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="tax-link-payment"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
+              <label>Datum připsání<input type="date" name="entry_date" required></label>
+              <label>Bankovní reference<input name="reference" maxlength="100" value="<?= $escape($order['variable_symbol'] ?? '') ?>"></label>
+              <button class="panel-button" type="submit">Zapsat příjem <?= $orderMoney($order['total_czk']) ?></button>
+            </form>
+          <?php endif; ?>
+          <?php if ($orderInvoice !== null): ?>
+            <p>Faktura <strong><?= $escape($orderInvoice['document_number']) ?></strong> · <a href="<?= $escape($adminUrl . '?section=accounting&tab=invoices&invoice_id=' . (int) $orderInvoice['id']) ?>">detail, tisk a e-mail</a></p>
+          <?php elseif ($orderInvoiceReady && \SimpleStore\Accounting\TaxEvidenceRepository::invoiceReady($sellerSettings)): ?>
+            <h3>Vystavit fakturu</h3>
+            <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=accounting') ?>">
+              <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="invoice-issue"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
+              <label>Odběratel<input name="buyer_name" value="<?= $escape($shipping['recipient'] ?? $shipping['name'] ?? '') ?>" maxlength="120" required></label>
+              <label>Ulice a číslo<input name="buyer_street" value="<?= $escape($shipping['street'] ?? '') ?>" maxlength="160"></label>
+              <label>Město<input name="buyer_city" value="<?= $escape($shipping['city'] ?? '') ?>" maxlength="100"></label>
+              <label>PSČ<input name="buyer_postal_code" value="<?= $escape($shipping['postal_code'] ?? '') ?>" maxlength="6"></label>
+              <label>IČO odběratele (volitelné)<input name="buyer_ico" maxlength="8"></label>
+              <button class="panel-button" type="submit">Vystavit a připravit e-mail s fakturou</button>
+              <p class="panel-help">Zkontroluj fakturační údaje. Tiskový doklad lze uložit jako PDF v prohlížeči.</p>
+            </form>
+          <?php else: ?><p class="panel-help">Před vystavením faktury doplň <a href="<?= $escape($adminUrl . '?section=accounting&tab=settings') ?>">údaje OSVČ</a> a aktualizuj SQL tabulky.</p><?php endif; ?>
+        </section>
+      <?php endif; ?>
       <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Stav vyřízení objednávky byl uložen.</p><?php endif; ?>
       <h2>Vyřízení</h2>
       <p class="panel-order-state"><?= $escape($orderFulfillmentLabel($order['status'] ?? '')) ?></p>

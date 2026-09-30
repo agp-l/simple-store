@@ -66,6 +66,9 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $orderActions = ['mark-order-paid', 'set-order-status', 'correct-order-status', 'correct-order-payment', 'delete-order', 'packeta-create',
     'packeta-courier', 'packeta-reconcile', 'packeta-retry', 'packeta-cancel',
     'packeta-cancel-confirmed', 'packeta-cancel-not-done', 'carrier-save', 'carrier-register'];
+$taxActions = ['tax-save-settings', 'tax-add-entry', 'tax-add-balance', 'tax-close-balance',
+    'tax-add-stock', 'tax-backfill-sales', 'tax-link-payment', 'invoice-issue',
+    'invoice-renumber', 'invoice-email', 'mail-retry'];
 try {
     $csrf = $auth->token();
     if ($method === 'POST' && $_POST === [] && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0 &&
@@ -108,7 +111,7 @@ try {
             'inline-product', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
             'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product',
             'save-checkout-settings', 'customer-create', 'customer-update', 'customer-active',
-            'customer-password', 'schema-apply'], $orderActions), true) ||
+            'customer-password', 'schema-apply'], $orderActions, $taxActions), true) ||
             !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach'], true)) {
                 header('Content-Type: application/json; charset=utf-8');
@@ -181,7 +184,7 @@ try {
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }
-    if ($method !== 'POST' && $section === 'accounting') {
+    if (in_array($action, $taxActions, true) || ($method !== 'POST' && $section === 'accounting')) {
         require __DIR__ . '/src/Admin/accounting.php';
         require __DIR__ . '/view/admin/layout.php';
         exit;

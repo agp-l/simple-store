@@ -23,6 +23,9 @@ use SimpleStore\Navigation\StorefrontMenus;
 use SimpleStore\Navigation\UrlManager;
 use SimpleStore\Product\ProductRepository;
 use SimpleStore\Rendering\PageRenderer;
+use SimpleStore\Accounting\TaxEvidenceRepository;
+use SimpleStore\Accounting\OrderMailQueue;
+use SimpleStore\Accounting\InvoiceRepository;
 
 $site = require __DIR__ . '/src/bootstrap.php';
 $renderer = new PageRenderer(__DIR__ . '/view');
@@ -121,10 +124,13 @@ try {
                 session_id('');
             }
         }
+        $taxSettings = (new TaxEvidenceRepository($db))->settings();
         $controller = new CheckoutController($url, $renderer, $shared, $cart,
             new CartService(new ProductRepository($db, $site['languages']), $site['languages']),
             $shipping, $orders, $bank, $customerId, (string) ($checkoutConfig['terms_url'] ?? ''),
-            $localPreview, $customerProfile, $customerAddresses, $packeta, $ppl);
+            $localPreview, $customerProfile, $customerAddresses, $packeta, $ppl, null, null,
+            new OrderMailQueue($db), (string) ($taxSettings['mail_from'] ?? ''),
+            new InvoiceRepository($db));
         $controller->handle($route);
         exit;
     }

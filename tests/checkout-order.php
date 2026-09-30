@@ -4,6 +4,7 @@ declare(strict_types=1);
 class MeekroDB
 {
     public array $rows = [];
+    public array $saleLines = [];
     public int $transactions = 0;
     public int $commits = 0;
     public int $rollbacks = 0;
@@ -15,14 +16,18 @@ class MeekroDB
     public function startTransaction(): void
     {
         $this->transactions++;
-        $this->before = $this->rows;
+        $this->before = [$this->rows, $this->saleLines];
     }
 
     public function commit(): void { $this->commits++; }
-    public function rollback(): void { $this->rollbacks++; $this->rows = $this->before; }
+    public function rollback(): void { $this->rollbacks++; [$this->rows, $this->saleLines] = $this->before; }
 
     public function insert(string $table, array $fields): void
     {
+        if ($table === 'shop_sale_lines') {
+            $this->saleLines[] = $fields;
+            return;
+        }
         if ($table !== 'shop_orders') throw new RuntimeException('Unexpected table.');
         foreach ($this->rows as $row) {
             if ($row['idempotency_key'] === $fields['idempotency_key'] ||
@@ -122,7 +127,8 @@ if (count($db->rows) !== 1 || $db->commits !== 1 || $order['total_czk'] !== 1100
     !preg_match('/^[0-9]{10}$/D', $order['variable_symbol']) ||
     !preg_match('/^DB-[0-9]{2}-[0-9]{10}$/D', $order['order_number']) ||
     !str_ends_with($order['order_number'], $order['variable_symbol']) ||
-    !preg_match('/^[a-f0-9]{64}$/D', $order['order_token'])) {
+    !preg_match('/^[a-f0-9]{64}$/D', $order['order_token']) ||
+    count($db->saleLines) !== 1 || $db->saleLines[0]['quantity'] !== 2) {
     throw new RuntimeException('Order snapshot, total, token or payment state is wrong.');
 }
 $details = BankTransferPayment::fromOrder($order)->details($order);
@@ -138,7 +144,8 @@ if ($changedSettings->details($order)['recipient'] !== 'Obchod') {
     throw new RuntimeException('Existing payment was silently retargeted after a config change.');
 }
 $same = $repository->create(null, 'eva@example.org', $items, $shipping, 100, $key);
-if (count($db->rows) !== 1 || $same['order_token'] !== $order['order_token'] ||
+if (count($db->rows) !== 1 || count($db->saleLines) !== 1 ||
+    $same['order_token'] !== $order['order_token'] ||
     $repository->findByToken($order['order_token'])['order_number'] !== $order['order_number'] ||
     $repository->findByToken('guess') !== null || $repository->findById(0) !== null) {
     throw new RuntimeException('Idempotent checkout or private order lookup failed.');

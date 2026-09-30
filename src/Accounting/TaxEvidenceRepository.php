@@ -121,6 +121,14 @@ final class TaxEvidenceRepository
         }
     }
 
+    public function orderReceipt(int $orderId): ?array
+    {
+        if ($orderId < 1 || !$this->installed()) return null;
+        return $this->db->queryFirstRow('SELECT id, entry_date, amount_czk, reference
+            FROM shop_tax_entries WHERE order_id=%i AND direction=%s ORDER BY id DESC LIMIT 1',
+            $orderId, 'income');
+    }
+
     public function entries(int $year): array
     {
         self::year($year);
@@ -179,6 +187,14 @@ final class TaxEvidenceRepository
             ORDER BY id DESC LIMIT %i', ($year + 1) . '-01-01', $year . '-01-01', 500);
     }
 
+    public function orderReceivables(): array
+    {
+        return $this->db->query('SELECT id, order_number, customer_email, total_czk, created_at
+            FROM shop_orders WHERE payment_method=%s AND payment_status=%s
+                AND status NOT IN (%s,%s) ORDER BY id DESC LIMIT %i',
+            'bank_transfer', 'pending', 'cancelled', 'test', 100);
+    }
+
     public function addStock(array $input): void
     {
         $key = $input['product_key'] ?? '';
@@ -211,10 +227,61 @@ final class TaxEvidenceRepository
             'SELECT l.order_id, o.order_number, l.product_key, l.name, l.quantity,
                     l.unit_price_czk, o.created_at, o.status
              FROM shop_sale_lines l JOIN shop_orders o ON o.id=l.order_id
-             WHERE o.created_at >= %s AND o.created_at < %s AND o.status<>%s
+             WHERE o.created_at >= %s AND o.created_at < %s AND o.status NOT IN (%s,%s)
              ORDER BY o.id DESC, l.line_no ASC LIMIT %i',
-            $year . '-01-01', ($year + 1) . '-01-01', 'cancelled', 500
+            $year . '-01-01', ($year + 1) . '-01-01', 'cancelled', 'test', 500
         );
+    }
+
+    public function products(string $search = ''): array
+    {
+        $search = trim($search);
+        if (strlen($search) > 100) throw new InvalidArgumentException('Hledání je příliš dlouhé.');
+        return $this->db->query(
+            'SELECT p.product_key, p.name, p.stock_status,
+                COALESCE((SELECT SUM(m.quantity_change) FROM shop_stock_movements m
+                          WHERE m.product_key=p.product_key),0) AS received,
+                COALESCE((SELECT SUM(l.quantity) FROM shop_sale_lines l
+                          JOIN shop_orders o ON o.id=l.order_id
+                          WHERE l.product_key=p.product_key AND o.status IN (%s,%s)),0) AS dispatched
+             FROM product_revisions p WHERE p.active_product_key IS NOT NULL AND p.language=%s
+                 AND (%s=%s OR LOCATE(%s,p.name)>0 OR p.product_key=%s)
+             ORDER BY p.name ASC LIMIT %i',
+            'shipped', 'completed', 'cs', $search, '', $search, $search, 60
+        );
+    }
+
+    /** Import older order snapshots in small repeatable batches after the schema upgrade. */
+    public function backfillSaleLines(): int
+    {
+        $orders = $this->db->query('SELECT o.id, o.items_json FROM shop_orders o
+            WHERE o.status<>%s AND NOT EXISTS
+                (SELECT 1 FROM shop_sale_lines l WHERE l.order_id=o.id)
+            ORDER BY o.id ASC LIMIT %i', 'test', 100);
+        $count = 0;
+        foreach ($orders as $order) {
+            $items = json_decode((string) $order['items_json'], true);
+            if (!is_array($items)) continue;
+            $this->db->startTransaction();
+            try {
+                foreach ($items as $index => $item) {
+                    if (!is_array($item) || !is_string($item['product_key'] ?? null) ||
+                        preg_match('/^[a-f0-9]{32}$/D', $item['product_key']) !== 1 ||
+                        (int) ($item['quantity'] ?? 0) < 1) continue;
+                    $this->db->query('INSERT IGNORE INTO shop_sale_lines
+                        (order_id, line_no, product_key, name, quantity, unit_price_czk)
+                        VALUES (%i,%i,%s,%s,%i,%i)', (int) $order['id'], $index + 1,
+                        $item['product_key'], (string) ($item['name'] ?? ''),
+                        (int) $item['quantity'], (int) ($item['unit_price_czk'] ?? 0));
+                }
+                $this->db->commit();
+                $count++;
+            } catch (\Throwable $error) {
+                $this->db->rollback();
+                throw $error;
+            }
+        }
+        return $count;
     }
 
     public static function year(int $year): void
