@@ -9,6 +9,8 @@ class MeekroDB
     public int $commits = 0;
     public int $rollbacks = 0;
     public ?array $shipment = null;
+    public string $lastManagementSql = '';
+    public array $lastManagementParameters = [];
     private array $before = [];
 
     public function queryFirstField(string $sql, mixed ...$values): int { return 1; }
@@ -90,13 +92,28 @@ class MeekroDB
             return [];
         }
         if (str_contains($sql, 'FROM shop_orders')) {
+            $this->lastManagementSql = $sql;
+            $this->lastManagementParameters = $values;
             $rows = array_reverse($this->rows);
-            if (str_contains($sql, 'WHERE payment_status=%s') || str_contains($sql, 'WHERE status=%s')) {
+            $position = 0;
+            if (str_contains($sql, 'payment_status=%s') || str_contains($sql, 'status=%s')) {
                 $rows = array_values(array_filter($rows,
-                    static fn (array $row): bool => $row[str_contains($sql, 'WHERE status=%s') ? 'status' : 'payment_status'] === $values[0]));
-                return array_slice($rows, $values[2], $values[1]);
+                    static fn (array $row): bool => $row[str_contains($sql, 'payment_status=%s') ? 'payment_status' : 'status'] === $values[0]));
+                $position++;
             }
-            return array_slice($rows, $values[1], $values[0]);
+            if (str_contains($sql, 'payment_method=%s')) {
+                $rows = array_values(array_filter($rows,
+                    static fn (array $row): bool => $row['payment_method'] === $values[$position]));
+                $position++;
+            }
+            if (str_contains($sql, 'order_number LIKE %s')) {
+                $needle = str_replace(['!%', '!_', '!!', '%'], ['%', '_', '!', ''], $values[$position]);
+                $rows = array_values(array_filter($rows,
+                    static fn (array $row): bool => str_contains($row['order_number'], $needle) ||
+                        str_contains($row['customer_email'], $needle) ||
+                        str_contains((string) $row['variable_symbol'], $needle)));
+            }
+            return array_slice($rows, $values[count($values) - 1], $values[count($values) - 2]);
         }
         throw new RuntimeException('Unexpected SQL query.');
     }
@@ -226,6 +243,19 @@ if ($preview['payment_method'] !== 'test' || $preview['payment_status'] !== 'tes
     !preg_match('/^TEST-[0-9]{2}-[A-F0-9]{8}$/D', $preview['order_number']) ||
     $preview['status'] !== 'test' || $repository->managementPage(0, 20, 'test')['items'][0]['id'] !== $preview['id']) {
     throw new RuntimeException('Test order must be distinguishable and have no payment instructions.');
+}
+$filtered = $repository->managementPage(0, 1, 'paid', 'bank_transfer', 'eva@example.org');
+if (count($filtered['items']) !== 1 || $filtered['items'][0]['id'] !== 1 ||
+    $repository->managementPage(0, 1, null, null, $preview['order_number'])['items'][0]['id'] !== $preview['id'] ||
+    $repository->managementPage(1, 1)['items'][0]['id'] !== 1) {
+    throw new RuntimeException('Order search, payment method or pagination failed.');
+}
+$repository->managementPage(0, 20, null, null, '50%_!');
+if (!str_contains($db->lastManagementSql, 'LIKE %s ESCAPE %s') ||
+    $db->lastManagementParameters[0] !== '%50!%!_!!%' ||
+    $db->lastManagementParameters[1] !== '!' ||
+    $db->lastManagementParameters[2] !== '%50!%!_!!%') {
+    throw new RuntimeException('Search wildcards must be matched literally.');
 }
 $rejected = false;
 try {

@@ -103,6 +103,7 @@ CREATE TABLE IF NOT EXISTS shop_orders (
   total_czk INT UNSIGNED NOT NULL,
   items_json LONGTEXT NOT NULL,
   shipping_json LONGTEXT NOT NULL,
+  dispatch_shipping_json LONGTEXT NULL DEFAULT NULL,
   payment_method VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'legacy',
   payment_status VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'unknown',
   payment_details_json LONGTEXT NULL,
@@ -127,7 +128,9 @@ CREATE TABLE IF NOT EXISTS shop_orders (
 -- late notifications can still be reconciled against the original order.
 CREATE TABLE IF NOT EXISTS shop_comgate_payments (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  order_id BIGINT UNSIGNED NOT NULL,
+  order_id BIGINT UNSIGNED NULL,
+  order_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  total_czk INT UNSIGNED NULL,
   status VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   merchant VARCHAR(80) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   test_mode TINYINT(1) NOT NULL,
@@ -141,14 +144,16 @@ CREATE TABLE IF NOT EXISTS shop_comgate_payments (
   UNIQUE KEY comgate_trans_id (trans_id),
   UNIQUE KEY comgate_return_token (return_token),
   KEY comgate_order_attempt (order_id, id),
-  CONSTRAINT comgate_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id)
+  CONSTRAINT comgate_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- One durable attempt for every GoPay transaction. Pending and uncertain creation
 -- reservations prevent duplicate charges on parallel checkout requests.
 CREATE TABLE IF NOT EXISTS shop_gopay_payments (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
-  order_id BIGINT UNSIGNED NOT NULL,
+  order_id BIGINT UNSIGNED NULL,
+  order_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  total_czk INT UNSIGNED NULL,
   status VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   goid VARCHAR(30) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   test_mode TINYINT(1) NOT NULL,
@@ -162,7 +167,7 @@ CREATE TABLE IF NOT EXISTS shop_gopay_payments (
   UNIQUE KEY gopay_payment_id (payment_id),
   UNIQUE KEY gopay_return_token (return_token),
   KEY gopay_order_attempt (order_id, id),
-  CONSTRAINT gopay_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id)
+  CONSTRAINT gopay_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- One reservation per order prevents two API calls for the same parcel.
@@ -308,7 +313,7 @@ CREATE TABLE IF NOT EXISTS shop_invoice_sequence (
 
 CREATE TABLE IF NOT EXISTS shop_invoices (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-  order_id BIGINT UNSIGNED NOT NULL,
+  order_id BIGINT UNSIGNED NULL,
   order_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   document_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   issue_date DATE NOT NULL,
@@ -328,7 +333,7 @@ CREATE TABLE IF NOT EXISTS shop_invoices (
   UNIQUE KEY invoice_order (order_id),
   UNIQUE KEY invoice_number (document_number),
   KEY invoice_issue (issue_date, id),
-  CONSTRAINT invoice_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id)
+  CONSTRAINT invoice_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET @invoice_method_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
@@ -394,6 +399,20 @@ CREATE TABLE IF NOT EXISTS shop_deleted_sale_lines (
   order_created_at DATETIME NOT NULL,
   KEY deleted_sale_lines_order (order_number, id),
   KEY deleted_sale_lines_date (order_created_at, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Minimal carrier references stay available for reconciliation after the shop
+-- order disappears; deleting here never cancels the real parcel at a carrier.
+CREATE TABLE IF NOT EXISTS shop_deleted_shipments (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  order_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  carrier VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  method VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  status VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  external_number VARCHAR(50) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY deleted_shipments_order (order_number, id),
+  KEY deleted_shipments_external (carrier, external_number)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS shop_stock_movements (
@@ -521,6 +540,16 @@ SET @order_reference_upgrade = IF(@order_reference_exists=0,
 PREPARE order_reference_statement FROM @order_reference_upgrade;
 EXECUTE order_reference_statement;
 DEALLOCATE PREPARE order_reference_statement;
+
+-- The delivery purchased by the customer stays in shipping_json. This optional
+-- operational override changes only which carrier fulfills the same-address parcel.
+SET @order_dispatch_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='dispatch_shipping_json');
+SET @order_dispatch_upgrade = IF(@order_dispatch_exists=0,
+  'ALTER TABLE shop_orders ADD COLUMN dispatch_shipping_json LONGTEXT NULL DEFAULT NULL AFTER shipping_json', 'SELECT 1');
+PREPARE order_dispatch_statement FROM @order_dispatch_upgrade;
+EXECUTE order_dispatch_statement;
+DEALLOCATE PREPARE order_dispatch_statement;
 
 SET @order_vs_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='variable_symbol');
@@ -779,3 +808,61 @@ CREATE TABLE IF NOT EXISTS shop_order_stock_reservations (
   KEY stock_reservation_product (product_key, state),
   CONSTRAINT order_stock_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Removing a shop order must not remove issued invoices or externally verified
+-- payment attempts. Each payment attempt keeps an order/amount snapshot first.
+SET @comgate_snapshot_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_comgate_payments' AND COLUMN_NAME='order_number');
+SET @comgate_snapshot_upgrade = IF(@comgate_snapshot_exists=0,
+  'ALTER TABLE shop_comgate_payments ADD COLUMN order_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NULL AFTER order_id', 'SELECT 1');
+PREPARE comgate_snapshot_statement FROM @comgate_snapshot_upgrade;
+EXECUTE comgate_snapshot_statement;
+DEALLOCATE PREPARE comgate_snapshot_statement;
+
+SET @comgate_amount_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_comgate_payments' AND COLUMN_NAME='total_czk');
+SET @comgate_amount_upgrade = IF(@comgate_amount_exists=0,
+  'ALTER TABLE shop_comgate_payments ADD COLUMN total_czk INT UNSIGNED NULL AFTER order_number', 'SELECT 1');
+PREPARE comgate_amount_statement FROM @comgate_amount_upgrade;
+EXECUTE comgate_amount_statement;
+DEALLOCATE PREPARE comgate_amount_statement;
+
+SET @comgate_link_nullable = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_comgate_payments' AND COLUMN_NAME='order_id' AND IS_NULLABLE='YES');
+SET @comgate_link_upgrade = IF(@comgate_link_nullable=0,
+  'ALTER TABLE shop_comgate_payments DROP FOREIGN KEY comgate_order_fk, MODIFY COLUMN order_id BIGINT UNSIGNED NULL, ADD CONSTRAINT comgate_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE SET NULL', 'SELECT 1');
+PREPARE comgate_link_statement FROM @comgate_link_upgrade;
+EXECUTE comgate_link_statement;
+DEALLOCATE PREPARE comgate_link_statement;
+
+SET @gopay_snapshot_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_gopay_payments' AND COLUMN_NAME='order_number');
+SET @gopay_snapshot_upgrade = IF(@gopay_snapshot_exists=0,
+  'ALTER TABLE shop_gopay_payments ADD COLUMN order_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NULL AFTER order_id', 'SELECT 1');
+PREPARE gopay_snapshot_statement FROM @gopay_snapshot_upgrade;
+EXECUTE gopay_snapshot_statement;
+DEALLOCATE PREPARE gopay_snapshot_statement;
+
+SET @gopay_amount_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_gopay_payments' AND COLUMN_NAME='total_czk');
+SET @gopay_amount_upgrade = IF(@gopay_amount_exists=0,
+  'ALTER TABLE shop_gopay_payments ADD COLUMN total_czk INT UNSIGNED NULL AFTER order_number', 'SELECT 1');
+PREPARE gopay_amount_statement FROM @gopay_amount_upgrade;
+EXECUTE gopay_amount_statement;
+DEALLOCATE PREPARE gopay_amount_statement;
+
+SET @gopay_link_nullable = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_gopay_payments' AND COLUMN_NAME='order_id' AND IS_NULLABLE='YES');
+SET @gopay_link_upgrade = IF(@gopay_link_nullable=0,
+  'ALTER TABLE shop_gopay_payments DROP FOREIGN KEY gopay_order_fk, MODIFY COLUMN order_id BIGINT UNSIGNED NULL, ADD CONSTRAINT gopay_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE SET NULL', 'SELECT 1');
+PREPARE gopay_link_statement FROM @gopay_link_upgrade;
+EXECUTE gopay_link_statement;
+DEALLOCATE PREPARE gopay_link_statement;
+
+SET @invoice_link_nullable = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_invoices' AND COLUMN_NAME='order_id' AND IS_NULLABLE='YES');
+SET @invoice_link_upgrade = IF(@invoice_link_nullable=0,
+  'ALTER TABLE shop_invoices DROP FOREIGN KEY invoice_order_fk, MODIFY COLUMN order_id BIGINT UNSIGNED NULL, ADD CONSTRAINT invoice_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE SET NULL', 'SELECT 1');
+PREPARE invoice_link_statement FROM @invoice_link_upgrade;
+EXECUTE invoice_link_statement;
+DEALLOCATE PREPARE invoice_link_statement;

@@ -86,7 +86,15 @@ $taxYear ??= (int) date('Y');
     <?php if ($financialEventsReady && $financialChanges['items'] !== []): ?>
       <ul>
         <?php foreach ($financialChanges['items'] as $change): ?>
-          <li><strong><?= $escape($change['order_number']) ?></strong> · <?= $escape($change['action'] === 'payment_correction' ? 'Oprava potvrzení platby' : 'Smazání objednávky') ?> · správce #<?= (int) $change['admin_id'] ?> · <?= $escape($change['created_at']) ?> UTC<br>
+          <?php $financialAction = match ($change['action']) {
+              'payment_correction' => 'Oprava potvrzení platby',
+              'order_deleted' => 'Smazání objednávky',
+              'provider_payment_after_delete' => 'Platba potvrzena bránou po smazání',
+              'provider_refund_after_delete' => 'Vrácení platby po smazání',
+              'provider_partial_refund_deleted' => 'Částečné vrácení platby po smazání',
+              default => 'Změna platby',
+          }; ?>
+          <li><strong><?= $escape($change['order_number']) ?></strong> · <?= $escape($financialAction) ?> · <?= (int) $change['admin_id'] === 0 ? 'platební brána' : 'správce #' . (int) $change['admin_id'] ?> · <?= $escape($change['created_at']) ?> UTC<br>
             VS <?= $escape($change['variable_symbol'] ?? '—') ?> · <?= $accountingMoney($change['total_czk']) ?> · původní platba <?= $escape($change['payment_status_before'] === 'paid' ? 'potvrzená' : 'čekající') ?><?php if ($change['payment_paid_at'] !== null): ?> · původně potvrzeno <?= $escape($change['payment_paid_at']) ?> UTC<?php endif; ?><br><?= $escape($change['reason']) ?></li>
         <?php endforeach; ?>
       </ul>

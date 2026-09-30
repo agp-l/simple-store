@@ -14,6 +14,8 @@ use SimpleStore\Checkout\PacketaRejectedException;
 use SimpleStore\Checkout\PacketaShipmentDraft;
 use SimpleStore\Checkout\PacketaShipmentRepository;
 use SimpleStore\Admin\OrderControlRepository;
+use SimpleStore\Admin\OrderShippingRepository;
+use SimpleStore\Admin\OrderProductLinks;
 use SimpleStore\Product\ProductStockRepository;
 use SimpleStore\Accounting\InvoiceRepository;
 use SimpleStore\Accounting\TaxEvidenceRepository;
@@ -34,6 +36,11 @@ $checkoutLocal = __DIR__ . '/../../config/checkout.php';
 $checkoutSettings = (new CheckoutSettingsRepository($db))->load(
     CheckoutSettingsRepository::withDefaults(is_file($checkoutLocal) ?
         require $checkoutLocal : $checkoutExample, $checkoutExample));
+$orderShipping = new OrderShippingRepository($db,
+    new \SimpleStore\Checkout\ShippingPolicy($checkoutSettings['shipping_methods']));
+$shippingChangeReady = $orderShipping->installed();
+$shippingChangeOptions = [];
+$shippingChangeNeedsAddress = false;
 $packetaCredentials = $checkoutSettings['packeta'] ?? [];
 $packetaConfigured = ($packetaCredentials['api_password'] ?? '') !== '' &&
     ($packetaCredentials['sender'] ?? '') !== '';
@@ -46,6 +53,7 @@ $goPayConfigured = (string) ($goPaySettings['goid'] ?? '') !== '' &&
     ($goPaySettings['client_secret'] ?? '') !== '';
 $orderError = '';
 $order = null;
+$orderProductLinks = [];
 $packetaShipment = null;
 $carrierShipment = null;
 $carrierAction = '';
@@ -60,20 +68,31 @@ $goPayState = null;
 $orderTaxReady = false;
 $orderInvoiceReady = false;
 $sellerSettings = [];
-$deletedOrders = [];
 $orderPage = ['items' => [], 'nextOffset' => null];
 $statusFilter = $_GET['status'] ?? 'all';
+$paymentFilter = $_GET['payment'] ?? 'all';
+$orderSearch = $_GET['q'] ?? '';
 $rawOffset = $_GET['offset'] ?? '0';
 $offset = is_string($rawOffset) ? filter_var($rawOffset, FILTER_VALIDATE_INT,
     ['options' => ['min_range' => 0, 'max_range' => 100000]]) : false;
 if (!is_string($statusFilter) || !in_array($statusFilter,
     ['pending', 'paid', 'processing', 'ready_to_ship', 'shipped', 'completed', 'cancelled', 'test', 'all'], true) ||
+    !is_string($paymentFilter) || !in_array($paymentFilter,
+        ['all', 'bank_transfer', 'comgate', 'gopay', 'test'], true) ||
+    !is_string($orderSearch) || strlen($orderSearch) > 100 ||
+    preg_match('//u', $orderSearch) !== 1 ||
+    preg_match('/[\x00-\x1f\x7f]/', $orderSearch) ||
     $offset === false) {
     http_response_code(422);
     $orderError = 'Neplatný filtr objednávek.';
     $statusFilter = 'all';
+    $paymentFilter = 'all';
+    $orderSearch = '';
     $offset = 0;
 }
+$orderSearch = trim($orderSearch);
+$orderListReturnUrl = $adminUrl . '?section=orders&status=' . rawurlencode($statusFilter) .
+    '&payment=' . rawurlencode($paymentFilter) . '&q=' . rawurlencode($orderSearch) . '&offset=' . $offset;
 
 if ($method === 'POST' && ($_POST['action'] ?? '') === 'mark-order-paid') {
     $rawId = $_POST['id'] ?? null;
@@ -89,7 +108,9 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'mark-order-paid') {
         }
         try {
             $orders->markPaid($id, (int) $admin['id']);
-            header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&paid=1', true, 303);
+            header('Location: ' . (($_POST['return_list'] ?? null) === '1'
+                ? $orderListReturnUrl . '&payment_saved=1'
+                : $adminUrl . '?section=orders&id=' . $id . '&paid=1'), true, 303);
             exit;
         } catch (InvalidArgumentException $exception) {
             http_response_code(422);
@@ -158,12 +179,44 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'set-order-status') {
     } else {
         try {
             $orders->setFulfillmentStatus($id, $newStatus, $source, $note);
-            header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&saved=1', true, 303);
+            header('Location: ' . (($_POST['return_list'] ?? null) === '1'
+                ? $orderListReturnUrl . '&saved=1'
+                : $adminUrl . '?section=orders&id=' . $id . '&saved=1'), true, 303);
             exit;
         } catch (InvalidArgumentException $exception) {
             http_response_code(422);
             $orderError = $exception->getMessage();
         }
+    }
+}
+
+if ($method === 'POST' && ($_POST['action'] ?? '') === 'change-order-shipping') {
+    $rawId = $_POST['id'] ?? null;
+    $id = is_string($rawId) && ctype_digit($rawId) ? filter_var($rawId, FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 1]]) : false;
+    $newMethod = $_POST['shipping_method'] ?? null;
+    $expectedMethod = $_POST['expected_method'] ?? null;
+    $reason = $_POST['reason'] ?? null;
+    try {
+        if ($id === false || !$ordersReady || !$shippingChangeReady ||
+            !is_string($newMethod) || !is_string($expectedMethod) || !is_string($reason)) {
+            throw new InvalidArgumentException('Vyber objednávku, dopravce a vyplň důvod změny.');
+        }
+        $admin = $auth->user();
+        if ($admin === null) throw new RuntimeException('Přihlášení správce vypršelo.');
+        $homeAddress = [
+            'street' => $_POST['shipping_street'] ?? null,
+            'city' => $_POST['shipping_city'] ?? null,
+            'postal_code' => $_POST['shipping_postal_code'] ?? null,
+        ];
+        $orderShipping->change($id, (int) $admin['id'], $newMethod, $expectedMethod,
+            $reason, ($_POST['draft_not_submitted'] ?? '') === '1', $homeAddress,
+            ($_POST['address_confirmed'] ?? '') === '1');
+        header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&shipping_saved=1', true, 303);
+        exit;
+    } catch (InvalidArgumentException $exception) {
+        http_response_code(422);
+        $orderError = $exception->getMessage();
     }
 }
 
@@ -384,6 +437,9 @@ if ($rawId !== null) {
         http_response_code(404);
         $orderError = 'Objednávka nebyla nalezena.';
     }
+    if ($order !== null) {
+        $orderProductLinks = (new OrderProductLinks($db))->forItems($order['items'] ?? [], $basePath);
+    }
     if ($order !== null && $packetaReady) {
         $packetaShipment = $packetaShipments->find($id);
         $cancelledPackets = $packetaShipments->cancelledForOrder($id);
@@ -391,6 +447,12 @@ if ($rawId !== null) {
     }
     if ($order !== null && $carrierReady) {
         $carrierShipment = $carrierShipments->find($id);
+    }
+    if ($order !== null && $shippingChangeReady &&
+        ($packetaShipment === null || in_array($packetaShipment['status'], ['cancelled', 'rejected'], true)) &&
+        ($carrierShipment === null || $carrierShipment['status'] === 'draft')) {
+        $shippingChangeOptions = $orderShipping->optionsFor($order);
+        $shippingChangeNeedsAddress = $orderShipping->needsAddress($order);
     }
     if ($order !== null && $orderControlsReady) {
         $orderEvents = $orderControls->eventsForOrder($id);
@@ -414,11 +476,10 @@ if ($rawId !== null) {
         }
         if ($orderInvoiceReady) $orderInvoice = $invoiceStore->byOrder($id);
     }
-} elseif ($ordersReady && $orderError === '') {
-    $orderPage = $orders->managementPage($offset, 25, $statusFilter === 'all' ? null : $statusFilter);
-    if ($orderControlsReady && $offset === 0 && $statusFilter === 'all') {
-        $deletedOrders = $orderControls->recentDeletions();
-    }
+} elseif ($ordersReady) {
+    $orderPage = $orders->managementPage($offset, 25,
+        $statusFilter === 'all' ? null : $statusFilter,
+        $paymentFilter === 'all' ? null : $paymentFilter, $orderSearch);
 }
 
 if ($method === 'GET' && ($_GET['carrier_csv'] ?? null) === '1' && $order !== null) {
@@ -471,6 +532,7 @@ if ($method === 'GET' && ($_GET['packeta_label'] ?? null) === '1' && $order !== 
 }
 
 $orderBaseUrl = $adminUrl . '?section=orders';
-$orderPageUrl = $orderBaseUrl . '&status=' . rawurlencode($statusFilter);
+$orderPageUrl = $orderBaseUrl . '&status=' . rawurlencode($statusFilter) .
+    '&payment=' . rawurlencode($paymentFilter) . '&q=' . rawurlencode($orderSearch);
 $ordersPreviousUrl = $offset > 0 ? $orderPageUrl . '&offset=' . max(0, $offset - 25) : '';
 $ordersNextUrl = $orderPage['nextOffset'] === null ? '' : $orderPageUrl . '&offset=' . (int) $orderPage['nextOffset'];

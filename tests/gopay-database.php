@@ -382,4 +382,53 @@ expectGoPay($doubleChargeDetected &&
     $orders->findById((int) $cancelOrder['id'])['provider_reference'] === $retryIds[0],
     'Two paid attempts on the same order were silently reconciled as a single charge.');
 
+// Provider state remains verifiable after an admin removes the original order.
+$deletedOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
+    bin2hex(random_bytes(32)), false, 'gopay');
+$deletedPaymentId = (string) random_int(100000000000, 999999999999);
+$lateState = 'PAID';
+$lateAmount = 107900;
+$deletedClient = new GoPayApiClient('8123456789', 'fake-client-id', 'fake-client-secret', true,
+    static function (string $operation, $argument) use (
+        $deletedPaymentId, $deletedOrder, &$lateState, &$lateAmount
+    ): array {
+        if ($operation === 'create') return ['id' => $deletedPaymentId,
+            'gw_url' => 'https://gw.sandbox.gopay.com/gw/v3/' . $deletedPaymentId,
+            'state' => 'CREATED', 'amount' => $argument['amount'],
+            'currency' => $argument['currency'], 'order_number' => $argument['order_number'],
+            'target' => $argument['target']];
+        if ($operation === 'status') return ['id' => $deletedPaymentId,
+            'state' => $lateState, 'amount' => $lateAmount, 'currency' => 'CZK',
+            'order_number' => $deletedOrder['order_number'],
+            'target' => ['type' => 'ACCOUNT', 'goid' => '8123456789']];
+        throw new RuntimeException('Unexpected detached payment transport operation.');
+    });
+$deletedPayments = new GoPayPaymentService($db, $settings, $deletedClient);
+$deletedPayments->initiate($deletedOrder);
+$db->query('UPDATE shop_gopay_payments SET order_number=%s, total_czk=%i, order_id=NULL WHERE order_id=%i',
+    $deletedOrder['order_number'], $deletedOrder['total_czk'], $deletedOrder['id']);
+$db->query('DELETE FROM shop_orders WHERE id=%i', $deletedOrder['id']);
+$lateAmount = 107800;
+$mismatchRejected = false;
+try {
+    $deletedPayments->notify($deletedPaymentId);
+} catch (RuntimeException $expected) {
+    $mismatchRejected = true;
+}
+expectGoPay($mismatchRejected && (string) $db->queryFirstField(
+    'SELECT status FROM shop_gopay_payments WHERE payment_id=%s', $deletedPaymentId
+) === 'created', 'A detached GoPay payment accepted a different verified amount.');
+$lateAmount = 107900;
+foreach (['PAID', 'PAID', 'PARTIALLY_REFUNDED', 'PARTIALLY_REFUNDED', 'REFUNDED', 'PAID'] as $lateState) {
+    $deletedPayments->notify($deletedPaymentId);
+}
+expectGoPay($orders->findById((int) $deletedOrder['id']) === null &&
+    (string) $db->queryFirstField('SELECT status FROM shop_gopay_payments WHERE payment_id=%s',
+        $deletedPaymentId) === 'refunded' &&
+    (int) $db->queryFirstField('SELECT COUNT(*) FROM shop_order_financial_events
+        WHERE order_number=%s AND action IN (%s,%s,%s)', $deletedOrder['order_number'],
+        'provider_payment_after_delete', 'provider_partial_refund_deleted',
+        'provider_refund_after_delete') === 3,
+    'Late GoPay settlement/refunds were lost, duplicated or recreated the order.');
+
 echo "GoPay payment database integration passed.\n";

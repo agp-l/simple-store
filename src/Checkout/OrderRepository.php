@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
 use MeekroDB;
+use SimpleStore\Accounting\InvoiceRepository;
 use SimpleStore\Product\ProductStockRepository;
 use RuntimeException;
 use Throwable;
@@ -268,11 +269,15 @@ final class OrderRepository
     }
 
     /** Bounded admin list with a single extra row for the next-page link. */
-    public function managementPage(int $offset = 0, int $limit = 20, ?string $filter = null): array
+    public function managementPage(int $offset = 0, int $limit = 20, ?string $filter = null,
+        ?string $paymentMethod = null, string $search = ''): array
     {
         if ($offset < 0 || $offset > 100000 || $limit < 1 || $limit > 100 ||
             !in_array($filter, [null, 'pending', 'paid', 'test', 'processing', 'ready_to_ship',
-                'shipped', 'completed', 'cancelled'], true)) {
+                'shipped', 'completed', 'cancelled'], true) ||
+            !in_array($paymentMethod, [null, 'bank_transfer', 'comgate', 'gopay', 'test'], true) ||
+            strlen($search) > 100 || preg_match('//u', $search) !== 1 ||
+            preg_match('/[\x00-\x1f\x7f]/', $search)) {
             throw new InvalidArgumentException('Neplatný filtr objednávek.');
         }
         $parcelField = (new PacketaShipmentRepository($this->db))->installed()
@@ -281,17 +286,67 @@ final class OrderRepository
         $carrierField = (new CarrierShipmentRepository($this->db))->installed()
             ? '(SELECT status FROM shop_carrier_shipments WHERE order_id=shop_orders.id)'
             : 'NULL';
-        $fulfillmentField = $this->fulfillmentSourceInstalled() ? 'fulfillment_source' : "'own'";
+        $invoiceReady = (new InvoiceRepository($this->db))->installed();
+        $invoiceId = $invoiceReady
+            ? '(SELECT id FROM shop_invoices WHERE order_id=shop_orders.id)'
+            : 'NULL';
+        $invoiceNumber = $invoiceReady
+            ? '(SELECT document_number FROM shop_invoices WHERE order_id=shop_orders.id)'
+            : 'NULL';
+        $hasGoPayAttempts = (int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
+            'shop_gopay_payments') > 0 &&
+            (int) $this->db->queryFirstField(
+                'SELECT COUNT(*) FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME=%s',
+                'shop_orders', 'provider_reference') > 0;
+        $goPayPaymentState = $hasGoPayAttempts
+            ? '(SELECT status FROM shop_gopay_payments
+                WHERE order_id=shop_orders.id AND payment_id=shop_orders.provider_reference
+                ORDER BY id DESC LIMIT 1)'
+            : 'NULL';
+        $hasFulfillmentSource = $this->fulfillmentSourceInstalled();
+        $fulfillmentField = $hasFulfillmentSource ? 'fulfillment_source' : "'own'";
+        $fulfillmentNoteField = $hasFulfillmentSource ? 'fulfillment_note' : 'NULL';
+        $hasDispatchShipping = (int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME=%s',
+            'shop_orders', 'dispatch_shipping_json') > 0;
+        $shippingField = $hasDispatchShipping
+            ? 'COALESCE(dispatch_shipping_json, shipping_json)' : 'shipping_json';
         $fields = 'SELECT id, order_number, status, customer_email, subtotal_czk, shipping_czk,
                           total_czk, payment_method, payment_status, variable_symbol, created_at,
+                          ' . $shippingField . ' AS shipping_json,
                           ' . $parcelField . ' AS shipment_status,
                           ' . $carrierField . ' AS carrier_shipment_status,
-                          ' . $fulfillmentField . ' AS fulfillment_source FROM shop_orders';
-        $rows = $filter === null
-            ? $this->db->query($fields . ' ORDER BY id DESC LIMIT %i OFFSET %i', $limit + 1, $offset)
-            : $this->db->query($fields . (in_array($filter, ['pending', 'paid', 'test'], true)
-                ? ' WHERE payment_status=%s' : ' WHERE status=%s') .
-                ' ORDER BY id DESC LIMIT %i OFFSET %i', $filter, $limit + 1, $offset);
+                          ' . $fulfillmentField . ' AS fulfillment_source,
+                          ' . $fulfillmentNoteField . ' AS fulfillment_note,
+                          ' . $invoiceId . ' AS invoice_id,
+                          ' . $invoiceNumber . ' AS invoice_number,
+                          ' . $goPayPaymentState . ' AS gopay_payment_state FROM shop_orders';
+        $conditions = [];
+        $parameters = [];
+        if ($filter !== null) {
+            $conditions[] = in_array($filter, ['pending', 'paid', 'test'], true)
+                ? 'payment_status=%s' : 'status=%s';
+            $parameters[] = $filter;
+        }
+        if ($paymentMethod !== null) {
+            $conditions[] = 'payment_method=%s';
+            $parameters[] = $paymentMethod;
+        }
+        $search = trim($search);
+        if ($search !== '') {
+            $like = '%' . str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $search) . '%';
+            $conditions[] = '(order_number LIKE %s ESCAPE %s OR customer_email LIKE %s ESCAPE %s
+                OR variable_symbol LIKE %s ESCAPE %s)';
+            array_push($parameters, $like, '!', $like, '!', $like, '!');
+        }
+        $sql = $fields . ($conditions === [] ? '' : ' WHERE ' . implode(' AND ', $conditions)) .
+            ' ORDER BY id DESC LIMIT %i OFFSET %i';
+        array_push($parameters, $limit + 1, $offset);
+        $rows = $this->db->query($sql, ...$parameters);
         return [
             'items' => array_slice($rows, 0, $limit),
             'nextOffset' => count($rows) > $limit ? $offset + $limit : null,
@@ -382,7 +437,7 @@ final class OrderRepository
                 (new GoPayPaidOrderGuard($this->db))->assertPaid($id,
                     (string) ($row['provider_reference'] ?? ''));
             }
-            $shipping = json_decode((string) ($row['shipping_json'] ?? ''), true);
+            $shipping = json_decode((string) ($row['dispatch_shipping_json'] ?? $row['shipping_json'] ?? ''), true);
             if (in_array($shipping['method'] ?? '', ['zasilkovna_pickup', 'zasilkovna_home'], true)) {
                 if ((int) $this->db->queryFirstField(
                     'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
@@ -446,7 +501,11 @@ final class OrderRepository
     private static function hydrate(array $row): array
     {
         $row['items'] = json_decode((string) $row['items_json'], true, 512, JSON_THROW_ON_ERROR);
-        $row['shipping'] = json_decode((string) $row['shipping_json'], true, 512, JSON_THROW_ON_ERROR);
+        $row['shipping_ordered'] = json_decode((string) $row['shipping_json'], true, 512, JSON_THROW_ON_ERROR);
+        $row['dispatch_shipping_changed'] = !empty($row['dispatch_shipping_json']);
+        $row['shipping'] = $row['dispatch_shipping_changed']
+            ? json_decode((string) $row['dispatch_shipping_json'], true, 512, JSON_THROW_ON_ERROR)
+            : $row['shipping_ordered'];
         $row['payment_details'] = $row['payment_details_json'] === null ? [] :
             json_decode((string) $row['payment_details_json'], true, 512, JSON_THROW_ON_ERROR);
         return $row;

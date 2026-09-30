@@ -124,19 +124,48 @@ if (!str_contains($html, 'name="action" value="mark-order-paid"') ||
     str_contains($html, '<img src=x onerror=alert(1)>')) {
     throw new RuntimeException('Order detail must require explicit bank verification and escape customer data.');
 }
+$linkedProductKey = str_repeat('a', 32);
+$orderProductLinks = [$linkedProductKey . ':cs' => '/shop/cs/produkt/aktualni-batoh?edit=1'];
+$order['items'][0]['product_key'] = $linkedProductKey;
+$order['items'][0]['language'] = 'cs';
+$order['items'][0]['image_path'] = 'images/products/batoh.jpg';
+$orderInvoice = ['id' => 4, 'document_number' => 'F-2026-004'];
+$shippingChangeReady = true;
+$shippingChangeOptions = ['gls_home' => 'GLS – na adresu', 'ppl_home' => 'PPL – na adresu'];
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'data-order-copy=') ||
+    !str_contains($html, 'assets/admin-orders.js') ||
+    !str_contains($html, '/shop/cs/produkt/aktualni-batoh?edit=1') ||
+    !str_contains($html, 'images/products/batoh.jpg') ||
+    !str_contains($html, 'Faktura F-2026-004') ||
+    !str_contains($html, 'invoice_id=4&amp;print=1') ||
+    !str_contains($html, 'name="action" value="change-order-shipping"')) {
+    throw new RuntimeException('Order detail must show product links, invoice, carrier selection and copy controls.');
+}
+unset($orderProductLinks, $orderInvoice, $shippingChangeReady, $shippingChangeOptions);
 $order['shipping'] = ['method' => 'zasilkovna_pickup', 'label' => 'Zásilkovna',
     'recipient' => 'Eva Nová', 'phone' => '+420123456789',
     'pickup_code' => '123456', 'pickup_point' => 'Praha', 'pickup_address' => 'Ulice 1, Praha, 110 00',
     'pickup_verified' => true];
+$shippingChangeReady = true;
+$shippingChangeOptions = ['gls_home' => 'GLS – na adresu'];
+$shippingChangeNeedsAddress = true;
 $packetaReady = true;
 $packetaConfigured = true;
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
 if (!str_contains($html, 'Podání zásilky Zásilkovně') ||
-    !str_contains($html, 'Nejdřív ověř platbu')) {
+    !str_contains($html, 'Nejdřív ověř platbu') ||
+    !str_contains($html, 'name="shipping_street"') ||
+    !str_contains($html, 'name="shipping_city"') ||
+    !str_contains($html, 'name="shipping_postal_code"') ||
+    !str_contains($html, 'name="address_confirmed"')) {
     throw new RuntimeException('Packeta dispatch should wait for the payment.');
 }
+unset($shippingChangeReady, $shippingChangeOptions, $shippingChangeNeedsAddress);
 $order['payment_status'] = 'paid';
 $fulfillmentSourceReady = true;
 ob_start();
@@ -214,7 +243,7 @@ ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
 if (!str_contains($html, 'value="not_delivered"') ||
-    !str_contains($html, 'Vrátit na odesláno')) {
+    !str_contains($html, 'Vrátit na předáno dopravci')) {
     throw new RuntimeException('Accidental completion must be correctable.');
 }
 $order['payment_status'] = 'pending';
@@ -292,10 +321,26 @@ if (!str_contains($html, 'Odeslané označení odesílatele') ||
     throw new RuntimeException('Rejected Packeta sender should show its submitted label and correction path safely.');
 }
 $packetaShipment = null;
-$orderPage = ['items' => [array_replace($order, ['shipment_status' => 'created'])], 'nextOffset' => 25];
+$orderPage = ['items' => [
+    array_replace($order, ['id' => 12, 'status' => 'processing',
+        'payment_status' => 'paid', 'shipment_status' => 'created',
+        'shipping_json' => json_encode(['label' => 'Kurýr', 'recipient' => 'Eva <script>'], JSON_THROW_ON_ERROR),
+        'invoice_id' => 8, 'invoice_number' => 'F2026-000008']),
+    array_replace($order, ['id' => 13, 'status' => 'new',
+        'payment_status' => 'pending', 'shipment_status' => null,
+        'shipping_json' => json_encode(['label' => 'PPL', 'recipient' => 'Karel'], JSON_THROW_ON_ERROR),
+        'invoice_id' => null, 'invoice_number' => null]),
+    array_replace($order, ['id' => 14, 'order_number' => 'DB-20260929-GOPAY',
+        'status' => 'ready_to_ship', 'payment_method' => 'gopay', 'payment_status' => 'paid',
+        'gopay_payment_state' => 'refunded', 'shipment_status' => null,
+        'shipping_json' => json_encode(['label' => 'GLS', 'recipient' => 'Jana'], JSON_THROW_ON_ERROR),
+        'invoice_id' => null, 'invoice_number' => null]),
+], 'nextOffset' => 25];
 $ordersNextUrl = $orderBaseUrl . '&status=all&offset=25';
 $deletedOrders = [['order_number' => 'TEST-26-A1B2C3D4', 'created_at' => '2026-09-30 09:00:00',
     'admin_id' => 3, 'reason' => 'Test <script>']];
+$paymentFilter = 'bank_transfer';
+$orderSearch = 'eva';
 $order = null;
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
@@ -304,11 +349,26 @@ if (!str_contains($html, 'DB-20260929-1') ||
     !str_contains($html, '1234567890') ||
     !str_contains($html, 'Zásilka vytvořena') ||
     !str_contains($html, 'status=all&amp;offset=25') ||
-    !str_contains($html, 'Nedávno smazané objednávky') ||
-    !str_contains($html, 'Test &lt;script&gt;') ||
-    str_contains($html, 'Test <script>') ||
+    str_contains($html, 'Nedávno smazané objednávky') ||
+    !str_contains($html, 'Číslo objednávky, e-mail nebo VS') ||
+    !str_contains($html, 'name="payment"') ||
+    !str_contains($html, 'name="return_list" value="1"') ||
+    !str_contains($html, 'name="action" value="mark-order-paid"') ||
+    !str_contains($html, 'name="action" value="set-order-status"') ||
+    !str_contains($html, 'F2026-000008') ||
+    !str_contains($html, 'Platba vrácena') ||
+    !str_contains($html, 'Eva &lt;script&gt;') ||
+    str_contains($html, 'Eva <script>') ||
     !str_contains($html, 'Objednávky')) {
-    throw new RuntimeException('Admin order list must show payment references and pagination.');
+    throw new RuntimeException('Admin order queue must display separate payment and fulfillment controls, invoices, filters and pagination.');
+}
+$refundStart = strpos($html, 'DB-20260929-GOPAY');
+$refundEnd = $refundStart === false ? false : strpos($html, '</tr>', $refundStart);
+$refundRow = $refundStart === false || $refundEnd === false ? '' :
+    substr($html, $refundStart, $refundEnd - $refundStart);
+if ($refundRow === '' || !str_contains($refundRow, 'Platba vrácena') ||
+    str_contains($refundRow, 'name="action" value="set-order-status"')) {
+    throw new RuntimeException('Refunded GoPay order must not expose a quick dispatch action.');
 }
 
 $screen = 'settings';

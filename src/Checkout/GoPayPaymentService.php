@@ -235,11 +235,6 @@ final class GoPayPaymentService
         }
         $id = (string) $attempt['payment_id'];
         $response = $this->client->forMode((int) $attempt['test_mode'] === 1)->status($id);
-        $order = $this->db->queryFirstRow('SELECT * FROM shop_orders WHERE id=%i', $attempt['order_id']);
-        if ($order === null || !$this->matches($response, $order, (string) $attempt['goid']) ||
-            (string) $response['id'] !== $id || $order['payment_method'] !== 'gopay') {
-            throw new RuntimeException('Ověřená transakce GoPay nesouhlasí s objednávkou.');
-        }
         $remote = $response['state'] ?? null;
         if (!in_array($remote, ['CREATED', 'PAYMENT_METHOD_CHOSEN', 'AUTHORIZED', 'PAID',
             'CANCELED', 'TIMEOUTED', 'REFUNDED', 'PARTIALLY_REFUNDED'], true)) {
@@ -247,16 +242,31 @@ final class GoPayPaymentService
         }
         $this->db->startTransaction();
         try {
-            $currentOrder = $this->db->queryFirstRow(
-                'SELECT payment_method, payment_status, provider_reference FROM shop_orders WHERE id=%i FOR UPDATE',
-                $attempt['order_id']
+            // Lock the order first, as the admin deletion flow does, then the attempt.
+            $currentOrder = $attempt['order_id'] === null ? null : $this->db->queryFirstRow(
+                'SELECT * FROM shop_orders WHERE id=%i FOR UPDATE', $attempt['order_id']
             );
             $currentAttempt = $this->db->queryFirstRow(
-                'SELECT status, payment_id FROM shop_gopay_payments WHERE id=%i FOR UPDATE', $attempt['id']
+                'SELECT * FROM shop_gopay_payments WHERE id=%i FOR UPDATE', $attempt['id']
             );
-            if ($currentOrder === null || $currentOrder['payment_method'] !== 'gopay' ||
-                $currentAttempt === null || (string) $currentAttempt['payment_id'] !== $id) {
+            if ($currentAttempt === null || (string) $currentAttempt['payment_id'] !== $id ||
+                (string) $currentAttempt['goid'] !== $this->goid) {
                 throw new RuntimeException('Transakce GoPay se mezitím změnila.');
+            }
+            $detached = $currentAttempt['order_id'] === null;
+            if ($detached) {
+                // Order deletion may have raced the API request. Match the locked,
+                // persistent snapshot, never the now-missing shop_orders row.
+                $snapshot = $this->detachedSnapshot($currentAttempt);
+                if ($snapshot === null || !$this->matches($response, $snapshot, $this->goid) ||
+                    (string) ($response['id'] ?? '') !== $id) {
+                    throw new RuntimeException('Ověřená transakce GoPay nesouhlasí se smazanou objednávkou.');
+                }
+            } elseif ($currentOrder === null || (int) $currentAttempt['order_id'] !== (int) $attempt['order_id'] ||
+                $currentOrder['payment_method'] !== 'gopay' ||
+                !$this->matches($response, $currentOrder, $this->goid) ||
+                (string) ($response['id'] ?? '') !== $id) {
+                throw new RuntimeException('Ověřená transakce GoPay nesouhlasí s objednávkou.');
             }
             $settlementRank = ['paid' => 1, 'partially_refunded' => 2, 'refunded' => 3];
             $local = strtolower($remote);
@@ -264,7 +274,11 @@ final class GoPayPaymentService
                 // A late PAID/PARTIALLY_REFUNDED response cannot undo a refund.
                 $local = $currentAttempt['status'];
             }
-            if ($remote === 'PAID') {
+            if ($detached && $local !== $currentAttempt['status'] &&
+                in_array($local, ['paid', 'partially_refunded', 'refunded'], true)) {
+                $this->recordDetachedSettlement($currentAttempt, $id, $local);
+            }
+            if (!$detached && $remote === 'PAID') {
                 if ($currentOrder['payment_status'] === 'pending' &&
                     !in_array($currentAttempt['status'], ['partially_refunded', 'refunded'], true)) {
                     $this->db->query(
@@ -286,6 +300,39 @@ final class GoPayPaymentService
             $this->db->rollback();
             throw $error;
         }
+    }
+
+    /** Keep enough non-personal data to verify delayed notifications after deletion. */
+    private function detachedSnapshot(array $attempt): ?array
+    {
+        if ($attempt['order_id'] !== null ||
+            !is_string($attempt['order_number'] ?? null) || $attempt['order_number'] === '' ||
+            !isset($attempt['total_czk']) || (int) $attempt['total_czk'] < 1) {
+            return null;
+        }
+        return ['order_number' => $attempt['order_number'], 'total_czk' => $attempt['total_czk']];
+    }
+
+    private function recordDetachedSettlement(array $attempt, string $paymentId, string $status): void
+    {
+        $action = match ($status) {
+            'paid' => 'provider_payment_after_delete',
+            'partially_refunded' => 'provider_partial_refund_deleted',
+            'refunded' => 'provider_refund_after_delete',
+        };
+        $this->db->insert('shop_order_financial_events', [
+            'order_id' => 0,
+            'order_number' => $attempt['order_number'],
+            'variable_symbol' => null,
+            'action' => $action,
+            'payment_status_before' => $attempt['status'],
+            'payment_paid_at' => $status === 'paid' ? gmdate('Y-m-d H:i:s') : null,
+            'payment_verified_by' => null,
+            'total_czk' => (int) $attempt['total_czk'],
+            'reason' => 'GoPay ' . $paymentId . ': ' . $attempt['status'] . ' -> ' . $status .
+                '. Ověř částku a vypořádání u brány.',
+            'admin_id' => 0,
+        ]);
     }
 
     private function matches(array $data, array $order, string $goid): bool

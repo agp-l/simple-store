@@ -42,6 +42,7 @@ jobs:
           php tests/schema-updater.php
           php tests/checkout-order.php
           php tests/order-controls.php
+          php tests/order-shipping.php
           php tests/accounting.php
           php tests/tax-invoice-mail.php
           php tests/catalog-render.php
@@ -102,3 +103,4 @@ jobs:
           php tests/comgate-database.php
           php tests/gopay-database.php
           php tests/stock-database.php
+          php tests/shipping-database.php

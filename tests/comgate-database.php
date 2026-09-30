@@ -200,4 +200,51 @@ expectComgate($retryCalls === 2 &&
     $orders->findById((int) $cancelOrder['id'])['provider_reference'] === $retryIds[1],
     'A confirmed cancellation could not be retried with a new transaction.');
 
+// Removing an order cannot make a later, authenticated payment disappear.
+$deletedOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
+    bin2hex(random_bytes(32)), false, 'comgate');
+$deletedTransId = 'CZ-LATE-' . strtoupper(bin2hex(random_bytes(6)));
+$latePrice = 107900;
+$deletedClient = new ComgateApiClient($settings['merchant'], $settings['secret'],
+    static function (string $method, string $url, ?array $body) use (
+        $deletedTransId, $deletedOrder, &$latePrice
+    ): array {
+        if ($method === 'POST') return ['code' => 0, 'transId' => $deletedTransId,
+            'redirect' => 'https://payments.comgate.cz/payment/' . $deletedTransId];
+        if ($method === 'GET') return ['code' => 0, 'transId' => $deletedTransId,
+            'status' => 'PAID', 'test' => true, 'price' => $latePrice,
+            'curr' => 'CZK', 'refId' => $deletedOrder['order_number']];
+        throw new RuntimeException('Unexpected detached payment transport method.');
+    });
+$deletedPayments = new ComgatePaymentService($db, $settings, $deletedClient);
+$deletedPayments->initiate($deletedOrder);
+$db->query('UPDATE shop_comgate_payments SET order_number=%s, total_czk=%i, order_id=NULL WHERE order_id=%i',
+    $deletedOrder['order_number'], $deletedOrder['total_czk'], $deletedOrder['id']);
+$db->query('DELETE FROM shop_orders WHERE id=%i', $deletedOrder['id']);
+$deletedNotification = [
+    'transId' => $deletedTransId, 'merchant' => $settings['merchant'],
+    'secret' => $settings['secret'], 'test' => true, 'price' => 107900,
+    'curr' => 'CZK', 'refId' => $deletedOrder['order_number'],
+];
+$latePrice = 107800;
+$mismatchRejected = false;
+try {
+    $deletedPayments->notify($deletedNotification);
+} catch (RuntimeException $expected) {
+    $mismatchRejected = true;
+}
+expectComgate($mismatchRejected && (string) $db->queryFirstField(
+    'SELECT status FROM shop_comgate_payments WHERE trans_id=%s', $deletedTransId
+) === 'pending', 'A detached Comgate payment accepted a different verified amount.');
+$latePrice = 107900;
+$deletedPayments->notify($deletedNotification);
+$deletedPayments->notify($deletedNotification);
+expectComgate($orders->findById((int) $deletedOrder['id']) === null &&
+    (string) $db->queryFirstField('SELECT status FROM shop_comgate_payments WHERE trans_id=%s',
+        $deletedTransId) === 'paid' &&
+    (int) $db->queryFirstField('SELECT COUNT(*) FROM shop_order_financial_events
+        WHERE order_number=%s AND action=%s', $deletedOrder['order_number'],
+        'provider_payment_after_delete') === 1,
+    'A verified late Comgate payment was lost, duplicated or recreated the order.');
+
 echo "Comgate payment database integration passed.\n";

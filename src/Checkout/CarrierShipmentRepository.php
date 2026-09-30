@@ -43,10 +43,9 @@ final class CarrierShipmentRepository
         $this->db->startTransaction();
         try {
             $order = $this->db->queryFirstRow(
-                'SELECT status, payment_status, payment_method, provider_reference,
-                        fulfillment_source, order_number, shipping_json
-                 FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId);
-            $shipping = $order === null ? null : json_decode((string) $order['shipping_json'], true);
+                'SELECT * FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId);
+            $shipping = $order === null ? null : json_decode((string)
+                ($order['dispatch_shipping_json'] ?? $order['shipping_json']), true);
             if ($order === null || !is_array($shipping) ||
                 !in_array($order['payment_method'], ['bank_transfer', 'comgate', 'gopay'], true) ||
                 $order['payment_status'] !== 'paid' ||

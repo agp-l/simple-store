@@ -12,6 +12,9 @@ class MeekroDB
     public array $events = [];
     public array $financialEvents = [];
     public array $archivedSales = [];
+    public array $archivedShipments = [];
+    public array $gopayAttempts = [];
+    public array $comgateAttempts = [];
     public bool $failEvent = false;
     public bool $failDelete = false;
     public bool $eventsInstalled = true;
@@ -22,7 +25,8 @@ class MeekroDB
     public function startTransaction(): void
     {
         $this->snapshot = [$this->orders, $this->events, $this->financialEvents,
-            $this->carriers, $this->archivedSales];
+            $this->carriers, $this->archivedSales, $this->shipments, $this->cancelledShipments,
+            $this->archivedShipments, $this->invoices, $this->gopayAttempts, $this->comgateAttempts];
     }
 
     public function commit(): void
@@ -34,7 +38,8 @@ class MeekroDB
     {
         if ($this->snapshot !== null) {
             [$this->orders, $this->events, $this->financialEvents,
-                $this->carriers, $this->archivedSales] = $this->snapshot;
+                $this->carriers, $this->archivedSales, $this->shipments, $this->cancelledShipments,
+                $this->archivedShipments, $this->invoices, $this->gopayAttempts, $this->comgateAttempts] = $this->snapshot;
             $this->snapshot = null;
         }
     }
@@ -49,13 +54,18 @@ class MeekroDB
                 'shop_invoices' => 1,
                 'shop_packeta_shipments', 'shop_packeta_cancelled_shipments',
                 'shop_carrier_shipments' => 1,
-                'shop_sale_lines', 'shop_deleted_sale_lines' => 1,
+                'shop_sale_lines', 'shop_deleted_sale_lines', 'shop_deleted_shipments',
+                'shop_comgate_payments', 'shop_gopay_payments' => 1,
                 'shop_tax_entries', 'shop_mail_outbox', 'shop_stock_movements' => 0,
                 default => throw new RuntimeException('Unknown table check.'),
             };
         }
+        if (str_contains($sql, 'information_schema.COLUMNS')) {
+            return in_array($args[0], ['shop_gopay_payments', 'shop_comgate_payments', 'shop_invoices'], true) ? 1 : 0;
+        }
         $id = $args[0];
-        if (str_contains($sql, 'FROM shop_packeta_cancelled_shipments')) {
+        if (str_starts_with(ltrim($sql), 'SELECT') &&
+            str_contains($sql, 'FROM shop_packeta_cancelled_shipments')) {
             return isset($this->cancelledShipments[$id]) ? 1 : 0;
         }
         if (str_contains($sql, 'FROM shop_packeta_shipments')) {
@@ -81,7 +91,18 @@ class MeekroDB
 
     public function query(string $sql, mixed ...$args): array
     {
-        if (str_contains($sql, 'FROM shop_order_admin_events')) {
+        if (str_starts_with(ltrim($sql), 'SELECT') &&
+            str_contains($sql, 'FROM shop_packeta_cancelled_shipments')) {
+            return isset($this->cancelledShipments[$args[0]]) ? [$this->cancelledShipments[$args[0]]] : [];
+        }
+        if (str_contains($sql, 'FROM shop_comgate_payments')) {
+            return $this->comgateAttempts[$args[0]] ?? [];
+        }
+        if (str_contains($sql, 'FROM shop_gopay_payments')) {
+            return $this->gopayAttempts[$args[0]] ?? [];
+        }
+        if (str_starts_with(ltrim($sql), 'SELECT') &&
+            str_contains($sql, 'FROM shop_order_admin_events')) {
             if (str_contains($sql, 'WHERE action=%s')) {
                 return array_slice(array_reverse(array_values(array_filter($this->events,
                     static fn (array $event): bool => $event['action'] === $args[0]))), 0, $args[1]);
@@ -121,7 +142,35 @@ class MeekroDB
             return [];
         }
         if (str_contains($sql, 'DELETE FROM shop_carrier_shipments')) {
-            if (($this->carriers[$args[0]]['status'] ?? null) === $args[1]) unset($this->carriers[$args[0]]);
+            unset($this->carriers[$args[0]]);
+            return [];
+        }
+        if (str_contains($sql, 'DELETE FROM shop_packeta_cancelled_shipments')) {
+            unset($this->cancelledShipments[$args[0]]);
+            return [];
+        }
+        if (str_contains($sql, 'DELETE FROM shop_packeta_shipments')) {
+            unset($this->shipments[$args[0]]);
+            return [];
+        }
+        if (str_contains($sql, 'UPDATE shop_invoices SET order_id=NULL')) {
+            if (isset($this->invoices[$args[0]])) $this->invoices[$args[0]]['order_id'] = null;
+            return [];
+        }
+        if (str_contains($sql, 'SET order_number=%s, total_czk=%i, order_id=NULL')) {
+            if (str_contains($sql, 'shop_gopay_payments')) {
+                foreach ($this->gopayAttempts[$args[2]] ?? [] as $index => $row) {
+                    $this->gopayAttempts[$args[2]][$index]['order_id'] = null;
+                    $this->gopayAttempts[$args[2]][$index]['order_number'] = $args[0];
+                    $this->gopayAttempts[$args[2]][$index]['total_czk'] = $args[1];
+                }
+            } else {
+                foreach ($this->comgateAttempts[$args[2]] ?? [] as $index => $row) {
+                    $this->comgateAttempts[$args[2]][$index]['order_id'] = null;
+                    $this->comgateAttempts[$args[2]][$index]['order_number'] = $args[0];
+                    $this->comgateAttempts[$args[2]][$index]['total_czk'] = $args[1];
+                }
+            }
             return [];
         }
         if (str_contains($sql, 'DELETE FROM shop_orders')) {
@@ -140,7 +189,7 @@ class MeekroDB
     public function insert(string $table, array $values): void
     {
         if (!in_array($table, ['shop_order_admin_events', 'shop_order_financial_events',
-            'shop_deleted_sale_lines'], true)) {
+            'shop_deleted_sale_lines', 'shop_deleted_shipments'], true)) {
             throw new RuntimeException('Unexpected table.');
         }
         if ($this->failEvent) throw new RuntimeException('Audit storage failed.');
@@ -148,8 +197,10 @@ class MeekroDB
             $this->events[] = $values + ['created_at' => '2026-09-30 00:00:00'];
         } elseif ($table === 'shop_order_financial_events') {
             $this->financialEvents[] = $values + ['created_at' => '2026-09-30 00:00:00'];
-        } else {
+        } elseif ($table === 'shop_deleted_sale_lines') {
             $this->archivedSales[] = $values;
+        } else {
+            $this->archivedShipments[] = $values;
         }
     }
 }
@@ -264,7 +315,7 @@ if ($db->orders[18]['payment_status'] !== 'pending' ||
 }
 expectInvalid(static fn () => $controls->correctPayment(18, 4, $reason, 'not_received'),
     'Accepted a second payment reset.');
-$db->carriers[18] = ['status' => 'draft'];
+$db->carriers[18] = ['status' => 'draft', 'method' => 'gls_home', 'tracking_number' => null];
 $controls->deleteOrder(18, 'DB-20260930-18', 4, 'Test zaplacené objednávky po opravě.');
 if (isset($db->orders[18]) || isset($db->carriers[18]) ||
     $db->financialEvents[array_key_last($db->financialEvents)]['action'] !== 'order_deleted') {
@@ -280,15 +331,10 @@ if (isset($db->orders[19]) || $deletionEvent['payment_status_before'] !== 'paid'
     throw new RuntimeException('Paid deletion lost its financial snapshot.');
 }
 
-foreach (['shipment', 'cancelled_shipment', 'document', 'invoice', 'carrier_registered',
-    'not_genuine_test', 'wrong_number'] as $index => $case) {
+foreach (['document', 'not_genuine_test', 'wrong_number'] as $index => $case) {
     $id = $index + 100;
     $db->orders[$id] = orderRow($id, 'new', 'bank_transfer', 'pending');
-    if ($case === 'shipment') $db->shipments[$id] = ['status' => 'rejected'];
-    if ($case === 'cancelled_shipment') $db->cancelledShipments[$id] = ['status' => 'cancelled'];
     if ($case === 'document') $db->documents[$id] = ['number' => '2026-001'];
-    if ($case === 'invoice') $db->invoices[$id] = ['number' => 'F2026-000001'];
-    if ($case === 'carrier_registered') $db->carriers[$id] = ['status' => 'registered'];
     if ($case === 'not_genuine_test') {
         $db->orders[$id]['payment_method'] = 'test';
         $db->orders[$id]['payment_status'] = 'test';
@@ -297,6 +343,50 @@ foreach (['shipment', 'cancelled_shipment', 'document', 'invoice', 'carrier_regi
     expectInvalid(static fn () => $controls->deleteOrder($id, $number, 3, $reason),
         'Deleted blocked order for case ' . $case);
     if (!isset($db->orders[$id])) throw new RuntimeException('Rejected deletion removed an order.');
+}
+
+$db->orders[104] = orderRow(104, 'shipped');
+$db->invoices[104] = ['order_id' => 104, 'number' => 'F2026-000001'];
+$db->shipments[104] = ['status' => 'created', 'method' => 'zasilkovna_pickup',
+    'packet_id' => '12345', 'barcode' => 'Z12345'];
+$db->cancelledShipments[104] = ['method' => 'zasilkovna_pickup', 'packet_id' => '12344',
+    'barcode' => 'Z12344'];
+$db->carriers[104] = ['status' => 'registered', 'method' => 'gls_home',
+    'tracking_number' => 'GLS123456'];
+$controls->deleteOrder(104, 'DB-20260930-104', 3, 'Duplicitní záznam již odeslané objednávky.');
+if (isset($db->orders[104]) || isset($db->shipments[104]) || isset($db->carriers[104]) ||
+    isset($db->cancelledShipments[104]) || $db->invoices[104]['order_id'] !== null ||
+    count($db->archivedShipments) !== 3 ||
+    $db->archivedShipments[0]['external_number'] !== 'GLS123456' ||
+    $db->archivedShipments[1]['external_number'] !== 'Z12345' ||
+    $db->archivedShipments[2]['external_number'] !== 'Z12344') {
+    throw new RuntimeException('Deletion failed to preserve issued invoice or parcel references.');
+}
+
+$db->orders[105] = orderRow(105, 'completed', 'gopay');
+$db->gopayAttempts[105] = [['order_id' => 105, 'status' => 'paid']];
+$controls->deleteOrder(105, 'DB-20260930-105', 3, 'Odstranění duplicitní úhrady GoPay.');
+if (isset($db->orders[105]) || $db->gopayAttempts[105][0]['order_id'] !== null ||
+    $db->gopayAttempts[105][0]['order_number'] !== 'DB-20260930-105' ||
+    $db->gopayAttempts[105][0]['total_czk'] !== 1790) {
+    throw new RuntimeException('Gateway payment lost its detached snapshot.');
+}
+
+$db->orders[106] = orderRow(106, 'new', 'comgate', 'pending');
+$db->comgateAttempts[106] = [['order_id' => 106, 'status' => 'creating']];
+expectInvalid(static fn () => $controls->deleteOrder(106, 'DB-20260930-106', 3, $reason),
+    'Uncertain gateway creation was detached without a transaction ID.');
+if (!isset($db->orders[106]) || $db->comgateAttempts[106][0]['order_id'] !== 106) {
+    throw new RuntimeException('Blocked deletion did not roll back.');
+}
+
+$db->orders[107] = orderRow(107, 'ready_to_ship');
+$db->shipments[107] = ['status' => 'uncertain', 'method' => 'zasilkovna_pickup',
+    'packet_id' => null, 'barcode' => null];
+expectInvalid(static fn () => $controls->deleteOrder(107, 'DB-20260930-107', 3, $reason),
+    'Uncertain Packeta submission was discarded without external reconciliation.');
+if (!isset($db->orders[107]) || !isset($db->shipments[107])) {
+    throw new RuntimeException('An unresolved parcel must remain linked for reconciliation.');
 }
 
 $db->orders[17] = orderRow(17, 'test', 'test', 'test');

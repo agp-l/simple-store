@@ -91,8 +91,8 @@ if ($testOrder) {
   <?php if (isset($order['subtotal_czk'], $order['shipping_czk'], $order['total_czk'])): ?>
   <section class="checkout-panel checkout-receipt"><h2>Souhrn nákupu</h2><dl>
     <div><dt>Produkty</dt><dd><?= $checkoutMoney((int) $order['subtotal_czk']) ?></dd></div>
-    <div><dt><?= $checkoutEscape($order['shipping']['label'] ?? 'Doprava') ?></dt><dd><?= $checkoutMoney((int) $order['shipping_czk']) ?></dd></div>
+    <div><dt><?= $checkoutEscape($order['shipping_ordered']['label'] ?? $order['shipping']['label'] ?? 'Doprava') ?></dt><dd><?= $checkoutMoney((int) $order['shipping_czk']) ?></dd></div>
     <div><dt><?= $gopayRefund !== '' ? 'Původní cena objednávky' : 'Celkem' ?></dt><dd><strong><?= $checkoutMoney((int) $order['total_czk']) ?></strong></dd></div>
-  </dl><?php if (!empty($order['shipping']['pickup_point'])): ?><p>Výdejní místo: <?= $checkoutEscape($order['shipping']['pickup_point']) ?>, <?= $checkoutEscape($order['shipping']['pickup_address'] ?? '') ?></p><?php endif; ?></section>
+  </dl><?php $orderedShipping = $order['shipping_ordered'] ?? $order['shipping'] ?? []; ?><?php if (!empty($orderedShipping['pickup_point'])): ?><p>Výdejní místo: <?= $checkoutEscape($orderedShipping['pickup_point']) ?>, <?= $checkoutEscape($orderedShipping['pickup_address'] ?? '') ?></p><?php endif; ?></section>
   <?php endif; ?>
 </main>

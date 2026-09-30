@@ -193,7 +193,8 @@ final class ComgatePaymentService
             'SELECT * FROM shop_comgate_payments WHERE trans_id=%s LIMIT 1', $transId
         );
         if ($attempt === null) throw new RuntimeException('Transakce ještě není uložena.');
-        $order = $this->db->queryFirstRow('SELECT * FROM shop_orders WHERE id=%i', $attempt['order_id']);
+        $order = $attempt['order_id'] === null ? $this->detachedSnapshot($attempt) :
+            $this->db->queryFirstRow('SELECT * FROM shop_orders WHERE id=%i', $attempt['order_id']);
         if ($order === null || $attempt['merchant'] !== $this->merchant ||
             !$this->matches($payload, $order, $attempt)) {
             throw new InvalidArgumentException('Notifikace neodpovídá objednávce.');
@@ -222,30 +223,33 @@ final class ComgatePaymentService
     {
         if ($attempt['trans_id'] === null) return;
         $status = $this->client->status((string) $attempt['trans_id']);
-        $order = $this->db->queryFirstRow('SELECT * FROM shop_orders WHERE id=%i', $attempt['order_id']);
-        if ($order === null || (string) ($status['code'] ?? '') !== '0' ||
-            (string) ($status['transId'] ?? '') !== (string) $attempt['trans_id'] ||
-            !$this->matches($status, $order, $attempt)) {
-            throw new RuntimeException('Ověření platby Comgate nesouhlasí s objednávkou.');
-        }
         $remote = $status['status'] ?? null;
         if (!in_array($remote, ['PENDING', 'PAID', 'CANCELLED', 'AUTHORIZED'], true)) {
             throw new RuntimeException('Comgate vrátila neznámý stav platby.');
         }
         $this->db->startTransaction();
         try {
-            $currentOrder = $this->db->queryFirstRow(
-                'SELECT payment_status, payment_method, provider_reference FROM shop_orders WHERE id=%i FOR UPDATE',
-                $attempt['order_id']
+            $currentOrder = $attempt['order_id'] === null ? null : $this->db->queryFirstRow(
+                'SELECT * FROM shop_orders WHERE id=%i FOR UPDATE', $attempt['order_id']
             );
             $currentAttempt = $this->db->queryFirstRow(
-                'SELECT status, trans_id FROM shop_comgate_payments WHERE id=%i FOR UPDATE', $attempt['id']
+                'SELECT * FROM shop_comgate_payments WHERE id=%i FOR UPDATE', $attempt['id']
             );
-            if ($currentOrder === null || $currentOrder['payment_method'] !== 'comgate' ||
-                $currentAttempt === null || $currentAttempt['trans_id'] !== $attempt['trans_id']) {
+            if ($currentAttempt === null || $currentAttempt['trans_id'] !== $attempt['trans_id'] ||
+                $currentAttempt['merchant'] !== $this->merchant) {
                 throw new RuntimeException('Transakce se mezitím změnila.');
             }
-            if ($remote === 'PAID') {
+            $detached = $currentAttempt['order_id'] === null;
+            $reference = $detached ? $this->detachedSnapshot($currentAttempt) : $currentOrder;
+            if ($reference === null || (!$detached &&
+                    ((int) $currentAttempt['order_id'] !== (int) $attempt['order_id'] ||
+                        $currentOrder['payment_method'] !== 'comgate')) ||
+                (string) ($status['code'] ?? '') !== '0' ||
+                (string) ($status['transId'] ?? '') !== (string) $attempt['trans_id'] ||
+                !$this->matches($status, $reference, $currentAttempt)) {
+                throw new RuntimeException('Ověření platby Comgate nesouhlasí s objednávkou.');
+            }
+            if (!$detached && $remote === 'PAID') {
                 if ($currentOrder['payment_status'] === 'pending') {
                     $this->db->query('UPDATE shop_orders SET payment_status=%s, payment_paid_at=UTC_TIMESTAMP(),
                         payment_verified_by=NULL, provider_reference=%s WHERE id=%i AND payment_status=%s',
@@ -259,6 +263,9 @@ final class ComgatePaymentService
             if ($currentAttempt['status'] !== 'paid' || $remote === 'PAID') {
                 $local = strtolower($remote);
                 if ($currentAttempt['status'] === 'paid') $local = 'paid';
+                if ($detached && $local === 'paid' && $currentAttempt['status'] !== 'paid') {
+                    $this->recordDetachedPayment($currentAttempt);
+                }
                 $this->db->query('UPDATE shop_comgate_payments SET status=%s, last_error=NULL,
                     updated_at=UTC_TIMESTAMP() WHERE id=%i', $local, $attempt['id']);
             }
@@ -267,6 +274,33 @@ final class ComgatePaymentService
             $this->db->rollback();
             throw $error;
         }
+    }
+
+    private function detachedSnapshot(array $attempt): ?array
+    {
+        if ($attempt['order_id'] !== null ||
+            !is_string($attempt['order_number'] ?? null) || $attempt['order_number'] === '' ||
+            !isset($attempt['total_czk']) || (int) $attempt['total_czk'] < 1) {
+            return null;
+        }
+        return ['order_number' => $attempt['order_number'], 'total_czk' => $attempt['total_czk']];
+    }
+
+    private function recordDetachedPayment(array $attempt): void
+    {
+        $this->db->insert('shop_order_financial_events', [
+            'order_id' => 0,
+            'order_number' => $attempt['order_number'],
+            'variable_symbol' => null,
+            'action' => 'provider_payment_after_delete',
+            'payment_status_before' => $attempt['status'],
+            'payment_paid_at' => gmdate('Y-m-d H:i:s'),
+            'payment_verified_by' => null,
+            'total_czk' => (int) $attempt['total_czk'],
+            'reason' => 'Comgate ' . $attempt['trans_id'] . ': ' . $attempt['status'] .
+                ' -> paid. Ověř částku a vypořádání u brány.',
+            'admin_id' => 0,
+        ]);
     }
 
     private function matches(array $data, array $order, array $attempt): bool

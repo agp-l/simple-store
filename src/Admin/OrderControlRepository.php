@@ -141,7 +141,7 @@ final class OrderControlRepository
         }
     }
 
-    /** Test orders leave no accounting trace; actual sales retain their financial evidence. */
+    /** Remove the operational order in any fulfillment/payment state, retaining actual financial evidence. */
     public function deleteOrder(int $orderId, string $typedNumber, int $adminId, string $reason): void
     {
         self::assertActorAndReason($orderId, $adminId, $reason);
@@ -159,27 +159,64 @@ final class OrderControlRepository
             }
             $test = ($order['payment_method'] ?? '') === 'test' &&
                 ($order['payment_status'] ?? '') === 'test' && ($order['status'] ?? '') === 'test';
-            $bankTransfer = ($order['payment_method'] ?? '') === 'bank_transfer' &&
-                in_array($order['payment_status'] ?? '', ['pending', 'paid'], true) &&
-                ($order['provider_reference'] ?? null) === null;
+            $actualSale = in_array($order['payment_method'] ?? '',
+                ['bank_transfer', 'comgate', 'gopay', 'legacy'], true);
             $carrier = $this->tableExists('shop_carrier_shipments') ? $this->db->queryFirstRow(
-                'SELECT status FROM shop_carrier_shipments WHERE order_id=%i LIMIT 1 FOR UPDATE', $orderId
+                'SELECT status, method, tracking_number FROM shop_carrier_shipments
+                 WHERE order_id=%i LIMIT 1 FOR UPDATE', $orderId
             ) : null;
-            if ((!$test && !$bankTransfer) ||
-                $this->hasRelatedRow('shop_packeta_shipments', $orderId) ||
-                ($carrier !== null && $carrier['status'] !== 'draft') ||
-                $this->hasRelatedRow('shop_packeta_cancelled_shipments', $orderId) ||
-                $this->hasRelatedRow('shop_documents', $orderId) ||
-                $this->hasRelatedRow('shop_invoices', $orderId)) {
-                throw new InvalidArgumentException('Nejdřív vyřeš navázaný doklad nebo zásilku u dopravce; podklady bez čísla lze smazat spolu s objednávkou.');
+            $packeta = $this->tableExists('shop_packeta_shipments') ? $this->db->queryFirstRow(
+                'SELECT status, method, packet_id, barcode FROM shop_packeta_shipments
+                 WHERE order_id=%i LIMIT 1 FOR UPDATE', $orderId
+            ) : null;
+            $cancelledPackets = $this->tableExists('shop_packeta_cancelled_shipments') ? $this->db->query(
+                'SELECT packet_id, barcode, method FROM shop_packeta_cancelled_shipments
+                 WHERE order_id=%i FOR UPDATE', $orderId
+            ) : [];
+            if ((!$test && !$actualSale) || $this->hasRelatedRow('shop_documents', $orderId)) {
+                throw new InvalidArgumentException('Neznámý způsob platby nebo starší doklad vyžaduje samostatné vyřešení.');
+            }
+            if (($carrier !== null || $packeta !== null || $cancelledPackets !== []) &&
+                !$this->tableExists('shop_deleted_shipments')) {
+                throw new InvalidArgumentException('Aktualizuj SQL tabulky pro uchování čísel dopravce při smazání.');
+            }
+            if ($packeta !== null && in_array($packeta['status'],
+                ['submitting', 'uncertain', 'cancelling', 'cancel_uncertain'], true)) {
+                throw new InvalidArgumentException('Podání nebo storno u Zásilkovny má nejistý výsledek. Nejdřív jej dořeš, aby se neztratilo číslo zásilky.');
+            }
+            if ($this->hasRelatedRow('shop_invoices', $orderId) &&
+                !$this->nullableOrderLink('shop_invoices')) {
+                throw new InvalidArgumentException('Aktualizuj SQL tabulky. Vystavená faktura zůstane zachována v účetnictví.');
             }
             if (!$test && $order['payment_status'] === 'paid' &&
                 (!$this->tableExists('shop_sale_lines') || !$this->tableExists('shop_deleted_sale_lines'))) {
                 throw new InvalidArgumentException('Před smazáním zaplacené objednávky aktualizuj SQL tabulky pro zachování položek prodeje.');
             }
 
-            if ($bankTransfer) {
+            if ($actualSale) {
                 $this->recordFinancialEvent($order, 'order_deleted', $adminId, $reason);
+            }
+
+            // Provider rows survive with immutable order/amount snapshots. An in-flight
+            // create request has no reliable provider ID yet and must be reconciled first.
+            foreach (['shop_comgate_payments', 'shop_gopay_payments'] as $paymentTable) {
+                if (!$this->tableExists($paymentTable)) continue;
+                $attempts = $this->db->query('SELECT status FROM ' . $paymentTable .
+                    ' WHERE order_id=%i FOR UPDATE', $orderId);
+                if ($attempts === []) continue;
+                if (!$this->nullableOrderLink($paymentTable) ||
+                    !$this->tableHasColumn($paymentTable, 'order_number') ||
+                    !$this->tableHasColumn($paymentTable, 'total_czk')) {
+                    throw new InvalidArgumentException('Aktualizuj SQL tabulky pro bezpečné odpojení platební brány.');
+                }
+                foreach ($attempts as $attempt) {
+                    if (in_array($attempt['status'], ['creating', 'uncertain'], true)) {
+                        throw new InvalidArgumentException('Založení platby u brány ještě není vyjasněné. Nejdřív ověř její stav.');
+                    }
+                }
+                $this->db->query('UPDATE ' . $paymentTable .
+                    ' SET order_number=%s, total_czk=%i, order_id=NULL WHERE order_id=%i',
+                    $order['order_number'], (int) $order['total_czk'], $orderId);
             }
 
             $soldLines = [];
@@ -246,8 +283,29 @@ final class OrderControlRepository
                 }
             }
             if ($carrier !== null) {
-                $this->db->query('DELETE FROM shop_carrier_shipments WHERE order_id=%i AND status=%s',
-                    $orderId, 'draft');
+                if ($carrier['status'] !== 'draft') {
+                    $this->archiveShipment($order, 'carrier', $carrier['method'], $carrier['status'],
+                        $carrier['tracking_number']);
+                }
+                $this->db->query('DELETE FROM shop_carrier_shipments WHERE order_id=%i', $orderId);
+            }
+            if ($packeta !== null) {
+                if ($packeta['packet_id'] !== null || $packeta['barcode'] !== null ||
+                    !in_array($packeta['status'], ['rejected', 'cancelled'], true)) {
+                    $this->archiveShipment($order, 'packeta', $packeta['method'], $packeta['status'],
+                        $packeta['barcode'] ?? $packeta['packet_id']);
+                }
+                $this->db->query('DELETE FROM shop_packeta_shipments WHERE order_id=%i', $orderId);
+            }
+            foreach ($cancelledPackets as $packet) {
+                $this->archiveShipment($order, 'packeta', $packet['method'], 'cancelled',
+                    $packet['barcode'] ?? $packet['packet_id']);
+            }
+            if ($cancelledPackets !== []) {
+                $this->db->query('DELETE FROM shop_packeta_cancelled_shipments WHERE order_id=%i', $orderId);
+            }
+            if ($this->hasRelatedRow('shop_invoices', $orderId)) {
+                $this->db->query('UPDATE shop_invoices SET order_id=NULL WHERE order_id=%i', $orderId);
             }
             $this->stock?->release($orderId);
             $this->stock?->forget($orderId);
@@ -280,9 +338,22 @@ final class OrderControlRepository
         ]);
     }
 
+    private function archiveShipment(array $order, string $carrier, string $method,
+        string $status, ?string $number): void
+    {
+        $this->db->insert('shop_deleted_shipments', [
+            'order_number' => $order['order_number'],
+            'carrier' => $carrier,
+            'method' => $method,
+            'status' => $status,
+            'external_number' => $number,
+        ]);
+    }
+
     private function assertParcelCompatible(int $orderId, array $order, string $target): void
     {
-        $shipping = json_decode((string) ($order['shipping_json'] ?? ''), true);
+        $shipping = json_decode((string)
+            ($order['dispatch_shipping_json'] ?? $order['shipping_json'] ?? ''), true);
         if (!is_array($shipping) || !is_string($shipping['method'] ?? null)) {
             throw new InvalidArgumentException('Dopravu objednávky nelze ověřit.');
         }
@@ -338,6 +409,23 @@ final class OrderControlRepository
         return (int) $this->db->queryFirstField(
             'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
             $table
+        ) > 0;
+    }
+
+    private function tableHasColumn(string $table, string $column): bool
+    {
+        return (int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE()
+             AND TABLE_NAME=%s AND COLUMN_NAME=%s', $table, $column
+        ) > 0;
+    }
+
+    private function nullableOrderLink(string $table): bool
+    {
+        return (int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE()
+             AND TABLE_NAME=%s AND COLUMN_NAME=%s AND IS_NULLABLE=%s',
+            $table, 'order_id', 'YES'
         ) > 0;
     }
 

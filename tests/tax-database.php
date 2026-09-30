@@ -69,6 +69,17 @@ if ($tax->summary($year)['income'] !== 990 || count($tax->saleLines($year)) !== 
     throw new RuntimeException('Tax ledger and sale line disagree with the order.');
 }
 
+(new OrderControlRepository($db))->deleteOrder($id, 'DB-LIVE-1', 1,
+    'Duplicitní objednávka s již vystavenou fakturou.');
+$keptInvoice = $invoices->byId((int) $invoice['id']);
+if ((int) $db->queryFirstField('SELECT COUNT(*) FROM shop_orders WHERE id=%i', $id) !== 0 ||
+    $keptInvoice === null || $keptInvoice['order_id'] !== null ||
+    $keptInvoice['document_number'] !== 'CUSTOM-2026-9' ||
+    count($invoices->numberHistory((int) $invoice['id'])) !== 1 ||
+    $tax->summary($year)['income'] !== 990) {
+    throw new RuntimeException('Deleting an order removed its issued invoice, number history or tax receipt.');
+}
+
 $db->insert('shop_orders', [
     'order_number' => 'DB-LIVE-DELETE', 'status' => 'shipped',
     'customer_email' => 'second@example.test', 'subtotal_czk' => 900,
@@ -82,6 +93,11 @@ $db->insert('shop_sale_lines', [
     'order_id' => $paidId, 'line_no' => 1, 'product_key' => $key,
     'name' => 'Stan', 'quantity' => 2, 'unit_price_czk' => 450,
 ]);
+$db->insert('shop_carrier_shipments', [
+    'order_id' => $paidId, 'status' => 'registered', 'method' => 'gls_home',
+    'draft_json' => '{}', 'tracking_number' => 'GLS987654',
+    'created_by' => 1, 'updated_by' => 1,
+]);
 $tax->addOrderReceipt($paidId, ['entry_date' => $today, 'reference' => 'BANK-2']);
 (new OrderControlRepository($db))->deleteOrder($paidId, 'DB-LIVE-DELETE', 1,
     'Oprava duplicitního prodeje.');
@@ -91,8 +107,10 @@ if ((int) $db->queryFirstField('SELECT COUNT(*) FROM shop_orders WHERE id=%i', $
     (int) $db->queryFirstField('SELECT COUNT(*) FROM shop_tax_entries
         WHERE reference=%s AND order_id IS NULL', 'BANK-2') !== 1 ||
     (int) $db->queryFirstField('SELECT COUNT(*) FROM shop_stock_movements
-        WHERE reference=%s AND quantity_change=%i', 'DB-LIVE-DELETE', -2) !== 1) {
-    throw new RuntimeException('Deletion of a paid sale lost its item, bank or stock evidence.');
+        WHERE reference=%s AND quantity_change=%i', 'DB-LIVE-DELETE', -2) !== 1 ||
+    (int) $db->queryFirstField('SELECT COUNT(*) FROM shop_deleted_shipments
+        WHERE order_number=%s AND external_number=%s', 'DB-LIVE-DELETE', 'GLS987654') !== 1) {
+    throw new RuntimeException('Deletion of a paid sale lost its item, bank, stock or carrier evidence.');
 }
 
 $db->insert('shop_orders', [

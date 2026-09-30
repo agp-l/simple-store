@@ -5,6 +5,7 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 use SimpleStore\Admin\OrderControlRepository;
+use SimpleStore\Admin\OrderProductLinks;
 use SimpleStore\Checkout\BankTransferPayment;
 use SimpleStore\Checkout\OrderRepository;
 use SimpleStore\Database\ConnectionFactory;
@@ -86,5 +87,12 @@ expectStock((int) $db->queryFirstField('SELECT available_quantity FROM shop_prod
     WHERE product_key=%s', $key) === 5, 'Deleting an unshipped order did not release inventory.');
 expectStock((int) $db->queryFirstField('SELECT COUNT(*) FROM shop_order_stock_reservations
     WHERE order_id=%i', (int) $order['id']) === 0, 'Deleted order kept stock reservations.');
+
+$newSlug = $slug . '-updated';
+$db->query('UPDATE product_revisions SET slug=%s, active_slug=%s WHERE product_key=%s
+    AND active_product_key IS NOT NULL', $newSlug, $newSlug, $key);
+$links = (new OrderProductLinks($db))->forItems([$item], '/store/');
+expectStock(($links[$key . ':cs'] ?? '') === '/store/cs/produkt/' . $newSlug . '?edit=1',
+    'Order product links must follow the current slug.');
 
 echo "Inventory database tests passed.\n";

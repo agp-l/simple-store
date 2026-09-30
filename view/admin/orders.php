@@ -10,9 +10,9 @@ $orderPaymentLabel = static fn (mixed $status): string => match ($status) {
     default => 'Stav platby: ' . (string) $status,
 };
 $orderFulfillmentLabel = static fn (mixed $status): string => match ($status) {
-    'processing' => 'Připravuje se', 'ready_to_ship' => 'Připraveno k odeslání',
-    'shipped' => 'Odesláno', 'completed' => 'Dokončeno', 'cancelled' => 'Zrušeno',
-    'test' => 'Testovací', default => 'Nová objednávka',
+    'processing' => 'Připravuje se', 'ready_to_ship' => 'Připravena k odeslání',
+    'shipped' => 'Předána dopravci', 'completed' => 'Dokončena', 'cancelled' => 'Stornována',
+    'test' => 'Testovací', default => 'Přijata',
 };
 $goPayStatusLabel = static fn (mixed $status): string => match ($status) {
     'creating' => 'Založení platby probíhá',
@@ -43,13 +43,18 @@ $carrierAction ??= '';
 $fulfillmentSourceReady ??= false;
 $orderControlsReady ??= false;
 $orderEvents ??= [];
-$deletedOrders ??= [];
 $orderTaxReady ??= false;
 $orderInvoiceReady ??= false;
 $orderReceipt ??= null;
 $goPayState ??= null;
 $orderInvoice ??= null;
 $sellerSettings ??= [];
+$shippingChangeReady ??= false;
+$shippingChangeOptions ??= [];
+$shippingChangeNeedsAddress ??= false;
+$orderProductLinks ??= [];
+$shippingMethodLabels = array_map(static fn (array $method): string => $method['label'],
+    \SimpleStore\Checkout\ShippingPolicy::defaults());
 ?>
 <div class="panel-intro">
   <div><p class="panel-eyebrow">Prodej</p><h1>Objednávky</h1>
@@ -80,8 +85,36 @@ $sellerSettings ??= [];
   $goPayDispatchBlocked = $goPayPayment && $paid &&
       ($goPayState === null || ($goPayState['status'] ?? '') !== 'paid' ||
       (string) ($goPayState['payment_id'] ?? '') !== (string) ($order['provider_reference'] ?? ''));
+  $recipientName = trim((string) ($shipping['recipient'] ?? $shipping['name'] ?? ''));
+  $contactEmail = trim((string) ($order['customer_email'] ?? $shipping['email'] ?? ''));
+  $contactPhone = trim((string) ($shipping['phone'] ?? ''));
+  $isPickup = !empty($shipping['pickup_point']);
+  $deliveryLines = $isPickup ? [
+      $recipientName,
+      (string) ($shipping['pickup_point'] ?? ''),
+      (string) ($shipping['pickup_address'] ?? ''),
+      empty($shipping['pickup_code']) ? '' : 'ID místa: ' . $shipping['pickup_code'],
+  ] : [
+      $recipientName,
+      (string) ($shipping['street'] ?? ''),
+      trim((string) ($shipping['postal_code'] ?? '') . ' ' . (string) ($shipping['city'] ?? '')),
+      (string) ($shipping['country'] ?? 'CZ'),
+  ];
+  $deliveryCopy = implode("\n", array_filter($deliveryLines, static fn (string $line): bool => trim($line) !== ''));
+  $carrierCopy = implode("\n", array_filter([
+      'Objednávka ' . (string) ($order['order_number'] ?? ''),
+      'Doprava: ' . (string) ($shipping['label'] ?? $shipping['method'] ?? ''),
+      $deliveryCopy,
+      $contactEmail === '' ? '' : 'E-mail: ' . $contactEmail,
+      $contactPhone === '' ? '' : 'Telefon: ' . $contactPhone,
+  ],
+      static fn (string $line): bool => trim($line) !== ''));
+  $invoiceDetailUrl = $orderInvoice === null ? '' : $adminUrl . '?section=accounting&tab=invoices&invoice_id=' . (int) $orderInvoice['id'];
+  $shippingEntered = ($method ?? 'GET') === 'POST' && ($_POST['action'] ?? '') === 'change-order-shipping' ? $_POST : [];
+  $shippingFormValue = static fn (string $field): string => is_string($shippingEntered[$field] ?? null) ? $shippingEntered[$field] : '';
   ?>
   <?php if (($_GET['paid'] ?? null) === '1' && $paid): ?><p class="panel-notice" role="status">Platba byla ručně označena jako přijatá.</p><?php endif; ?>
+  <?php if (($_GET['shipping_saved'] ?? null) === '1'): ?><p class="panel-notice" role="status">Dopravce pro expedici byl změněn. Cena v původní objednávce zůstává stejná.</p><?php endif; ?>
   <?php if (($_GET['payment_checked'] ?? null) === '1' && $onlineGateway): ?><p class="panel-notice" role="status">Stav platby byl ověřen přímo u <?= $gatewayName ?>.</p><?php endif; ?>
   <?php if (($_GET['corrected'] ?? null) === '1'): ?><p class="panel-notice" role="status">Stav byl opraven. Důvod a původní stav jsou v historii zásahů níže.</p><?php endif; ?>
   <?php if (($_GET['payment_corrected'] ?? null) === '1'): ?><p class="panel-notice" role="status">Potvrzení platby bylo opraveno. Původní údaj je v historii zásahů a v účetních podkladech.</p><?php endif; ?>
@@ -92,13 +125,31 @@ $sellerSettings ??= [];
     <div class="panel-workspace">
       <section class="panel-panel">
         <div class="panel-panel-head"><h2>Objednávka <?= $escape($order['order_number'] ?? '') ?></h2>
-          <span class="panel-order-state <?= $paymentHighlight ? 'is-paid' : 'is-pending' ?>"><?= $escape($paymentDisplayLabel) ?> · <?= $escape($orderFulfillmentLabel($order['status'] ?? '')) ?></span></div>
-        <p class="panel-help">Přijato <?= $escape($order['created_at'] ?? '') ?></p>
+          <div class="panel-order-head-actions">
+            <?php if ($orderInvoice !== null): ?><a class="panel-order-document" href="<?= $escape($invoiceDetailUrl . '&print=1') ?>" target="_blank" rel="noopener noreferrer">Faktura <?= $escape($orderInvoice['document_number']) ?> ↗</a><?php endif; ?>
+            <span class="panel-order-state <?= $paymentHighlight ? 'is-paid' : 'is-pending' ?>"><?= $escape($paymentDisplayLabel) ?></span>
+            <span class="panel-order-state"><?= $escape($orderFulfillmentLabel($order['status'] ?? '')) ?></span>
+          </div></div>
+        <p class="panel-help">Přijato <?= $escape($order['created_at'] ?? '') ?> · <?= $escape($shipping['label'] ?? $shipping['method'] ?? 'Doprava neuvedena') ?></p>
+        <h3 class="panel-order-lines-title">Objednané zboží</h3>
         <div class="panel-order-lines">
           <?php foreach (($order['items'] ?? []) as $item): ?>
             <?php if (!is_array($item)): continue; endif; ?>
+            <?php
+            $productLanguage = (string) ($item['language'] ?? 'cs');
+            $productIdentity = (string) ($item['product_key'] ?? '') . ':' . $productLanguage;
+            $productUrl = $orderProductLinks[$productIdentity] ?? '';
+            $imagePath = (string) ($item['image_path'] ?? '');
+            $thumbnailPath = \SimpleStore\Media\MediaPath::variant($imagePath, 'thumb');
+            $imageUrl = str_starts_with($thumbnailPath, 'images/') ? $basePath . $thumbnailPath :
+                (preg_match('~^https?://~iD', $thumbnailPath) === 1 &&
+                filter_var($thumbnailPath, FILTER_VALIDATE_URL) ? $thumbnailPath : '');
+            ?>
             <div class="panel-order-line">
-              <div><strong><?= $escape($item['name'] ?? '') ?></strong>
+              <?php if ($productUrl !== ''): ?><a class="panel-order-product-image" href="<?= $escape($productUrl) ?>" aria-label="Otevřít produkt <?= $escape($item['name'] ?? '') ?>">
+                <?php if ($imageUrl !== ''): ?><img src="<?= $escape($imageUrl) ?>" alt="" loading="lazy" width="64" height="64"><?php else: ?><span aria-hidden="true">▦</span><?php endif; ?>
+              </a><?php elseif ($imageUrl !== ''): ?><span class="panel-order-product-image"><img src="<?= $escape($imageUrl) ?>" alt="" loading="lazy" width="64" height="64"></span><?php endif; ?>
+              <div><?php if ($productUrl !== ''): ?><a class="panel-order-product-name" href="<?= $escape($productUrl) ?>"><?= $escape($item['name'] ?? '') ?></a><?php else: ?><strong><?= $escape($item['name'] ?? '') ?></strong><?php endif; ?>
                 <small><?= (int) ($item['quantity'] ?? 0) ?> ks × <?= $orderMoney($item['unit_price_czk'] ?? 0) ?>
                 <?php foreach (($item['options'] ?? []) as $option => $value): ?>
                   <?php if (is_scalar($value)): ?> · <?= $escape($option) ?>: <?= $escape($value) ?><?php endif; ?>
@@ -114,9 +165,16 @@ $sellerSettings ??= [];
         </dl>
       </section>
       <section class="panel-panel">
-        <h2>Doručení a kontakt</h2>
+        <div class="panel-panel-head"><h2>Doručení a kontakt</h2>
+          <div class="panel-order-head-actions" aria-label="Kopírovat údaje pro expedici">
+            <button class="panel-order-copy" type="button" data-order-copy="<?= $escape($deliveryCopy) ?>">Kopírovat adresu</button>
+            <button class="panel-order-copy" type="button" data-order-copy="<?= $escape($carrierCopy) ?>">Kopírovat pro dopravce</button>
+          </div>
+        </div>
+        <p class="panel-order-copy-feedback" role="status" aria-live="polite"></p>
         <dl class="panel-order-facts">
-          <div><dt>Doprava</dt><dd><?= $escape($shipping['label'] ?? $shipping['method'] ?? 'Neuvedeno') ?></dd></div>
+          <div><dt>Aktuální doprava</dt><dd><strong><?= $escape($shipping['label'] ?? $shipping['method'] ?? 'Neuvedeno') ?></strong></dd></div>
+          <?php if (!empty($order['dispatch_shipping_changed'])): ?><div><dt>Původně objednáno</dt><dd><?= $escape($order['shipping_ordered']['label'] ?? $order['shipping_ordered']['method'] ?? 'Neuvedeno') ?> · účtováno <?= $orderMoney($order['shipping_czk'] ?? 0) ?></dd></div><?php endif; ?>
           <div><dt>Expeduje</dt><dd><?= ($order['fulfillment_source'] ?? 'own') === 'external' ? 'Externí dodavatel' : 'Obchod' ?><?php if (!empty($order['fulfillment_note'])): ?><br><?= $escape($order['fulfillment_note']) ?><?php endif; ?></dd></div>
           <div><dt>Příjemce</dt><dd><?= $escape($shipping['recipient'] ?? $shipping['name'] ?? 'Neuvedeno') ?></dd></div>
           <div><dt>E-mail</dt><dd><?= $escape($order['customer_email'] ?? $shipping['email'] ?? 'Neuvedeno') ?></dd></div>
@@ -124,9 +182,32 @@ $sellerSettings ??= [];
           <?php if (!empty($shipping['pickup_point'])): ?><div><dt>Výdejní místo</dt><dd><?= $escape($shipping['pickup_point']) ?><br><?= $escape($shipping['pickup_address'] ?? '') ?><?php if (!empty($shipping['pickup_code'])): ?><br>Kód: <?= $escape($shipping['pickup_code']) ?><?php endif; ?><?php if (($shipping['method'] ?? '') === 'balikovna_pickup' && !empty($shipping['pickup_postal_code'])): ?><br>PSČ Balíkovny: <?= $escape($shipping['pickup_postal_code']) ?><?php endif; ?></dd></div>
           <?php else: ?><div><dt>Adresa</dt><dd><?= $escape($shipping['street'] ?? '') ?><br><?= $escape(trim((string) ($shipping['postal_code'] ?? '') . ' ' . (string) ($shipping['city'] ?? ''))) ?><br><?= $escape($shipping['country'] ?? 'CZ') ?></dd></div><?php endif; ?>
         </dl>
+        <?php if ($shippingChangeReady && $shippingChangeOptions !== []): ?>
+          <details class="panel-order-accordion" <?= $shippingEntered !== [] ? 'open' : '' ?>>
+            <summary>Změnit skutečného dopravce</summary>
+            <p class="panel-help">Změna se týká expedice. Původní cena dopravy, objednávka a vystavený doklad zůstávají stejné.</p>
+            <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+              <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="change-order-shipping"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="expected_method" value="<?= $escape($shipping['method'] ?? '') ?>">
+              <label>Expedovat přes <select name="shipping_method" required>
+                <?php foreach ($shippingChangeOptions as $methodCode => $methodLabel): ?><option value="<?= $escape($methodCode) ?>" <?= $methodCode === $shippingFormValue('shipping_method') ? 'selected' : '' ?>><?= $escape($methodLabel) ?></option><?php endforeach; ?>
+              </select></label>
+              <?php if ($shippingChangeNeedsAddress): ?>
+                <p class="panel-help">Objednávka obsahuje jen výdejní místo. Pro doručení domů zadej úplnou adresu, kterou jsi ověřil/a u zákazníka.</p>
+                <label>Ulice a číslo domu <input name="shipping_street" value="<?= $escape($shippingFormValue('shipping_street')) ?>" maxlength="190" required autocomplete="street-address"></label>
+                <label>Město <input name="shipping_city" value="<?= $escape($shippingFormValue('shipping_city')) ?>" maxlength="120" required autocomplete="address-level2"></label>
+                <label>PSČ <input name="shipping_postal_code" value="<?= $escape($shippingFormValue('shipping_postal_code')) ?>" maxlength="20" required autocomplete="postal-code"></label>
+                <label class="panel-check"><input type="checkbox" name="address_confirmed" value="1" <?= $shippingFormValue('address_confirmed') === '1' ? 'checked' : '' ?> required> Ověřil/a jsem úplnou adresu příjemce pro doručení domů.</label>
+              <?php endif; ?>
+              <label>Důvod změny <input name="reason" value="<?= $escape($shippingFormValue('reason')) ?>" minlength="8" maxlength="190" required placeholder="Například přesměrování na jiného dopravce"></label>
+              <?php if ($carrierShipment !== null && ($carrierShipment['status'] ?? '') === 'draft'): ?><label class="panel-check"><input type="checkbox" name="draft_not_submitted" value="1" <?= $shippingFormValue('draft_not_submitted') === '1' ? 'checked' : '' ?> required> Potvrzuji, že podklady dosud nebyly importovány k dopravci; uložený koncept se smaže.</label><?php endif; ?>
+              <button class="panel-button" type="submit">Uložit dopravce pro expedici</button>
+            </form>
+          </details>
+        <?php endif; ?>
         <?php if (in_array($shipping['method'] ?? '', ['zasilkovna_pickup', 'zasilkovna_home'], true)): ?>
+          <details class="panel-order-accordion panel-order-dispatch" <?= $packetaShipment !== null || $orderError !== '' || isset($_GET['packeta_result']) || isset($_GET['packeta_saved']) ? 'open' : '' ?>>
+            <summary>Podání zásilky Zásilkovně<?php if ($packetaShipment !== null && ($packetaShipment['status'] ?? '') === 'created'): ?> · <?= $escape($packetaShipment['barcode_text'] ?: $packetaShipment['barcode']) ?><?php endif; ?></summary>
           <div class="panel-packeta-dispatch">
-            <h3>Podání zásilky Zásilkovně</h3>
             <?php if (($order['fulfillment_source'] ?? 'own') !== 'external' && !$packetaReady): ?>
               <p class="panel-help">Nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>, aby vznikla tabulka zásilek.</p>
             <?php elseif (($order['fulfillment_source'] ?? 'own') !== 'external' && !$packetaConfigured): ?>
@@ -231,6 +312,7 @@ $sellerSettings ??= [];
                     (string) ($_POST['id'] ?? '') === (string) $order['id'] ?
                     array_filter($_POST, 'is_string') : [];
                 ?>
+                <details class="panel-order-accordion panel-order-edit-draft" <?= $entered !== [] ? 'open' : '' ?>><summary>Zkontrolovat údaje a vytvořit zásilku</summary>
                 <p class="panel-help">Zkontroluj údaje příjemce a hmotnost již zabaleného balíku. API použije číslo objednávky <?= $escape($order['order_number']) ?> a platbu bez dobírky. Případné opravy kontaktu a adresy níže se uloží k zásilce; původní objednávka zůstane v historii.</p>
                 <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="packeta-create"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
@@ -251,17 +333,20 @@ $sellerSettings ??= [];
                   <?php endif; ?>
                   <button class="panel-button" type="submit">Vytvořit zásilku u Zásilkovny</button>
                 </form>
+                </details>
               <?php endif; ?>
             <?php endif; ?>
             <?php if ($cancelledPackets !== []): ?>
               <p class="panel-help">Dříve stornované zásilky: <?php foreach ($cancelledPackets as $old): ?><?= $escape($old['barcode']) ?> (<?= $escape($old['cancelled_at']) ?>) <?php endforeach; ?></p>
             <?php endif; ?>
           </div>
+          </details>
         <?php endif; ?>
         <?php if (in_array($shipping['method'] ?? '', ['balikovna_pickup', 'gls_pickup', 'gls_home'], true)): ?>
           <?php $carrierBalik = ($shipping['method'] ?? '') === 'balikovna_pickup'; ?>
+          <details class="panel-order-accordion panel-order-dispatch" <?= $carrierShipment !== null || $orderError !== '' || isset($_GET['carrier_saved']) ? 'open' : '' ?>>
+            <summary>Podání zásilky <?= $carrierBalik ? 'Balíkovnou' : 'GLS' ?><?php if ($carrierShipment !== null): ?> · <?= $carrierShipment['status'] === 'registered' ? 'číslo ' . $escape($carrierShipment['tracking_number']) : 'podklady uloženy' ?><?php endif; ?></summary>
           <div class="panel-packeta-dispatch">
-            <h3>Podklady k podání <?= $carrierBalik ? 'Balíkovně' : 'GLS' ?></h3>
             <?php if (!$carrierReady): ?>
               <p class="panel-help">Nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
             <?php else: ?>
@@ -300,6 +385,7 @@ $sellerSettings ??= [];
                         is_string($enteredDraft[$key] ?? null) ? $enteredDraft[$key] :
                         (is_string($savedDraft[$key] ?? null) ? $savedDraft[$key] : $default);
                   ?>
+                  <?php if ($carrierShipment !== null): ?><details class="panel-order-accordion panel-order-edit-draft" <?= $enteredDraft !== [] ? 'open' : '' ?>><summary>Upravit podklady k podání</summary><?php endif; ?>
                   <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                     <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="carrier-save"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                     <label>Příjemce / kontaktní osoba<input name="recipient" value="<?= $escape($draftValue('recipient', (string) ($shipping['recipient'] ?? $shipping['name'] ?? ''))) ?>" maxlength="140" required></label>
@@ -319,6 +405,7 @@ $sellerSettings ??= [];
                     <?php endif; ?>
                     <button class="panel-button" type="submit"><?= $carrierShipment === null ? 'Uložit podklady k podání' : 'Upravit podklady' ?></button>
                   </form>
+                  <?php if ($carrierShipment !== null): ?></details><?php endif; ?>
                 <?php endif; ?>
               <?php endif; ?>
               <?php if ($carrierShipment !== null && $carrierShipment['status'] === 'draft' && !$goPayDispatchBlocked): ?>
@@ -332,6 +419,7 @@ $sellerSettings ??= [];
               <p class="panel-help">Uložení podkladů ani čísla v e-shopu nenahrazuje podání u dopravce. Balík označ jeho štítkem nebo kódem. Stav vyřízení objednávky nastav zvlášť po skutečném předání.</p>
             <?php endif; ?>
           </div>
+          </details>
         <?php endif; ?>
       </section>
     </div>
@@ -352,6 +440,13 @@ $sellerSettings ??= [];
         <?php if ($bankTransfer && !empty($payment['iban'])): ?><div><dt>IBAN</dt><dd><?= $escape($payment['iban']) ?></dd></div><?php endif; ?>
         <?php if ($bankTransfer && !empty($order['payment_due_at'])): ?><div><dt>Splatnost</dt><dd><?= $escape($order['payment_due_at']) ?></dd></div><?php endif; ?>
       </dl>
+      <div class="panel-order-invoice">
+        <strong>Faktura</strong>
+        <?php if ($orderInvoice !== null): ?>
+          <span>Číslo <?= $escape($orderInvoice['document_number']) ?></span>
+          <div class="panel-order-head-actions"><a class="panel-button" href="<?= $escape($invoiceDetailUrl . '&print=1') ?>" target="_blank" rel="noopener noreferrer">Zobrazit fakturu ↗</a><a class="panel-text-link" href="<?= $escape($invoiceDetailUrl) ?>">Detail a odeslání</a></div>
+        <?php else: ?><span>Dosud nevystavena</span><?php endif; ?>
+      </div>
       <?php if ($goPayPayment && $goPayState !== null && in_array($goPayState['status'] ?? '', ['creating', 'uncertain'], true)): ?>
         <p class="panel-error" role="alert">Založení platby má nejasný výsledek. Neopakuj požadavek naslepo; nejprve vyhledej transakci v administraci GoPay podle čísla objednávky.</p>
       <?php endif; ?>
@@ -375,8 +470,8 @@ $sellerSettings ??= [];
         <?php else: ?><p class="panel-help">Pro opětovné ověření stavu u <?= $gatewayName ?> vyplň přihlašovací údaje v <a href="<?= $escape($adminUrl . '?section=settings') ?>">nastavení obchodu</a>.</p><?php endif; ?>
       <?php endif; ?>
       <?php if ($bankTransfer && $paid && $orderControlsReady): ?>
-        <section class="panel-order-controls" aria-label="Oprava platby">
-          <h2>Opravit chybně potvrzenou platbu</h2>
+        <details class="panel-order-accordion panel-order-controls" aria-label="Oprava platby">
+          <summary>Opravit chybně potvrzenou platbu</summary>
           <p class="panel-help">Vrátí stav na „Čeká na platbu“. Bankovní pohyb se tím nemění. Původní potvrzení, částka a důvod zůstanou v účetních zásazích.</p>
           <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
             <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="correct-order-payment"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="confirmation" value="not_received">
@@ -384,13 +479,13 @@ $sellerSettings ??= [];
             <label class="panel-check"><input type="checkbox" name="verified" value="1" required> Ověřil/a jsem výpis a opravuji ručně potvrzený stav platby.</label>
             <button class="panel-button" type="submit">Vrátit platbu na čekající</button>
           </form>
-        </section>
+        </details>
       <?php endif; ?>
       <?php if ($bankTransfer): ?><p class="panel-help">Stav platby se z banky nenačítá automaticky.</p><?php endif; ?>
       <?php if ($onlineGateway): ?><p class="panel-help">Stav platby potvrzuje <?= $gatewayName ?>. Samotný návrat zákazníka na web platbu nepotvrzuje.</p><?php endif; ?>
       <?php if (($bankTransfer || $onlineGateway) && $paid && $orderTaxReady && ($order['status'] ?? '') !== 'test'): ?>
-        <section class="panel-order-controls" aria-label="Daňová evidence objednávky">
-          <h2>Daňová evidence a faktura</h2>
+        <details class="panel-order-accordion panel-order-controls" aria-label="Daňová evidence objednávky">
+          <summary>Daňová evidence a vystavení faktury</summary>
           <?php if ($bankTransfer): ?>
           <?php if ($orderReceipt !== null): ?>
             <p class="panel-notice">Příjem <?= $orderMoney($orderReceipt['amount_czk']) ?> ze dne <?= $escape($orderReceipt['entry_date']) ?> je zapsaný v <a href="<?= $escape($adminUrl . '?section=accounting&tab=money') ?>">peněžním deníku</a>.</p>
@@ -407,7 +502,7 @@ $sellerSettings ??= [];
             <p class="panel-help"><?= $gatewayName ?> potvrdil úhradu zákazníka. Výplatu a poplatky zaznamenej v <a href="<?= $escape($adminUrl . '?section=accounting&tab=money') ?>">peněžním deníku</a> podle skutečného vyúčtování brány a bankovního výpisu; mohou zahrnovat více objednávek.</p>
           <?php endif; ?>
           <?php if ($orderInvoice !== null): ?>
-            <p>Faktura <strong><?= $escape($orderInvoice['document_number']) ?></strong> · <a href="<?= $escape($adminUrl . '?section=accounting&tab=invoices&invoice_id=' . (int) $orderInvoice['id']) ?>">detail, tisk a e-mail</a></p>
+            <p>Faktura <strong><?= $escape($orderInvoice['document_number']) ?></strong> · <a href="<?= $escape($invoiceDetailUrl) ?>">detail, tisk a e-mail</a></p>
           <?php elseif ($goPayDispatchBlocked): ?>
             <p class="panel-help">Před vystavením faktury nejprve vyřeš vrácení platby nebo ověř u GoPay její aktuální stav.</p>
           <?php elseif ($orderInvoiceReady && \SimpleStore\Accounting\TaxEvidenceRepository::invoiceReady($sellerSettings)): ?>
@@ -423,7 +518,7 @@ $sellerSettings ??= [];
               <p class="panel-help">Zkontroluj fakturační údaje. Tiskový doklad lze uložit jako PDF v prohlížeči.</p>
             </form>
           <?php else: ?><p class="panel-help">Před vystavením faktury doplň <a href="<?= $escape($adminUrl . '?section=accounting&tab=settings') ?>">údaje OSVČ</a> a aktualizuj SQL tabulky.</p><?php endif; ?>
-        </section>
+        </details>
       <?php endif; ?>
       <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Stav vyřízení objednávky byl uložen.</p><?php endif; ?>
       <h2>Vyřízení</h2>
@@ -444,14 +539,14 @@ $sellerSettings ??= [];
           <?php if ($paid): ?>
             <?php if ($order['status'] !== 'shipped'): ?>
               <option value="processing" <?= $order['status'] === 'processing' ? 'selected' : '' ?>>Připravuje se</option>
-              <option value="ready_to_ship" <?= $order['status'] === 'ready_to_ship' ? 'selected' : '' ?>>Připraveno k odeslání</option>
+              <option value="ready_to_ship" <?= $order['status'] === 'ready_to_ship' ? 'selected' : '' ?>>Připravena k odeslání</option>
             <?php endif; ?>
-            <option value="shipped" <?= $order['status'] === 'shipped' ? 'selected' : '' ?>>Odesláno po předání dopravci</option>
-            <?php if ($order['status'] === 'shipped'): ?><option value="completed">Dokončeno po doručení</option><?php endif; ?>
-          <?php else: ?><option value="cancelled">Zrušeno (bez přijaté platby)</option><?php endif; ?>
+            <option value="shipped" <?= $order['status'] === 'shipped' ? 'selected' : '' ?>>Předána dopravci</option>
+            <?php if ($order['status'] === 'shipped'): ?><option value="completed">Dokončena po doručení</option><?php endif; ?>
+          <?php else: ?><option value="cancelled">Stornována (bez přijaté platby)</option><?php endif; ?>
         </select></label>
         <button class="panel-button" type="submit">Uložit stav</button>
-        <p class="panel-help">Připraveno znamená zabalenou zásilku, případně potvrzení připravenosti od dodavatele. Odesláno nastav až po skutečném předání dopravci (u dodavatele po jeho potvrzení), dokončeno po doručení. <?= $packetaMethod ? 'Při expedici obchodem přes Zásilkovnu musí být místní zásilka vytvořená. Dodavatel může expedovat bez místního podání.' : '' ?> Dokončené a zrušené objednávky se zákazníkovi přesunou do historie.</p>
+        <p class="panel-help">Připravena k odeslání znamená zabalenou zásilku, případně potvrzení připravenosti od dodavatele. Stav Předána dopravci nastav až po skutečném předání balíku (u dodavatele po jeho potvrzení), Dokončena po doručení. <?= $packetaMethod ? 'Při expedici obchodem přes Zásilkovnu musí být místní zásilka vytvořená. Dodavatel může expedovat bez místního podání.' : '' ?> Dokončené a stornované objednávky se zákazníkovi přesunou do historie.</p>
         <?php if ($paid && !$fulfillmentSourceReady): ?><p class="panel-help">Pro volbu externího dodavatele <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
       </form>
       <?php elseif ($goPayDispatchBlocked): ?>
@@ -461,33 +556,33 @@ $sellerSettings ??= [];
         <p class="panel-help">Pro opravy a mazání objednávek <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
       <?php else: ?>
         <?php if (in_array($order['status'], ['shipped', 'completed'], true)): ?>
-          <section class="panel-order-controls" aria-label="Oprava chybného odeslání">
-            <h2>Opravit omylem nastavený stav</h2>
+          <details class="panel-order-accordion panel-order-controls" aria-label="Oprava chybného odeslání">
+            <summary>Opravit omylem nastavený stav</summary>
             <p class="panel-help">Použij jen když balík ve skutečnosti nebyl předán dopravci. Oprava nemění platbu ani zásilku u dopravce; zůstane zapsána v historii.</p>
             <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
               <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="correct-order-status"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="confirmation" value="not_handed">
-              <label>Skutečný stav <select name="order_status"><option value="processing">Připravuje se</option><option value="ready_to_ship">Připraveno k odeslání</option></select></label>
+              <label>Skutečný stav <select name="order_status"><option value="processing">Připravuje se</option><option value="ready_to_ship">Připravena k odeslání</option></select></label>
               <label>Důvod opravy <textarea name="reason" minlength="8" maxlength="190" required placeholder="Například omylem označeno jako odeslané"></textarea></label>
               <label class="panel-check"><input type="checkbox" name="verified" value="1" required> Potvrzuji, že balík nebyl předán dopravci.</label>
               <button class="panel-button" type="submit">Opravit chybné odeslání</button>
             </form>
-          </section>
+          </details>
         <?php endif; ?>
         <?php if ($order['status'] === 'completed'): ?>
-          <section class="panel-order-controls" aria-label="Oprava dokončení">
-            <h2>Vrátit z dokončeno na odesláno</h2>
+          <details class="panel-order-accordion panel-order-controls" aria-label="Oprava dokončení">
+            <summary>Vrátit z dokončeno na předáno dopravci</summary>
             <p class="panel-help">Když objednávka stále cestuje a doručení bylo potvrzeno omylem.</p>
             <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
               <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="correct-order-status"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="order_status" value="shipped"><input type="hidden" name="confirmation" value="not_delivered">
               <label>Důvod opravy <textarea name="reason" minlength="8" maxlength="190" required></textarea></label>
               <label class="panel-check"><input type="checkbox" name="verified" value="1" required> Potvrzuji, že zásilka ještě nebyla doručena.</label>
-              <button class="panel-button" type="submit">Vrátit na odesláno</button>
+              <button class="panel-button" type="submit">Vrátit na předáno dopravci</button>
             </form>
-          </section>
+          </details>
         <?php endif; ?>
         <?php if ($order['status'] === 'cancelled' && !$paid): ?>
-          <section class="panel-order-controls" aria-label="Obnovení objednávky">
-            <h2>Obnovit zrušenou objednávku</h2>
+          <details class="panel-order-accordion panel-order-controls" aria-label="Obnovení objednávky">
+            <summary>Obnovit stornovanou objednávku</summary>
             <p class="panel-help">Zrušení bylo omyl; platba zůstává neověřená.</p>
             <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
               <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="correct-order-status"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="order_status" value="new"><input type="hidden" name="confirmation" value="reopen">
@@ -495,15 +590,16 @@ $sellerSettings ??= [];
               <label class="panel-check"><input type="checkbox" name="verified" value="1" required> Potvrzuji, že chci zrušenou objednávku znovu otevřít.</label>
               <button class="panel-button" type="submit">Obnovit objednávku</button>
             </form>
-          </section>
+          </details>
         <?php endif; ?>
-        <?php $canOfferDeletion = ($order['status'] === 'test' && ($order['payment_method'] ?? '') === 'test' && ($order['payment_status'] ?? '') === 'test') ||
-            ($bankTransfer && in_array($order['payment_status'] ?? '', ['pending', 'paid'], true)); ?>
-        <?php if ($canOfferDeletion && $packetaShipment === null &&
-            ($carrierShipment === null || $carrierShipment['status'] === 'draft') && $cancelledPackets === []): ?>
-          <section class="panel-order-controls" aria-label="Smazání objednávky">
-            <h2>Trvale smazat objednávku</h2>
-            <p class="panel-help">Lze smazat i zaplacenou nebo dokončenou objednávku. Zmizí z účtu zákazníka a z běžného seznamu plateb. Zůstane záznam zásahu a u převodu také účetní stopa s částkou a variabilním symbolem. Pro skutečné platby a vydané doklady ověř povinnost uchování; do důvodu nepiš osobní údaje.</p>
+        <?php $canOfferDeletion = in_array(($order['payment_method'] ?? ''),
+            ['bank_transfer', 'comgate', 'gopay', 'legacy'], true) ||
+            (($order['status'] ?? '') === 'test' && ($order['payment_method'] ?? '') === 'test' &&
+                ($order['payment_status'] ?? '') === 'test'); ?>
+        <?php if ($canOfferDeletion): ?>
+          <details class="panel-order-accordion panel-order-controls" aria-label="Smazání objednávky">
+            <summary>Trvale smazat objednávku</summary>
+            <p class="panel-help">Objednávka zmizí z běžného seznamu a účtu zákazníka bez ohledu na stav platby či vyřízení. Vystavená faktura, finanční záznamy a zaplacené položky zůstanou v účetnictví, čísla skutečných zásilek v databázi pro dohledání u dopravce. Odstranění objednávky nestornuje platbu ani fyzickou zásilku u dopravce. Nejasné založení platby u brány nejprve ověř. Do důvodu nepiš osobní údaje.</p>
             <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
               <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="delete-order"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="confirmation" value="delete">
               <label>Důvod smazání <textarea name="reason" minlength="8" maxlength="190" required placeholder="Například test pokladny"></textarea></label>
@@ -511,51 +607,160 @@ $sellerSettings ??= [];
               <label class="panel-check"><input type="checkbox" name="verified" value="1" required> Rozumím trvalému smazání; případná platba na bankovním účtu tím nezmizí.</label>
               <button class="panel-button" type="submit">Trvale smazat objednávku</button>
             </form>
-          </section>
-        <?php else: ?><p class="panel-help"><?= $onlineGateway ? 'Transakce ' . $gatewayName . ' a její účetní návaznost musí zůstat dohledatelná. Objednávku lze zrušit, stav platby ověř u brány.' : 'Objednávka má navázanou zásilku nebo způsob platby, který vyžaduje další vyřešení. Podklady bez čísla lze odstranit spolu s objednávkou; vydaný doklad a podanou zásilku nelze odstranit tímto tlačítkem.' ?></p><?php endif; ?>
+          </details>
+        <?php endif; ?>
         <?php if ($orderEvents !== []): ?>
-          <section class="panel-order-controls" aria-label="Historie zásahů">
-            <h2>Historie zásahů správce</h2>
+          <details class="panel-order-accordion panel-order-controls" aria-label="Historie zásahů">
+            <summary>Historie zásahů správce (<?= count($orderEvents) ?>)</summary>
             <ul>
               <?php foreach ($orderEvents as $event): ?>
-                <li><strong><?= $escape($event['created_at'] ?? '') ?></strong> · správce #<?= (int) ($event['admin_id'] ?? 0) ?> · <?php if (($event['action'] ?? '') === 'payment_correction'): ?>Platba: <?= $escape($orderPaymentLabel($event['old_status'] ?? '')) ?> → <?= $escape($orderPaymentLabel($event['new_status'] ?? '')) ?><?php else: ?>Vyřízení: <?= $escape($orderFulfillmentLabel($event['old_status'] ?? '')) ?> → <?= $escape($orderFulfillmentLabel($event['new_status'] ?? '')) ?><?php endif; ?><br><?= $escape($event['reason'] ?? '') ?></li>
+                <li><strong><?= $escape($event['created_at'] ?? '') ?></strong> · správce #<?= (int) ($event['admin_id'] ?? 0) ?> · <?php if (($event['action'] ?? '') === 'payment_correction'): ?>Platba: <?= $escape($orderPaymentLabel($event['old_status'] ?? '')) ?> → <?= $escape($orderPaymentLabel($event['new_status'] ?? '')) ?><?php elseif (($event['action'] ?? '') === 'shipping_changed'): ?>Doprava: <?= $escape($shippingMethodLabels[$event['old_status'] ?? ''] ?? $event['old_status'] ?? '') ?> → <?= $escape($shippingMethodLabels[$event['new_status'] ?? ''] ?? $event['new_status'] ?? '') ?><?php else: ?>Vyřízení: <?= $escape($orderFulfillmentLabel($event['old_status'] ?? '')) ?> → <?= $escape($orderFulfillmentLabel($event['new_status'] ?? '')) ?><?php endif; ?><br><?= $escape($event['reason'] ?? '') ?></li>
               <?php endforeach; ?>
             </ul>
-          </section>
+          </details>
         <?php endif; ?>
       <?php endif; ?>
     </aside>
   </div>
+  <script defer src="<?= $escape($basePath . 'assets/admin-orders.js?v=' . filemtime(__DIR__ . '/../../assets/admin-orders.js')) ?>"></script>
 <?php elseif ($ordersReady): ?>
+  <?php
+  $paymentFilter ??= 'all';
+  $orderSearch ??= '';
+  $offset ??= 0;
+  $orderPageUrl ??= $orderBaseUrl . '&status=' . rawurlencode($statusFilter) .
+      '&payment=' . rawurlencode($paymentFilter) . '&q=' . rawurlencode($orderSearch);
+  $orderMethodLabel = static fn (mixed $method): string => match ($method) {
+      'bank_transfer' => 'Převod na účet', 'comgate' => 'Comgate',
+      'gopay' => 'GoPay', 'test' => 'Test', default => (string) $method,
+  };
+  ?>
   <nav class="panel-quick panel-order-filters" aria-label="Filtrovat objednávky">
-    <?php foreach (['all' => 'Všechny', 'pending' => 'Čeká na platbu', 'paid' => 'Zaplaceno', 'processing' => 'Připravuje se', 'ready_to_ship' => 'Připraveno', 'shipped' => 'Odesláno', 'completed' => 'Dokončeno', 'cancelled' => 'Zrušeno', 'test' => 'Testovací'] as $filter => $label): ?>
-      <a href="<?= $escape($orderBaseUrl . '&status=' . $filter) ?>" <?= $statusFilter === $filter ? 'aria-current="page"' : '' ?>><?= $escape($label) ?></a>
+    <?php foreach (['all' => 'Všechny', 'pending' => 'Čeká na platbu', 'paid' => 'Zaplaceno', 'processing' => 'Připravuje se', 'ready_to_ship' => 'Připraveno', 'shipped' => 'Předáno dopravci', 'completed' => 'Dokončeno', 'cancelled' => 'Zrušeno', 'test' => 'Testovací'] as $filter => $label): ?>
+      <a href="<?= $escape($orderBaseUrl . '&status=' . $filter . '&payment=' . rawurlencode($paymentFilter) . '&q=' . rawurlencode($orderSearch)) ?>" <?= $statusFilter === $filter ? 'aria-current="page"' : '' ?>><?= $escape($label) ?></a>
     <?php endforeach; ?>
   </nav>
+  <form class="panel-order-search" method="get" action="<?= $escape($adminUrl) ?>" role="search">
+    <input type="hidden" name="section" value="orders"><input type="hidden" name="status" value="<?= $escape($statusFilter) ?>">
+    <label>Číslo objednávky, e-mail nebo VS
+      <input type="search" name="q" value="<?= $escape($orderSearch) ?>" maxlength="100" placeholder="Hledat objednávku">
+    </label>
+    <label>Způsob platby
+      <select name="payment">
+        <?php foreach (['all' => 'Všechny platby', 'bank_transfer' => 'Převod na účet', 'comgate' => 'Comgate', 'gopay' => 'GoPay', 'test' => 'Test'] as $method => $label): ?>
+          <option value="<?= $escape($method) ?>" <?= $paymentFilter === $method ? 'selected' : '' ?>><?= $escape($label) ?></option>
+        <?php endforeach; ?>
+      </select>
+    </label>
+    <button class="panel-button" type="submit">Filtrovat</button>
+    <?php if ($orderSearch !== '' || $paymentFilter !== 'all'): ?><a class="panel-text-link" href="<?= $escape($orderBaseUrl . '&status=' . $statusFilter) ?>">Vymazat filtry</a><?php endif; ?>
+  </form>
+  <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Stav vyřízení byl uložen.</p><?php endif; ?>
+  <?php if (($_GET['payment_saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Přijetí platby bylo potvrzeno.</p><?php endif; ?>
   <section class="panel-panel" aria-labelledby="panel-orders-list">
-    <h2 id="panel-orders-list">Přijaté objednávky <span><?= count($orderPage['items']) ?> na stránce</span></h2>
+    <h2 id="panel-orders-list">Objednávky <span><?= count($orderPage['items']) ?> na stránce</span></h2>
     <?php if ($orderPage['items'] === []): ?><p class="panel-empty">V tomto přehledu zatím nejsou objednávky.</p><?php endif; ?>
-    <div class="panel-order-list">
+    <?php if ($orderPage['items'] !== []): ?><div class="panel-order-table-wrap"><table class="panel-order-table">
+      <thead><tr><th>Objednávka</th><th>Doručení</th><th>Platba</th><th>Vyřízení</th><th>Faktura</th><th>Celkem</th><th>Ovládání</th></tr></thead>
+      <tbody>
       <?php foreach ($orderPage['items'] as $listed): ?>
-        <?php $listedPaid = ($listed['payment_status'] ?? '') === 'paid'; ?>
-        <?php $listedShipment = match ($listed['shipment_status'] ?? '') {
-            'created' => 'Zásilka vytvořena', 'cancelled' => 'Zásilka stornována',
-            'cancelling', 'cancel_uncertain' => 'Storno k ověření',
-            'submitting', 'uncertain' => 'Podání k ověření', 'rejected' => 'Podání odmítnuto',
-            default => '',
-        }; ?>
-        <?php $listedCarrier = match ($listed['carrier_shipment_status'] ?? '') {
-            'draft' => 'Podklady k podání', 'registered' => 'Číslo zásilky zapsáno',
-            default => '',
-        }; ?>
-        <a class="panel-order-row" href="<?= $escape($orderBaseUrl . '&id=' . (int) $listed['id']) ?>">
-          <span><strong><?= $escape($listed['order_number'] ?? '') ?></strong><small><?= $escape($listed['created_at'] ?? '') ?> · <?= $escape($listed['customer_email'] ?? '') ?></small></span>
-          <span class="panel-order-symbol"><?= ($listed['payment_method'] ?? '') === 'test' ? 'TEST' : 'VS ' . $escape($listed['variable_symbol'] ?? '–') ?></span>
-          <strong><?= $orderMoney($listed['total_czk'] ?? 0) ?></strong>
-          <span class="panel-order-state <?= $listedPaid ? 'is-paid' : 'is-pending' ?>"><?= $escape($orderPaymentLabel($listed['payment_status'] ?? '')) ?> · <?= $escape($orderFulfillmentLabel($listed['status'] ?? '')) ?><?= ($listed['fulfillment_source'] ?? 'own') === 'external' ? ' · Externí dodavatel' : '' ?><?= $listedShipment !== '' ? ' · ' . $escape($listedShipment) : '' ?><?= $listedCarrier !== '' ? ' · ' . $escape($listedCarrier) : '' ?></span>
-        </a>
+        <?php
+        $listedGoPay = ($listed['payment_method'] ?? '') === 'gopay';
+        $listedGoPayState = $listedGoPay ? ($listed['gopay_payment_state'] ?? null) : null;
+        $listedRefunded = in_array($listedGoPayState, ['refunded', 'partially_refunded'], true);
+        $listedGatewayBlocked = $listedGoPay && ($listed['payment_status'] ?? '') === 'paid' &&
+            $listedGoPayState !== 'paid';
+        $listedPaid = ($listed['payment_status'] ?? '') === 'paid' && !$listedGatewayBlocked;
+        $listedPaymentLabel = $listedGoPayState === 'refunded' ? 'Platba vrácena' :
+            ($listedGoPayState === 'partially_refunded' ? 'Platba částečně vrácena' :
+            ($listedGatewayBlocked ? 'Platba k ověření' : $orderPaymentLabel($listed['payment_status'] ?? '')));
+        $listedStatus = $listed['status'] ?? '';
+        $listedShipping = json_decode((string) ($listed['shipping_json'] ?? ''), true);
+        $listedShipping = is_array($listedShipping) ? $listedShipping : [];
+        $listedSource = ($listed['fulfillment_source'] ?? 'own') === 'external' ? 'external' : 'own';
+        $listedShippingMethod = $listedShipping['method'] ?? '';
+        $listedPacketaBlocked = $listedSource === 'own' &&
+            in_array($listedShippingMethod, ['zasilkovna_pickup', 'zasilkovna_home'], true) &&
+            ($listed['shipment_status'] ?? '') !== 'created';
+        $listedNext = match ($listedStatus) {
+            'new' => $listedPaid ? ['processing', 'ready_to_ship', 'shipped'] : [],
+            'processing' => $listedPaid ? ['ready_to_ship', 'shipped'] : [],
+            'ready_to_ship' => $listedPaid ? ['processing', 'shipped'] : [],
+            'shipped' => $listedPaid ? ['completed'] : [],
+            default => [],
+        };
+        if ($listedPacketaBlocked) {
+            $listedNext = array_values(array_diff($listedNext, ['ready_to_ship', 'shipped']));
+        }
+        $listedQuickUrl = $orderPageUrl . '&offset=' . $offset;
+        $listedId = (int) $listed['id'];
+        ?>
+        <tr>
+          <td data-label="Objednávka">
+            <a class="panel-order-primary" href="<?= $escape($orderBaseUrl . '&id=' . $listedId) ?>"><?= $escape($listed['order_number'] ?? '') ?></a>
+            <small><?= $escape($listed['created_at'] ?? '') ?><br><?= $escape($listedShipping['recipient'] ?? $listed['customer_email'] ?? '') ?></small>
+            <small><?= $escape($listed['customer_email'] ?? '') ?> · <?= ($listed['payment_method'] ?? '') === 'test' ? 'TEST' : 'VS ' . $escape($listed['variable_symbol'] ?? '–') ?></small>
+          </td>
+          <td data-label="Doručení"><strong><?= $escape($listedShipping['label'] ?? 'Neuvedeno') ?></strong>
+            <?php if ($listedSource === 'external'): ?><small>Externí dodavatel</small><?php endif; ?>
+            <?php if (($listed['shipment_status'] ?? '') === 'created'): ?><small>Zásilka vytvořena</small><?php endif; ?>
+            <?php if (($listed['carrier_shipment_status'] ?? '') === 'registered'): ?><small>Číslo zásilky zapsáno</small><?php endif; ?>
+          </td>
+          <td data-label="Platba"><span class="panel-order-state <?= $listedRefunded ? 'is-refunded' : ($listedPaid ? 'is-paid' : 'is-pending') ?>"><?= $escape($listedPaymentLabel) ?></span><small><?= $escape($orderMethodLabel($listed['payment_method'] ?? '')) ?></small>
+            <?php if ($listedGatewayBlocked): ?><small>Ověř transakci v detailu objednávky.</small><?php endif; ?>
+          </td>
+          <td data-label="Vyřízení"><span class="panel-order-state <?= in_array($listedStatus, ['shipped', 'completed'], true) ? 'is-paid' : 'is-pending' ?>"><?= $escape($orderFulfillmentLabel($listedStatus)) ?></span>
+            <?php if ($listedPacketaBlocked && $listedPaid && $listedNext !== []): ?><small>Pro přípravu zásilky otevři detail.</small><?php endif; ?>
+          </td>
+          <td data-label="Faktura"><?php if ((int) ($listed['invoice_id'] ?? 0) > 0): ?>
+            <a class="panel-text-link" href="<?= $escape($adminUrl . '?section=accounting&tab=invoices&invoice_id=' . (int) $listed['invoice_id'] . '&print=1') ?>" target="_blank" rel="noopener noreferrer"><?= $escape($listed['invoice_number'] ?? 'Otevřít fakturu') ?></a>
+            <?php else: ?><span class="panel-order-muted">Nevystavena</span><?php endif; ?>
+          </td>
+          <td data-label="Celkem" class="panel-order-amount"><?= $orderMoney($listed['total_czk'] ?? 0) ?></td>
+          <td data-label="Ovládání" class="panel-order-actions">
+            <a class="panel-text-link" href="<?= $escape($orderBaseUrl . '&id=' . $listedId) ?>">Otevřít detail</a>
+            <?php if (!$listedPaid && ($listed['payment_method'] ?? '') === 'bank_transfer' &&
+                ($listed['payment_status'] ?? '') === 'pending' &&
+                !in_array($listedStatus, ['cancelled', 'test'], true)): ?>
+              <details class="panel-order-quick"><summary>Potvrdit platbu</summary>
+                <form method="post" action="<?= $escape($listedQuickUrl) ?>">
+                  <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="mark-order-paid">
+                  <input type="hidden" name="id" value="<?= $listedId ?>"><input type="hidden" name="return_list" value="1">
+                  <label><input type="checkbox" name="bank_checked" value="1" required> Platbu jsem ověřil ve výpisu banky.</label>
+                  <button type="submit">Označit jako zaplacené</button>
+                </form>
+              </details>
+            <?php endif; ?>
+            <?php if ($listedNext !== []): ?>
+              <form class="panel-order-quick-status" method="post" action="<?= $escape($listedQuickUrl) ?>">
+                <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="set-order-status">
+                <input type="hidden" name="id" value="<?= $listedId ?>"><input type="hidden" name="return_list" value="1">
+                <input type="hidden" name="fulfillment_source" value="<?= $escape($listedSource) ?>">
+                <input type="hidden" name="fulfillment_note" value="<?= $escape($listed['fulfillment_note'] ?? '') ?>">
+                <label for="order-quick-<?= $listedId ?>">Nový stav objednávky <?= $escape($listed['order_number'] ?? '') ?></label>
+                <select id="order-quick-<?= $listedId ?>" name="order_status">
+                  <?php foreach ($listedNext as $next): ?><option value="<?= $escape($next) ?>"><?= $escape($orderFulfillmentLabel($next)) ?></option><?php endforeach; ?>
+                </select>
+                <button type="submit">Uložit stav</button>
+              </form>
+            <?php elseif ($listedStatus === 'new' && !$listedPaid && ($listed['payment_status'] ?? '') === 'pending'): ?>
+              <details class="panel-order-quick"><summary>Stornovat</summary>
+                <form method="post" action="<?= $escape($listedQuickUrl) ?>">
+                  <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="set-order-status">
+                  <input type="hidden" name="id" value="<?= $listedId ?>"><input type="hidden" name="return_list" value="1">
+                  <input type="hidden" name="order_status" value="cancelled">
+                  <input type="hidden" name="fulfillment_source" value="<?= $escape($listedSource) ?>">
+                  <input type="hidden" name="fulfillment_note" value="<?= $escape($listed['fulfillment_note'] ?? '') ?>">
+                  <label><input type="checkbox" required> Potvrzuji storno objednávky.</label>
+                  <button type="submit">Stornovat</button>
+                </form>
+              </details>
+            <?php endif; ?>
+          </td>
+        </tr>
       <?php endforeach; ?>
-    </div>
+      </tbody>
+    </table></div><?php endif; ?>
     <?php if ($ordersPreviousUrl !== '' || $ordersNextUrl !== ''): ?>
       <nav class="panel-quick panel-order-pages" aria-label="Stránky objednávek">
         <?php if ($ordersPreviousUrl !== ''): ?><a href="<?= $escape($ordersPreviousUrl) ?>">← Předchozí</a><?php endif; ?>
@@ -563,15 +768,4 @@ $sellerSettings ??= [];
       </nav>
     <?php endif; ?>
   </section>
-  <?php if ($deletedOrders !== []): ?>
-    <section class="panel-panel" aria-labelledby="deleted-orders-heading">
-      <h2 id="deleted-orders-heading">Nedávno smazané objednávky</h2>
-      <p class="panel-help">Ponechává se číslo, správce, čas a zadaný důvod; neukládá se e-mail ani dodací adresa.</p>
-      <ul class="panel-deleted-orders">
-        <?php foreach ($deletedOrders as $deleted): ?>
-          <li><strong><?= $escape($deleted['order_number'] ?? '') ?></strong> · <?= $escape($deleted['created_at'] ?? '') ?> · správce #<?= (int) ($deleted['admin_id'] ?? 0) ?><br><?= $escape($deleted['reason'] ?? '') ?></li>
-        <?php endforeach; ?>
-      </ul>
-    </section>
-  <?php endif; ?>
 <?php endif; ?>
