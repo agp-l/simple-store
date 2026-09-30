@@ -2,6 +2,8 @@
 
 Jednoduchý obchod, redakční systém a zákaznický účet v PHP 8.1+ a MySQL. Obchod, administrace i účet používají stejnou hlavičku a patičku z `view/`. Architektura a důvody jednotlivých rozhodnutí jsou popsané v [docs/architecture.md](docs/architecture.md).
 
+Online platby: [Comgate](docs/comgate.md) a [GoPay](docs/gopay.md). GoPay používá oficiální PHP SDK, testovací přístupy vydává přímo GoPay a ostrý provoz podléhá jejich kontrole integrace.
+
 **Nejdřív spusť v kořeni projektu:**
 
 ```bash

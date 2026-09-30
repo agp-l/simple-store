@@ -92,12 +92,7 @@ jobs:
           extensions: mysqli
           tools: composer:v2
           coverage: none
-      - run: |
-          composer update --no-interaction --prefer-dist --no-progress
-          echo GOPAY_COMPOSER_LOCK_START
-          base64 -w0 composer.lock
-          echo
-          echo GOPAY_COMPOSER_LOCK_END
+      - run: composer install --no-interaction --prefer-dist --no-progress
       - name: Verify full schema and tax workflow against MySQL
         env:
           MYSQL_TEST_PASSWORD: ci-only-password

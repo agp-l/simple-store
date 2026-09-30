@@ -170,6 +170,8 @@ $renderer->render('payment', $gopayData);
 $gopayPayment = ob_get_clean();
 if (!str_contains($gopayPayment, 'name="payment_method" value="gopay"') ||
     !str_contains($gopayPayment, 'Zkontrolovat objednávku') ||
+    !str_contains($gopayPayment, 'href="https://www.gopay.cz/"') ||
+    !str_contains($gopayPayment, 'assets/gopay-logo.png" alt="GoPay"') ||
     str_contains($gopayPayment, 'name="payment_method" value="bank_transfer"')) {
     throw new RuntimeException('GoPay-only checkout must offer a usable payment method.');
 }

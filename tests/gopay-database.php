@@ -233,9 +233,12 @@ $cancelOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79
     bin2hex(random_bytes(32)), false, 'gopay');
 $firstRetryId = random_int(100000000000, 999999999998);
 $retryIds = [(string) $firstRetryId, (string) ($firstRetryId + 1)];
+$retryStates = [$retryIds[0] => 'CANCELED', $retryIds[1] => 'CREATED'];
 $retryCalls = 0;
 $retryClient = new GoPayApiClient('8123456789', 'fake-client-id', 'fake-client-secret', true,
-    static function (string $operation, $argument) use (&$retryCalls, $retryIds, $cancelOrder): array {
+    static function (string $operation, $argument) use (
+        &$retryCalls, &$retryStates, $retryIds, $cancelOrder
+    ): array {
         if ($operation === 'create') {
             $id = $retryIds[$retryCalls++] ?? null;
             if ($id === null) throw new RuntimeException('Too many retry attempts.');
@@ -245,7 +248,8 @@ $retryClient = new GoPayApiClient('8123456789', 'fake-client-id', 'fake-client-s
                 'order_number' => $argument['order_number'], 'target' => $argument['target']];
         }
         if ($operation === 'status') {
-            return ['id' => $retryIds[0], 'state' => 'CANCELED', 'amount' => 107900,
+            return ['id' => $argument, 'state' => $retryStates[$argument] ?? 'CREATED',
+                'amount' => 107900,
                 'currency' => 'CZK', 'order_number' => $cancelOrder['order_number'],
                 'target' => ['type' => 'ACCOUNT', 'goid' => '8123456789']];
         }
@@ -260,5 +264,20 @@ $retryPayments->initiate($cancelOrder);
 expectGoPay($retryCalls === 2 &&
     $orders->findById((int) $cancelOrder['id'])['provider_reference'] === $retryIds[1],
     'A canceled payment could not be retried with a new transaction.');
+$retryStates[$retryIds[0]] = 'PAID';
+$retryPayments->notify($retryIds[0]);
+expectGoPay($orders->findById((int) $cancelOrder['id'])['payment_status'] === 'paid' &&
+    $orders->findById((int) $cancelOrder['id'])['provider_reference'] === $retryIds[0],
+    'A late confirmed payment on an older attempt was lost.');
+$retryStates[$retryIds[1]] = 'PAID';
+$doubleChargeDetected = false;
+try {
+    $retryPayments->notify($retryIds[1]);
+} catch (RuntimeException $expected) {
+    $doubleChargeDetected = true;
+}
+expectGoPay($doubleChargeDetected &&
+    $orders->findById((int) $cancelOrder['id'])['provider_reference'] === $retryIds[0],
+    'Two paid attempts on the same order were silently reconciled as a single charge.');
 
 echo "GoPay payment database integration passed.\n";

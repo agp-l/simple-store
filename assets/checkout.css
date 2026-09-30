@@ -99,6 +99,10 @@
 .checkout-choice > span:not(.checkout-payment-mark):not(.checkout-selected) { min-width: 0; flex: 1; }
 .checkout-choice strong { line-height: 1.35; }
 .checkout-choice small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; line-height: 1.45; }
+.checkout-gopay-brands { display: grid; gap: 9px; margin-top: 12px; }
+.checkout-gopay-brands > a { display: inline-flex; width: max-content; align-items: center; background: white; }
+.checkout-gopay-cards { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; }
+.checkout-gopay-cards img { width: auto; height: auto; max-width: 86px; max-height: 36px; object-fit: contain; }
 .checkout-choice > strong:last-child { white-space: nowrap; }
 .checkout-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px; }
 .checkout-fields label { display: grid; gap: 6px; min-width: 0; font-size: 13px; font-weight: 700; }

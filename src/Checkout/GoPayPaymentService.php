@@ -76,11 +76,20 @@ final class GoPayPaymentService
         $this->db->startTransaction();
         try {
             $current = $this->db->queryFirstRow(
-                'SELECT payment_method, payment_status, status FROM shop_orders WHERE id=%i FOR UPDATE', $orderId
+                'SELECT payment_method, payment_status, status, total_czk, order_number,
+                        customer_email, items_json, shipping_json
+                 FROM shop_orders WHERE id=%i FOR UPDATE', $orderId
             );
             if ($current === null || $current['payment_method'] !== 'gopay' ||
                 $current['payment_status'] !== 'pending' || $current['status'] === 'cancelled') {
                 throw new RuntimeException('Tuto objednávku už nelze zaplatit přes GoPay.');
+            }
+            if ((int) $current['total_czk'] !== (int) $order['total_czk'] ||
+                $current['order_number'] !== $order['order_number'] ||
+                $current['customer_email'] !== $order['customer_email'] ||
+                (isset($order['items_json']) && $current['items_json'] !== $order['items_json']) ||
+                (isset($order['shipping_json']) && $current['shipping_json'] !== $order['shipping_json'])) {
+                throw new RuntimeException('Objednávka se mezitím změnila. Obnov stránku.');
             }
             $last = $this->db->queryFirstRow(
                 'SELECT * FROM shop_gopay_payments WHERE order_id=%i ORDER BY id DESC LIMIT 1 FOR UPDATE', $orderId

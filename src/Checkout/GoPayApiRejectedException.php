@@ -5,7 +5,7 @@ namespace SimpleStore\Checkout;
 
 use RuntimeException;
 
-/** A non-success HTTP response proves the create request was rejected by GoPay. */
+/** A definite validation or authorization rejection creates no remote payment. */
 final class GoPayApiRejectedException extends RuntimeException
 {
 }

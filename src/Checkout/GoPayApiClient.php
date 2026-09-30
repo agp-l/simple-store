@@ -10,6 +10,7 @@ use RuntimeException;
 final class GoPayApiClient
 {
     private ?Closure $transport;
+    private ?object $sdk = null;
 
     public function __construct(
         private string $goid,
@@ -28,7 +29,8 @@ final class GoPayApiClient
     /** Keep the original environment for an attempt even when new payments change mode. */
     public function forMode(bool $test): self
     {
-        return new self($this->goid, $this->clientId, $this->clientSecret, $test, $this->transport);
+        return $test === $this->test ? $this :
+            new self($this->goid, $this->clientId, $this->clientSecret, $test, $this->transport);
     }
 
     public function create(array $payment): array
@@ -56,7 +58,7 @@ final class GoPayApiClient
         if (!class_exists(\GoPay\Api::class)) {
             throw new RuntimeException('Nainstaluj GoPay PHP SDK pomocí Composeru.');
         }
-        $sdk = \GoPay\Api::payments([
+        $sdk = $this->sdk ??= \GoPay\Api::payments([
             'goid' => $this->goid,
             'clientId' => $this->clientId,
             'clientSecret' => $this->clientSecret,
@@ -74,7 +76,8 @@ final class GoPayApiClient
         if (!$response->hasSucceed()) {
             $code = (int) $response->statusCode;
             $message = 'GoPay odmítla požadavek (HTTP ' . $code . ').';
-            if ($operation === 'create' && $code >= 400 && $code < 500) {
+            // 408/409/429 may be ambiguous; never permit an immediate new create.
+            if ($operation === 'create' && in_array($code, [400, 401, 403, 404, 422], true)) {
                 throw new GoPayApiRejectedException($message);
             }
             throw new RuntimeException($message);
