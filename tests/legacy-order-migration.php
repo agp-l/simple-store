@@ -8,10 +8,16 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Database\SchemaUpdater;
 
-$db = ConnectionFactory::create([
+$connection = [
     'host' => '127.0.0.1', 'user' => 'root', 'password' => (string) getenv('MYSQL_TEST_PASSWORD'),
     'database' => 'simple_store', 'port' => 3306,
-]);
+];
+// Keep this upgrade fixture separate from other integration tests, which may
+// already contain invoices without an order on their current schema.
+$db = ConnectionFactory::create($connection);
+$db->query('CREATE DATABASE IF NOT EXISTS simple_store_legacy CHARACTER SET utf8mb4');
+$connection['database'] = 'simple_store_legacy';
+$db = ConnectionFactory::create($connection);
 $updater = new SchemaUpdater($db, dirname(__DIR__) . '/database/schema.sql');
 $updater->apply();
 
