@@ -258,8 +258,15 @@ final class GoPayPaymentService
                 $currentAttempt === null || (string) $currentAttempt['payment_id'] !== $id) {
                 throw new RuntimeException('Transakce GoPay se mezitím změnila.');
             }
+            $settlementRank = ['paid' => 1, 'partially_refunded' => 2, 'refunded' => 3];
+            $local = strtolower($remote);
+            if (($settlementRank[$currentAttempt['status']] ?? 0) > ($settlementRank[$local] ?? 0)) {
+                // A late PAID/PARTIALLY_REFUNDED response cannot undo a refund.
+                $local = $currentAttempt['status'];
+            }
             if ($remote === 'PAID') {
-                if ($currentOrder['payment_status'] === 'pending') {
+                if ($currentOrder['payment_status'] === 'pending' &&
+                    !in_array($currentAttempt['status'], ['partially_refunded', 'refunded'], true)) {
                     $this->db->query(
                         'UPDATE shop_orders SET payment_status=%s, payment_paid_at=UTC_TIMESTAMP(),
                          payment_verified_by=NULL, provider_reference=%s WHERE id=%i AND payment_status=%s',
@@ -269,11 +276,6 @@ final class GoPayPaymentService
                     (string) $currentOrder['provider_reference'] !== $id) {
                     throw new RuntimeException('Jiná platba již uhradila tuto objednávku. Prověř možné dvojí stržení.');
                 }
-            }
-            $local = strtolower($remote);
-            if (in_array($currentAttempt['status'], ['paid', 'refunded', 'partially_refunded'], true) &&
-                !in_array($remote, ['PAID', 'REFUNDED', 'PARTIALLY_REFUNDED'], true)) {
-                $local = $currentAttempt['status']; // A late stale state must never erase a settlement.
             }
             $this->db->query(
                 'UPDATE shop_gopay_payments SET status=%s, last_error=NULL, updated_at=UTC_TIMESTAMP() WHERE id=%i',

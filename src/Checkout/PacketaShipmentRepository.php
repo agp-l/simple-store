@@ -65,6 +65,10 @@ final class PacketaShipmentRepository
                 !is_array($shipping) || ($shipping['method'] ?? '') !== $draft['method']) {
                 throw new InvalidArgumentException('Objednávka není připravená k podání. Obnov stránku.');
             }
+            if ($order['payment_method'] === 'gopay') {
+                (new GoPayPaidOrderGuard($this->db))->assertPaid($orderId,
+                    (string) ($order['provider_reference'] ?? ''));
+            }
             $current = $this->find($orderId);
             if ($current !== null && !in_array($current['status'], ['rejected', 'cancelled'], true)) {
                 throw new InvalidArgumentException('Tato objednávka už má pokus o podání. Zkontroluj stav zásilky.');

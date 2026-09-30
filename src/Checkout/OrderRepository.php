@@ -333,7 +333,7 @@ final class OrderRepository
         }
     }
 
-    /** Manual fulfillment state; a bank transfer must be verified before shipping. */
+    /** Manual fulfillment state; payment must be verified before shipping. */
     public function setFulfillmentStatus(int $id, string $status, string $source = 'own', string $note = ''): void
     {
         if ($id < 1 || !in_array($status,
@@ -372,6 +372,11 @@ final class OrderRepository
             if (in_array($row['status'], ['shipped'], true) &&
                 $source !== ($row['fulfillment_source'] ?? 'own')) {
                 throw new InvalidArgumentException('U odeslané objednávky už nelze změnit způsob expedice.');
+            }
+            if ($row['payment_method'] === 'gopay' &&
+                in_array($status, ['ready_to_ship', 'shipped', 'completed'], true)) {
+                (new GoPayPaidOrderGuard($this->db))->assertPaid($id,
+                    (string) ($row['provider_reference'] ?? ''));
             }
             $shipping = json_decode((string) ($row['shipping_json'] ?? ''), true);
             if (in_array($shipping['method'] ?? '', ['zasilkovna_pickup', 'zasilkovna_home'], true)) {

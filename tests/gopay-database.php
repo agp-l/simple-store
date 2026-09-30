@@ -4,9 +4,16 @@ declare(strict_types=1);
 // CI-only integration check: a fake GoPay transport with real MySQL persistence.
 require dirname(__DIR__) . '/vendor/autoload.php';
 
+if (!class_exists(\GoPay\Api::class) || !method_exists(\GoPay\Api::class, 'payments')) {
+    throw new RuntimeException('Official GoPay SDK is missing from the Composer installation.');
+}
+
 use SimpleStore\Checkout\GoPayApiClient;
 use SimpleStore\Checkout\GoPayPaymentService;
 use SimpleStore\Checkout\OrderRepository;
+use SimpleStore\Checkout\GoPayPaidOrderGuard;
+use SimpleStore\Checkout\CarrierShipmentDraft;
+use SimpleStore\Checkout\CarrierShipmentRepository;
 use SimpleStore\Accounting\InvoiceRepository;
 use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Database\SchemaUpdater;
@@ -163,13 +170,70 @@ expectGoPay($payments->returnOrder(str_repeat('f', 64), $paymentId) === null &&
     $payments->returnOrder($returnToken, str_repeat('9', 30)) === null &&
     (int) $payments->returnOrder($returnToken, $paymentId)['id'] === (int) $order['id'],
     'The private browser return did not bind its token to the original payment.');
-$invoice = (new InvoiceRepository($db))->issue((int) $order['id'], [
+$seller = [
     'name' => 'Prodejce OSVČ', 'ico' => '12345678', 'street' => 'Test 1',
     'city' => 'Praha', 'postal_code' => '11000', 'bank_account' => '',
-], ['name' => 'Eva Nová', 'street' => 'Polní 1', 'city' => 'Praha',
-    'postal_code' => '11000', 'ico' => '']);
+];
+$buyer = ['name' => 'Eva Nová', 'street' => 'Polní 1', 'city' => 'Praha',
+    'postal_code' => '11000', 'ico' => ''];
+$invoices = new InvoiceRepository($db);
+$invoice = $invoices->issue((int) $order['id'], $seller, $buyer);
 expectGoPay($invoice['payment_method'] === 'gopay' && (int) $invoice['total_czk'] === 1079,
     'A paid GoPay order did not produce a correctly labeled invoice.');
+$guard = new GoPayPaidOrderGuard($db);
+$guard->assertPaid((int) $order['id'], $paymentId);
+$carrier = new CarrierShipmentRepository($db);
+$draft = CarrierShipmentDraft::fromOrder($orders->findById((int) $order['id']), [
+    'recipient' => 'Eva Nová', 'email' => 'buyer@example.test',
+    'phone' => '+420777111222', 'weight_kg' => '1.2',
+    'first_name' => 'Eva', 'surname' => 'Nová', 'street' => 'Polní',
+    'house_number' => '1', 'city' => 'Praha', 'postal_code' => '11000',
+]);
+$carrier->save((int) $order['id'], 1, $draft);
+$orders->setFulfillmentStatus((int) $order['id'], 'ready_to_ship');
+expectGoPay($orders->findById((int) $order['id'])['status'] === 'ready_to_ship' &&
+    $carrier->find((int) $order['id'])['status'] === 'draft',
+    'A fully paid GoPay order could not prepare GLS shipping.');
+
+// Keep the historical payment date, but block fulfillment when the charge is refunded.
+foreach (['PARTIALLY_REFUNDED', 'REFUNDED'] as $refundedState) {
+    $providerState = $refundedState;
+    $payments->notify($paymentId);
+    $guardBlocked = false;
+    $draftBlocked = false;
+    $shippingBlocked = false;
+    try {
+        $guard->assertPaid((int) $order['id'], $paymentId);
+    } catch (InvalidArgumentException $expected) {
+        $guardBlocked = true;
+    }
+    try {
+        $carrier->save((int) $order['id'], 1, $draft);
+    } catch (InvalidArgumentException $expected) {
+        $draftBlocked = true;
+    }
+    try {
+        $orders->setFulfillmentStatus((int) $order['id'], 'shipped');
+    } catch (InvalidArgumentException $expected) {
+        $shippingBlocked = true;
+    }
+    expectGoPay($guardBlocked && $draftBlocked && $shippingBlocked &&
+        $payments->state((int) $order['id'])['status'] === strtolower($refundedState) &&
+        $orders->findById((int) $order['id'])['status'] === 'ready_to_ship',
+        $refundedState . ' GoPay charge was allowed into GLS shipping or fulfillment.');
+    $providerState = 'PAID'; // Delayed older responses must not reopen either refund state.
+    $payments->notify($paymentId);
+    expectGoPay($payments->state((int) $order['id'])['status'] === strtolower($refundedState),
+        'A stale PAID response reopened a ' . $refundedState . ' GoPay charge.');
+}
+$registrationBlocked = false;
+try {
+    $carrier->register((int) $order['id'], 1, 'GLS123456');
+} catch (InvalidArgumentException $expected) {
+    $registrationBlocked = true;
+}
+expectGoPay($registrationBlocked && $carrier->find((int) $order['id'])['status'] === 'draft',
+    'A fully refunded GoPay charge was allowed to register the prepared parcel.');
 $paidAt = $orders->findById((int) $order['id'])['payment_paid_at'];
 $payments->notify($paymentId);
 expectGoPay($orders->findById((int) $order['id'])['payment_paid_at'] === $paidAt,
@@ -183,6 +247,44 @@ $disabled = new GoPayPaymentService($db, array_replace($settings, ['enabled' => 
 expectGoPay(!$disabled->canInitiate() &&
     $disabled->refresh($orders->findById((int) $order['id']))['payment_status'] === 'paid',
     'Disabling new GoPay payments blocked reconciliation of existing transactions.');
+
+$invoiceRefundOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
+    bin2hex(random_bytes(32)), false, 'gopay');
+$invoiceRefundId = (string) random_int(100000000000, 999999999999);
+$invoiceRefundState = 'PAID';
+$invoiceRefundClient = new GoPayApiClient('8123456789', 'fake-client-id', 'fake-client-secret', true,
+    static function (string $operation, $argument) use (
+        $invoiceRefundId, $invoiceRefundOrder, &$invoiceRefundState
+    ): array {
+        if ($operation === 'create') {
+            return ['id' => $invoiceRefundId,
+                'gw_url' => 'https://gw.sandbox.gopay.com/gw/v3/' . $invoiceRefundId,
+                'state' => 'CREATED', 'amount' => $argument['amount'],
+                'currency' => $argument['currency'],
+                'order_number' => $argument['order_number'], 'target' => $argument['target']];
+        }
+        if ($operation === 'status') {
+            return ['id' => $invoiceRefundId, 'state' => $invoiceRefundState,
+                'amount' => 107900, 'currency' => 'CZK',
+                'order_number' => $invoiceRefundOrder['order_number'],
+                'target' => ['type' => 'ACCOUNT', 'goid' => '8123456789']];
+        }
+        throw new RuntimeException('Unexpected invoice refund operation.');
+    });
+$invoiceRefundPayments = new GoPayPaymentService($db, $settings, $invoiceRefundClient);
+$invoiceRefundPayments->initiate($invoiceRefundOrder);
+$invoiceRefundPayments->notify($invoiceRefundId);
+$invoiceRefundState = 'REFUNDED';
+$invoiceRefundPayments->notify($invoiceRefundId);
+$invoiceRejected = false;
+try {
+    $invoices->issue((int) $invoiceRefundOrder['id'], $seller, $buyer);
+} catch (InvalidArgumentException $expected) {
+    $invoiceRejected = true;
+}
+expectGoPay($invoiceRejected && $invoices->byOrder((int) $invoiceRefundOrder['id']) === null &&
+    $orders->findById((int) $invoiceRefundOrder['id'])['payment_status'] === 'paid',
+    'A new invoice was issued for a GoPay payment already refunded in full.');
 
 $refundOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
     bin2hex(random_bytes(32)), false, 'gopay');

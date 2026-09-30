@@ -72,17 +72,27 @@ $sellerSettings ??= [];
   $gatewayName = $goPayPayment ? 'GoPay' : 'Comgate';
   $gatewayConfigured = $goPayPayment ? $goPayConfigured : $comgateConfigured;
   $paid = ($order['payment_status'] ?? '') === 'paid';
+  $goPayRefunded = $goPayPayment && in_array($goPayState['status'] ?? '', ['refunded', 'partially_refunded'], true);
+  $paymentHighlight = $paid && !$goPayRefunded;
+  $paymentDisplayLabel = $goPayRefunded
+      ? (($goPayState['status'] ?? '') === 'refunded' ? 'Platba vrácena' : 'Platba částečně vrácena')
+      : $orderPaymentLabel($order['payment_status'] ?? '');
+  $goPayDispatchBlocked = $goPayPayment && $paid &&
+      ($goPayState === null || ($goPayState['status'] ?? '') !== 'paid' ||
+      (string) ($goPayState['payment_id'] ?? '') !== (string) ($order['provider_reference'] ?? ''));
   ?>
   <?php if (($_GET['paid'] ?? null) === '1' && $paid): ?><p class="panel-notice" role="status">Platba byla ručně označena jako přijatá.</p><?php endif; ?>
   <?php if (($_GET['payment_checked'] ?? null) === '1' && $onlineGateway): ?><p class="panel-notice" role="status">Stav platby byl ověřen přímo u <?= $gatewayName ?>.</p><?php endif; ?>
   <?php if (($_GET['corrected'] ?? null) === '1'): ?><p class="panel-notice" role="status">Stav byl opraven. Důvod a původní stav jsou v historii zásahů níže.</p><?php endif; ?>
   <?php if (($_GET['payment_corrected'] ?? null) === '1'): ?><p class="panel-notice" role="status">Potvrzení platby bylo opraveno. Původní údaj je v historii zásahů a v účetních podkladech.</p><?php endif; ?>
   <?php if (($_GET['tax_saved'] ?? null) === '1'): ?><p class="panel-notice" role="status">Účetní údaj byl uložen.</p><?php endif; ?>
+  <?php if ($goPayRefunded): ?><p class="panel-error" role="alert">GoPay eviduje vrácení platby. Původní úhrada zůstává v historii objednávky; před expedicí zkontroluj vrácenou částku, účetní zápisy a další postup se zákazníkem.</p><?php endif; ?>
+  <?php if ($goPayDispatchBlocked && !$goPayRefunded): ?><p class="panel-error" role="alert">U této objednávky nemáme potvrzenou stále uhrazenou transakci GoPay. Před expedicí načti aktuální stav platby u brány.</p><?php endif; ?>
   <div class="panel-grid panel-order-detail">
     <div class="panel-workspace">
       <section class="panel-panel">
         <div class="panel-panel-head"><h2>Objednávka <?= $escape($order['order_number'] ?? '') ?></h2>
-          <span class="panel-order-state <?= $paid ? 'is-paid' : 'is-pending' ?>"><?= $escape($orderPaymentLabel($order['payment_status'] ?? '')) ?> · <?= $escape($orderFulfillmentLabel($order['status'] ?? '')) ?></span></div>
+          <span class="panel-order-state <?= $paymentHighlight ? 'is-paid' : 'is-pending' ?>"><?= $escape($paymentDisplayLabel) ?> · <?= $escape($orderFulfillmentLabel($order['status'] ?? '')) ?></span></div>
         <p class="panel-help">Přijato <?= $escape($order['created_at'] ?? '') ?></p>
         <div class="panel-order-lines">
           <?php foreach (($order['items'] ?? []) as $item): ?>
@@ -209,7 +219,7 @@ $sellerSettings ??= [];
                   preg_match('/^[0-9]{1,12}$/D', (string) ($shipping['pickup_code'] ?? '')) !== 1)): ?>
                 <p class="panel-help">U této starší objednávky nebylo výdejní místo ověřeno. Zadej správné ID; před podáním ho server ověří přes Zásilkovnu.</p>
               <?php endif; ?>
-              <?php if ($packetaReady && $packetaConfigured && $paid && ($order['fulfillment_source'] ?? 'own') !== 'external' && !in_array($order['status'], ['shipped', 'cancelled', 'completed', 'test'], true)): ?>
+              <?php if ($packetaReady && $packetaConfigured && $paid && !$goPayDispatchBlocked && ($order['fulfillment_source'] ?? 'own') !== 'external' && !in_array($order['status'], ['shipped', 'cancelled', 'completed', 'test'], true)): ?>
                 <?php
                 $recipientParts = preg_split('/\s+/u', trim((string) ($shipping['recipient'] ?? $shipping['name'] ?? ''))) ?: [];
                 $defaultSurname = count($recipientParts) > 1 ? array_pop($recipientParts) : '';
@@ -269,7 +279,7 @@ $sellerSettings ??= [];
                     <div><dt>Výdejní místo</dt><dd><?= $escape($carrierShipment['draft']['pickup_point'] ?? '') ?> · <?= $escape($carrierShipment['draft']['pickup_address'] ?? '') ?><br>ID <?= $escape($carrierShipment['draft']['pickup_code'] ?? '') ?> · PSČ <?= $escape($carrierShipment['draft']['postal_code'] ?? '') ?></dd></div>
                     <div><dt>Hmotnost</dt><dd><?= $escape($carrierShipment['draft']['weight_kg'] ?? '') ?> kg</dd></div>
                   </dl>
-                <?php else: ?><p><a class="panel-button" href="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id'] . '&carrier_csv=1') ?>">Stáhnout CSV pro GLS e-Balík</a></p><?php endif; ?>
+                <?php elseif (!$goPayDispatchBlocked): ?><p><a class="panel-button" href="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id'] . '&carrier_csv=1') ?>">Stáhnout CSV pro GLS e-Balík</a></p><?php endif; ?>
               <?php endif; ?>
               <?php if ($carrierBalik): ?>
                 <p class="panel-help">Vyhledávací mapa Balíkovny pouze vrací vybrané místo; sama nevytváří zásilku ani čárový kód. Údaje níže si připrav pro <a href="https://www.balikovna.cz/cs/web/guest/poslat-balik" target="_blank" rel="noopener noreferrer">podání na webu Balíkovny ↗</a>. Po vytvoření zásilky tam získáš štítek nebo podací kód. Tento e-shop bez podání u dopravce platný štítek nevytvoří.</p>
@@ -277,7 +287,7 @@ $sellerSettings ??= [];
                 <p class="panel-help">CSV má 17 sloupců bez hlavičky pro <strong>výchozí import GLS e-Balík</strong>. U ParcelShopu je ID místa v posledním sloupci; při doručení na adresu zůstává prázdný. Zkontroluj náhled importu, vygenerovaný štítek i cenu dopravy v portálu.</p>
               <?php endif; ?>
               <?php if ($carrierShipment === null || $carrierShipment['status'] === 'draft'): ?>
-                <?php if (!$paid || ($order['fulfillment_source'] ?? 'own') !== 'own' || in_array($order['status'], ['shipped', 'completed', 'cancelled', 'test'], true)): ?>
+                <?php if (!$paid || $goPayDispatchBlocked || ($order['fulfillment_source'] ?? 'own') !== 'own' || in_array($order['status'], ['shipped', 'completed', 'cancelled', 'test'], true)): ?>
                   <p class="panel-help">Podklady lze připravovat jen pro zaplacenou aktivní objednávku expedovanou obchodem. Externí dodavatel podává sám.</p>
                 <?php else: ?>
                   <?php
@@ -311,7 +321,7 @@ $sellerSettings ??= [];
                   </form>
                 <?php endif; ?>
               <?php endif; ?>
-              <?php if ($carrierShipment !== null && $carrierShipment['status'] === 'draft'): ?>
+              <?php if ($carrierShipment !== null && $carrierShipment['status'] === 'draft' && !$goPayDispatchBlocked): ?>
                 <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="carrier-register"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                   <label>Skutečné číslo zásilky od dopravce<input name="tracking_number" autocomplete="off" minlength="6" maxlength="50" required></label>
@@ -327,7 +337,7 @@ $sellerSettings ??= [];
     </div>
     <aside class="panel-panel panel-order-payment">
       <h2>Platba</h2>
-      <p class="panel-order-state <?= $paid ? 'is-paid' : 'is-pending' ?>"><?= $escape($orderPaymentLabel($order['payment_status'] ?? '')) ?></p>
+      <p class="panel-order-state <?= $paymentHighlight ? 'is-paid' : 'is-pending' ?>"><?= $escape($paymentDisplayLabel) ?></p>
       <dl class="panel-order-facts">
         <div><dt>Metoda</dt><dd><?= $bankTransfer ? 'Bankovní převod' : ($onlineGateway ? $gatewayName : $escape($order['payment_method'] ?? 'Neuvedeno')) ?></dd></div>
         <div><dt>Částka</dt><dd><strong><?= $orderMoney($order['total_czk'] ?? 0) ?></strong></dd></div>
@@ -398,6 +408,8 @@ $sellerSettings ??= [];
           <?php endif; ?>
           <?php if ($orderInvoice !== null): ?>
             <p>Faktura <strong><?= $escape($orderInvoice['document_number']) ?></strong> · <a href="<?= $escape($adminUrl . '?section=accounting&tab=invoices&invoice_id=' . (int) $orderInvoice['id']) ?>">detail, tisk a e-mail</a></p>
+          <?php elseif ($goPayDispatchBlocked): ?>
+            <p class="panel-help">Před vystavením faktury nejprve vyřeš vrácení platby nebo ověř u GoPay její aktuální stav.</p>
           <?php elseif ($orderInvoiceReady && \SimpleStore\Accounting\TaxEvidenceRepository::invoiceReady($sellerSettings)): ?>
             <h3>Vystavit fakturu</h3>
             <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=accounting') ?>">
@@ -416,7 +428,7 @@ $sellerSettings ??= [];
       <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Stav vyřízení objednávky byl uložen.</p><?php endif; ?>
       <h2>Vyřízení</h2>
       <p class="panel-order-state"><?= $escape($orderFulfillmentLabel($order['status'] ?? '')) ?></p>
-      <?php if (!in_array($order['status'], ['completed', 'cancelled', 'test'], true)): ?>
+      <?php if (!in_array($order['status'], ['completed', 'cancelled', 'test'], true) && !$goPayDispatchBlocked): ?>
       <?php $packetaMethod = in_array($shipping['method'] ?? '', ['zasilkovna_pickup', 'zasilkovna_home'], true);
       $fulfillmentSource = $order['fulfillment_source'] ?? 'own'; ?>
       <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
@@ -442,6 +454,8 @@ $sellerSettings ??= [];
         <p class="panel-help">Připraveno znamená zabalenou zásilku, případně potvrzení připravenosti od dodavatele. Odesláno nastav až po skutečném předání dopravci (u dodavatele po jeho potvrzení), dokončeno po doručení. <?= $packetaMethod ? 'Při expedici obchodem přes Zásilkovnu musí být místní zásilka vytvořená. Dodavatel může expedovat bez místního podání.' : '' ?> Dokončené a zrušené objednávky se zákazníkovi přesunou do historie.</p>
         <?php if ($paid && !$fulfillmentSourceReady): ?><p class="panel-help">Pro volbu externího dodavatele <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
       </form>
+      <?php elseif ($goPayDispatchBlocked): ?>
+        <p class="panel-help">Běžnou expedici po vrácení nebo neověřeném stavu platby nelze potvrdit. Pokud opravuješ omylem uložený stav, použij níže ovládání oprav s uvedením důvodu.</p>
       <?php endif; ?>
       <?php if (!$orderControlsReady): ?>
         <p class="panel-help">Pro opravy a mazání objednávek <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>

@@ -84,7 +84,7 @@ final class OrderMailQueue
         $lines[] = 'Celkem: ' . (int) $invoice['total_czk'] . ' Kč';
         $lines[] = match ($invoice['payment_method'] ?? 'bank_transfer') {
             'comgate' => 'Uhrazeno online přes Comgate.',
-            'gopay' => 'Uhrazeno online přes GoPay.',
+            'gopay' => 'Platba online přes GoPay byla při vystavení faktury potvrzená.',
             default => 'Uhrazeno bankovním převodem · VS: ' . ($invoice['variable_symbol'] ?? ''),
         };
         $lines[] = 'Nejsem plátce DPH.';

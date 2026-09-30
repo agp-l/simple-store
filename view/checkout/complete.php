@@ -11,24 +11,42 @@ $comgateOrder = ($order['payment_method'] ?? '') === 'comgate';
 $gopayOrder = ($order['payment_method'] ?? '') === 'gopay';
 $comgateStatus = is_array($comgateState ?? null) ? (string) ($comgateState['status'] ?? '') : '';
 $gopayStatus = is_array($gopayState ?? null) ? (string) ($gopayState['status'] ?? '') : '';
+$gopayRefund = $gopayOrder && in_array($gopayStatus, ['refunded', 'partially_refunded'], true)
+    ? $gopayStatus : '';
 $onlineOrder = $comgateOrder || $gopayOrder;
 $onlineProvider = $gopayOrder ? 'GoPay' : 'Comgate';
 $onlineStatus = $gopayOrder ? $gopayStatus : $comgateStatus;
 $onlineUncertain = in_array($onlineStatus, ['creating', 'uncertain'], true);
 $onlineAvailable = $gopayOrder ? ($gopayAvailable ?? false) : ($comgateAvailable ?? false);
 $onlineAction = $gopayOrder ? 'gopay_pay' : 'comgate_pay';
-$paymentMessage = $testOrder ? 'je testovací. Nic neplaťte; nebyly vytvořeny platební údaje ani QR kód.' :
-    ($paymentPaid ? 'je zaplacená. Děkujeme.' :
-    ($onlineOrder ? (in_array($onlineStatus, ['cancelled', 'canceled', 'timeouted', 'rejected'], true)
-        ? 'čeká na další pokus o online platbu přes ' . $onlineProvider . '.' :
-        'čeká na potvrzení online platby přes ' . $onlineProvider . '.') :
-    'čeká na úhradu. Zaplaťte bankovním převodem podle údajů níže.'));
+if ($testOrder) {
+    $paymentMessage = 'je testovací. Nic neplaťte; nebyly vytvořeny platební údaje ani QR kód.';
+} elseif ($gopayRefund === 'refunded') {
+    $paymentMessage = 'má u GoPay evidované úplné vrácení platby.';
+} elseif ($gopayRefund === 'partially_refunded') {
+    $paymentMessage = 'má u GoPay evidované částečné vrácení platby.';
+} elseif ($paymentPaid) {
+    $paymentMessage = 'je zaplacená. Děkujeme.';
+} elseif ($onlineOrder) {
+    $paymentMessage = in_array($onlineStatus, ['cancelled', 'canceled', 'timeouted', 'rejected'], true)
+        ? 'čeká na další pokus o online platbu přes ' . $onlineProvider . '.'
+        : 'čeká na potvrzení online platby přes ' . $onlineProvider . '.';
+} else {
+    $paymentMessage = 'čeká na úhradu. Zaplaťte bankovním převodem podle údajů níže.';
+}
 ?>
 <main class="wrap checkout-page checkout-complete" id="produkty">
-  <div class="checkout-heading"><span class="checkout-eyebrow"><?= $testOrder ? 'Místní test' : 'Objednávka přijata' ?></span><h1><?= $testOrder ? 'Testovací objednávka vytvořena' : 'Děkujeme za objednávku' ?></h1><p>Objednávka<?= $orderNumber !== '' ? ' č. ' . $checkoutEscape($orderNumber) : '' ?> <?= $paymentMessage ?></p></div>
+  <div class="checkout-heading"><span class="checkout-eyebrow"><?= $testOrder ? 'Místní test' : ($gopayRefund !== '' ? 'Stav platby' : 'Objednávka přijata') ?></span><h1><?= $testOrder ? 'Testovací objednávka vytvořena' : ($gopayRefund !== '' ? 'Stav objednávky' : 'Děkujeme za objednávku') ?></h1><p>Objednávka<?= $orderNumber !== '' ? ' č. ' . $checkoutEscape($orderNumber) : '' ?> <?= $paymentMessage ?></p></div>
   <?php if (($paymentNotice ?? '') !== ''): ?><p class="checkout-alert" role="alert"><?= $checkoutEscape($paymentNotice) ?></p><?php endif; ?>
   <div class="checkout-columns<?= $paymentPaid ? ' checkout-columns-paid' : '' ?>">
     <?php if ($testOrder): ?><section class="checkout-panel"><h2>Jen pro testování</h2><p>Objednávku najdete v administraci mezi testovacími objednávkami. K placení ani expedici neslouží.</p><?php if ($orderUrl !== ''): ?><label class="checkout-return-link">Odkaz na objednávku <input type="text" readonly value="<?= $checkoutEscape($orderUrl) ?>"></label><?php endif; ?><a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a></section>
+    <?php elseif ($gopayRefund !== ''): ?>
+    <section class="checkout-panel" aria-labelledby="checkout-refund-title">
+      <h2 id="checkout-refund-title"><?= $gopayRefund === 'refunded' ? 'Platba vrácena' : 'Částečné vrácení platby' ?></h2>
+      <p><?= $gopayRefund === 'refunded' ? 'GoPay eviduje vrácení původní platby.' : 'GoPay eviduje vrácení části původní platby.' ?> Souhrn níže ukazuje původní cenu objednávky. Další platbu neprovádějte bez domluvy s obchodem.</p>
+      <?php if (($invoiceUrl ?? '') !== ''): ?><p><a class="checkout-back" href="<?= $checkoutEscape($invoiceUrl) ?>">Zobrazit původní fakturu</a></p><?php endif; ?>
+      <a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a>
+    </section>
     <?php elseif ($gopayOrder && $gopayGatewayUrl !== '' && !$paymentPaid): ?>
     <section class="checkout-panel checkout-bank" aria-labelledby="checkout-gopay-title">
       <h2 id="checkout-gopay-title">Pokračovat k platbě GoPay</h2>
@@ -74,7 +92,7 @@ $paymentMessage = $testOrder ? 'je testovací. Nic neplaťte; nebyly vytvořeny 
   <section class="checkout-panel checkout-receipt"><h2>Souhrn nákupu</h2><dl>
     <div><dt>Produkty</dt><dd><?= $checkoutMoney((int) $order['subtotal_czk']) ?></dd></div>
     <div><dt><?= $checkoutEscape($order['shipping']['label'] ?? 'Doprava') ?></dt><dd><?= $checkoutMoney((int) $order['shipping_czk']) ?></dd></div>
-    <div><dt>Celkem</dt><dd><strong><?= $checkoutMoney((int) $order['total_czk']) ?></strong></dd></div>
+    <div><dt><?= $gopayRefund !== '' ? 'Původní cena objednávky' : 'Celkem' ?></dt><dd><strong><?= $checkoutMoney((int) $order['total_czk']) ?></strong></dd></div>
   </dl><?php if (!empty($order['shipping']['pickup_point'])): ?><p>Výdejní místo: <?= $checkoutEscape($order['shipping']['pickup_point']) ?>, <?= $checkoutEscape($order['shipping']['pickup_address'] ?? '') ?></p><?php endif; ?></section>
   <?php endif; ?>
 </main>

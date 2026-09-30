@@ -421,6 +421,11 @@ if ($rawId !== null) {
 
 if ($method === 'GET' && ($_GET['carrier_csv'] ?? null) === '1' && $order !== null) {
     try {
+        if (($order['payment_method'] ?? '') === 'gopay' &&
+            ($goPayState === null || ($goPayState['status'] ?? '') !== 'paid' ||
+            (string) ($goPayState['payment_id'] ?? '') !== (string) ($order['provider_reference'] ?? ''))) {
+            throw new InvalidArgumentException('Nejdřív ověř, že platba GoPay nebyla vrácena.');
+        }
         if ($carrierShipment === null || !is_array($carrierShipment['draft'] ?? null) ||
             !in_array($carrierShipment['method'], ['gls_pickup', 'gls_home'], true) ||
             !in_array($carrierShipment['status'], ['draft', 'registered'], true)) {

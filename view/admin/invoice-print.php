@@ -44,7 +44,7 @@ $buyer = $selectedInvoice['buyer'];
       'comgate' => 'online přes Comgate',
       'gopay' => 'online přes GoPay',
       default => 'bankovním převodem',
-  } ?>, uhrazeno<br>
+  } ?>, při vystavení evidováno jako uhrazené<br>
   <?php if (($selectedInvoice['payment_method'] ?? 'bank_transfer') === 'bank_transfer'): ?>
     Účet: <?= $printEscape($selectedInvoice['bank_account']) ?><br>
     Variabilní symbol: <?= $printEscape($selectedInvoice['variable_symbol'] ?? '') ?>

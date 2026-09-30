@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
 use MeekroDB;
+use SimpleStore\Checkout\GoPayPaidOrderGuard;
 use Throwable;
 
 /** Issued non-VAT invoices store their original seller, buyer and item snapshots. */
@@ -43,6 +44,10 @@ final class InvoiceRepository
             if ($order === null || !in_array($order['payment_method'], ['bank_transfer', 'comgate', 'gopay'], true) ||
                 $order['payment_status'] !== 'paid' || $order['status'] === 'test') {
                 throw new InvalidArgumentException('Fakturu lze vystavit jen k uhrazené skutečné objednávce.');
+            }
+            if ($order['payment_method'] === 'gopay') {
+                (new GoPayPaidOrderGuard($this->db))->assertPaid($orderId,
+                    (string) ($order['provider_reference'] ?? ''));
             }
             if ($this->db->queryFirstRow('SELECT id FROM shop_invoices WHERE order_id=%i LIMIT 1', $orderId) !== null) {
                 throw new InvalidArgumentException('Objednávka již fakturu má.');

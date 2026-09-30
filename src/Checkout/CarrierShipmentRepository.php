@@ -43,7 +43,8 @@ final class CarrierShipmentRepository
         $this->db->startTransaction();
         try {
             $order = $this->db->queryFirstRow(
-                'SELECT status, payment_status, payment_method, fulfillment_source, order_number, shipping_json
+                'SELECT status, payment_status, payment_method, provider_reference,
+                        fulfillment_source, order_number, shipping_json
                  FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId);
             $shipping = $order === null ? null : json_decode((string) $order['shipping_json'], true);
             if ($order === null || !is_array($shipping) ||
@@ -55,6 +56,10 @@ final class CarrierShipmentRepository
                 (string) $order['order_number'] !== $draft['order_number'] ||
                 (string) ($shipping['pickup_code'] ?? '') !== $draft['pickup_code']) {
                 throw new InvalidArgumentException('Objednávka se změnila. Obnov její detail a znovu ověř podklady.');
+            }
+            if ($order['payment_method'] === 'gopay') {
+                (new GoPayPaidOrderGuard($this->db))->assertPaid($orderId,
+                    (string) ($order['provider_reference'] ?? ''));
             }
             $row = $this->db->queryFirstRow(
                 'SELECT status FROM shop_carrier_shipments WHERE order_id=%i LIMIT 1 FOR UPDATE', $orderId);
@@ -88,7 +93,8 @@ final class CarrierShipmentRepository
         $this->db->startTransaction();
         try {
             $order = $this->db->queryFirstRow(
-                'SELECT status, payment_status, fulfillment_source FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE',
+                'SELECT status, payment_status, payment_method, provider_reference, fulfillment_source
+                 FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE',
                 $orderId);
             $row = $this->db->queryFirstRow(
                 'SELECT status FROM shop_carrier_shipments WHERE order_id=%i LIMIT 1 FOR UPDATE', $orderId);
@@ -97,6 +103,10 @@ final class CarrierShipmentRepository
                 ($order['fulfillment_source'] ?? 'own') !== 'own' ||
                 in_array($order['status'], ['cancelled', 'test'], true)) {
                 throw new InvalidArgumentException('Zásilku nelze zapsat. Obnov detail objednávky.');
+            }
+            if ($order['payment_method'] === 'gopay') {
+                (new GoPayPaidOrderGuard($this->db))->assertPaid($orderId,
+                    (string) ($order['provider_reference'] ?? ''));
             }
             $this->db->query('UPDATE shop_carrier_shipments SET status=%s, tracking_number=%s,
                 updated_by=%i WHERE order_id=%i AND status=%s',
