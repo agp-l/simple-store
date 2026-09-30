@@ -77,7 +77,7 @@ final class OrderRepository
         bool $testOrder = false,
         string $paymentMethod = 'bank_transfer'
     ): array {
-        if (!in_array($paymentMethod, ['bank_transfer', 'comgate'], true)) {
+        if (!in_array($paymentMethod, ['bank_transfer', 'comgate', 'gopay'], true)) {
             throw new InvalidArgumentException('Neplatný způsob platby.');
         }
         if (!$testOrder && $paymentMethod === 'bank_transfer' && $this->bank === null) {
@@ -191,9 +191,9 @@ final class OrderRepository
                 'shipping_json' => $shippingJson,
                 'payment_method' => $request['payment_method'],
                 'payment_status' => $testOrder ? 'test' : 'pending',
-                'payment_details_json' => $testOrder || $paymentMethod === 'comgate'
+                'payment_details_json' => $testOrder || $paymentMethod !== 'bank_transfer'
                     ? null : self::json($this->bank->snapshot(), 2048),
-                'payment_due_at' => $testOrder || $paymentMethod === 'comgate' ? null :
+                'payment_due_at' => $testOrder || $paymentMethod !== 'bank_transfer' ? null :
                     $now->modify('+' . $this->dueDays . ' days')->format('Y-m-d H:i:s'),
                 'payment_paid_at' => null,
                 'payment_verified_by' => null,

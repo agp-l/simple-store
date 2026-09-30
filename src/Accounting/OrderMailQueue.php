@@ -43,9 +43,10 @@ final class OrderMailQueue
             $lines[] = 'Číslo účtu: ' . ($bank['account_display'] ?? '');
             $lines[] = 'Variabilní symbol: ' . ($order['variable_symbol'] ?? '');
             $lines[] = 'Splatnost: ' . ($order['payment_due_at'] ?? '');
-        } elseif (($order['payment_method'] ?? '') === 'comgate') {
+        } elseif (in_array($order['payment_method'] ?? '', ['comgate', 'gopay'], true)) {
+            $gateway = $order['payment_method'] === 'gopay' ? 'GoPay' : 'Comgate';
             $lines[] = '';
-            $lines[] = 'Zvolená platba: online přes Comgate.';
+            $lines[] = 'Zvolená platba: online přes ' . $gateway . '.';
             $lines[] = 'O výsledku platby rozhoduje potvrzení brány.';
             if ($orderUrl !== '') {
                 if (filter_var($orderUrl, FILTER_VALIDATE_URL) === false ||
@@ -81,9 +82,11 @@ final class OrderMailQueue
         }
         $lines[] = 'Doprava: ' . (int) $invoice['shipping_czk'] . ' Kč';
         $lines[] = 'Celkem: ' . (int) $invoice['total_czk'] . ' Kč';
-        $lines[] = ($invoice['payment_method'] ?? 'bank_transfer') === 'comgate'
-            ? 'Uhrazeno online přes Comgate.'
-            : 'Uhrazeno bankovním převodem · VS: ' . ($invoice['variable_symbol'] ?? '');
+        $lines[] = match ($invoice['payment_method'] ?? 'bank_transfer') {
+            'comgate' => 'Uhrazeno online přes Comgate.',
+            'gopay' => 'Uhrazeno online přes GoPay.',
+            default => 'Uhrazeno bankovním převodem · VS: ' . ($invoice['variable_symbol'] ?? ''),
+        };
         $lines[] = 'Nejsem plátce DPH.';
         $subject = 'Faktura ' . $invoice['document_number'];
         $body = implode("\n", $lines) . "\n";

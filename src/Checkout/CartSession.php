@@ -123,7 +123,7 @@ final class CartSession
     /** Payment choice belongs to this checkout attempt and is never read from the order form. */
     public function setPaymentMethod(string $method): void
     {
-        if (!in_array($method, ['bank_transfer', 'comgate'], true)) {
+        if (!in_array($method, ['bank_transfer', 'comgate', 'gopay'], true)) {
             throw new InvalidArgumentException('Vyberte dostupný způsob platby.');
         }
         $this->access(static function (array &$session) use ($method): void {
@@ -269,7 +269,7 @@ final class CartSession
             if (!is_array($_SESSION['checkout_delivery'] ?? null)) {
                 $_SESSION['checkout_delivery'] = null;
             }
-            if (!in_array($_SESSION['checkout_payment_method'] ?? null, ['bank_transfer', 'comgate'], true)) {
+            if (!in_array($_SESSION['checkout_payment_method'] ?? null, ['bank_transfer', 'comgate', 'gopay'], true)) {
                 $_SESSION['checkout_payment_method'] = null;
             }
             return $operation($_SESSION);

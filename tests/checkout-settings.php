@@ -47,6 +47,8 @@ if ($fallback['bank_transfer']['account_display'] !== '' ||
     $fallback['ppl']['widget_key'] !== '' ||
     $fallback['comgate'] !== ['enabled' => false, 'test' => true, 'merchant' => '',
         'secret' => '', 'return_base_url' => ''] ||
+    $fallback['gopay'] !== ['enabled' => false, 'test' => true, 'goid' => '',
+        'client_id' => '', 'client_secret' => '', 'return_base_url' => ''] ||
     count($fallback['shipping_methods']) !== 9 ||
     $repo->load($fallback) !== $fallback) {
     throw new RuntimeException('Old private checkout settings did not receive the new defaults.');
@@ -65,6 +67,9 @@ $input = ['shipping_price' => array_map('strval', array_column(ShippingPolicy::d
     'comgate_enabled' => '1', 'comgate_test' => '1', 'comgate_merchant' => 'test-merchant',
     'comgate_secret' => 'comgate-test-secret',
     'comgate_return_base_url' => 'https://obchod.example/simple-store/',
+    'gopay_enabled' => '1', 'gopay_test' => '1', 'gopay_goid' => '1234567890',
+    'gopay_client_id' => 'sandbox-client', 'gopay_client_secret' => 'sandbox-secret',
+    'gopay_return_base_url' => 'https://obchod.example/simple-store/',
     'local_test_checkout' => '1'];
 $input['shipping_price'] = array_combine(array_keys(ShippingPolicy::defaults()),
     array_values($input['shipping_price']));
@@ -79,6 +84,9 @@ if ($loaded != $saved || $saved['bank_transfer']['iban'] !== $generated->snapsho
     $saved['comgate'] !== ['enabled' => true, 'test' => true,
         'merchant' => 'test-merchant', 'secret' => 'comgate-test-secret',
         'return_base_url' => 'https://obchod.example/simple-store'] ||
+    $saved['gopay'] !== ['enabled' => true, 'test' => true, 'goid' => '1234567890',
+        'client_id' => 'sandbox-client', 'client_secret' => 'sandbox-secret',
+        'return_base_url' => 'https://obchod.example/simple-store'] ||
     $saved['packeta']['sender'] !== 'Dobrodruzi') {
     throw new RuntimeException('Checkout settings were not validated and loaded from the database.');
 }
@@ -86,10 +94,11 @@ if ($saved['ppl']['widget_key'] !== 'public-ppl-key-123') {
     throw new RuntimeException('PPL widget key was not persisted.');
 }
 $withoutNewPassword = $repo->save(array_replace($input,
-    ['packeta_api_password' => '', 'comgate_secret' => '']),
+    ['packeta_api_password' => '', 'comgate_secret' => '', 'gopay_client_secret' => '']),
     '/simple-store/', $saved);
 if ($withoutNewPassword['packeta']['api_password'] !== 'private-test-password' ||
-    $withoutNewPassword['comgate']['secret'] !== 'comgate-test-secret') {
+    $withoutNewPassword['comgate']['secret'] !== 'comgate-test-secret' ||
+    $withoutNewPassword['gopay']['client_secret'] !== 'sandbox-secret') {
     throw new RuntimeException('Saving other settings erased an API secret.');
 }
 $cleared = $repo->save(array_replace($input, ['packeta_api_password' => '',
@@ -101,6 +110,12 @@ $comgateCleared = $repo->save(array_replace($input, ['comgate_secret' => '',
     'comgate_clear_secret' => '1']), '/simple-store/', $saved);
 if ($comgateCleared['comgate']['secret'] !== '' || !$comgateCleared['comgate']['enabled']) {
     throw new RuntimeException('Explicit Comgate secret removal changed the wrong setting.');
+}
+$gopayCleared = $repo->save(array_replace($input, ['gopay_client_secret' => '',
+    'gopay_clear_secret' => '1']), '/simple-store/', $saved);
+if ($gopayCleared['gopay']['client_secret'] !== '' || !$gopayCleared['gopay']['enabled'] ||
+    $gopayCleared['comgate']['secret'] !== 'comgate-test-secret') {
+    throw new RuntimeException('Explicit GoPay secret removal changed the wrong setting.');
 }
 $repo->save($input, '/simple-store/');
 foreach ([['shipping_price' => array_replace($input['shipping_price'], ['ppl_home' => '-1'])],
@@ -115,6 +130,16 @@ foreach ([['shipping_price' => array_replace($input['shipping_price'], ['ppl_hom
     ['comgate_return_base_url' => 'https://obchod.example/another-site'],
     ['comgate_return_base_url' => 'https://obchod.example/simple-store?redirect=evil'],
     ['comgate_return_base_url' => ''],
+    ['gopay_goid' => 'merchant-id'],
+    ['gopay_goid' => '123 456'],
+    ['gopay_client_id' => "bad\nclient"],
+    ['gopay_client_secret' => "bad\nsecret"],
+    ['gopay_return_base_url' => 'http://obchod.example/simple-store'],
+    ['gopay_return_base_url' => 'https://localhost/simple-store'],
+    ['gopay_return_base_url' => 'https://192.168.1.2/simple-store'],
+    ['gopay_return_base_url' => 'https://obchod.example/another-site'],
+    ['gopay_return_base_url' => 'https://obchod.example/simple-store?redirect=evil'],
+    ['gopay_return_base_url' => ''],
     ['ppl_widget_key' => 'invalid key with spaces']] as $change) {
     try {
         $repo->save(array_replace($input, $change), '/simple-store/');
@@ -136,6 +161,11 @@ $withoutGateway = $repo->save(array_replace($input,
     ['comgate_enabled' => '0', 'comgate_return_base_url' => '']), '/simple-store/');
 if ($withoutGateway['comgate']['enabled'] || $withoutGateway['comgate']['return_base_url'] !== '') {
     throw new RuntimeException('A disabled Comgate gateway must not require a return URL.');
+}
+$withoutGoPay = $repo->save(array_replace($input,
+    ['gopay_enabled' => '0', 'gopay_return_base_url' => '']), '/simple-store/');
+if ($withoutGoPay['gopay']['enabled'] || $withoutGoPay['gopay']['return_base_url'] !== '') {
+    throw new RuntimeException('A disabled GoPay gateway must not require a return URL.');
 }
 $db->json = json_encode(['shipping_methods' => ['home' => [
     'label' => 'Starý kurýr', 'price_czk' => 149, 'requires_address' => true,

@@ -27,6 +27,12 @@ final class CheckoutSettingsRepository
         ];
         $local['comgate'] = is_array($local['comgate'] ?? null)
             ? array_replace($comgateDefaults, $local['comgate']) : $comgateDefaults;
+        $gopayDefaults = $example['gopay'] ?? [
+            'enabled' => false, 'test' => true, 'goid' => '', 'client_id' => '',
+            'client_secret' => '', 'return_base_url' => '',
+        ];
+        $local['gopay'] = is_array($local['gopay'] ?? null)
+            ? array_replace($gopayDefaults, $local['gopay']) : $gopayDefaults;
         if (($local['bank_transfer']['account_display'] ?? '') === '' &&
             ($local['bank_transfer']['recipient'] ?? '') === '') {
             $local['bank_transfer'] = $example['bank_transfer'];
@@ -136,6 +142,30 @@ final class CheckoutSettingsRepository
         if ($comgateEnabled && $comgateReturnBaseUrl === '') {
             throw new InvalidArgumentException('Před zapnutím Comgate vyplň veřejnou HTTPS adresu obchodu.');
         }
+        $gopayGoid = self::value($input, 'gopay_goid');
+        if ($gopayGoid !== '' && preg_match('/^[0-9]{1,20}$/D', $gopayGoid) !== 1) {
+            throw new InvalidArgumentException('Identifikátor GoID musí obsahovat pouze číslice.');
+        }
+        $gopayClientId = self::value($input, 'gopay_client_id');
+        if ($gopayClientId !== '' && (strlen($gopayClientId) > 256 ||
+            preg_match('/^[\x21-\x7e]+$/D', $gopayClientId) !== 1)) {
+            throw new InvalidArgumentException('Client ID GoPay musí mít nejvýše 256 znaků bez mezer.');
+        }
+        $gopayClientSecret = self::value($input, 'gopay_client_secret');
+        if ($gopayClientSecret === '') {
+            $gopayClientSecret = ($input['gopay_clear_secret'] ?? null) === '1' ? '' :
+                (string) ($current['gopay']['client_secret'] ?? '');
+        }
+        if ($gopayClientSecret !== '' && (strlen($gopayClientSecret) > 256 ||
+            preg_match('/^[\x21-\x7e]+$/D', $gopayClientSecret) !== 1)) {
+            throw new InvalidArgumentException('Client secret GoPay musí mít nejvýše 256 znaků bez mezer.');
+        }
+        $gopayEnabled = ($input['gopay_enabled'] ?? null) === '1';
+        $gopayReturnBaseUrl = self::paymentReturnBaseUrl(
+            self::value($input, 'gopay_return_base_url'), $basePath, 'GoPay');
+        if ($gopayEnabled && $gopayReturnBaseUrl === '') {
+            throw new InvalidArgumentException('Před zapnutím GoPay vyplň veřejnou HTTPS adresu obchodu.');
+        }
         $settings = [
             'shipping_methods' => $shipping,
             'packeta' => ['api_key' => $packetaKey, 'api_password' => $password, 'sender' => $sender],
@@ -147,6 +177,14 @@ final class CheckoutSettingsRepository
                 'merchant' => $comgateMerchant,
                 'secret' => $comgateSecret,
                 'return_base_url' => $comgateReturnBaseUrl,
+            ],
+            'gopay' => [
+                'enabled' => $gopayEnabled,
+                'test' => ($input['gopay_test'] ?? null) === '1',
+                'goid' => $gopayGoid,
+                'client_id' => $gopayClientId,
+                'client_secret' => $gopayClientSecret,
+                'return_base_url' => $gopayReturnBaseUrl,
             ],
             'terms_url' => $termsUrl,
             'local_test_checkout' => ($input['local_test_checkout'] ?? null) === '1',
@@ -199,6 +237,11 @@ final class CheckoutSettingsRepository
 
     private static function comgateReturnBaseUrl(string $url, string $basePath): string
     {
+        return self::paymentReturnBaseUrl($url, $basePath, 'Comgate');
+    }
+
+    private static function paymentReturnBaseUrl(string $url, string $basePath, string $provider): string
+    {
         if ($url === '') return '';
         $parts = parse_url($url);
         $host = is_array($parts) ? ($parts['host'] ?? '') : '';
@@ -213,7 +256,7 @@ final class CheckoutSettingsRepository
             isset($parts['query']) || isset($parts['fragment']) ||
             !in_array($parts['path'] ?? '', [$expectedPath, $expectedPath . '/'], true)) {
             throw new InvalidArgumentException(
-                'Comgate vyžaduje veřejnou HTTPS adresu kořene obchodu bez parametrů, např. https://obchod.cz' .
+                $provider . ' vyžaduje veřejnou HTTPS adresu kořene obchodu bez parametrů, např. https://obchod.cz' .
                 rtrim($basePath, '/') . '.');
         }
         return rtrim($url, '/');

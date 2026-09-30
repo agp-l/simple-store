@@ -1,8 +1,10 @@
 <?php
 declare(strict_types=1);
 $form += ['comgate_enabled' => '0', 'comgate_test' => '1', 'comgate_merchant' => '',
-    'comgate_return_base_url' => ''];
+    'comgate_return_base_url' => '', 'gopay_enabled' => '0', 'gopay_test' => '1',
+    'gopay_goid' => '', 'gopay_client_id' => '', 'gopay_return_base_url' => ''];
 $comgateSecretConfigured ??= false;
+$gopaySecretConfigured ??= false;
 ?>
 <div class="panel-intro"><div><p class="panel-eyebrow">Pokladna</p><h1>Nastavení obchodu</h1>
   <p>Uprav dopravu, platby a stránku obchodních podmínek. Změny se použijí pro nové objednávky.</p></div></div>
@@ -44,6 +46,17 @@ $comgateSecretConfigured ??= false;
   <label>Tajný klíč API (secret)<input type="password" name="comgate_secret" value="" maxlength="256" autocomplete="new-password" placeholder="<?= $comgateSecretConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'Tajný klíč z klientského portálu' ?>"></label>
   <p class="panel-help">Prázdné pole ponechá uložený klíč beze změny. Klíč se znovu nezobrazuje ani se neposílá zákazníkovi. V Comgate nastav adresu pro PUSH oznámení na <code><?= $escape(($form['comgate_return_base_url'] !== '' ? rtrim($form['comgate_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/')) . '/comgate-callback.php') ?></code>. Návratové adresy pro zaplacenou, čekající a zrušenou platbu se předají API automaticky. Pro místní test přijímající oznámení použij veřejnou testovací doménu; Comgate se na localhost nedostane.</p>
   <?php if ($comgateSecretConfigured): ?><label class="panel-check"><input type="checkbox" name="comgate_clear_secret" value="1"> Odstranit uložený tajný klíč</label><?php endif; ?>
+  <h2>GoPay – online platba</h2>
+  <label class="panel-check"><input type="checkbox" name="gopay_enabled" value="1" <?= $form['gopay_enabled'] === '1' ? 'checked' : '' ?>> Nabízet platbu přes GoPay (po vyplnění přístupových údajů)</label>
+  <label class="panel-check"><input type="checkbox" name="gopay_test" value="1" <?= $form['gopay_test'] === '1' ? 'checked' : '' ?>> Testovací prostředí GoPay</label>
+  <p class="panel-help">Testovací prostředí vyžaduje testovací GoID, Client ID a Client secret přidělené GoPay. Před ostrým provozem ověř testovací objednávku a potom vyplň produkční údaje a vypni testovací režim.</p>
+  <label>GoID obchodníka<input name="gopay_goid" value="<?= $escape($form['gopay_goid']) ?>" maxlength="20" inputmode="numeric" pattern="[0-9]+" autocomplete="off" placeholder="Číselné GoID od GoPay"></label>
+  <label>Client ID<input name="gopay_client_id" value="<?= $escape($form['gopay_client_id']) ?>" maxlength="256" autocomplete="off" placeholder="Client ID od GoPay"></label>
+  <label>Veřejná HTTPS adresa obchodu<input type="url" name="gopay_return_base_url" value="<?= $escape($form['gopay_return_base_url']) ?>" maxlength="1000" autocomplete="off" placeholder="<?= $escape('https://obchod.cz' . rtrim($basePath, '/')) ?>"></label>
+  <p class="panel-help">Vlož kořenovou adresu této instalace bez posledního lomítka. Tuto adresu musí být možné otevřít z internetu přes HTTPS, také při testování.</p>
+  <label>Client secret<input type="password" name="gopay_client_secret" value="" maxlength="256" autocomplete="new-password" placeholder="<?= $gopaySecretConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'Client secret od GoPay' ?>"></label>
+  <p class="panel-help">Prázdné pole ponechá uložený klíč beze změny. Tajný klíč se zde znovu nevypisuje. GoPay zavolá URL oznámení <code><?= $escape(($form['gopay_return_base_url'] !== '' ? rtrim($form['gopay_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/')) . '/gopay-callback.php') ?></code> a zákazníka vrátí přes <code>gopay-return.php</code>. Místní localhost GoPay nemůže zavolat.</p>
+  <?php if ($gopaySecretConfigured): ?><label class="panel-check"><input type="checkbox" name="gopay_clear_secret" value="1"> Odstranit uložený Client secret</label><?php endif; ?>
   <h2>Obchodní podmínky</h2>
   <label>Adresa publikované stránky<input name="terms_url" value="<?= $escape($form['terms_url']) ?>" placeholder="<?= $escape($basePath . 'cs/obchodni-podminky') ?>"></label>
   <p class="panel-help">Můžeš je doplnit později. Až stránku vytvoříš a publikuješ, vlož sem její cestu začínající <?= $escape($basePath) ?>.</p>

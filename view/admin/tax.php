@@ -27,7 +27,7 @@ $balanceKind = ['receivable'=>'Pohledávka', 'liability'=>'Dluh', 'asset'=>'Maje
         <div><dt>Rozdíl</dt><dd><strong><?= $taxMoney($taxSummary['income'] - $taxSummary['expenses']) ?></strong></dd></div>
         <div><dt>Neuhrazené objednávky</dt><dd><?= count($taxReceivables) ?> v posledních 100</dd></div>
       </dl>
-      <p class="panel-help">Deník používá skutečné datum příjmu či výdaje zadané správcem. Potvrzení platby objednávky samo nevytváří bankovní pohyb: částku a datum zapiš podle bankovního výpisu na detailu objednávky. Souhrn nepředstavuje hotové daňové přiznání.</p>
+      <p class="panel-help">Deník používá datum příjmu či výdaje zadané správcem. Potvrzení platby objednávky samo nevytváří bankovní pohyb: převod zapiš na detailu objednávky podle výpisu, výplatu od Comgate nebo GoPay a související poplatky zde podle vyúčtování brány a bankovního výpisu. Souhrn nepředstavuje hotové daňové přiznání.</p>
       <?php if (!\SimpleStore\Accounting\TaxEvidenceRepository::invoiceReady($taxSettings)): ?><p class="panel-notice">Pro vystavování faktur doplň <a href="<?= $escape($taxUrl . '&tab=settings') ?>">údaje OSVČ</a>.</p><?php endif; ?>
     </section>
     <section class="panel-panel"><h2>Na konci roku zkontroluj</h2>
@@ -47,7 +47,7 @@ $balanceKind = ['receivable'=>'Pohledávka', 'liability'=>'Dluh', 'asset'=>'Maje
         <label>Doklad nebo bankovní reference<input name="reference" maxlength="100"></label>
         <button class="panel-button" type="submit">Zapsat pohyb</button>
       </form>
-      <p class="panel-help">Příjem z objednávky zapiš na jejím detailu, aby se propojil s číslem objednávky. Zde eviduj další příjmy, výdaje a převody mezi bankou a pokladnou jako nedaňové pohyby.</p>
+      <p class="panel-help">Příjem z objednávky placené převodem zapiš na jejím detailu, aby se propojil s číslem objednávky. Výplaty platebních bran, jejich poplatky a další skutečné pohyby zapiš zde podle vyúčtování; interní přesuny mezi bankou a pokladnou označ jako nedaňové.</p>
     </section>
     <?php if ($taxEditEntry !== null): ?>
       <section class="panel-panel"><h2>Opravit peněžní zápis #<?= (int) $taxEditEntry['id'] ?></h2>

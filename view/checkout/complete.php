@@ -8,12 +8,20 @@ $qrReady = str_starts_with($qrPayload, 'SPD*1.0*') && strlen($qrPayload) <= 512 
 $paymentPaid = ($order['payment_status'] ?? '') === 'paid';
 $testOrder = ($order['payment_method'] ?? '') === 'test';
 $comgateOrder = ($order['payment_method'] ?? '') === 'comgate';
+$gopayOrder = ($order['payment_method'] ?? '') === 'gopay';
 $comgateStatus = is_array($comgateState ?? null) ? (string) ($comgateState['status'] ?? '') : '';
-$comgateUncertain = in_array($comgateStatus, ['creating', 'uncertain'], true);
+$gopayStatus = is_array($gopayState ?? null) ? (string) ($gopayState['status'] ?? '') : '';
+$onlineOrder = $comgateOrder || $gopayOrder;
+$onlineProvider = $gopayOrder ? 'GoPay' : 'Comgate';
+$onlineStatus = $gopayOrder ? $gopayStatus : $comgateStatus;
+$onlineUncertain = in_array($onlineStatus, ['creating', 'uncertain'], true);
+$onlineAvailable = $gopayOrder ? ($gopayAvailable ?? false) : ($comgateAvailable ?? false);
+$onlineAction = $gopayOrder ? 'gopay_pay' : 'comgate_pay';
 $paymentMessage = $testOrder ? 'je testovací. Nic neplaťte; nebyly vytvořeny platební údaje ani QR kód.' :
     ($paymentPaid ? 'je zaplacená. Děkujeme.' :
-    ($comgateOrder ? (in_array($comgateStatus, ['cancelled', 'rejected'], true)
-        ? 'čeká na další pokus o online platbu přes Comgate.' : 'čeká na potvrzení online platby přes Comgate.') :
+    ($onlineOrder ? (in_array($onlineStatus, ['cancelled', 'canceled', 'timeouted', 'rejected'], true)
+        ? 'čeká na další pokus o online platbu přes ' . $onlineProvider . '.' :
+        'čeká na potvrzení online platby přes ' . $onlineProvider . '.') :
     'čeká na úhradu. Zaplaťte bankovním převodem podle údajů níže.'));
 ?>
 <main class="wrap checkout-page checkout-complete" id="produkty">
@@ -21,12 +29,24 @@ $paymentMessage = $testOrder ? 'je testovací. Nic neplaťte; nebyly vytvořeny 
   <?php if (($paymentNotice ?? '') !== ''): ?><p class="checkout-alert" role="alert"><?= $checkoutEscape($paymentNotice) ?></p><?php endif; ?>
   <div class="checkout-columns<?= $paymentPaid ? ' checkout-columns-paid' : '' ?>">
     <?php if ($testOrder): ?><section class="checkout-panel"><h2>Jen pro testování</h2><p>Objednávku najdete v administraci mezi testovacími objednávkami. K placení ani expedici neslouží.</p><?php if ($orderUrl !== ''): ?><label class="checkout-return-link">Odkaz na objednávku <input type="text" readonly value="<?= $checkoutEscape($orderUrl) ?>"></label><?php endif; ?><a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a></section>
-    <?php elseif ($comgateOrder && !$paymentPaid): ?>
-    <section class="checkout-panel checkout-bank" aria-labelledby="checkout-comgate-title">
-      <h2 id="checkout-comgate-title">Online platba Comgate</h2>
-      <p><?= $comgateStatus === 'cancelled' ? 'Platba byla zrušena nebo nebyla dokončena. Objednávku můžete zaplatit znovu.' : ($comgateStatus === 'rejected' ? 'Platební brána nepřijala poslední pokus o platbu. Můžete to zkusit znovu.' : ($comgateUncertain ? 'Stav posledního pokusu o platbu se ověřuje. Kontaktujte obchod, pokud se stav brzy neaktualizuje.' : 'Objednávka je uložená. Pokud jste platbu nedokončili, můžete se k ní vrátit.')) ?></p>
+    <?php elseif ($gopayOrder && $gopayGatewayUrl !== '' && !$paymentPaid): ?>
+    <section class="checkout-panel checkout-bank" aria-labelledby="checkout-gopay-title">
+      <h2 id="checkout-gopay-title">Pokračovat k platbě GoPay</h2>
+      <p>Objednávka je uložená a čeká na úhradu. Pokračujte na zabezpečenou platební bránu.</p>
       <p><strong>Částka k úhradě: <?= $checkoutMoney($paymentAmount) ?></strong></p>
-      <?php if (($comgateAvailable ?? false) && !$comgateUncertain): ?><form method="post" action="<?= $checkoutEscape($orderUrl) ?>"><input type="hidden" name="csrf" value="<?= $checkoutEscape($cartToken) ?>"><input type="hidden" name="action" value="comgate_pay"><button type="submit" class="checkout-primary">Přejít k online platbě</button></form><?php elseif (!($comgateAvailable ?? false)): ?><p class="checkout-fineprint">Online platba je dočasně nedostupná. Kontaktujte prosím obchod a neprovádějte další platbu bez ověření objednávky.</p><?php endif; ?>
+      <form id="checkout-gopay-handoff" method="post" action="<?= $checkoutEscape($gopayGatewayUrl) ?>">
+        <button type="submit" class="checkout-primary">Přejít na platební bránu GoPay</button>
+      </form>
+      <p class="checkout-fineprint">Pokud se brána neotevře automaticky, použijte tlačítko. Stav platby ověříme přímo u GoPay.</p>
+      <a class="checkout-back" href="<?= $checkoutEscape($orderUrl) ?>">Zpět na objednávku</a>
+    </section>
+    <script>document.getElementById('checkout-gopay-handoff').submit();</script>
+    <?php elseif ($onlineOrder && !$paymentPaid): ?>
+    <section class="checkout-panel checkout-bank" aria-labelledby="checkout-online-title">
+      <h2 id="checkout-online-title">Online platba <?= $checkoutEscape($onlineProvider) ?></h2>
+      <p><?= in_array($onlineStatus, ['cancelled', 'canceled', 'timeouted'], true) ? 'Platba byla zrušena nebo nebyla dokončena. Objednávku můžete zaplatit znovu.' : ($onlineStatus === 'rejected' ? 'Platební brána nepřijala poslední pokus o platbu. Můžete to zkusit znovu.' : ($onlineUncertain ? 'Stav posledního pokusu o platbu se ověřuje. Kontaktujte obchod, pokud se stav brzy neaktualizuje.' : 'Objednávka je uložená. Pokud jste platbu nedokončili, můžete se k ní vrátit.')) ?></p>
+      <p><strong>Částka k úhradě: <?= $checkoutMoney($paymentAmount) ?></strong></p>
+      <?php if ($onlineAvailable && !$onlineUncertain): ?><form method="post" action="<?= $checkoutEscape($orderUrl) ?>"><input type="hidden" name="csrf" value="<?= $checkoutEscape($cartToken) ?>"><input type="hidden" name="action" value="<?= $checkoutEscape($onlineAction) ?>"><button type="submit" class="checkout-primary">Přejít k online platbě</button></form><?php elseif (!$onlineAvailable): ?><p class="checkout-fineprint">Online platba je dočasně nedostupná. Kontaktujte prosím obchod a neprovádějte další platbu bez ověření objednávky.</p><?php endif; ?>
       <?php if ($orderUrl !== ''): ?><p class="checkout-fineprint">Uložte si odkaz na objednávku pro pozdější kontrolu stavu. Potvrzení o přijetí objednávky může přijít také e-mailem.</p><label class="checkout-return-link">Odkaz na objednávku <input type="text" readonly value="<?= $checkoutEscape($orderUrl) ?>"></label><?php endif; ?>
       <a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a>
     </section>

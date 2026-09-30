@@ -40,7 +40,7 @@ final class InvoiceRepository
         $this->db->startTransaction();
         try {
             $order = $this->db->queryFirstRow('SELECT * FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId);
-            if ($order === null || !in_array($order['payment_method'], ['bank_transfer', 'comgate'], true) ||
+            if ($order === null || !in_array($order['payment_method'], ['bank_transfer', 'comgate', 'gopay'], true) ||
                 $order['payment_status'] !== 'paid' || $order['status'] === 'test') {
                 throw new InvalidArgumentException('Fakturu lze vystavit jen k uhrazené skutečné objednávce.');
             }

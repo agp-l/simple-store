@@ -96,10 +96,14 @@ final class PageRenderer
         $step = (string) ($data['step'] ?? '');
         $bankConfigured = (bool) ($data['bankConfigured'] ?? false);
         $comgateConfigured = (bool) ($data['comgateConfigured'] ?? false);
+        $gopayConfigured = (bool) ($data['gopayConfigured'] ?? false);
         $paymentMethod = (string) ($data['paymentMethod'] ?? '');
         $paymentStepReady = (bool) ($data['paymentStepReady'] ?? false);
         $comgateAvailable = (bool) ($data['comgateAvailable'] ?? false);
         $comgateState = $data['comgateState'] ?? null;
+        $gopayAvailable = (bool) ($data['gopayAvailable'] ?? false);
+        $gopayState = $data['gopayState'] ?? null;
+        $gopayGatewayUrl = (string) ($data['gopayGatewayUrl'] ?? '');
         $paymentNotice = (string) ($data['paymentNotice'] ?? '');
         $shippingConfigured = (bool) ($data['shippingConfigured'] ?? false);
         $termsUrl = (string) ($data['termsUrl'] ?? '');

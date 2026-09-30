@@ -10,6 +10,7 @@ use SimpleStore\Checkout\OrderRepository;
 use SimpleStore\Checkout\LocalCheckoutPreview;
 use SimpleStore\Checkout\CheckoutSettingsRepository;
 use SimpleStore\Checkout\ComgatePaymentService;
+use SimpleStore\Checkout\GoPayPaymentService;
 use SimpleStore\Checkout\PacketaPickupPoint;
 use SimpleStore\Checkout\PplPickupPoint;
 use SimpleStore\Checkout\ShippingPolicy;
@@ -109,6 +110,14 @@ try {
             $candidate = new ComgatePaymentService($db, $comgateSettings);
             if ($candidate->installed()) $comgate = $candidate;
         }
+        $gopay = null;
+        $gopaySettings = $checkoutConfig['gopay'] ?? [];
+        if (is_array($gopaySettings) &&
+            ($gopaySettings['goid'] ?? '') !== '' && ($gopaySettings['client_id'] ?? '') !== '' &&
+            ($gopaySettings['client_secret'] ?? '') !== '') {
+            $candidate = new GoPayPaymentService($db, $gopaySettings);
+            if ($candidate->installed()) $gopay = $candidate;
+        }
         $localPreview = LocalCheckoutPreview::available($_SERVER, (bool) $site['debug'],
             ($checkoutConfig['local_test_checkout'] ?? true) === true);
         $customerId = null;
@@ -134,7 +143,7 @@ try {
             $shipping, $orders, $bank, $customerId, (string) ($checkoutConfig['terms_url'] ?? ''),
             $localPreview, $customerProfile, $customerAddresses, $packeta, $ppl, null, null,
             new OrderMailQueue($db), (string) ($taxSettings['mail_from'] ?? ''),
-            new InvoiceRepository($db), $comgate);
+            new InvoiceRepository($db), $comgate, $gopay);
         $controller->handle($route);
         exit;
     }

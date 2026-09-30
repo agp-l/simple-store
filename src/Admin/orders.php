@@ -7,6 +7,7 @@ use SimpleStore\Checkout\CarrierShipmentDraft;
 use SimpleStore\Checkout\CarrierShipmentRepository;
 use SimpleStore\Checkout\CheckoutSettingsRepository;
 use SimpleStore\Checkout\ComgatePaymentService;
+use SimpleStore\Checkout\GoPayPaymentService;
 use SimpleStore\Checkout\PacketaApiClient;
 use SimpleStore\Checkout\PacketaPickupPoint;
 use SimpleStore\Checkout\PacketaRejectedException;
@@ -37,6 +38,10 @@ $packetaConfigured = ($packetaCredentials['api_password'] ?? '') !== '' &&
 $comgateSettings = $checkoutSettings['comgate'] ?? [];
 $comgateConfigured = ($comgateSettings['merchant'] ?? '') !== '' &&
     ($comgateSettings['secret'] ?? '') !== '';
+$goPaySettings = $checkoutSettings['gopay'] ?? [];
+$goPayConfigured = (string) ($goPaySettings['goid'] ?? '') !== '' &&
+    ($goPaySettings['client_id'] ?? '') !== '' &&
+    ($goPaySettings['client_secret'] ?? '') !== '';
 $orderError = '';
 $order = null;
 $packetaShipment = null;
@@ -49,6 +54,7 @@ $orderControlsReady = $orderControls->installed();
 $orderEvents = [];
 $orderInvoice = null;
 $orderReceipt = null;
+$goPayState = null;
 $orderTaxReady = false;
 $orderInvoiceReady = false;
 $sellerSettings = [];
@@ -102,6 +108,29 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'comgate-refresh') {
             throw new InvalidArgumentException('Pro objednávku zatím není dostupná transakce Comgate.');
         }
         (new ComgatePaymentService($db, $checkoutSettings['comgate'] ?? []))->refresh($targetOrder);
+        header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&payment_checked=1', true, 303);
+        exit;
+    } catch (InvalidArgumentException $exception) {
+        http_response_code(422);
+        $orderError = $exception->getMessage();
+    } catch (RuntimeException $exception) {
+        http_response_code(503);
+        $orderError = $exception->getMessage();
+    }
+}
+
+if ($method === 'POST' && ($_POST['action'] ?? '') === 'gopay-refresh') {
+    $rawId = $_POST['id'] ?? null;
+    $id = is_string($rawId) && ctype_digit($rawId) ? filter_var($rawId, FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 1]]) : false;
+    try {
+        $targetOrder = $id === false || !$ordersReady ? null : $orders->findById($id);
+        if ($targetOrder === null || ($targetOrder['payment_method'] ?? '') !== 'gopay' ||
+            !is_string($targetOrder['provider_reference'] ?? null) ||
+            $targetOrder['provider_reference'] === '') {
+            throw new InvalidArgumentException('Pro objednávku zatím není dostupná transakce GoPay.');
+        }
+        (new GoPayPaymentService($db, $goPaySettings))->refresh($targetOrder);
         header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&payment_checked=1', true, 303);
         exit;
     } catch (InvalidArgumentException $exception) {
@@ -363,6 +392,14 @@ if ($rawId !== null) {
     }
     if ($order !== null && $orderControlsReady) {
         $orderEvents = $orderControls->eventsForOrder($id);
+    }
+    if ($order !== null && ($order['payment_method'] ?? '') === 'gopay' && $goPayConfigured) {
+        try {
+            $goPayState = (new GoPayPaymentService($db, $goPaySettings))->state($id);
+        } catch (RuntimeException $exception) {
+            // A malformed credential must not make unrelated order administration unavailable.
+            $goPayState = null;
+        }
     }
     if ($order !== null) {
         $taxEvidence = new TaxEvidenceRepository($db);

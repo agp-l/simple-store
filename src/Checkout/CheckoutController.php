@@ -43,7 +43,8 @@ final class CheckoutController
         private ?OrderMailQueue $mailQueue = null,
         private string $mailSender = '',
         private ?InvoiceRepository $invoices = null,
-        private ?ComgatePaymentService $comgate = null
+        private ?ComgatePaymentService $comgate = null,
+        private ?GoPayPaymentService $gopay = null
     ) {
         $this->cartUrl = $url->path('kosik');
         $this->checkoutUrl = $url->path('pokladna');
@@ -79,23 +80,30 @@ final class CheckoutController
             }
             $paymentNotice = '';
             $responseStatus = 200;
+            $gopayGatewayUrl = '';
             if ($method === 'POST') {
                 if (!$this->cart->validToken($_POST['csrf'] ?? null)) {
                     $paymentNotice = 'Platnost formuláře vypršela. Obnov stránku a zkus platbu znovu.';
                     $responseStatus = 403;
-                } elseif (($_POST['action'] ?? null) !== 'comgate_pay' ||
-                    ($order['payment_method'] ?? '') !== 'comgate' ||
+                } elseif (!in_array($_POST['action'] ?? null, ['comgate_pay', 'gopay_pay'], true) ||
+                    ($_POST['action'] === 'comgate_pay' ? 'comgate' : 'gopay') !== ($order['payment_method'] ?? '') ||
                     ($order['payment_status'] ?? '') === 'paid') {
                     $this->renderer->render('not-found', $this->shared, 404);
                     return;
-                } elseif ($this->comgate === null) {
+                } elseif (($_POST['action'] === 'comgate_pay' ? $this->comgate : $this->gopay) === null) {
                     $paymentNotice = 'Online platba je nyní nedostupná. Kontaktujte prosím obchod.';
                     $responseStatus = 503;
                 } else {
                     try {
-                        $this->redirect($this->comgate->initiate($order));
+                        $service = $_POST['action'] === 'comgate_pay' ? $this->comgate : $this->gopay;
+                        $gatewayUrl = $service->initiate($order);
+                        if ($_POST['action'] === 'gopay_pay') {
+                            $gopayGatewayUrl = $gatewayUrl;
+                        } else {
+                            $this->redirect($gatewayUrl);
+                        }
                     } catch (Throwable $error) {
-                        error_log('Comgate payment ' . (int) $order['id'] . ' initiation failed: ' . $error->getMessage());
+                        error_log('Online payment ' . (int) $order['id'] . ' initiation failed: ' . $error->getMessage());
                         $paymentNotice = 'Platební bránu se nepodařilo otevřít. Objednávka zůstala uložená a není zaplacená. Zkus to později nebo kontaktuj obchod.';
                         $responseStatus = 503;
                     }
@@ -108,8 +116,19 @@ final class CheckoutController
                     error_log('Comgate payment ' . (int) $order['id'] . ' status check failed: ' . $error->getMessage());
                     $paymentNotice = 'Stav platby se zatím nepodařilo ověřit. Obnov stránku později.';
                 }
+            } elseif (($order['payment_method'] ?? '') === 'gopay' &&
+                ($_GET['gopay_return'] ?? '') === '1' && $this->gopay !== null) {
+                try {
+                    $order = $this->gopay->refresh($order);
+                } catch (Throwable $error) {
+                    error_log('GoPay payment ' . (int) $order['id'] . ' status check failed: ' . $error->getMessage());
+                    $paymentNotice = 'Stav platby se zatím nepodařilo ověřit. Obnov stránku později.';
+                }
             }
             if ($method === 'GET' && ($_GET['comgate_error'] ?? '') === '1' && $paymentNotice === '') {
+                $paymentNotice = 'Platební bránu se nepodařilo otevřít. Objednávka zůstala uložená. Platbu lze zkusit znovu.';
+            }
+            if ($method === 'GET' && ($_GET['gopay_error'] ?? '') === '1' && $paymentNotice === '') {
                 $paymentNotice = 'Platební bránu se nepodařilo otevřít. Objednávka zůstala uložená. Platbu lze zkusit znovu.';
             }
             $invoice = $this->invoices?->byOrder((int) $order['id']);
@@ -122,20 +141,7 @@ final class CheckoutController
                 require __DIR__ . '/../../view/admin/invoice-print.php';
                 return;
             }
-            $this->renderer->render('complete', $this->shared + [
-                'title' => 'Objednávka ' . $order['order_number'] . ' — dobrodruzi.cz',
-                'privatePage' => true, 'compactHeader' => true, 'order' => $order,
-                'orderUrl' => $this->url->path('objednavka/' . $order['order_token']),
-                'invoiceUrl' => $invoice !== null ? $this->url->path(
-                    'objednavka/' . $order['order_token']) . '?invoice=1' : '',
-                'bankPayment' => ($order['payment_method'] ?? '') === 'bank_transfer'
-                    ? BankTransferPayment::fromOrder($order)->details($order) : [],
-                'comgateAvailable' => $this->comgate !== null && $this->comgate->canInitiate(),
-                'comgateState' => $this->comgate !== null && $this->comgate->installed()
-                    ? $this->comgate->state((int) $order['id']) : null,
-                'paymentNotice' => $paymentNotice,
-                'cartToken' => $this->cart->token(),
-            ], $responseStatus);
+            $this->renderOrder($order, $paymentNotice, $responseStatus, $gopayGatewayUrl, $invoice);
             return;
         }
         if (!in_array($name, ['cart', 'checkout'], true)) {
@@ -282,19 +288,26 @@ final class CheckoutController
         if (!$this->paymentAvailable($method)) {
             throw new InvalidArgumentException('Vybraný způsob platby není dostupný.');
         }
+        if ($method === 'gopay' && strlen((string) ($this->cart->state()['delivery']['email'] ?? '')) > 128) {
+            throw new InvalidArgumentException('Pro GoPay zkraťte e-mail na nejvýše 128 znaků. Údaj upravíte v dopravě.');
+        }
         $this->cart->setPaymentMethod($method);
     }
 
     private function selectedPaymentMethod(): string
     {
         $selected = $this->cart->state()['payment_method'];
-        return is_string($selected) ? $selected : ($this->bank !== null ? 'bank_transfer' : 'comgate');
+        if (is_string($selected)) return $selected;
+        if ($this->bank !== null) return 'bank_transfer';
+        if ($this->comgate !== null && $this->comgate->canInitiate()) return 'comgate';
+        return 'gopay';
     }
 
     private function paymentAvailable(string $method): bool
     {
         return $method === 'bank_transfer' && $this->bank !== null ||
-            $method === 'comgate' && $this->comgate !== null && $this->comgate->canInitiate();
+            $method === 'comgate' && $this->comgate !== null && $this->comgate->canInitiate() ||
+            $method === 'gopay' && $this->gopay !== null && $this->gopay->canInitiate();
     }
 
     private function placeOrder(): void
@@ -306,6 +319,10 @@ final class CheckoutController
         }
         $summary = $this->cartService->summary($this->cart);
         $delivery = $this->cart->state()['delivery'];
+        if (!$testOrder && $paymentMethod === 'gopay' && is_array($delivery) &&
+            strlen((string) ($delivery['email'] ?? '')) > 128) {
+            throw new InvalidArgumentException('Pro GoPay zkraťte e-mail na nejvýše 128 znaků. Údaj upravíte v dopravě.');
+        }
         $methodCode = is_array($delivery) ? (string) ($delivery['method'] ?? '') : '';
         $selected = ShippingPolicy::known($methodCode) ? $this->shipping->method($methodCode) : null;
         $price = $selected['price_czk'] ?? null;
@@ -351,8 +368,10 @@ final class CheckoutController
             $shipping, $price, $this->cart->checkoutKey(), $testOrder, $paymentMethod);
         if ($this->mailQueue !== null && !$testOrder) {
             try {
-                $orderUrl = $paymentMethod === 'comgate' && $this->comgate !== null
-                    ? $this->comgate->receiptUrl($order, $this->url->getLanguage()) : '';
+                $gateway = $paymentMethod === 'comgate' ? $this->comgate :
+                    ($paymentMethod === 'gopay' ? $this->gopay : null);
+                $orderUrl = $gateway !== null
+                    ? $gateway->receiptUrl($order, $this->url->getLanguage()) : '';
                 $messageId = $this->mailQueue->enqueueOrder($order, $orderUrl);
                 if ($messageId !== null && $this->mailSender !== '') {
                     $this->mailQueue->dispatch($messageId, $this->mailSender);
@@ -362,15 +381,50 @@ final class CheckoutController
             }
         }
         $this->cart->clear();
-        if (!$testOrder && $paymentMethod === 'comgate') {
+        if (!$testOrder && in_array($paymentMethod, ['comgate', 'gopay'], true)) {
             try {
-                $this->redirect($this->comgate->initiate($order));
+                $gateway = $paymentMethod === 'comgate' ? $this->comgate : $this->gopay;
+                $gatewayUrl = $gateway->initiate($order);
+                if ($paymentMethod === 'gopay') {
+                    $this->renderOrder($order, '', 200, $gatewayUrl);
+                    return;
+                }
+                $this->redirect($gatewayUrl);
             } catch (Throwable $error) {
-                error_log('Comgate payment ' . (int) $order['id'] . ' initiation failed: ' . $error->getMessage());
-                $this->redirect($this->url->path('objednavka/' . $order['order_token']) . '?comgate_error=1');
+                error_log($paymentMethod . ' payment ' . (int) $order['id'] . ' initiation failed: ' . $error->getMessage());
+                $this->redirect($this->url->path('objednavka/' . $order['order_token']) . '?' . $paymentMethod . '_error=1');
             }
         }
         $this->redirect($this->url->path('objednavka/' . $order['order_token']));
+    }
+
+    /** The GoPay hosted gateway is opened by a POST form, even on a repeated payment attempt. */
+    private function renderOrder(
+        array $order,
+        string $paymentNotice = '',
+        int $responseStatus = 200,
+        string $gopayGatewayUrl = '',
+        ?array $invoice = null
+    ): void {
+        if ($invoice === null) $invoice = $this->invoices?->byOrder((int) $order['id']);
+        $orderUrl = $this->url->path('objednavka/' . $order['order_token']);
+        $this->renderer->render('complete', array_replace($this->shared, [
+            'title' => 'Objednávka ' . $order['order_number'] . ' — dobrodruzi.cz',
+            'privatePage' => true, 'compactHeader' => true, 'order' => $order,
+            'cartCount' => $this->cart->count(),
+            'orderUrl' => $orderUrl,
+            'invoiceUrl' => $invoice !== null ? $orderUrl . '?invoice=1' : '',
+            'bankPayment' => ($order['payment_method'] ?? '') === 'bank_transfer'
+                ? BankTransferPayment::fromOrder($order)->details($order) : [],
+            'comgateAvailable' => $this->comgate !== null && $this->comgate->canInitiate(),
+            'comgateState' => $this->comgate !== null && $this->comgate->installed()
+                ? $this->comgate->state((int) $order['id']) : null,
+            'gopayAvailable' => $this->gopay !== null && $this->gopay->canInitiate(),
+            'gopayState' => $this->gopay !== null && $this->gopay->installed()
+                ? $this->gopay->state((int) $order['id']) : null,
+            'gopayGatewayUrl' => $gopayGatewayUrl,
+            'paymentNotice' => $paymentNotice, 'cartToken' => $this->cart->token(),
+        ]), $responseStatus);
     }
 
     private function render(string $step, string $error = '', int $status = 200): void
@@ -477,9 +531,11 @@ final class CheckoutController
             'balikovnaSelection' => $balikovnaSelection,
             'shippingConfigured' => $shippingConfigured, 'bankConfigured' => $this->bank !== null,
             'comgateConfigured' => $this->comgate !== null && $this->comgate->canInitiate(),
+            'gopayConfigured' => $this->gopay !== null && $this->gopay->canInitiate(),
             'paymentMethod' => $paymentMethod,
             'paymentStepReady' => $baseReady && ($testCheckout || $this->bank !== null ||
-                $this->comgate !== null && $this->comgate->canInitiate()),
+                $this->comgate !== null && $this->comgate->canInitiate() ||
+                $this->gopay !== null && $this->gopay->canInitiate()),
             'checkoutReady' => $ready, 'testCheckout' => $testCheckout, 'termsUrl' => $this->termsUrl,
             'error' => $error, 'step' => $step,
             'setupNotice' => !$installed ? 'Pro objednávky znovu importuj aktuální database/schema.sql.' : '',
@@ -490,7 +546,8 @@ final class CheckoutController
     private function testCheckout(): bool
     {
         return $this->allowLocalPreview && $this->bank === null &&
-            ($this->comgate === null || !$this->comgate->canInitiate());
+            ($this->comgate === null || !$this->comgate->canInitiate()) &&
+            ($this->gopay === null || !$this->gopay->canInitiate());
     }
 
     private static function field(string $name): string

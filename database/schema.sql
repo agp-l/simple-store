@@ -144,6 +144,27 @@ CREATE TABLE IF NOT EXISTS shop_comgate_payments (
   CONSTRAINT comgate_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- One durable attempt for every GoPay transaction. Pending and uncertain creation
+-- reservations prevent duplicate charges on parallel checkout requests.
+CREATE TABLE IF NOT EXISTS shop_gopay_payments (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  order_id BIGINT UNSIGNED NOT NULL,
+  status VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  goid VARCHAR(30) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  test_mode TINYINT(1) NOT NULL,
+  payment_id VARCHAR(30) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  redirect_url VARCHAR(2048) NULL,
+  return_token CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  last_error VARCHAR(500) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY gopay_payment_id (payment_id),
+  UNIQUE KEY gopay_return_token (return_token),
+  KEY gopay_order_attempt (order_id, id),
+  CONSTRAINT gopay_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- One reservation per order prevents two API calls for the same parcel.
 -- An uncertain network result must be reconciled in the Packeta client section.
 CREATE TABLE IF NOT EXISTS shop_packeta_shipments (

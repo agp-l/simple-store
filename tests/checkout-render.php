@@ -161,6 +161,18 @@ if (!str_contains($onlinePayment, 'name="payment_method" value="comgate"') ||
     str_contains($onlinePayment, 'name="payment_method" value="bank_transfer"')) {
     throw new RuntimeException('Comgate-only checkout must offer the online method.');
 }
+$gopayData = $bankData;
+$gopayData['bankConfigured'] = false;
+$gopayData['gopayConfigured'] = true;
+$gopayData['paymentMethod'] = 'gopay';
+ob_start();
+$renderer->render('payment', $gopayData);
+$gopayPayment = ob_get_clean();
+if (!str_contains($gopayPayment, 'name="payment_method" value="gopay"') ||
+    !str_contains($gopayPayment, 'Zkontrolovat objednávku') ||
+    str_contains($gopayPayment, 'name="payment_method" value="bank_transfer"')) {
+    throw new RuntimeException('GoPay-only checkout must offer a usable payment method.');
+}
 ob_start();
 $renderer->render('review', $bankData);
 $review = ob_get_clean();
@@ -190,6 +202,20 @@ $complete = ob_get_clean();
 if (!str_contains($complete, 'Testovací objednávka vytvořena') ||
     str_contains($complete, 'Naskenovat QR platbu') || str_contains($complete, 'Číslo účtu')) {
     throw new RuntimeException('Test order confirmation must never suggest a bank payment.');
+}
+$gopayData['order'] = ['payment_method' => 'gopay', 'order_number' => 'DB-26-1234567890',
+    'payment_status' => 'pending', 'total_czk' => 1099];
+$gopayData['gopayGatewayUrl'] = 'https://gw.sandbox.gopay.com/gw/v3/123?x=a&y=b';
+$gopayData['orderUrl'] = '/simple-store/cs/objednavka/private-token';
+ob_start();
+$renderer->render('complete', $gopayData);
+$gopayComplete = ob_get_clean();
+if (!str_contains($gopayComplete, 'id="checkout-gopay-handoff" method="post"') ||
+    !str_contains($gopayComplete, 'action="https://gw.sandbox.gopay.com/gw/v3/123?x=a&amp;y=b"') ||
+    !str_contains($gopayComplete, 'type="submit" class="checkout-primary"') ||
+    !str_contains($gopayComplete, "getElementById('checkout-gopay-handoff').submit()") ||
+    str_contains($gopayComplete, 'Naskenovat QR platbu')) {
+    throw new RuntimeException('GoPay must hand off by POST and keep an escaped manual fallback.');
 }
 
 echo "Checkout rendering tests passed.\n";

@@ -1,0 +1,15 @@
+# GoPay v obchodě
+
+GoPay používá oficiální balíček [`gopay/payments-sdk-php`](https://github.com/gopaycommunity/gopay-php-api), REST API V3 a přesměrovací platební bránu. Obchod sám nepřijímá údaje z platebních karet. Sada balíčků se instaluje přes `composer install`; je potřeba PHP 8.1+, rozšíření `curl`, `json` a `mysqli`. Pokud na hostingu Composer neběží, připrav závislosti na kompatibilním PHP mimo hosting a nahraj také výsledný adresář `vendor/`.
+
+## Zapojení
+
+1. V administraci otevři **Databáze → Aktualizovat SQL tabulky**. Vznikne `shop_gopay_payments` pro jednotlivé pokusy o platbu.
+2. Po registraci do GoPay získáš testovací **GoID, ClientID a ClientSecret**. V **Nastavení obchodu → GoPay** vyplň tyto hodnoty a veřejnou HTTPS adresu kořene instalace (například `https://obchod.cz` nebo `https://obchod.cz/simple-store`). Nech zapnutý testovací režim a zapni nabídku GoPay. API secret uchovávej mimo Git; administrace ho znovu nevypisuje.
+3. Zajisti dostupnost `https://obchod.cz/gopay-return.php` a `https://obchod.cz/gopay-callback.php` (s podsložkou, je-li součástí instalace). URL vytváří aplikace při založení platby. Ověř HTTPS a přístup z internetu i v testovacím režimu. Místní `localhost` nemůže přijímat oznámení GoPay.
+4. Vyzkoušej úspěšnou, zrušenou a nedokončenou platbu, návrat do obchodu i HTTP notifikaci. Přesměrovací brána se otevírá formulářem POST na adresu vrácenou GoPay. Samotný návrat ani notifikace neprokazují zaplacení: obchod se vždy znovu ptá GoPay na stav a kontroluje identifikátor transakce, GoID, číslo objednávky, částku v haléřích a měnu. Stav `PAID` potvrdí platbu; `CREATED`, `PAYMENT_METHOD_CHOSEN` a `AUTHORIZED` ji nepotvrzují.
+5. Podle [postupu GoPay](https://help.gopay.com/cs/tema/integrace-platebni-brany/technicky-popis-integrace-platebni-brany/obecny-postup-integrace) po testech požádej `integrace@gopay.cz` o kontrolu. GoPay pak vydá provozní údaje a provádí ještě kontrolu funkčnosti na produkci. Teprve s produkčními údaji vypni **Testovací režim**. Testovací transakce se tím nezmění na skutečné platby.
+
+GoPay [popisuje testovací prostředí a přístupové údaje](https://help.gopay.com/cs/tema/integrace-platebni-brany/technicky-popis-integrace-platebni-brany/provadeni-plateb-v-testovacim-prostredi), veřejný univerzální testovací GoID/ClientSecret však neposkytuje. Bez registrace lze spustit automatizované testy s falešnou odpovědí SDK (`tests/gopay-database.php` v CI), ale skutečnou testovací platbu u GoPay dokončíš až po získání vlastních údajů. Bankovní převod a Comgate zůstávají samostatné volby.
+
+Pokud bys tento CMS nabízel **dalším obchodníkům jako dodavatel e-shopového řešení**, GoPay má navíc [požadavky na integraci pro dodavatele](https://help.gopay.com/cs/tema/dodavatele-e-shopovych-reseni/pozadavky-na-integraci-pro-dodavatele), včetně prezentace jednotlivých dostupných metod už v košíku. Současná instalace nabízí souhrnnou volbu GoPay pro vlastní obchod; před distribucí CMS dalším obchodníkům je potřeba rozšířit výběr metod a projít zvláštní kontrolou dodavatele. Ani použití oficiálního SDK samo o sobě schválení integrace nezaručuje.

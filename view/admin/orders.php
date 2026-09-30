@@ -14,8 +14,23 @@ $orderFulfillmentLabel = static fn (mixed $status): string => match ($status) {
     'shipped' => 'Odesláno', 'completed' => 'Dokončeno', 'cancelled' => 'Zrušeno',
     'test' => 'Testovací', default => 'Nová objednávka',
 };
+$goPayStatusLabel = static fn (mixed $status): string => match ($status) {
+    'creating' => 'Založení platby probíhá',
+    'uncertain' => 'Založení platby je nejisté',
+    'created' => 'Čeká na platbu',
+    'payment_method_chosen' => 'Zvolen způsob platby',
+    'authorized' => 'Autorizováno, čeká na úhradu',
+    'paid' => 'Zaplaceno',
+    'canceled', 'cancelled' => 'Zrušeno',
+    'timeouted' => 'Vypršel čas',
+    'refunded' => 'Vráceno',
+    'partially_refunded' => 'Částečně vráceno',
+    'rejected' => 'Brána odmítla založení',
+    default => (string) $status,
+};
 $packetaReady ??= false;
 $comgateConfigured ??= false;
+$goPayConfigured ??= false;
 $packetaConfigured ??= false;
 $packetaCancelReady ??= false;
 $packetaShipment ??= null;
@@ -32,12 +47,13 @@ $deletedOrders ??= [];
 $orderTaxReady ??= false;
 $orderInvoiceReady ??= false;
 $orderReceipt ??= null;
+$goPayState ??= null;
 $orderInvoice ??= null;
 $sellerSettings ??= [];
 ?>
 <div class="panel-intro">
   <div><p class="panel-eyebrow">Prodej</p><h1>Objednávky</h1>
-    <p>Přehled přijatých objednávek. Převod potvrď po kontrole bankovního výpisu; Comgate se ověřuje přes platební bránu.</p></div>
+    <p>Přehled přijatých objednávek. Převod potvrď po kontrole bankovního výpisu; platby Comgate a GoPay ověřuj přímo u příslušné brány.</p></div>
   <?php if ($order !== null): ?><div class="panel-quick"><a href="<?= $escape($orderBaseUrl) ?>">← Všechny objednávky</a></div><?php endif; ?>
 </div>
 <?php if (!$ordersReady): ?>
@@ -51,10 +67,14 @@ $sellerSettings ??= [];
   $payment = is_array($order['payment_details'] ?? null) ? $order['payment_details'] : [];
   $bankTransfer = ($order['payment_method'] ?? '') === 'bank_transfer';
   $comgatePayment = ($order['payment_method'] ?? '') === 'comgate';
+  $goPayPayment = ($order['payment_method'] ?? '') === 'gopay';
+  $onlineGateway = $comgatePayment || $goPayPayment;
+  $gatewayName = $goPayPayment ? 'GoPay' : 'Comgate';
+  $gatewayConfigured = $goPayPayment ? $goPayConfigured : $comgateConfigured;
   $paid = ($order['payment_status'] ?? '') === 'paid';
   ?>
   <?php if (($_GET['paid'] ?? null) === '1' && $paid): ?><p class="panel-notice" role="status">Platba byla ručně označena jako přijatá.</p><?php endif; ?>
-  <?php if (($_GET['payment_checked'] ?? null) === '1'): ?><p class="panel-notice" role="status">Stav platby byl ověřen přímo u Comgate.</p><?php endif; ?>
+  <?php if (($_GET['payment_checked'] ?? null) === '1' && $onlineGateway): ?><p class="panel-notice" role="status">Stav platby byl ověřen přímo u <?= $gatewayName ?>.</p><?php endif; ?>
   <?php if (($_GET['corrected'] ?? null) === '1'): ?><p class="panel-notice" role="status">Stav byl opraven. Důvod a původní stav jsou v historii zásahů níže.</p><?php endif; ?>
   <?php if (($_GET['payment_corrected'] ?? null) === '1'): ?><p class="panel-notice" role="status">Potvrzení platby bylo opraveno. Původní údaj je v historii zásahů a v účetních podkladech.</p><?php endif; ?>
   <?php if (($_GET['tax_saved'] ?? null) === '1'): ?><p class="panel-notice" role="status">Účetní údaj byl uložen.</p><?php endif; ?>
@@ -182,7 +202,7 @@ $sellerSettings ??= [];
                   <p class="panel-help">Odeslané označení odesílatele: <strong><?= $escape(is_string($sentSender) ? $sentSender : '') ?></strong>. Zkopíruj přesné <strong>Označení</strong> ze čtvrtého sloupce <a href="https://client.packeta.com/senders/" target="_blank" rel="noopener noreferrer">seznamu odesílatelů Zásilkovny</a> do <a href="<?= $escape($adminUrl . '?section=settings') ?>">nastavení obchodu</a>. Potom zásilku podej znovu.</p>
                 <?php endif; ?>
               <?php endif; ?>
-              <?php if (!$paid): ?><p class="panel-help"><?= $comgatePayment ? 'Nejdřív vyčkej na potvrzení platby Comgate nebo načti aktuální stav brány.' : 'Nejdřív ověř platbu na bankovním výpisu a označ ji jako přijatou.' ?></p><?php endif; ?>
+              <?php if (!$paid): ?><p class="panel-help"><?= $onlineGateway ? 'Nejdřív vyčkej na potvrzení platby ' . $gatewayName . ' nebo načti aktuální stav brány.' : 'Nejdřív ověř platbu na bankovním výpisu a označ ji jako přijatou.' ?></p><?php endif; ?>
               <?php if (($order['fulfillment_source'] ?? 'own') === 'external'): ?><p class="panel-help">Expedici zajišťuje externí dodavatel. Stav objednávky nastav v panelu Vyřízení; zásilku tímto účtem Zásilkovny nepodávej.</p><?php endif; ?>
               <?php if (($order['fulfillment_source'] ?? 'own') !== 'external' && ($shipping['method'] ?? '') === 'zasilkovna_pickup' &&
                   (($shipping['pickup_verified'] ?? false) !== true ||
@@ -309,15 +329,22 @@ $sellerSettings ??= [];
       <h2>Platba</h2>
       <p class="panel-order-state <?= $paid ? 'is-paid' : 'is-pending' ?>"><?= $escape($orderPaymentLabel($order['payment_status'] ?? '')) ?></p>
       <dl class="panel-order-facts">
-        <div><dt>Metoda</dt><dd><?= $bankTransfer ? 'Bankovní převod' : ($comgatePayment ? 'Comgate' : $escape($order['payment_method'] ?? 'Neuvedeno')) ?></dd></div>
+        <div><dt>Metoda</dt><dd><?= $bankTransfer ? 'Bankovní převod' : ($onlineGateway ? $gatewayName : $escape($order['payment_method'] ?? 'Neuvedeno')) ?></dd></div>
         <div><dt>Částka</dt><dd><strong><?= $orderMoney($order['total_czk'] ?? 0) ?></strong></dd></div>
         <?php if ($bankTransfer): ?><div><dt>Variabilní symbol</dt><dd><strong><?= $escape($order['variable_symbol'] ?? 'Neuveden') ?></strong></dd></div><?php endif; ?>
-        <?php if ($comgatePayment && !empty($order['provider_reference'])): ?><div><dt>Transakce Comgate</dt><dd><strong><?= $escape($order['provider_reference']) ?></strong></dd></div><?php endif; ?>
-        <?php if ($paid && !empty($order['payment_paid_at'])): ?><div><dt><?= $comgatePayment ? 'Potvrzeno bránou' : 'Ověřeno' ?></dt><dd><?= $escape($order['payment_paid_at']) ?><?php if (!empty($order['payment_verified_by'])): ?> · správce #<?= (int) $order['payment_verified_by'] ?><?php endif; ?></dd></div><?php endif; ?>
+        <?php if ($onlineGateway && !empty($order['provider_reference'])): ?><div><dt>Transakce <?= $gatewayName ?></dt><dd><strong><?= $escape($order['provider_reference']) ?></strong></dd></div><?php endif; ?>
+        <?php if ($goPayPayment && $goPayState !== null): ?>
+          <div><dt>Stav u GoPay</dt><dd><?= $escape($goPayStatusLabel($goPayState['status'] ?? '')) ?><?= (int) ($goPayState['test_mode'] ?? 0) === 1 ? ' · testovací' : '' ?></dd></div>
+          <?php if (empty($order['provider_reference']) && !empty($goPayState['payment_id'])): ?><div><dt>ID platby GoPay</dt><dd><?= $escape($goPayState['payment_id']) ?></dd></div><?php endif; ?>
+        <?php endif; ?>
+        <?php if ($paid && !empty($order['payment_paid_at'])): ?><div><dt><?= $onlineGateway ? 'Potvrzeno bránou' : 'Ověřeno' ?></dt><dd><?= $escape($order['payment_paid_at']) ?><?php if (!empty($order['payment_verified_by'])): ?> · správce #<?= (int) $order['payment_verified_by'] ?><?php endif; ?></dd></div><?php endif; ?>
         <?php if ($bankTransfer): ?><div><dt>Účet</dt><dd><?= $escape($payment['account_display'] ?? 'Neuveden') ?></dd></div><?php endif; ?>
         <?php if ($bankTransfer && !empty($payment['iban'])): ?><div><dt>IBAN</dt><dd><?= $escape($payment['iban']) ?></dd></div><?php endif; ?>
         <?php if ($bankTransfer && !empty($order['payment_due_at'])): ?><div><dt>Splatnost</dt><dd><?= $escape($order['payment_due_at']) ?></dd></div><?php endif; ?>
       </dl>
+      <?php if ($goPayPayment && $goPayState !== null && in_array($goPayState['status'] ?? '', ['creating', 'uncertain'], true)): ?>
+        <p class="panel-error" role="alert">Založení platby má nejasný výsledek. Neopakuj požadavek naslepo; nejprve vyhledej transakci v administraci GoPay podle čísla objednávky.</p>
+      <?php endif; ?>
       <?php if ($bankTransfer && !$paid && ($order['payment_status'] ?? '') === 'pending' && !in_array($order['status'], ['cancelled', 'test'], true)): ?>
         <form class="panel-order-confirm" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
           <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
@@ -327,15 +354,15 @@ $sellerSettings ??= [];
           <button class="panel-button" type="submit">Označit platbu jako přijatou</button>
         </form>
       <?php endif; ?>
-      <?php if ($comgatePayment && !empty($order['provider_reference'])): ?>
-        <?php if ($comgateConfigured): ?>
+      <?php if ($onlineGateway && !empty($order['provider_reference'])): ?>
+        <?php if ($gatewayConfigured): ?>
           <form class="panel-order-confirm" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
             <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
-            <input type="hidden" name="action" value="comgate-refresh">
+            <input type="hidden" name="action" value="<?= $goPayPayment ? 'gopay-refresh' : 'comgate-refresh' ?>">
             <input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
-            <button class="panel-button" type="submit">Ověřit stav u Comgate</button>
+            <button class="panel-button" type="submit">Ověřit stav u <?= $gatewayName ?></button>
           </form>
-        <?php else: ?><p class="panel-help">Pro opětovné ověření stavu u Comgate vyplň přihlašovací údaje v <a href="<?= $escape($adminUrl . '?section=settings') ?>">nastavení obchodu</a>.</p><?php endif; ?>
+        <?php else: ?><p class="panel-help">Pro opětovné ověření stavu u <?= $gatewayName ?> vyplň přihlašovací údaje v <a href="<?= $escape($adminUrl . '?section=settings') ?>">nastavení obchodu</a>.</p><?php endif; ?>
       <?php endif; ?>
       <?php if ($bankTransfer && $paid && $orderControlsReady): ?>
         <section class="panel-order-controls" aria-label="Oprava platby">
@@ -350,8 +377,8 @@ $sellerSettings ??= [];
         </section>
       <?php endif; ?>
       <?php if ($bankTransfer): ?><p class="panel-help">Stav platby se z banky nenačítá automaticky.</p><?php endif; ?>
-      <?php if ($comgatePayment): ?><p class="panel-help">Stav platby potvrzuje Comgate. Samotný návrat zákazníka na web platbu nepotvrzuje.</p><?php endif; ?>
-      <?php if (($bankTransfer || $comgatePayment) && $paid && $orderTaxReady && ($order['status'] ?? '') !== 'test'): ?>
+      <?php if ($onlineGateway): ?><p class="panel-help">Stav platby potvrzuje <?= $gatewayName ?>. Samotný návrat zákazníka na web platbu nepotvrzuje.</p><?php endif; ?>
+      <?php if (($bankTransfer || $onlineGateway) && $paid && $orderTaxReady && ($order['status'] ?? '') !== 'test'): ?>
         <section class="panel-order-controls" aria-label="Daňová evidence objednávky">
           <h2>Daňová evidence a faktura</h2>
           <?php if ($bankTransfer): ?>
@@ -367,7 +394,7 @@ $sellerSettings ??= [];
             </form>
           <?php endif; ?>
           <?php else: ?>
-            <p class="panel-help">Comgate potvrdil úhradu zákazníka. Výplatu a poplatky zaznamenej v <a href="<?= $escape($adminUrl . '?section=accounting&tab=money') ?>">peněžním deníku</a> podle skutečného vyúčtování brány a bankovního výpisu; mohou zahrnovat více objednávek.</p>
+            <p class="panel-help"><?= $gatewayName ?> potvrdil úhradu zákazníka. Výplatu a poplatky zaznamenej v <a href="<?= $escape($adminUrl . '?section=accounting&tab=money') ?>">peněžním deníku</a> podle skutečného vyúčtování brány a bankovního výpisu; mohou zahrnovat více objednávek.</p>
           <?php endif; ?>
           <?php if ($orderInvoice !== null): ?>
             <p>Faktura <strong><?= $escape($orderInvoice['document_number']) ?></strong> · <a href="<?= $escape($adminUrl . '?section=accounting&tab=invoices&invoice_id=' . (int) $orderInvoice['id']) ?>">detail, tisk a e-mail</a></p>
@@ -471,7 +498,7 @@ $sellerSettings ??= [];
               <button class="panel-button" type="submit">Trvale smazat objednávku</button>
             </form>
           </section>
-        <?php else: ?><p class="panel-help"><?= $comgatePayment ? 'Transakce Comgate a její účetní návaznost musí zůstat dohledatelná. Objednávku lze zrušit, stav platby ověř u brány.' : 'Objednávka má navázanou zásilku nebo způsob platby, který vyžaduje další vyřešení. Podklady bez čísla lze odstranit spolu s objednávkou; vydaný doklad a podanou zásilku nelze odstranit tímto tlačítkem.' ?></p><?php endif; ?>
+        <?php else: ?><p class="panel-help"><?= $onlineGateway ? 'Transakce ' . $gatewayName . ' a její účetní návaznost musí zůstat dohledatelná. Objednávku lze zrušit, stav platby ověř u brány.' : 'Objednávka má navázanou zásilku nebo způsob platby, který vyžaduje další vyřešení. Podklady bez čísla lze odstranit spolu s objednávkou; vydaný doklad a podanou zásilku nelze odstranit tímto tlačítkem.' ?></p><?php endif; ?>
         <?php if ($orderEvents !== []): ?>
           <section class="panel-order-controls" aria-label="Historie zásahů">
             <h2>Historie zásahů správce</h2>

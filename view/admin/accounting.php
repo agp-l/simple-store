@@ -5,6 +5,7 @@ $accountingMoney = static fn (mixed $value): string => number_format((int) $valu
 $accountingPaymentLabel = static fn (mixed $method): string => match ($method) {
     'bank_transfer' => 'Bankovní převod',
     'comgate' => 'Comgate',
+    'gopay' => 'GoPay',
     'btcpay' => 'BTCPay',
     default => (string) $method,
 };
@@ -57,7 +58,7 @@ $taxYear ??= (int) date('Y');
       <div><dt>Doprava</dt><dd><?= $accountingMoney($accountingTotals['shipping_czk']) ?></dd></div>
       <div><dt>Celkem přijato</dt><dd><strong><?= $accountingMoney($accountingTotals['total_czk']) ?></strong></dd></div>
     </dl>
-    <p class="panel-help">Jde o podklady z objednávek, nikoli o faktury, daňové doklady nebo evidenci DPH. Datum je okamžik ručního potvrzení správcem, ne nutně den připsání peněz na bankovní účet. Zrušené zaplacené objednávky zůstávají v součtu; vratky systém zatím neeviduje a je potřeba je ověřit ve výpisu účtu.</p>
+    <p class="panel-help">Jde o podklady z objednávek, nikoli o faktury, daňové doklady nebo evidenci DPH. Datum je okamžik ručního potvrzení převodu správcem nebo ověření platby u brány; u online plateb se může lišit od dne vyplacení na bankovní účet. Zrušené zaplacené objednávky zůstávají v součtu; vratky systém zatím neeviduje a je potřeba je ověřit ve výpisu účtu a vyúčtování brány.</p>
   </section>
   <section class="panel-panel">
     <h2>Seznam plateb</h2>

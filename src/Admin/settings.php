@@ -29,10 +29,16 @@ $form = [
     'comgate_return_base_url' => $settings['comgate']['return_base_url'] ?? '',
     'comgate_enabled' => ($settings['comgate']['enabled'] ?? false) === true ? '1' : '0',
     'comgate_test' => ($settings['comgate']['test'] ?? true) === true ? '1' : '0',
+    'gopay_goid' => $settings['gopay']['goid'] ?? '',
+    'gopay_client_id' => $settings['gopay']['client_id'] ?? '',
+    'gopay_return_base_url' => $settings['gopay']['return_base_url'] ?? '',
+    'gopay_enabled' => ($settings['gopay']['enabled'] ?? false) === true ? '1' : '0',
+    'gopay_test' => ($settings['gopay']['test'] ?? true) === true ? '1' : '0',
     'local_test_checkout' => ($settings['local_test_checkout'] ?? true) === true ? '1' : '0',
 ];
 $packetaPasswordConfigured = ($settings['packeta']['api_password'] ?? '') !== '';
 $comgateSecretConfigured = ($settings['comgate']['secret'] ?? '') !== '';
+$gopaySecretConfigured = ($settings['gopay']['client_secret'] ?? '') !== '';
 foreach ($shippingCatalog as $code => $definition) {
     $saved = $settings['shipping_methods'][$code] ?? $definition;
     $form['shipping_price'][$code] = (string) ($saved['price_czk'] ?? $definition['price_czk']);
@@ -54,6 +60,8 @@ if ($method === 'POST') {
         $form['local_test_checkout'] = ($_POST['local_test_checkout'] ?? null) === '1' ? '1' : '0';
         $form['comgate_enabled'] = ($_POST['comgate_enabled'] ?? null) === '1' ? '1' : '0';
         $form['comgate_test'] = ($_POST['comgate_test'] ?? null) === '1' ? '1' : '0';
+        $form['gopay_enabled'] = ($_POST['gopay_enabled'] ?? null) === '1' ? '1' : '0';
+        $form['gopay_test'] = ($_POST['gopay_test'] ?? null) === '1' ? '1' : '0';
         foreach ($shippingCatalog as $code => $definition) {
             if (is_string($_POST['shipping_price'][$code] ?? null)) {
                 $form['shipping_price'][$code] = $_POST['shipping_price'][$code];

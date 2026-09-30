@@ -3,8 +3,11 @@
   "description": "A small PHP storefront with simple content management",
   "type": "project",
   "require": {
-    "php": "^8.0",
+    "php": "^8.1",
     "ext-mysqli": "*",
+    "ext-curl": "*",
+    "ext-json": "*",
+    "gopay/payments-sdk-php": "^1.9",
     "sergeytsalkov/meekrodb": "2.5.2"
   },
   "autoload": {
@@ -14,7 +17,7 @@
   },
   "config": {
     "platform": {
-      "php": "8.0.30"
+      "php": "8.1.0"
     }
   }
 }

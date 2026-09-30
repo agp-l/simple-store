@@ -40,8 +40,11 @@ $buyer = $selectedInvoice['buyer'];
 </div>
 <div class="columns"><p>Datum vystavení: <strong><?= $printEscape($selectedInvoice['issue_date']) ?></strong><br>
   Splatnost: <?= $printEscape($selectedInvoice['due_date']) ?></p>
-  <p>Platba: <?= ($selectedInvoice['payment_method'] ?? 'bank_transfer') === 'comgate'
-    ? 'online přes Comgate' : 'bankovním převodem' ?>, uhrazeno<br>
+  <p>Platba: <?= match ($selectedInvoice['payment_method'] ?? 'bank_transfer') {
+      'comgate' => 'online přes Comgate',
+      'gopay' => 'online přes GoPay',
+      default => 'bankovním převodem',
+  } ?>, uhrazeno<br>
   <?php if (($selectedInvoice['payment_method'] ?? 'bank_transfer') === 'bank_transfer'): ?>
     Účet: <?= $printEscape($selectedInvoice['bank_account']) ?><br>
     Variabilní symbol: <?= $printEscape($selectedInvoice['variable_symbol'] ?? '') ?>

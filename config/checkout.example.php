@@ -27,5 +27,13 @@ return [
         'secret' => '', // Never commit live credentials.
         'return_base_url' => '', // Public HTTPS installation root, e.g. https://obchod.cz/simple-store.
     ],
+    'gopay' => [
+        'enabled' => false, // Enable after entering your GoID and OAuth credentials in administration.
+        'test' => true, // Uses GoPay sandbox; issued sandbox credentials are still required.
+        'goid' => '',
+        'client_id' => '',
+        'client_secret' => '', // Never commit live credentials.
+        'return_base_url' => '', // Public HTTPS installation root, e.g. https://obchod.cz/simple-store.
+    ],
     'shipping_methods' => \SimpleStore\Checkout\ShippingPolicy::defaults(),
 ];
