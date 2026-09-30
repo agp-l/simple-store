@@ -143,8 +143,12 @@ final class OrderShippingRepository
                     throw new InvalidArgumentException('Údaje o doručení jsou příliš dlouhé.');
                 }
             }
-            $this->db->query('UPDATE shop_orders SET dispatch_shipping_json=%s WHERE id=%i',
-                $dispatchJson, $orderId);
+            if ($dispatchJson === null) {
+                $this->db->query('UPDATE shop_orders SET dispatch_shipping_json=NULL WHERE id=%i', $orderId);
+            } else {
+                $this->db->query('UPDATE shop_orders SET dispatch_shipping_json=%s WHERE id=%i',
+                    $dispatchJson, $orderId);
+            }
             $this->db->insert('shop_order_admin_events', [
                 'order_id' => $orderId, 'order_number' => (string) $row['order_number'],
                 'action' => 'shipping_changed', 'old_status' => $oldMethod, 'new_status' => $newMethod,

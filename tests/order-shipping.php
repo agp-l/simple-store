@@ -32,7 +32,9 @@ class MeekroDB
     }
     public function query(string $sql, mixed ...$arguments): array
     {
-        if (str_contains($sql, 'UPDATE shop_orders SET dispatch_shipping_json=')) {
+        if (str_contains($sql, 'UPDATE shop_orders SET dispatch_shipping_json=NULL')) {
+            $this->order['dispatch_shipping_json'] = null;
+        } elseif (str_contains($sql, 'UPDATE shop_orders SET dispatch_shipping_json=')) {
             $this->order['dispatch_shipping_json'] = $arguments[0];
         } elseif (str_contains($sql, 'DELETE FROM shop_carrier_shipments')) {
             $this->carrier = null;
