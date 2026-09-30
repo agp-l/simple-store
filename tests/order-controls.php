@@ -7,16 +7,19 @@ class MeekroDB
     public array $shipments = [];
     public array $cancelledShipments = [];
     public array $documents = [];
+    public array $carriers = [];
     public array $events = [];
+    public array $financialEvents = [];
     public bool $failEvent = false;
     public bool $failDelete = false;
     public bool $eventsInstalled = true;
+    public bool $financialInstalled = true;
     public bool $documentsInstalled = true;
     private ?array $snapshot = null;
 
     public function startTransaction(): void
     {
-        $this->snapshot = [$this->orders, $this->events];
+        $this->snapshot = [$this->orders, $this->events, $this->financialEvents, $this->carriers];
     }
 
     public function commit(): void
@@ -27,7 +30,7 @@ class MeekroDB
     public function rollback(): void
     {
         if ($this->snapshot !== null) {
-            [$this->orders, $this->events] = $this->snapshot;
+            [$this->orders, $this->events, $this->financialEvents, $this->carriers] = $this->snapshot;
             $this->snapshot = null;
         }
     }
@@ -37,6 +40,7 @@ class MeekroDB
         if (str_contains($sql, 'information_schema.TABLES')) {
             return match ($args[0]) {
                 'shop_order_admin_events' => $this->eventsInstalled ? 1 : 0,
+                'shop_order_financial_events' => $this->financialInstalled ? 1 : 0,
                 'shop_documents' => $this->documentsInstalled ? 1 : 0,
                 'shop_packeta_shipments', 'shop_packeta_cancelled_shipments',
                 'shop_carrier_shipments' => 1,
@@ -50,7 +54,7 @@ class MeekroDB
         if (str_contains($sql, 'FROM shop_packeta_shipments')) {
             return isset($this->shipments[$id]) ? 1 : 0;
         }
-        if (str_contains($sql, 'FROM shop_carrier_shipments')) return 0;
+        if (str_contains($sql, 'FROM shop_carrier_shipments')) return isset($this->carriers[$id]) ? 1 : 0;
         if (str_contains($sql, 'FROM shop_documents')) {
             return isset($this->documents[$id]) ? 1 : 0;
         }
@@ -61,6 +65,7 @@ class MeekroDB
     {
         if (str_contains($sql, 'FROM shop_orders')) return $this->orders[$args[0]] ?? null;
         if (str_contains($sql, 'FROM shop_packeta_shipments')) return $this->shipments[$args[0]] ?? null;
+        if (str_contains($sql, 'FROM shop_carrier_shipments')) return $this->carriers[$args[0]] ?? null;
         throw new RuntimeException('Unexpected row query.');
     }
 
@@ -84,14 +89,26 @@ class MeekroDB
             }
             return [];
         }
+        if (str_contains($sql, 'UPDATE shop_orders SET payment_status=')) {
+            [$target, $id, $old, $method] = $args;
+            if (($this->orders[$id]['payment_status'] ?? null) === $old &&
+                ($this->orders[$id]['payment_method'] ?? null) === $method) {
+                $this->orders[$id]['payment_status'] = $target;
+                $this->orders[$id]['payment_paid_at'] = null;
+                $this->orders[$id]['payment_verified_by'] = null;
+            }
+            return [];
+        }
+        if (str_contains($sql, 'DELETE FROM shop_carrier_shipments')) {
+            if (($this->carriers[$args[0]]['status'] ?? null) === $args[1]) unset($this->carriers[$args[0]]);
+            return [];
+        }
         if (str_contains($sql, 'DELETE FROM shop_orders')) {
             [$id, $number, $status, $method, $payment] = $args;
             $row = $this->orders[$id] ?? null;
             if ($this->failDelete) throw new RuntimeException('Foreign key deletion rejected.');
             if ($row !== null && $row['order_number'] === $number && $row['status'] === $status &&
-                $row['payment_method'] === $method && $row['payment_status'] === $payment &&
-                $row['payment_paid_at'] === null && $row['payment_verified_by'] === null &&
-                $row['provider_reference'] === null) {
+                $row['payment_method'] === $method && $row['payment_status'] === $payment) {
                 unset($this->orders[$id]);
             }
             return [];
@@ -101,9 +118,15 @@ class MeekroDB
 
     public function insert(string $table, array $values): void
     {
-        if ($table !== 'shop_order_admin_events') throw new RuntimeException('Unexpected table.');
+        if (!in_array($table, ['shop_order_admin_events', 'shop_order_financial_events'], true)) {
+            throw new RuntimeException('Unexpected table.');
+        }
         if ($this->failEvent) throw new RuntimeException('Audit storage failed.');
-        $this->events[] = $values + ['created_at' => '2026-09-30 00:00:00'];
+        if ($table === 'shop_order_admin_events') {
+            $this->events[] = $values + ['created_at' => '2026-09-30 00:00:00'];
+        } else {
+            $this->financialEvents[] = $values + ['created_at' => '2026-09-30 00:00:00'];
+        }
     }
 }
 
@@ -125,6 +148,7 @@ function orderRow(int $id, string $status, string $method = 'bank_transfer',
     string $payment = 'paid', string $source = 'own'): array
 {
     return ['id' => $id, 'order_number' => 'DB-20260930-' . $id, 'status' => $status,
+        'variable_symbol' => (string) (1000000000 + $id), 'total_czk' => 1790,
         'payment_method' => $method, 'payment_status' => $payment,
         'payment_paid_at' => null, 'payment_verified_by' => null,
         'provider_reference' => null, 'fulfillment_source' => $source,
@@ -199,15 +223,42 @@ $controls->deleteOrder(15, 'DB-20260930-15', 3, 'Nesprávně vytvořená neplace
 $db->orders[16] = orderRow(16, 'cancelled', 'bank_transfer', 'pending');
 $controls->deleteOrder(16, 'DB-20260930-16', 3, 'Duplicitní neplacená objednávka zákazníka.');
 
-foreach (['paid_order', 'shipment', 'cancelled_shipment', 'document', 'verified',
+$db->orders[18] = orderRow(18, 'completed');
+$db->orders[18]['payment_paid_at'] = '2026-09-29 12:00:00';
+$db->orders[18]['payment_verified_by'] = 3;
+$controls->correctPayment(18, 4, 'Chybné párování ve výpisu banky.', 'not_received');
+if ($db->orders[18]['payment_status'] !== 'pending' ||
+    $db->orders[18]['payment_paid_at'] !== null ||
+    $db->orders[18]['payment_verified_by'] !== null ||
+    $db->financialEvents[0]['payment_paid_at'] !== '2026-09-29 12:00:00' ||
+    $db->financialEvents[0]['variable_symbol'] !== $db->orders[18]['variable_symbol'] ||
+    $controls->eventsForOrder(18)[0]['action'] !== 'payment_correction') {
+    throw new RuntimeException('Payment correction lost the prior paid evidence.');
+}
+expectInvalid(static fn () => $controls->correctPayment(18, 4, $reason, 'not_received'),
+    'Accepted a second payment reset.');
+$db->carriers[18] = ['status' => 'draft'];
+$controls->deleteOrder(18, 'DB-20260930-18', 4, 'Test zaplacené objednávky po opravě.');
+if (isset($db->orders[18]) || isset($db->carriers[18]) ||
+    $db->financialEvents[1]['action'] !== 'order_deleted') {
+    throw new RuntimeException('Corrected bank order or its draft was not deleted with an audit trail.');
+}
+$db->orders[19] = orderRow(19, 'completed');
+$db->orders[19]['payment_paid_at'] = '2026-09-29 13:00:00';
+$controls->deleteOrder(19, 'DB-20260930-19', 4, 'Přímé smazání duplicitní platby.');
+if (isset($db->orders[19]) || $db->financialEvents[2]['payment_status_before'] !== 'paid' ||
+    $db->financialEvents[2]['total_czk'] !== 1790) {
+    throw new RuntimeException('Paid deletion lost its financial snapshot.');
+}
+
+foreach (['shipment', 'cancelled_shipment', 'document', 'carrier_registered',
     'not_genuine_test', 'wrong_number'] as $index => $case) {
     $id = $index + 100;
     $db->orders[$id] = orderRow($id, 'new', 'bank_transfer', 'pending');
-    if ($case === 'paid_order') $db->orders[$id]['payment_status'] = 'paid';
     if ($case === 'shipment') $db->shipments[$id] = ['status' => 'rejected'];
     if ($case === 'cancelled_shipment') $db->cancelledShipments[$id] = ['status' => 'cancelled'];
     if ($case === 'document') $db->documents[$id] = ['number' => '2026-001'];
-    if ($case === 'verified') $db->orders[$id]['payment_verified_by'] = 3;
+    if ($case === 'carrier_registered') $db->carriers[$id] = ['status' => 'registered'];
     if ($case === 'not_genuine_test') {
         $db->orders[$id]['payment_method'] = 'test';
         $db->orders[$id]['payment_status'] = 'test';
@@ -220,16 +271,22 @@ foreach (['paid_order', 'shipment', 'cancelled_shipment', 'document', 'verified'
 
 $db->orders[17] = orderRow(17, 'test', 'test', 'test');
 $eventCount = count($db->events);
+$financialCount = count($db->financialEvents);
 $db->failDelete = true;
 try {
     $controls->deleteOrder(17, 'DB-20260930-17', 3, 'Test objednávky, kterou nelze smazat.');
     throw new RuntimeException('A foreign key failure did not abort deletion.');
 } catch (RuntimeException $expected) {
-    if (!isset($db->orders[17]) || count($db->events) !== $eventCount) {
+    if (!isset($db->orders[17]) || count($db->events) !== $eventCount ||
+        count($db->financialEvents) !== $financialCount) {
         throw new RuntimeException('Foreign key failure retained an orphaned audit event.');
     }
 }
 $db->eventsInstalled = false;
 expectInvalid(static fn () => $controls->deleteOrder(17, 'DB-20260930-17', 3, $reason),
     'Missing audit table did not block deletion.');
+$db->eventsInstalled = true;
+$db->financialInstalled = false;
+expectInvalid(static fn () => $controls->correctPayment(19, 3, $reason, 'not_received'),
+    'Missing financial audit table did not block payment corrections.');
 echo "Order control tests passed.\n";

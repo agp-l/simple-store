@@ -34,6 +34,33 @@ final class AccountingRepository
         return true;
     }
 
+    public function financialEventsInstalled(): bool
+    {
+        return (int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
+            'shop_order_financial_events'
+        ) > 0;
+    }
+
+    /** Admin corrections by action date, independent of the currently paid orders. */
+    public function financialChanges(string $from, string $to, int $offset = 0, int $limit = 25): array
+    {
+        if ($offset < 0 || $offset > 1000000 || $limit < 1 || $limit > 100) {
+            throw new InvalidArgumentException('Neplatná stránka historie zásahů.');
+        }
+        if (!$this->financialEventsInstalled()) return ['items' => [], 'nextOffset' => null];
+        [$start, $end] = self::bounds($from, $to);
+        $rows = $this->db->query(
+            'SELECT order_number, variable_symbol, action, payment_status_before,
+                    payment_paid_at, payment_verified_by, total_czk, reason, admin_id, created_at
+             FROM shop_order_financial_events
+             WHERE created_at >= %s AND created_at < %s ORDER BY id DESC LIMIT %i OFFSET %i',
+            $start, $end, $limit + 1, $offset
+        );
+        return ['items' => array_slice($rows, 0, $limit),
+            'nextOffset' => count($rows) > $limit ? $offset + $limit : null];
+    }
+
     /** Dates refer to the UTC time when an administrator confirmed the payment. */
     public static function period(?string $from, ?string $to): array
     {

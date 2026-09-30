@@ -66,4 +66,22 @@ $accountingFulfillmentLabel = static fn (mixed $status): string => match ($statu
       <?php if ($accountingNextUrl !== ''): ?><a href="<?= $escape($accountingNextUrl) ?>">Další →</a><?php endif; ?>
     </nav>
   </section>
+  <section class="panel-panel">
+    <h2>Opravy plateb a smazané objednávky</h2>
+    <p class="panel-help">Zásahy za vybrané období podle data změny (UTC). Původní potvrzení platby a částka zůstávají dohledatelné i po smazání objednávky. Tato evidence nenahrazuje bankovní výpis ani doklad.</p>
+    <?php if (!$financialEventsReady): ?><p class="panel-help">Pro historii zásahů <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
+    <?php if ($financialEventsReady && $financialChanges['items'] === []): ?><p class="panel-empty">V tomto období nejsou finanční opravy ani smazání.</p><?php endif; ?>
+    <?php if ($financialEventsReady && $financialChanges['items'] !== []): ?>
+      <ul>
+        <?php foreach ($financialChanges['items'] as $change): ?>
+          <li><strong><?= $escape($change['order_number']) ?></strong> · <?= $escape($change['action'] === 'payment_correction' ? 'Oprava potvrzení platby' : 'Smazání objednávky') ?> · správce #<?= (int) $change['admin_id'] ?> · <?= $escape($change['created_at']) ?> UTC<br>
+            VS <?= $escape($change['variable_symbol'] ?? '—') ?> · <?= $accountingMoney($change['total_czk']) ?> · původní platba <?= $escape($change['payment_status_before'] === 'paid' ? 'potvrzená' : 'čekající') ?><?php if ($change['payment_paid_at'] !== null): ?> · původně potvrzeno <?= $escape($change['payment_paid_at']) ?> UTC<?php endif; ?><br><?= $escape($change['reason']) ?></li>
+        <?php endforeach; ?>
+      </ul>
+    <?php endif; ?>
+    <nav class="panel-quick panel-order-pages" aria-label="Stránky historie zásahů">
+      <?php if ($financialPreviousUrl !== ''): ?><a href="<?= $escape($financialPreviousUrl) ?>">← Předchozí zásahy</a><?php endif; ?>
+      <?php if ($financialNextUrl !== ''): ?><a href="<?= $escape($financialNextUrl) ?>">Další zásahy →</a><?php endif; ?>
+    </nav>
+  </section>
 <?php endif; ?>

@@ -6,9 +6,14 @@ class MeekroDB
     public array $rows = [];
     public ?string $missingColumn = null;
     public ?int $forcedCount = null;
+    public array $financialEvents = [];
+    public bool $financialInstalled = true;
 
     public function queryFirstField(string $sql, mixed ...$values): int
     {
+        if (str_contains($sql, 'information_schema.TABLES')) {
+            return $values[0] === 'shop_order_financial_events' && $this->financialInstalled ? 1 : 0;
+        }
         if (!str_contains($sql, 'information_schema.COLUMNS') || $values[0] !== 'shop_orders') {
             throw new RuntimeException('Unexpected installation probe.');
         }
@@ -31,6 +36,12 @@ class MeekroDB
 
     public function query(string $sql, mixed ...$values): array
     {
+        if (str_contains($sql, 'FROM shop_order_financial_events')) {
+            $rows = array_values(array_filter($this->financialEvents,
+                static fn (array $row): bool => $row['created_at'] >= $values[0] &&
+                    $row['created_at'] < $values[1]));
+            return array_slice(array_reverse($rows), $values[3], $values[2]);
+        }
         if (!str_contains($sql, 'FROM shop_orders') || !str_contains($sql, 'LIMIT %i OFFSET %i')) {
             throw new RuntimeException('Unexpected accounting page query.');
         }
@@ -87,6 +98,18 @@ $db->rows = [
 
 $repository = new AccountingRepository($db);
 if (!$repository->installed()) throw new RuntimeException('Existing checkout schema was not detected.');
+$db->financialEvents = [[
+    'order_number' => 'DB-1', 'variable_symbol' => '1234567890',
+    'action' => 'payment_correction', 'payment_status_before' => 'paid',
+    'payment_paid_at' => '2026-09-29 09:00:00', 'payment_verified_by' => 3,
+    'total_czk' => 1100, 'reason' => 'Chybně párovaný bankovní výpis.',
+    'admin_id' => 4, 'created_at' => '2026-09-30 11:00:00',
+]];
+if (!$repository->financialEventsInstalled() ||
+    count($repository->financialChanges('2026-09-29', '2026-09-30')['items']) !== 1 ||
+    $repository->financialChanges('2026-09-29', '2026-09-29')['items'] !== []) {
+    throw new RuntimeException('Accounting history does not filter corrections by action date.');
+}
 $db->missingColumn = 'payment_paid_at';
 if ($repository->installed()) throw new RuntimeException('Missing migration was not detected.');
 $db->missingColumn = null;
@@ -153,6 +176,10 @@ $accountingPage = ['items' => $firstPage['items'], 'nextOffset' => 1];
 $accountingPreviousUrl = '';
 $accountingNextUrl = $accountingBaseUrl . '&offset=1';
 $accountingExportUrl = $accountingBaseUrl . '&download=csv';
+$financialEventsReady = true;
+$financialChanges = $repository->financialChanges($accountingFrom, $accountingTo);
+$financialPreviousUrl = '';
+$financialNextUrl = '';
 set_error_handler(static function (int $severity, string $message): never {
     throw new RuntimeException('Accounting view emitted a warning: ' . $message);
 });

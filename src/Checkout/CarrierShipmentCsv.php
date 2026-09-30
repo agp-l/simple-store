@@ -6,29 +6,23 @@ namespace SimpleStore\Checkout;
 use InvalidArgumentException;
 use RuntimeException;
 
-/** UTF-8 CSV for a configurable import profile in the carrier's own portal. */
+/** Exact 17-column, headerless GLS e-Balík default import supplied by the portal. */
 final class CarrierShipmentCsv
 {
     public static function export(array $draft): string
     {
         $method = $draft['method'] ?? '';
-        if ($method === 'balikovna_pickup') {
-            // For the NB product, the destination field is the point ID, not its physical ZIP.
-            $columns = ['Reference', 'Typ zásilky', 'Příjmení/Název', 'PSČ', 'Obec',
-                'Mobil', 'E-mail', 'Hmotnost (kg)'];
-            $row = [$draft['order_number'], 'NB', $draft['recipient'],
-                $draft['pickup_code'], $draft['city'], $draft['phone'],
-                $draft['email'], $draft['weight_kg']];
-        } elseif (in_array($method, ['gls_pickup', 'gls_home'], true)) {
+        if (in_array($method, ['gls_pickup', 'gls_home'], true)) {
             $pickup = $method === 'gls_pickup';
-            $columns = ['Reference', 'Recipient name', 'Contact person', 'Street',
-                'City', 'ZIP', 'Country', 'Phone', 'Email', 'Weight (kg)', 'Services'];
-            $row = [$draft['order_number'], $pickup ? $draft['pickup_point'] : $draft['recipient'],
-                $draft['recipient'], $draft['street'], $draft['city'], $draft['postal_code'],
-                'CZ', $draft['phone'], $draft['email'], $draft['weight_kg'],
-                $pickup ? 'PSD(' . $draft['pickup_code'] . ')' : ''];
+            // 1 dimensions, 2 weight, 3-4 recipient, 5 company, 6-10 address,
+            // 11-12 contact, 13 note, 14 COD, 15 variable symbol,
+            // 16 insurance, 17 ParcelShopDelivery point ID.
+            $row = ['', $draft['weight_kg'], $draft['first_name'], $draft['surname'], '',
+                $draft['street'], $draft['house_number'], $draft['city'], $draft['postal_code'],
+                'CZ', $draft['phone'], $draft['email'], '', '',
+                $draft['variable_symbol'], '', $pickup ? $draft['pickup_code'] : ''];
         } else {
-            throw new InvalidArgumentException('Tuto dopravu nelze exportovat.');
+            throw new InvalidArgumentException('CSV je dostupné pouze pro GLS e-Balík.');
         }
 
         // Even saved snapshots must not create spreadsheet formulas when opened in Excel.
@@ -42,9 +36,9 @@ final class CarrierShipmentCsv
         $file = fopen('php://temp', 'w+');
         if ($file === false) throw new RuntimeException('Soubor CSV nelze připravit.');
         try {
-            fwrite($file, "\xEF\xBB\xBF");
-            fputcsv($file, $columns, ';', '"', '');
-            fputcsv($file, $row, ';', '"', '');
+            if (fputcsv($file, $row, ';', '"', '') === false) {
+                throw new RuntimeException('Soubor CSV nelze zapsat.');
+            }
             rewind($file);
             $data = stream_get_contents($file);
             if ($data === false) throw new RuntimeException('Soubor CSV nelze načíst.');

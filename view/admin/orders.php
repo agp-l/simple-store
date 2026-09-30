@@ -47,6 +47,7 @@ $deletedOrders ??= [];
   ?>
   <?php if (($_GET['paid'] ?? null) === '1' && $paid): ?><p class="panel-notice" role="status">Platba byla ručně označena jako přijatá.</p><?php endif; ?>
   <?php if (($_GET['corrected'] ?? null) === '1'): ?><p class="panel-notice" role="status">Stav byl opraven. Důvod a původní stav jsou v historii zásahů níže.</p><?php endif; ?>
+  <?php if (($_GET['payment_corrected'] ?? null) === '1'): ?><p class="panel-notice" role="status">Potvrzení platby bylo opraveno. Původní údaj je v historii zásahů a v účetních podkladech.</p><?php endif; ?>
   <div class="panel-grid panel-order-detail">
     <div class="panel-workspace">
       <section class="panel-panel">
@@ -218,24 +219,32 @@ $deletedOrders ??= [];
           </div>
         <?php endif; ?>
         <?php if (in_array($shipping['method'] ?? '', ['balikovna_pickup', 'gls_pickup', 'gls_home'], true)): ?>
+          <?php $carrierBalik = ($shipping['method'] ?? '') === 'balikovna_pickup'; ?>
           <div class="panel-packeta-dispatch">
-            <h3>Podklady k podání <?= ($shipping['method'] ?? '') === 'balikovna_pickup' ? 'Balíkovně' : 'GLS' ?></h3>
+            <h3>Podklady k podání <?= $carrierBalik ? 'Balíkovně' : 'GLS' ?></h3>
             <?php if (!$carrierReady): ?>
               <p class="panel-help">Nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
             <?php else: ?>
               <?php if (($_GET['carrier_saved'] ?? '') === 'carrier-save'): ?><p class="panel-notice" role="status">Podklady byly uloženy. Zásilka ještě nevznikla u dopravce.</p><?php endif; ?>
               <?php if (($_GET['carrier_saved'] ?? '') === 'carrier-register'): ?><p class="panel-notice" role="status">Číslo zásilky od dopravce bylo uloženo. Objednávku označ jako odeslanou až po předání balíku.</p><?php endif; ?>
               <?php if ($carrierShipment !== null): ?>
-                <p class="panel-order-state"><?= $carrierShipment['status'] === 'draft' ? 'Podklady připraveny · čeká na import' : 'Číslo dopravce zapsáno · čeká na předání' ?></p>
+                <p class="panel-order-state"><?= $carrierShipment['status'] === 'draft' ? ($carrierBalik ? 'Údaje připraveny · podání v Balíkovně čeká' : 'CSV připraveno · čeká na import') : 'Číslo dopravce zapsáno' ?></p>
                 <?php if ($carrierShipment['status'] === 'registered'): ?>
                   <dl class="panel-order-facts"><div><dt>Číslo zásilky</dt><dd><strong><?= $escape($carrierShipment['tracking_number']) ?></strong></dd></div></dl>
                 <?php endif; ?>
-                <p><a class="panel-button" href="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id'] . '&carrier_csv=1') ?>">Stáhnout CSV s podklady</a></p>
+                <?php if ($carrierBalik): ?>
+                  <dl class="panel-order-facts">
+                    <div><dt>Příjemce</dt><dd><?= $escape($carrierShipment['draft']['recipient'] ?? '') ?></dd></div>
+                    <div><dt>Kontakt</dt><dd><?= $escape($carrierShipment['draft']['email'] ?? '') ?> · <?= $escape($carrierShipment['draft']['phone'] ?? '') ?></dd></div>
+                    <div><dt>Výdejní místo</dt><dd><?= $escape($carrierShipment['draft']['pickup_point'] ?? '') ?> · <?= $escape($carrierShipment['draft']['pickup_address'] ?? '') ?><br>ID <?= $escape($carrierShipment['draft']['pickup_code'] ?? '') ?> · PSČ <?= $escape($carrierShipment['draft']['postal_code'] ?? '') ?></dd></div>
+                    <div><dt>Hmotnost</dt><dd><?= $escape($carrierShipment['draft']['weight_kg'] ?? '') ?> kg</dd></div>
+                  </dl>
+                <?php else: ?><p><a class="panel-button" href="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id'] . '&carrier_csv=1') ?>">Stáhnout CSV pro GLS e-Balík</a></p><?php endif; ?>
               <?php endif; ?>
-              <?php if (($shipping['method'] ?? '') === 'balikovna_pickup'): ?>
-                <p class="panel-help">CSV pro vlastní konfiguraci importu v Podání Online: vyber službu NB, jako cílové PSČ mapuj <strong>ID Balíkovny <?= $escape($shipping['pickup_code'] ?? '') ?></strong>, nikoliv fyzické PSČ <?= $escape($shipping['pickup_postal_code'] ?? '') ?>. Nastav odesílatele, podací místo a kódování UTF-8 v portálu. Před potvrzením zkontroluj náhled a přidělené číslo zásilky.</p>
+              <?php if ($carrierBalik): ?>
+                <p class="panel-help">Vyhledávací mapa Balíkovny pouze vrací vybrané místo; sama nevytváří zásilku ani čárový kód. Údaje níže si připrav pro <a href="https://www.balikovna.cz/cs/web/guest/poslat-balik" target="_blank" rel="noopener noreferrer">podání na webu Balíkovny ↗</a>. Po vytvoření zásilky tam získáš štítek nebo podací kód. Tento e-shop bez podání u dopravce platný štítek nevytvoří.</p>
               <?php else: ?>
-                <p class="panel-help">CSV pro vlastní profil importu GLS Online / MyGLS. U výdejního místa mapuj sloupec Services jako <strong>PSD(ID místa)</strong>, adresu místa jako doručovací adresu a zákazníka jako kontaktní osobu. Vyber v portálu svůj účet a zkontroluj náhled; číslo a štítek vzniknou až tam.</p>
+                <p class="panel-help">CSV má 17 sloupců bez hlavičky pro <strong>výchozí import GLS e-Balík</strong>. U ParcelShopu je ID místa v posledním sloupci; při doručení na adresu zůstává prázdný. Zkontroluj náhled importu, vygenerovaný štítek i cenu dopravy v portálu.</p>
               <?php endif; ?>
               <?php if ($carrierShipment === null || $carrierShipment['status'] === 'draft'): ?>
                 <?php if (!$paid || ($order['fulfillment_source'] ?? 'own') !== 'own' || in_array($order['status'], ['shipped', 'completed', 'cancelled', 'test'], true)): ?>
@@ -243,6 +252,7 @@ $deletedOrders ??= [];
                 <?php else: ?>
                   <?php
                     $addressDefaults = \SimpleStore\Checkout\CarrierShipmentDraft::addressDefaults($shipping);
+                    $nameDefaults = \SimpleStore\Checkout\CarrierShipmentDraft::nameDefaults((string) ($shipping['recipient'] ?? $shipping['name'] ?? ''));
                     $savedDraft = is_array($carrierShipment['draft'] ?? null) ? $carrierShipment['draft'] : [];
                     $enteredDraft = ($method ?? 'GET') === 'POST' && $carrierAction === 'carrier-save' &&
                         (string) ($_POST['id'] ?? '') === (string) $order['id'] ? $_POST : [];
@@ -256,13 +266,14 @@ $deletedOrders ??= [];
                     <label>E-mail<input type="email" name="email" value="<?= $escape($draftValue('email', (string) ($order['customer_email'] ?? ''))) ?>" maxlength="254" required></label>
                     <label>Telefon<input type="tel" name="phone" value="<?= $escape($draftValue('phone', (string) ($shipping['phone'] ?? ''))) ?>" maxlength="40" required></label>
                     <label>Hmotnost zabalené zásilky v kg<input name="weight_kg" inputmode="decimal" value="<?= $escape($draftValue('weight_kg', '1')) ?>" required></label>
-                    <?php if (($shipping['method'] ?? '') === 'balikovna_pickup'): ?>
-                      <?php $pickupCity = ''; if (preg_match('/\b[0-9]{3}\s?[0-9]{2}\s+([^,]+)$/u', (string) ($shipping['pickup_address'] ?? ''), $cityMatch)) $pickupCity = trim($cityMatch[1]); ?>
-                      <label>Obec vybrané Balíkovny<input name="city" value="<?= $escape($draftValue('city', $pickupCity)) ?>" maxlength="120" required></label>
-                      <p class="panel-help">Vybrané místo: <?= $escape($shipping['pickup_point'] ?? '') ?> · <?= $escape($shipping['pickup_address'] ?? '') ?>. Ověř obec podle mapy.</p>
+                    <?php if ($carrierBalik): ?>
+                      <p class="panel-help">Vybrané místo: <?= $escape($shipping['pickup_point'] ?? '') ?> · <?= $escape($shipping['pickup_address'] ?? '') ?> · ID <?= $escape($shipping['pickup_code'] ?? '') ?>.</p>
                     <?php else: ?>
-                      <p class="panel-help"><?= ($shipping['method'] ?? '') === 'gls_pickup' ? 'Adresu místa GLS zkontroluj podle vybraného bodu v objednávce.' : 'Zkontroluj adresu příjemce.' ?></p>
-                      <label>Ulice a číslo<input name="street" value="<?= $escape($draftValue('street', $addressDefaults['street'])) ?>" maxlength="120" required></label>
+                      <label>Jméno příjemce<input name="first_name" value="<?= $escape($draftValue('first_name', $nameDefaults['first_name'])) ?>" maxlength="70" required></label>
+                      <label>Příjmení příjemce<input name="surname" value="<?= $escape($draftValue('surname', $nameDefaults['surname'])) ?>" maxlength="70" required></label>
+                      <p class="panel-help"><?= ($shipping['method'] ?? '') === 'gls_pickup' ? 'Adresu místa GLS zkontroluj podle vybraného bodu v objednávce.' : 'Zkontroluj adresu příjemce.' ?> Jméno a číslo domu jsme rozdělili automaticky; před exportem je ověř.</p>
+                      <label>Ulice<input name="street" value="<?= $escape($draftValue('street', $addressDefaults['street'])) ?>" maxlength="120" required></label>
+                      <label>Číslo domu<input name="house_number" value="<?= $escape($draftValue('house_number', $addressDefaults['house_number'])) ?>" maxlength="30" required></label>
                       <label>Obec<input name="city" value="<?= $escape($draftValue('city', $addressDefaults['city'])) ?>" maxlength="120" required></label>
                       <label>PSČ<input name="postal_code" value="<?= $escape($draftValue('postal_code', $addressDefaults['postal_code'])) ?>" maxlength="12" required></label>
                     <?php endif; ?>
@@ -274,11 +285,11 @@ $deletedOrders ??= [];
                 <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="carrier-register"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                   <label>Skutečné číslo zásilky od dopravce<input name="tracking_number" autocomplete="off" minlength="6" maxlength="50" required></label>
-                  <label class="panel-check"><input type="checkbox" name="carrier_confirmed" value="1" required> Zkontroloval/a jsem import v portálu dopravce a opisuji číslo skutečně vytvořené zásilky.</label>
+                  <label class="panel-check"><input type="checkbox" name="carrier_confirmed" value="1" required> Zkontroloval/a jsem podání u dopravce a opisuji číslo skutečně vytvořené zásilky.</label>
                   <button class="panel-button" type="submit">Zapsat číslo dopravce</button>
                 </form>
               <?php endif; ?>
-              <p class="panel-help">CSV a místní číslo nenahrazují štítek ani potvrzení podání. Balík označ až štítkem nebo kódem od dopravce. Stav vyřízení objednávky nastav zvlášť po skutečném předání.</p>
+              <p class="panel-help">Uložení podkladů ani čísla v e-shopu nenahrazuje podání u dopravce. Balík označ jeho štítkem nebo kódem. Stav vyřízení objednávky nastav zvlášť po skutečném předání.</p>
             <?php endif; ?>
           </div>
         <?php endif; ?>
@@ -304,6 +315,18 @@ $deletedOrders ??= [];
           <label><input type="checkbox" name="bank_checked" value="1" required> Ověřil/a jsem na bankovním výpisu částku a variabilní symbol této objednávky.</label>
           <button class="panel-button" type="submit">Označit platbu jako přijatou</button>
         </form>
+      <?php endif; ?>
+      <?php if ($bankTransfer && $paid && $orderControlsReady): ?>
+        <section class="panel-order-controls" aria-label="Oprava platby">
+          <h2>Opravit chybně potvrzenou platbu</h2>
+          <p class="panel-help">Vrátí stav na „Čeká na platbu“. Bankovní pohyb se tím nemění. Původní potvrzení, částka a důvod zůstanou v účetních zásazích.</p>
+          <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+            <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="correct-order-payment"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="confirmation" value="not_received">
+            <label>Důvod opravy <textarea name="reason" minlength="8" maxlength="190" required placeholder="Například platba označena jako přijatá omylem"></textarea></label>
+            <label class="panel-check"><input type="checkbox" name="verified" value="1" required> Ověřil/a jsem výpis a opravuji ručně potvrzený stav platby.</label>
+            <button class="panel-button" type="submit">Vrátit platbu na čekající</button>
+          </form>
+        </section>
       <?php endif; ?>
       <p class="panel-help">Stav platby se z banky nenačítá automaticky.</p>
       <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Stav vyřízení objednávky byl uložen.</p><?php endif; ?>
@@ -377,26 +400,27 @@ $deletedOrders ??= [];
           </section>
         <?php endif; ?>
         <?php $canOfferDeletion = ($order['status'] === 'test' && ($order['payment_method'] ?? '') === 'test' && ($order['payment_status'] ?? '') === 'test') ||
-            ($bankTransfer && !$paid && ($order['payment_status'] ?? '') === 'pending' && in_array($order['status'], ['new', 'cancelled'], true)); ?>
-        <?php if ($canOfferDeletion && $packetaShipment === null && $carrierShipment === null && $cancelledPackets === []): ?>
+            ($bankTransfer && in_array($order['payment_status'] ?? '', ['pending', 'paid'], true)); ?>
+        <?php if ($canOfferDeletion && $packetaShipment === null &&
+            ($carrierShipment === null || $carrierShipment['status'] === 'draft') && $cancelledPackets === []): ?>
           <section class="panel-order-controls" aria-label="Smazání objednávky">
-            <h2>Smazat zkušební nebo nezaplacenou objednávku</h2>
-            <p class="panel-help">Trvalé smazání odstraní objednávku i z účtu zákazníka. Nelze ho vrátit. Zásah s důvodem zůstane v administrátorském záznamu; do důvodu nepiš osobní údaje.</p>
+            <h2>Trvale smazat objednávku</h2>
+            <p class="panel-help">Lze smazat i zaplacenou nebo dokončenou objednávku. Zmizí z účtu zákazníka a z běžného seznamu plateb. Zůstane záznam zásahu a u převodu také účetní stopa s částkou a variabilním symbolem. Pro skutečné platby a vydané doklady ověř povinnost uchování; do důvodu nepiš osobní údaje.</p>
             <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
               <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="delete-order"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="confirmation" value="delete">
               <label>Důvod smazání <textarea name="reason" minlength="8" maxlength="190" required placeholder="Například test pokladny"></textarea></label>
               <label>Opiš číslo <?= $escape($order['order_number']) ?><input name="order_number" autocomplete="off" required></label>
-              <label class="panel-check"><input type="checkbox" name="verified" value="1" required><?= $bankTransfer ? ' Ověřil/a jsem, že objednávka nebyla uhrazena, a rozumím trvalému smazání.' : ' Rozumím, že jde o trvalé smazání testovací objednávky.' ?></label>
+              <label class="panel-check"><input type="checkbox" name="verified" value="1" required> Rozumím trvalému smazání; případná platba na bankovním účtu tím nezmizí.</label>
               <button class="panel-button" type="submit">Trvale smazat objednávku</button>
             </form>
           </section>
-        <?php else: ?><p class="panel-help">Zaplacenou objednávku, objednávku se zásilkou nebo účetním dokladem nelze trvale smazat. Její historii zachovej.</p><?php endif; ?>
+        <?php else: ?><p class="panel-help">Objednávka má navázanou zásilku nebo způsob platby, který vyžaduje další vyřešení. Podklady bez čísla lze odstranit spolu s objednávkou; vydaný doklad a podanou zásilku nelze odstranit tímto tlačítkem.</p><?php endif; ?>
         <?php if ($orderEvents !== []): ?>
           <section class="panel-order-controls" aria-label="Historie zásahů">
             <h2>Historie zásahů správce</h2>
             <ul>
               <?php foreach ($orderEvents as $event): ?>
-                <li><strong><?= $escape($event['created_at'] ?? '') ?></strong> · správce #<?= (int) ($event['admin_id'] ?? 0) ?> · <?= $escape($orderFulfillmentLabel($event['old_status'] ?? '')) ?> → <?= $escape($orderFulfillmentLabel($event['new_status'] ?? '')) ?><br><?= $escape($event['reason'] ?? '') ?></li>
+                <li><strong><?= $escape($event['created_at'] ?? '') ?></strong> · správce #<?= (int) ($event['admin_id'] ?? 0) ?> · <?php if (($event['action'] ?? '') === 'payment_correction'): ?>Platba: <?= $escape($orderPaymentLabel($event['old_status'] ?? '')) ?> → <?= $escape($orderPaymentLabel($event['new_status'] ?? '')) ?><?php else: ?>Vyřízení: <?= $escape($orderFulfillmentLabel($event['old_status'] ?? '')) ?> → <?= $escape($orderFulfillmentLabel($event['new_status'] ?? '')) ?><?php endif; ?><br><?= $escape($event['reason'] ?? '') ?></li>
               <?php endforeach; ?>
             </ul>
           </section>

@@ -16,7 +16,8 @@ final class OrderControlRepository
 
     public function installed(): bool
     {
-        return $this->tableExists('shop_order_admin_events');
+        return $this->tableExists('shop_order_admin_events') &&
+            $this->tableExists('shop_order_financial_events');
     }
 
     public function eventsForOrder(int $orderId): array
@@ -97,7 +98,48 @@ final class OrderControlRepository
         }
     }
 
-    /** Purge an unfulfilled unpaid order; retain an audit entry without customer details. */
+    /** Undo only the administrator's bank-transfer confirmation; retain its old details. */
+    public function correctPayment(int $orderId, int $adminId, string $reason, string $confirmation): void
+    {
+        self::assertActorAndReason($orderId, $adminId, $reason);
+        if (!$this->installed()) {
+            throw new InvalidArgumentException('Nejdřív aktualizuj SQL tabulky v sekci Databáze.');
+        }
+        if ($confirmation !== 'not_received') {
+            throw new InvalidArgumentException('Potvrď opravu chybně označené platby.');
+        }
+        $this->db->startTransaction();
+        try {
+            $order = $this->db->queryFirstRow(
+                'SELECT * FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId
+            );
+            if ($order === null || $order['payment_method'] !== 'bank_transfer' ||
+                $order['payment_status'] !== 'paid') {
+                throw new InvalidArgumentException('Opravit lze pouze platbu převodem označenou jako zaplacenou.');
+            }
+            $this->recordFinancialEvent($order, 'payment_correction', $adminId, $reason);
+            $this->db->query(
+                'UPDATE shop_orders SET payment_status=%s, payment_paid_at=NULL,
+                 payment_verified_by=NULL WHERE id=%i AND payment_status=%s AND payment_method=%s',
+                'pending', $orderId, 'paid', 'bank_transfer'
+            );
+            $this->db->insert('shop_order_admin_events', [
+                'order_id' => $orderId,
+                'order_number' => $order['order_number'],
+                'action' => 'payment_correction',
+                'old_status' => 'paid',
+                'new_status' => 'pending',
+                'reason' => trim($reason),
+                'admin_id' => $adminId,
+            ]);
+            $this->db->commit();
+        } catch (Throwable $error) {
+            $this->db->rollback();
+            throw $error;
+        }
+    }
+
+    /** Purge an order, including a paid one, while keeping a financial audit snapshot. */
     public function deleteOrder(int $orderId, string $typedNumber, int $adminId, string $reason): void
     {
         self::assertActorAndReason($orderId, $adminId, $reason);
@@ -115,16 +157,22 @@ final class OrderControlRepository
             }
             $test = ($order['payment_method'] ?? '') === 'test' &&
                 ($order['payment_status'] ?? '') === 'test' && ($order['status'] ?? '') === 'test';
-            $unpaid = self::unpaidBankTransfer($order) &&
-                in_array($order['status'], ['new', 'cancelled'], true);
-            if ((!$test && !$unpaid) ||
-                $order['payment_paid_at'] !== null || $order['payment_verified_by'] !== null ||
-                ($order['provider_reference'] ?? null) !== null ||
+            $bankTransfer = ($order['payment_method'] ?? '') === 'bank_transfer' &&
+                in_array($order['payment_status'] ?? '', ['pending', 'paid'], true) &&
+                ($order['provider_reference'] ?? null) === null;
+            $carrier = $this->tableExists('shop_carrier_shipments') ? $this->db->queryFirstRow(
+                'SELECT status FROM shop_carrier_shipments WHERE order_id=%i LIMIT 1 FOR UPDATE', $orderId
+            ) : null;
+            if ((!$test && !$bankTransfer) ||
                 $this->hasRelatedRow('shop_packeta_shipments', $orderId) ||
-                $this->hasRelatedRow('shop_carrier_shipments', $orderId) ||
+                ($carrier !== null && $carrier['status'] !== 'draft') ||
                 $this->hasRelatedRow('shop_packeta_cancelled_shipments', $orderId) ||
                 $this->hasRelatedRow('shop_documents', $orderId)) {
-                throw new InvalidArgumentException('Objednávku s platbou, dokladem nebo zásilkou nelze smazat.');
+                throw new InvalidArgumentException('Nejdřív vyřeš navázaný doklad nebo zásilku u dopravce; podklady bez čísla lze smazat spolu s objednávkou.');
+            }
+
+            if ($bankTransfer) {
+                $this->recordFinancialEvent($order, 'order_deleted', $adminId, $reason);
             }
 
             $this->db->insert('shop_order_admin_events', [
@@ -136,18 +184,36 @@ final class OrderControlRepository
                 'reason' => trim($reason),
                 'admin_id' => $adminId,
             ]);
+            if ($carrier !== null) {
+                $this->db->query('DELETE FROM shop_carrier_shipments WHERE order_id=%i AND status=%s',
+                    $orderId, 'draft');
+            }
             $this->db->query(
                 'DELETE FROM shop_orders WHERE id=%i AND order_number=%s AND status=%s
-                 AND payment_method=%s AND payment_status=%s AND payment_paid_at IS NULL
-                 AND payment_verified_by IS NULL AND provider_reference IS NULL',
-                $orderId, $order['order_number'], $order['status'], $order['payment_method'],
-                $order['payment_status']
+                 AND payment_method=%s AND payment_status=%s',
+                $orderId, $order['order_number'], $order['status'], $order['payment_method'], $order['payment_status']
             );
             $this->db->commit();
         } catch (Throwable $error) {
             $this->db->rollback();
             throw $error;
         }
+    }
+
+    private function recordFinancialEvent(array $order, string $action, int $adminId, string $reason): void
+    {
+        $this->db->insert('shop_order_financial_events', [
+            'order_id' => (int) $order['id'],
+            'order_number' => (string) $order['order_number'],
+            'variable_symbol' => $order['variable_symbol'] ?? null,
+            'action' => $action,
+            'payment_status_before' => (string) $order['payment_status'],
+            'payment_paid_at' => $order['payment_paid_at'] ?? null,
+            'payment_verified_by' => $order['payment_verified_by'] ?? null,
+            'total_czk' => (int) $order['total_czk'],
+            'reason' => trim($reason),
+            'admin_id' => $adminId,
+        ]);
     }
 
     private function assertParcelCompatible(int $orderId, array $order, string $target): void

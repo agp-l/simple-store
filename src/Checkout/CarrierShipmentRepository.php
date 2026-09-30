@@ -38,8 +38,8 @@ final class CarrierShipmentRepository
             !in_array($draft['method'] ?? '', ['balikovna_pickup', 'gls_pickup', 'gls_home'], true)) {
             throw new InvalidArgumentException('Neplatné podklady zásilky.');
         }
-        // Validate the whole export before saving, so every saved draft can be downloaded.
-        CarrierShipmentCsv::export($draft);
+        // GLS drafts must be exportable; Balíkovna's consumer portal has no CSV import.
+        if ($draft['method'] !== 'balikovna_pickup') CarrierShipmentCsv::export($draft);
         $this->db->startTransaction();
         try {
             $order = $this->db->queryFirstRow(

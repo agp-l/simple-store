@@ -7,6 +7,10 @@ use SimpleStore\Accounting\AccountingRepository;
 $screen = 'accounting';
 $accounting = new AccountingRepository($db);
 $accountingReady = $accounting->installed();
+$financialEventsReady = $accounting->financialEventsInstalled();
+$financialChanges = ['items' => [], 'nextOffset' => null];
+$financialPreviousUrl = '';
+$financialNextUrl = '';
 $accountingError = '';
 $accountingBaseUrl = $adminUrl . '?section=accounting';
 $accountingPage = ['items' => [], 'nextOffset' => null];
@@ -29,6 +33,12 @@ try {
         ['options' => ['min_range' => 0, 'max_range' => 1000000]]) : false;
     if ($accountingOffset === false) {
         throw new InvalidArgumentException('Neplatná stránka účetních podkladů.');
+    }
+    $rawFinancialOffset = $_GET['audit_offset'] ?? '0';
+    $financialOffset = is_string($rawFinancialOffset) ? filter_var($rawFinancialOffset, FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 0, 'max_range' => 1000000]]) : false;
+    if ($financialOffset === false) {
+        throw new InvalidArgumentException('Neplatná stránka historie zásahů.');
     }
     if (!$accountingReady) {
         throw new RuntimeException('Přehled vyžaduje aktuální tabulku objednávek.');
@@ -57,12 +67,18 @@ try {
 
     $accountingTotals = $accounting->summary($accountingFrom, $accountingTo);
     $accountingPage = $accounting->page($accountingFrom, $accountingTo, $accountingOffset);
+    $financialChanges = $accounting->financialChanges($accountingFrom, $accountingTo, $financialOffset);
     $filters = ['section' => 'accounting', 'from' => $accountingFrom, 'to' => $accountingTo];
     $accountingExportUrl = $adminUrl . '?' . http_build_query($filters + ['download' => 'csv']);
     $accountingPreviousUrl = $accountingOffset > 0 ? $adminUrl . '?' . http_build_query(
         $filters + ['offset' => max(0, $accountingOffset - 25)]) : '';
     $accountingNextUrl = $accountingPage['nextOffset'] === null ? '' : $adminUrl . '?' .
         http_build_query($filters + ['offset' => $accountingPage['nextOffset']]);
+    $financialPreviousUrl = $financialOffset > 0 ? $adminUrl . '?' . http_build_query(
+        $filters + ['offset' => $accountingOffset, 'audit_offset' => max(0, $financialOffset - 25)]) : '';
+    $financialNextUrl = $financialChanges['nextOffset'] === null ? '' : $adminUrl . '?' .
+        http_build_query($filters + ['offset' => $accountingOffset,
+            'audit_offset' => $financialChanges['nextOffset']]);
 } catch (InvalidArgumentException $exception) {
     http_response_code(422);
     $accountingError = $exception->getMessage();

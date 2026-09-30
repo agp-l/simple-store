@@ -63,7 +63,7 @@ try {
     exit;
 }
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-$orderActions = ['mark-order-paid', 'set-order-status', 'correct-order-status', 'delete-order', 'packeta-create',
+$orderActions = ['mark-order-paid', 'set-order-status', 'correct-order-status', 'correct-order-payment', 'delete-order', 'packeta-create',
     'packeta-courier', 'packeta-reconcile', 'packeta-retry', 'packeta-cancel',
     'packeta-cancel-confirmed', 'packeta-cancel-not-done', 'carrier-save', 'carrier-register'];
 try {

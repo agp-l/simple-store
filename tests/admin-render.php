@@ -161,9 +161,11 @@ ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
 if (!str_contains($html, 'name="action" value="carrier-save"') ||
-    !str_contains($html, 'name="street" value="Nádražní 1"') ||
+    !str_contains($html, 'name="street" value="Nádražní"') ||
+    !str_contains($html, 'name="house_number" value="1"') ||
+    !str_contains($html, 'name="first_name" value="Eva"') ||
     !str_contains($html, 'name="postal_code" value="602 00"') ||
-    !str_contains($html, 'PSD(ID místa)')) {
+    !str_contains($html, '17 sloupců bez hlavičky')) {
     throw new RuntimeException('GLS order must offer carrier dispatch preparation with the selected address.');
 }
 $carrierShipment = ['status' => 'draft', 'method' => 'gls_pickup',
@@ -183,9 +185,10 @@ $order['shipping'] = ['method' => 'balikovna_pickup', 'label' => 'Balíkovna',
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
-if (!str_contains($html, 'ID Balíkovny B10000') ||
-    !str_contains($html, 'name="city" value="Praha"')) {
-    throw new RuntimeException('Balíkovna dispatch must use the selected point ID and city.');
+if (!str_contains($html, 'ID B10000') ||
+    !str_contains($html, 'podání na webu Balíkovny') ||
+    str_contains($html, 'carrier_csv=1')) {
+    throw new RuntimeException('Balíkovna dispatch must use the selected point ID and consumer portal.');
 }
 $order['shipping'] = ['method' => 'zasilkovna_pickup', 'label' => 'Zásilkovna',
     'recipient' => 'Eva Nová', 'phone' => '+420123456789',
@@ -202,7 +205,8 @@ if (!str_contains($html, 'name="action" value="correct-order-status"') ||
     !str_contains($html, 'Opravit chybné odeslání') ||
     !str_contains($html, 'Oprava &lt;script&gt;') ||
     str_contains($html, 'Oprava <script>') ||
-    str_contains($html, 'name="action" value="delete-order"')) {
+    !str_contains($html, 'name="action" value="correct-order-payment"') ||
+    !str_contains($html, 'name="action" value="delete-order"')) {
     throw new RuntimeException('Shipped order correction must be confirmed, audited and escaped.');
 }
 $order['status'] = 'completed';

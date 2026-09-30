@@ -174,8 +174,8 @@ CREATE TABLE IF NOT EXISTS shop_packeta_cancelled_shipments (
   CONSTRAINT cancelled_packeta_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Manual corrections and permitted hard deletions leave a minimal audit trail.
--- No foreign key: deleting a disposable test order must retain its action record.
+-- Manual corrections and deletions leave a minimal audit trail.
+-- No foreign key: the event remains when an order is removed.
 CREATE TABLE IF NOT EXISTS shop_order_admin_events (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   order_id BIGINT UNSIGNED NOT NULL,
@@ -188,6 +188,25 @@ CREATE TABLE IF NOT EXISTS shop_order_admin_events (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY order_admin_events_order (order_id, id),
   KEY order_admin_events_created (created_at, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Financial snapshot for payment corrections and bank-transfer order deletions.
+-- Intentionally independent of shop_orders so the audit survives deletion.
+CREATE TABLE IF NOT EXISTS shop_order_financial_events (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  order_id BIGINT UNSIGNED NOT NULL,
+  order_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  variable_symbol VARCHAR(10) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  action VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  payment_status_before VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  payment_paid_at DATETIME NULL,
+  payment_verified_by BIGINT UNSIGNED NULL,
+  total_czk INT UNSIGNED NOT NULL,
+  reason VARCHAR(190) NOT NULL,
+  admin_id BIGINT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY financial_events_created (created_at, id),
+  KEY financial_events_order (order_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Additive upgrade for installations with the older customer order placeholder.

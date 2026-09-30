@@ -102,7 +102,8 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'set-order-status') {
     }
 }
 
-if ($method === 'POST' && in_array($_POST['action'] ?? '', ['correct-order-status', 'delete-order'], true)) {
+if ($method === 'POST' && in_array($_POST['action'] ?? '',
+    ['correct-order-status', 'correct-order-payment', 'delete-order'], true)) {
     $rawId = $_POST['id'] ?? null;
     $id = is_string($rawId) && ctype_digit($rawId) ? filter_var($rawId, FILTER_VALIDATE_INT,
         ['options' => ['min_range' => 1]]) : false;
@@ -124,6 +125,9 @@ if ($method === 'POST' && in_array($_POST['action'] ?? '', ['correct-order-statu
             if (!is_string($target)) throw new InvalidArgumentException('Vyber cílový stav.');
             $orderControls->correctFulfillment($id, $target, (int) $admin['id'], $reason, $confirmation);
             header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&corrected=1', true, 303);
+        } elseif ($_POST['action'] === 'correct-order-payment') {
+            $orderControls->correctPayment($id, (int) $admin['id'], $reason, $confirmation);
+            header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&payment_corrected=1', true, 303);
         } else {
             if (!is_string($number) || $confirmation !== 'delete') {
                 throw new InvalidArgumentException('Potvrď smazání a opiš přesné číslo objednávky.');
@@ -336,13 +340,13 @@ if ($rawId !== null) {
 if ($method === 'GET' && ($_GET['carrier_csv'] ?? null) === '1' && $order !== null) {
     try {
         if ($carrierShipment === null || !is_array($carrierShipment['draft'] ?? null) ||
+            !in_array($carrierShipment['method'], ['gls_pickup', 'gls_home'], true) ||
             !in_array($carrierShipment['status'], ['draft', 'registered'], true)) {
             throw new InvalidArgumentException('Podklady k exportu zatím nejsou uložené.');
         }
         $csv = CarrierShipmentCsv::export($carrierShipment['draft']);
-        $carrier = $carrierShipment['method'] === 'balikovna_pickup' ? 'balikovna' : 'gls';
         header('Content-Type: text/csv; charset=UTF-8');
-        header('Content-Disposition: attachment; filename="' . $carrier . '-' . (int) $order['id'] . '.csv"');
+        header('Content-Disposition: attachment; filename="gls-ebalik-' . (int) $order['id'] . '.csv"');
         header('Cache-Control: private, no-store');
         header('X-Content-Type-Options: nosniff');
         echo $csv;
