@@ -117,7 +117,7 @@ $balanceKind = ['receivable'=>'Pohledávka', 'liability'=>'Dluh', 'asset'=>'Maje
       <?php endforeach; ?>
     </section>
   <?php elseif ($accountingTab === 'stock'): ?>
-    <section class="panel-panel"><h2>Stav zásob</h2>
+    <section class="panel-panel"><div class="panel-panel-head"><h2>Stav zásob</h2><div><a class="panel-button" href="<?= $escape($taxUrl . '&tab=stock&year=' . $taxYear . '&download=stock') ?>">Skladové pohyby CSV</a> <a class="panel-button" href="<?= $escape($taxUrl . '&tab=stock&year=' . $taxYear . '&download=sales') ?>">Prodané kusy CSV</a></div></div>
       <p class="panel-help">Zapiš počáteční a přijaté kusy jako kladný pohyb; škodu či inventurní rozdíl jako záporný. U odeslaných objednávek systém odečítá množství z uloženého snímku položek. Skutečný stav na konci roku ověř fyzicky.</p>
       <form method="get" action="<?= $escape($adminUrl) ?>" class="panel-search"><input type="hidden" name="section" value="accounting"><input type="hidden" name="tab" value="stock"><label>Najít produkt<input name="search" value="<?= $escape($_GET['search'] ?? '') ?>"></label><button class="panel-button" type="submit">Hledat</button></form>
       <div class="panel-order-list">

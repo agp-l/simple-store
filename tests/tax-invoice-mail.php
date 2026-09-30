@@ -10,6 +10,8 @@ class MeekroDB
     public array $sequences = [];
     public array $entries = [];
     public array $entryEvents = [];
+    public array $sales = [];
+    public array $stock = [];
     private ?array $snapshot = null;
 
     public function startTransaction(): void
@@ -132,6 +134,10 @@ class MeekroDB
             return array_slice($rows, $args[3], $args[2]);
         } elseif (str_contains($sql, 'FROM shop_tax_entry_events WHERE created_at')) {
             return array_reverse($this->entryEvents);
+        } elseif (str_contains($sql, 'FROM shop_deleted_sale_lines')) {
+            return array_slice($this->sales, $args[7], $args[6]);
+        } elseif (str_contains($sql, 'FROM shop_stock_movements')) {
+            return array_slice($this->stock, $args[3], $args[2]);
         } else {
             throw new RuntimeException('Unexpected SQL: ' . $sql);
         }
@@ -235,5 +241,21 @@ $tax->voidEntry(1, 1, 'Duplicitní záznam');
 if ($db->entries !== [] || count($db->entryEvents) !== 2 ||
     $db->entryEvents[1]['action'] !== 'voided') {
     throw new RuntimeException('Voided journal entry still affects the ledger.');
+}
+$db->sales = [['created_at' => '2026-09-30 12:00:00', 'order_number' => 'DB-26-1',
+    'product_key' => str_repeat('a', 32), 'name' => '=MALICIOUS', 'quantity' => 2,
+    'unit_price_czk' => 450, 'status' => 'completed']];
+$db->stock = [['movement_date' => '2026-09-30', 'product_key' => str_repeat('a', 32),
+    'quantity_change' => 5, 'unit_cost_czk' => 200, 'description' => '=MALICIOUS',
+    'reference' => 'N-1']];
+foreach (['writeSalesCsv', 'writeStockCsv'] as $export) {
+    $stream = fopen('php://temp', 'w+b');
+    $tax->$export($stream, 2026);
+    rewind($stream);
+    $data = stream_get_contents($stream);
+    fclose($stream);
+    if (!str_contains($data, "'=MALICIOUS")) {
+        throw new RuntimeException($export . ' did not safely export annual data.');
+    }
 }
 echo "Tax invoice and mail tests passed.\n";

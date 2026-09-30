@@ -149,15 +149,21 @@ if ($method === 'POST') {
 
 try {
     TaxEvidenceRepository::year($taxYear);
-    if (($_GET['download'] ?? '') === 'ledger' && $accountingTab === 'money') {
+    $taxDownload = $_GET['download'] ?? '';
+    if (($taxDownload === 'ledger' && $accountingTab === 'money') ||
+        (in_array($taxDownload, ['sales', 'stock'], true) && $accountingTab === 'stock')) {
         if (!$taxReady) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky.');
         $stream = fopen('php://temp/maxmemory:2097152', 'w+b');
         if ($stream === false) throw new RuntimeException('CSV se nepodařilo připravit.');
         try {
-            $tax->writeLedgerCsv($stream, $taxYear);
+            if ($taxDownload === 'ledger') $tax->writeLedgerCsv($stream, $taxYear);
+            elseif ($taxDownload === 'sales') $tax->writeSalesCsv($stream, $taxYear);
+            else $tax->writeStockCsv($stream, $taxYear);
             rewind($stream);
             header('Content-Type: text/csv; charset=UTF-8');
-            header('Content-Disposition: attachment; filename="penezni-denik-' . $taxYear . '.csv"');
+            $filePrefix = ['ledger' => 'penezni-denik', 'sales' => 'prodeje',
+                'stock' => 'skladove-pohyby'][$taxDownload];
+            header('Content-Disposition: attachment; filename="' . $filePrefix . '-' . $taxYear . '.csv"');
             header('Cache-Control: private, no-store');
             header('X-Content-Type-Options: nosniff');
             fpassthru($stream);

@@ -332,24 +332,76 @@ final class TaxEvidenceRepository
         return $this->db->query('SELECT * FROM shop_stock_movements ORDER BY id DESC LIMIT %i', 100);
     }
 
-    public function saleLines(int $year): array
+    public function saleLines(int $year, int $limit = 500, int $offset = 0): array
     {
         self::year($year);
+        if ($limit < 1 || $limit > 500 || $offset < 0 || $offset > 50000) {
+            throw new InvalidArgumentException('Neplatná stránka prodejů.');
+        }
         return $this->db->query(
             'SELECT * FROM (
                 SELECT l.order_id, o.order_number, l.product_key, l.name, l.quantity,
-                    l.unit_price_czk, o.created_at, o.status
+                    l.unit_price_czk, o.created_at, o.status, l.line_no AS sort_key
                 FROM shop_sale_lines l JOIN shop_orders o ON o.id=l.order_id
                 WHERE o.created_at >= %s AND o.created_at < %s AND o.status NOT IN (%s,%s)
                 UNION ALL
                 SELECT NULL AS order_id, a.order_number, a.product_key, a.name, a.quantity,
-                    a.unit_price_czk, a.order_created_at AS created_at, a.order_status AS status
+                    a.unit_price_czk, a.order_created_at AS created_at, a.order_status AS status,
+                    a.id AS sort_key
                 FROM shop_deleted_sale_lines a
                 WHERE a.order_created_at >= %s AND a.order_created_at < %s
-            ) AS sold ORDER BY created_at DESC, order_number DESC LIMIT %i',
+            ) AS sold ORDER BY created_at DESC, order_number DESC, sort_key ASC LIMIT %i OFFSET %i',
             $year . '-01-01', ($year + 1) . '-01-01', 'cancelled', 'test',
-            $year . '-01-01', ($year + 1) . '-01-01', 500
+            $year . '-01-01', ($year + 1) . '-01-01', $limit, $offset
         );
+    }
+
+    public function writeSalesCsv(mixed $stream, int $year): int
+    {
+        self::year($year);
+        self::csvHeader($stream, ['Datum objednávky', 'Objednávka', 'Produktový klíč',
+            'Název', 'Kusů', 'Cena/ks Kč', 'Celkem Kč', 'Stav']);
+        $offset = 0;
+        do {
+            $rows = $this->saleLines($year, 200, $offset);
+            foreach ($rows as $row) {
+                if ($offset >= 50000) throw new InvalidArgumentException('Export prodejů přesáhl 50 000 řádků.');
+                if (fputcsv($stream, [$row['created_at'], self::safeCsvCell($row['order_number']),
+                    $row['product_key'], self::safeCsvCell($row['name']), $row['quantity'],
+                    $row['unit_price_czk'], (int) $row['quantity'] * (int) $row['unit_price_czk'],
+                    $row['status']], ';', '"', '') === false) {
+                    throw new RuntimeException('CSV se nepodařilo vytvořit.');
+                }
+                $offset++;
+            }
+        } while (count($rows) === 200);
+        return $offset;
+    }
+
+    public function writeStockCsv(mixed $stream, int $year): int
+    {
+        self::year($year);
+        self::csvHeader($stream, ['Datum', 'Produktový klíč', 'Změna kusů',
+            'Pořizovací cena/ks Kč', 'Důvod', 'Doklad']);
+        $offset = 0;
+        do {
+            $rows = $this->db->query('SELECT movement_date, product_key, quantity_change,
+                    unit_cost_czk, description, reference FROM shop_stock_movements
+                WHERE movement_date >= %s AND movement_date < %s
+                ORDER BY movement_date ASC, id ASC LIMIT %i OFFSET %i',
+                $year . '-01-01', ($year + 1) . '-01-01', 200, $offset);
+            foreach ($rows as $row) {
+                if ($offset >= 50000) throw new InvalidArgumentException('Export skladu přesáhl 50 000 řádků.');
+                if (fputcsv($stream, [$row['movement_date'], $row['product_key'],
+                    $row['quantity_change'], $row['unit_cost_czk'] ?? '',
+                    self::safeCsvCell($row['description']), self::safeCsvCell($row['reference'])],
+                    ';', '"', '') === false) {
+                    throw new RuntimeException('CSV se nepodařilo vytvořit.');
+                }
+                $offset++;
+            }
+        } while (count($rows) === 200);
+        return $offset;
     }
 
     public function products(string $search = ''): array
@@ -411,6 +463,15 @@ final class TaxEvidenceRepository
     private static function safeCsvCell(string $cell): string
     {
         return preg_match('/^[\x00-\x20]*[=+\-@]/', $cell) === 1 ? "'" . $cell : $cell;
+    }
+
+    private static function csvHeader(mixed $stream, array $columns): void
+    {
+        if (!is_resource($stream) || get_resource_type($stream) !== 'stream' ||
+            fwrite($stream, "\xEF\xBB\xBF") !== 3 ||
+            fputcsv($stream, $columns, ';', '"', '') === false) {
+            throw new RuntimeException('CSV se nepodařilo vytvořit.');
+        }
     }
 
     private static function date(mixed $value): string
