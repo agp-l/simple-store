@@ -60,3 +60,5 @@ jobs:
         run: node --test tests/ppl-checkout.mjs
       - name: Test GLS pickup selection
         run: node --test tests/gls-checkout.mjs
+      - name: Test Balíkovna pickup selection
+        run: node --test tests/balikovna-checkout.mjs

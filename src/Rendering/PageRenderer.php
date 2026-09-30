@@ -90,6 +90,7 @@ final class PageRenderer
         $pplWidgetKey = (string) ($data['pplWidgetKey'] ?? '');
         $pplSelection = $data['pplSelection'] ?? [];
         $glsSelection = $data['glsSelection'] ?? [];
+        $balikovnaSelection = $data['balikovnaSelection'] ?? [];
         $selectedShippingPrice = $data['selectedShippingPrice'] ?? null;
         $error = (string) ($data['error'] ?? '');
         $step = (string) ($data['step'] ?? '');

@@ -188,5 +188,34 @@ try {
 if ($cart->state()['delivery']['pickup_code'] !== '26711-GLSCZ_DEPO47') {
     throw new RuntimeException('Invalid GLS selection overwrote the last valid delivery.');
 }
+$_POST = ['method' => 'balikovna_pickup', 'name' => 'Eva Nová',
+    'email' => 'eva@example.org', 'phone' => '123', 'country' => 'CZ',
+    'street' => '', 'city' => '', 'postal_code' => '',
+    'pickup_point' => 'Podvržená pobočka', 'pickup_address' => 'Podvržená adresa',
+    'pickup_code' => 'PODVRH', 'pickup_postal_code' => '99999',
+    'balikovna_point_id' => '123', 'balikovna_point_name' => 'Praha 10',
+    'balikovna_point_address' => 'Černokostelecká 2020/20, Praha',
+    'balikovna_point_zip' => '10000', 'balikovna_point_type' => 'BALIKOVNY'];
+$saveDelivery->invoke($withoutKey);
+$delivery = $cart->state()['delivery'];
+if ($delivery['pickup_code'] !== '123' || $delivery['pickup_point'] !== 'Praha 10' ||
+    $delivery['pickup_address'] !== 'Černokostelecká 2020/20, Praha' ||
+    $delivery['pickup_postal_code'] !== '10000') {
+    throw new RuntimeException('Balíkovna selection did not replace manual fields and save its ZIP.');
+}
+foreach (['balikovna_point_zip' => '999', 'balikovna_point_type' => 'OTHER',
+    'balikovna_point_id' => 'invalid/id'] as $field => $invalid) {
+    $original = $_POST[$field];
+    $_POST[$field] = $invalid;
+    try {
+        $saveDelivery->invoke($withoutKey);
+        throw new RuntimeException('Invalid Balíkovna field reached the checkout session: ' . $field);
+    } catch (InvalidArgumentException $expected) {
+    }
+    $_POST[$field] = $original;
+}
+if ($cart->state()['delivery']['pickup_code'] !== '123') {
+    throw new RuntimeException('Invalid Balíkovna selection overwrote the last valid delivery.');
+}
 
 echo "Checkout availability tests passed.\n";

@@ -49,6 +49,7 @@ $cartToken ??= '';
 <?php if ($page === 'shipping' && ($packetaApiKey ?? '') !== ''): ?><script defer src="https://widget.packeta.com/v6/www/js/library.js"></script><script defer src="<?= $siteRoot ?>assets/packeta-checkout.js?v=<?= filemtime(__DIR__ . '/../assets/packeta-checkout.js') ?>"></script><?php endif; ?>
 <?php if ($page === 'shipping' && ($pplWidgetKey ?? '') !== ''): ?><script async src="https://www.ppl.cz/accesspointwidget/loader.js"></script><script defer src="<?= $siteRoot ?>assets/ppl-checkout.js?v=<?= filemtime(__DIR__ . '/../assets/ppl-checkout.js') ?>"></script><?php endif; ?>
 <?php if ($page === 'shipping'): ?><script defer src="<?= $siteRoot ?>assets/gls-checkout.js?v=<?= filemtime(__DIR__ . '/../assets/gls-checkout.js') ?>"></script><?php endif; ?>
+<?php if ($page === 'shipping'): ?><script defer src="<?= $siteRoot ?>assets/balikovna-checkout.js?v=<?= filemtime(__DIR__ . '/../assets/balikovna-checkout.js') ?>"></script><?php endif; ?>
 <?php if ($page === 'complete' && !empty($bankPayment['spayd'])): ?><script type="module" src="<?= $siteRoot ?>assets/payment-qr.js?v=<?= filemtime(__DIR__ . '/../assets/payment-qr.js') ?>"></script><?php endif; ?>
 <?php if ($page === 'catalog' || $page === 'blog'): ?><script defer src="<?= $siteRoot ?>assets/load-more.js"></script><?php endif; ?>
 <?php if ($page === 'product-record'): ?><script defer src="<?= $siteRoot ?>assets/product.js"></script><?php endif; ?>

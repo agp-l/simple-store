@@ -17,6 +17,7 @@ final class CheckoutController
     private PacketaPickupPoint $packeta;
     private PplPickupPoint $ppl;
     private GlsPickupPoint $gls;
+    private BalikovnaPickupPoint $balikovna;
 
     public function __construct(
         private UrlManager $url,
@@ -34,13 +35,15 @@ final class CheckoutController
         private array $customerAddresses = [],
         ?PacketaPickupPoint $packeta = null,
         ?PplPickupPoint $ppl = null,
-        ?GlsPickupPoint $gls = null
+        ?GlsPickupPoint $gls = null,
+        ?BalikovnaPickupPoint $balikovna = null
     ) {
         $this->cartUrl = $url->path('kosik');
         $this->checkoutUrl = $url->path('pokladna');
         $this->packeta = $packeta ?? new PacketaPickupPoint();
         $this->ppl = $ppl ?? new PplPickupPoint();
         $this->gls = $gls ?? new GlsPickupPoint();
+        $this->balikovna = $balikovna ?? new BalikovnaPickupPoint();
         $this->shippingOptions = array_values(array_filter($shipping->options(),
             fn (array $option): bool => $option['code'] !== 'zasilkovna_pickup' || $this->packeta->isConfigured()));
         $termsUrl = trim($termsUrl);
@@ -170,12 +173,13 @@ final class CheckoutController
         }
         $fields = [];
         foreach (['method', 'name', 'email', 'phone', 'street', 'city', 'postal_code', 'country',
-            'pickup_point', 'pickup_address', 'pickup_code'] as $field) {
+            'pickup_point', 'pickup_address', 'pickup_code', 'pickup_postal_code'] as $field) {
             $fields[$field] = str_starts_with($field, 'pickup_') && !isset($_POST[$field])
                 ? '' : self::field($field);
         }
         if (ShippingPolicy::isPickup($method)) {
             $fields['street'] = $fields['city'] = $fields['postal_code'] = '';
+            if ($method !== 'balikovna_pickup') $fields['pickup_postal_code'] = '';
             if ($method === 'zasilkovna_pickup') {
                 $fields = array_replace($fields, $this->packeta->verify(self::field('packeta_point_id')));
             } elseif ($method === 'ppl_pickup' && $this->ppl->isConfigured()) {
@@ -188,9 +192,16 @@ final class CheckoutController
                     self::field('gls_point_id'), self::field('gls_point_name'),
                     self::field('gls_point_address'), self::field('gls_point_country')
                 ));
+            } elseif ($method === 'balikovna_pickup') {
+                $fields = array_replace($fields, $this->balikovna->selection(
+                    self::field('balikovna_point_id'), self::field('balikovna_point_name'),
+                    self::field('balikovna_point_address'), self::field('balikovna_point_zip'),
+                    self::field('balikovna_point_type')
+                ));
             }
         } else {
-            $fields['pickup_point'] = $fields['pickup_address'] = $fields['pickup_code'] = '';
+            $fields['pickup_point'] = $fields['pickup_address'] = $fields['pickup_code'] =
+                $fields['pickup_postal_code'] = '';
         }
         $this->cart->setDelivery($fields);
     }
@@ -223,6 +234,12 @@ final class CheckoutController
                 (string) ($delivery['pickup_code'] ?? ''), (string) ($delivery['pickup_point'] ?? ''),
                 (string) ($delivery['pickup_address'] ?? ''), (string) ($delivery['country'] ?? '')
             ));
+        } elseif ($methodCode === 'balikovna_pickup') {
+            $delivery = array_replace($delivery, $this->balikovna->selection(
+                (string) ($delivery['pickup_code'] ?? ''), (string) ($delivery['pickup_point'] ?? ''),
+                (string) ($delivery['pickup_address'] ?? ''),
+                (string) ($delivery['pickup_postal_code'] ?? ''), 'BALIKOVNY'
+            ));
         }
         if ($summary['subtotal_czk'] + $price > 9999999) {
             throw new InvalidArgumentException('Celková částka objednávky přesahuje dostupný limit.');
@@ -237,6 +254,7 @@ final class CheckoutController
         if ($methodCode === 'zasilkovna_pickup') $shipping['pickup_verified'] = true;
         if ($methodCode === 'ppl_pickup' && $this->ppl->isConfigured()) $shipping['pickup_source'] = 'ppl_widget';
         if ($methodCode === 'gls_pickup') $shipping['pickup_source'] = 'gls_map';
+        if ($methodCode === 'balikovna_pickup') $shipping['pickup_source'] = 'balikovna_map';
         $order = $this->orders->create($this->customerId, $delivery['email'], $summary['items'],
             $shipping, $price, $this->cart->checkoutKey(), $testOrder);
         $this->cart->clear();
@@ -271,7 +289,7 @@ final class CheckoutController
         if ($step === 'shipping' && $error !== '' && is_array($_POST)) {
             // Keep submitted contact details visible after a validation error.
             foreach (['method', 'name', 'email', 'phone', 'street', 'city', 'postal_code', 'country',
-                'pickup_point', 'pickup_address', 'pickup_code'] as $field) {
+                'pickup_point', 'pickup_address', 'pickup_code', 'pickup_postal_code'] as $field) {
                 if (is_string($_POST[$field] ?? null)) $delivery[$field] = $_POST[$field];
             }
         }
@@ -299,6 +317,19 @@ final class CheckoutController
             foreach (['id', 'name', 'address', 'country'] as $field) {
                 $raw = $_POST['gls_point_' . $field] ?? null;
                 if (is_string($raw) && strlen($raw) <= 190) $glsSelection[$field] = $raw;
+            }
+        }
+        $balikovnaSelection = $methodCode === 'balikovna_pickup' ? [
+            'id' => (string) ($delivery['pickup_code'] ?? ''),
+            'name' => (string) ($delivery['pickup_point'] ?? ''),
+            'address' => (string) ($delivery['pickup_address'] ?? ''),
+            'zip' => (string) ($delivery['pickup_postal_code'] ?? ''),
+            'type' => 'BALIKOVNY',
+        ] : ['id' => '', 'name' => '', 'address' => '', 'zip' => '', 'type' => ''];
+        if ($step === 'shipping' && $error !== '' && $methodCode === 'balikovna_pickup') {
+            foreach (['id', 'name', 'address', 'zip', 'type'] as $field) {
+                $raw = $_POST['balikovna_point_' . $field] ?? null;
+                if (is_string($raw) && strlen($raw) <= 190) $balikovnaSelection[$field] = $raw;
             }
         }
         $selected = ShippingPolicy::known($methodCode) ? $this->shipping->method($methodCode) : null;
@@ -330,6 +361,7 @@ final class CheckoutController
             'packetaApiKey' => $this->packeta->apiKey(), 'packetaOptions' => PacketaPickupPoint::options(),
             'pplWidgetKey' => $this->ppl->apiKey(), 'pplSelection' => $pplSelection,
             'glsSelection' => $glsSelection,
+            'balikovnaSelection' => $balikovnaSelection,
             'shippingConfigured' => $shippingConfigured, 'bankConfigured' => $this->bank !== null,
             'checkoutReady' => $ready, 'testCheckout' => $testCheckout, 'termsUrl' => $this->termsUrl,
             'error' => $error, 'step' => $step,

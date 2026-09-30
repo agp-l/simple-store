@@ -168,7 +168,8 @@ final class CartSession
     {
         $limits = ['method' => 20, 'name' => 120, 'email' => 254, 'phone' => 40,
             'street' => 190, 'city' => 120, 'postal_code' => 20, 'country' => 2,
-            'pickup_point' => 190, 'pickup_address' => 190, 'pickup_code' => 80];
+            'pickup_point' => 190, 'pickup_address' => 190, 'pickup_code' => 80,
+            'pickup_postal_code' => 20];
         if (array_diff(array_keys($fields), array_keys($limits)) !== []) {
             throw new InvalidArgumentException('Neplatný údaj doručení.');
         }
@@ -192,7 +193,8 @@ final class CartSession
                 $result['postal_code'] === '')) ||
             (ShippingPolicy::isPickup($result['method']) &&
                 ($result['pickup_point'] === '' || $result['pickup_address'] === '')) ||
-            ($result['method'] === 'zasilkovna_pickup' && $result['pickup_code'] === '')) {
+            ($result['method'] === 'zasilkovna_pickup' && $result['pickup_code'] === '') ||
+            ($result['method'] === 'balikovna_pickup' && $result['pickup_postal_code'] === '')) {
             throw new InvalidArgumentException('Doplň kontakt a adresu nebo výdejní místo v České republice.');
         }
         return $result;

@@ -20,12 +20,12 @@ require __DIR__ . '/common.php';
       <?php endforeach; ?>
     </div></div><?php endif; ?>
     <div class="checkout-columns">
-      <form class="checkout-panel checkout-form checkout-has-gls-map <?= ($pplWidgetKey ?? '') !== '' ? 'checkout-has-ppl-widget' : '' ?>" method="post" action="<?= $checkoutEscape($checkoutUrl) ?>">
+      <form class="checkout-panel checkout-form checkout-has-gls-map checkout-has-balikovna-map <?= ($pplWidgetKey ?? '') !== '' ? 'checkout-has-ppl-widget' : '' ?>" method="post" action="<?= $checkoutEscape($checkoutUrl) ?>">
         <input type="hidden" name="csrf" value="<?= $checkoutEscape($cartToken) ?>"><input type="hidden" name="action" value="delivery"><input type="hidden" name="country" value="CZ">
-        <fieldset><legend>1. Výdejní místa a boxy</legend><p class="checkout-field-help">U Zásilkovny, GLS<?= ($pplWidgetKey ?? '') !== '' ? ' a PPL' : '' ?> vyberte místo v mapě; údaje se doplní automaticky. U ostatních dopravců zatím adresu opište z jejich mapy.</p>
+        <fieldset><legend>1. Výdejní místa a boxy</legend><p class="checkout-field-help">U Zásilkovny, GLS a Balíkovny<?= ($pplWidgetKey ?? '') !== '' ? ' i PPL' : '' ?> vyberte místo v mapě; údaje se doplní automaticky.<?= ($pplWidgetKey ?? '') === '' ? ' U PPL zatím adresu opište z jeho mapy.' : '' ?></p>
           <?php foreach ($availableShippingOptions as $option): ?>
             <?php if ($option['group'] !== 'pickup') continue; ?>
-            <div class="checkout-shipping-option"><label class="checkout-choice"><input type="radio" name="method" value="<?= $checkoutEscape($option['code']) ?>" <?= ($delivery['method'] ?? '') === $option['code'] ? 'checked' : '' ?> required><span><strong><?= $checkoutEscape($option['label']) ?></strong></span><strong><?= (int) $option['price_czk'] === 0 ? 'Zdarma' : $checkoutMoney((int) $option['price_czk']) ?></strong></label><?php if ($option['code'] === 'zasilkovna_pickup'): ?><button class="checkout-packeta-open" type="button" data-packeta-open>Vybrat výdejní místo Zásilkovny</button><?php elseif ($option['code'] === 'ppl_pickup' && ($pplWidgetKey ?? '') !== ''): ?><button class="checkout-packeta-open" type="button" data-ppl-open>Vybrat místo PPL v mapě</button><?php elseif ($option['code'] === 'gls_pickup'): ?><button class="checkout-packeta-open" type="button" data-gls-open>Vybrat místo GLS v mapě</button><?php elseif ($option['locator_url'] !== ''): ?><a href="<?= $checkoutEscape($option['locator_url']) ?>" target="_blank" rel="noopener noreferrer">Vybrat adresu výdejního místa ↗</a><?php endif; ?></div>
+            <div class="checkout-shipping-option"><label class="checkout-choice"><input type="radio" name="method" value="<?= $checkoutEscape($option['code']) ?>" <?= ($delivery['method'] ?? '') === $option['code'] ? 'checked' : '' ?> required><span><strong><?= $checkoutEscape($option['label']) ?></strong></span><strong><?= (int) $option['price_czk'] === 0 ? 'Zdarma' : $checkoutMoney((int) $option['price_czk']) ?></strong></label><?php if ($option['code'] === 'zasilkovna_pickup'): ?><button class="checkout-packeta-open" type="button" data-packeta-open>Vybrat výdejní místo Zásilkovny</button><?php elseif ($option['code'] === 'ppl_pickup' && ($pplWidgetKey ?? '') !== ''): ?><button class="checkout-packeta-open" type="button" data-ppl-open>Vybrat místo PPL v mapě</button><?php elseif ($option['code'] === 'gls_pickup'): ?><button class="checkout-packeta-open" type="button" data-gls-open>Vybrat místo GLS v mapě</button><?php elseif ($option['code'] === 'balikovna_pickup'): ?><button class="checkout-packeta-open" type="button" data-balikovna-open>Vybrat Balíkovnu v mapě</button><?php elseif ($option['locator_url'] !== ''): ?><a href="<?= $checkoutEscape($option['locator_url']) ?>" target="_blank" rel="noopener noreferrer">Vybrat adresu výdejního místa ↗</a><?php endif; ?></div>
           <?php endforeach; ?>
         </fieldset>
         <fieldset><legend>2. Doručení na adresu</legend>
@@ -70,18 +70,32 @@ require __DIR__ . '/common.php';
             <p class="checkout-packeta-selection" data-gls-selection aria-live="polite"><?php if (($glsSelection['id'] ?? '') !== ''): ?><?= $checkoutEscape($glsSelection['name'] ?? '') ?> · <?= $checkoutEscape($glsSelection['address'] ?? '') ?> (ID <?= $checkoutEscape($glsSelection['id']) ?>)<?php else: ?>Místo zatím není vybrané. Použijte tlačítko u GLS.<?php endif; ?></p>
             <p class="checkout-field-help" data-gls-status role="status"></p><noscript>Pro výběr místa GLS zapněte JavaScript.</noscript>
           </div>
+          <div class="checkout-balikovna-fields">
+            <input type="hidden" name="balikovna_point_id" value="<?= $checkoutEscape($balikovnaSelection['id'] ?? '') ?>" data-balikovna-id>
+            <input type="hidden" name="balikovna_point_name" value="<?= $checkoutEscape($balikovnaSelection['name'] ?? '') ?>" data-balikovna-name>
+            <input type="hidden" name="balikovna_point_address" value="<?= $checkoutEscape($balikovnaSelection['address'] ?? '') ?>" data-balikovna-address>
+            <input type="hidden" name="balikovna_point_zip" value="<?= $checkoutEscape($balikovnaSelection['zip'] ?? '') ?>" data-balikovna-zip>
+            <input type="hidden" name="balikovna_point_type" value="<?= $checkoutEscape($balikovnaSelection['type'] ?? '') ?>" data-balikovna-type>
+            <p class="checkout-packeta-selection" data-balikovna-selection aria-live="polite"><?php if (($balikovnaSelection['id'] ?? '') !== ''): ?><?= $checkoutEscape($balikovnaSelection['name'] ?? '') ?> · <?= $checkoutEscape($balikovnaSelection['address'] ?? '') ?> (ID <?= $checkoutEscape($balikovnaSelection['id']) ?>)<?php else: ?>Místo zatím není vybrané. Použijte tlačítko u Balíkovny.<?php endif; ?></p>
+            <p class="checkout-field-help" data-balikovna-status role="status"></p><noscript>Pro výběr Balíkovny zapněte JavaScript.</noscript>
+          </div>
           <div class="checkout-manual-pickup"><p class="checkout-field-help">Na mapě dopravce vyhledejte místo a opište jeho název a přesnou adresu.</p>
-          <?php $manualSelection = !in_array(($delivery['method'] ?? ''), ['zasilkovna_pickup', 'gls_pickup'], true) && !(($delivery['method'] ?? '') === 'ppl_pickup' && ($pplWidgetKey ?? '') !== ''); ?>
+          <?php $manualSelection = !in_array(($delivery['method'] ?? ''), ['zasilkovna_pickup', 'gls_pickup', 'balikovna_pickup'], true) && !(($delivery['method'] ?? '') === 'ppl_pickup' && ($pplWidgetKey ?? '') !== ''); ?>
           <div class="checkout-fields"><label class="checkout-span">Název výdejního místa nebo boxu <input type="text" name="pickup_point" value="<?= $manualSelection ? $checkoutEscape($delivery['pickup_point'] ?? '') : '' ?>" maxlength="190" placeholder="Například ParcelShop Hlavní nádraží"></label>
             <label class="checkout-span">Adresa výdejního místa (ulice, město, PSČ) <input type="text" name="pickup_address" value="<?= $manualSelection ? $checkoutEscape($delivery['pickup_address'] ?? '') : '' ?>" maxlength="190"></label>
             <label>Kód místa (pokud je uveden) <input type="text" name="pickup_code" value="<?= $manualSelection ? $checkoutEscape($delivery['pickup_code'] ?? '') : '' ?>" maxlength="80"></label></div></div>
         </fieldset>
         <div class="checkout-form-actions"><a class="checkout-back" href="<?= $checkoutEscape($cartUrl) ?>">← Zpět do košíku</a><button class="checkout-primary" type="submit">Pokračovat k platbě <span aria-hidden="true">→</span></button></div>
       </form>
-      <dialog class="checkout-gls-dialog" data-gls-dialog aria-label="Výběr výdejního místa GLS">
-        <div class="checkout-gls-dialog-head"><strong>Vyberte místo GLS</strong><button type="button" data-gls-close aria-label="Zavřít mapu">Zavřít ×</button></div>
-        <p class="checkout-gls-dialog-status" data-gls-dialog-status role="status"></p>
+      <dialog class="checkout-map-dialog" data-gls-dialog aria-label="Výběr výdejního místa GLS">
+        <div class="checkout-map-dialog-head"><strong>Vyberte místo GLS</strong><button type="button" data-gls-close aria-label="Zavřít mapu">Zavřít ×</button></div>
+        <p class="checkout-map-dialog-status" data-gls-dialog-status role="status"></p>
         <iframe title="Mapa výdejních míst GLS" data-gls-map data-src="<?= $checkoutEscape(\SimpleStore\Checkout\GlsPickupPoint::MAP_URL) ?>" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+      </dialog>
+      <dialog class="checkout-map-dialog" data-balikovna-dialog aria-label="Výběr Balíkovny">
+        <div class="checkout-map-dialog-head"><strong>Vyberte Balíkovnu nebo box</strong><button type="button" data-balikovna-close aria-label="Zavřít mapu">Zavřít ×</button></div>
+        <p class="checkout-map-dialog-status" data-balikovna-dialog-status role="status"></p>
+        <iframe title="Mapa Balíkoven a boxů" data-balikovna-map data-src="<?= $checkoutEscape(\SimpleStore\Checkout\BalikovnaPickupPoint::MAP_URL) ?>" allow="geolocation" referrerpolicy="strict-origin-when-cross-origin"></iframe>
       </dialog>
       <?php require __DIR__ . '/summary.php'; ?>
     </div>

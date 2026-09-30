@@ -65,6 +65,28 @@ if (!str_contains($shipping, 'data-gls-open') ||
     !str_contains($shipping, 'assets/gls-checkout.js')) {
     throw new RuntimeException('GLS map and parcelshop ID field are missing from checkout.');
 }
+if (!str_contains($shipping, 'data-balikovna-open') ||
+    !str_contains($shipping, 'name="balikovna_point_id"') ||
+    !str_contains($shipping, 'name="balikovna_point_zip"') ||
+    !str_contains($shipping, 'data-balikovna-map') ||
+    !str_contains($shipping, 'b2c.cpost.cz/locations/?type=BALIKOVNY&amp;skipLocation=true') ||
+    !str_contains($shipping, 'assets/balikovna-checkout.js')) {
+    throw new RuntimeException('Balíkovna map and its point ID/ZIP fields are missing from checkout.');
+}
+$balikovnaData = $data;
+$balikovnaData['delivery'] = ['method' => 'balikovna_pickup', 'pickup_code' => '123',
+    'pickup_point' => 'Praha 10', 'pickup_address' => 'Černokostelecká 2020/20, Praha',
+    'pickup_postal_code' => '10000'];
+$balikovnaData['balikovnaSelection'] = ['id' => '123', 'name' => 'Praha 10',
+    'address' => 'Černokostelecká 2020/20, Praha', 'zip' => '10000', 'type' => 'BALIKOVNY'];
+ob_start();
+$renderer->render('shipping', $balikovnaData);
+$balikovnaShipping = ob_get_clean();
+if (!str_contains($balikovnaShipping, 'name="balikovna_point_id" value="123"') ||
+    !str_contains($balikovnaShipping, 'name="balikovna_point_zip" value="10000"') ||
+    !str_contains($balikovnaShipping, 'Praha 10 · Černokostelecká 2020/20, Praha')) {
+    throw new RuntimeException('Previously selected Balíkovna was not restored.');
+}
 $glsData = $data;
 $glsData['delivery'] = ['method' => 'gls_pickup', 'pickup_code' => '26711-GLSCZ_DEPO47',
     'pickup_point' => 'GLS ParcelShop Brno', 'pickup_address' => 'Nádražní 12, Brno, 60200'];

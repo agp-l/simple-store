@@ -9,7 +9,7 @@ declare(strict_types=1);
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
   <input type="hidden" name="action" value="save-checkout-settings">
   <h2>Výdejní místa a boxy</h2>
-  <p class="panel-help">U Zásilkovny a GLS zákazník vybere místo přímo v mapě; u PPL po nastavení klíče widgetu. U Balíkovny zatím opíše adresu.</p>
+  <p class="panel-help">U Zásilkovny, GLS a Balíkovny zákazník vybere místo přímo v mapě; u PPL po nastavení klíče widgetu. Mapa Balíkovny ani GLS nevyžaduje klíč.</p>
   <?php foreach ($shippingCatalog as $code => $definition): ?>
     <?php if (str_ends_with($code, '_home') && $code === 'gls_home'): ?><h2>Na adresu</h2><?php endif; ?>
     <div class="panel-shipping-row"><strong><?= $escape($definition['label']) ?></strong><label>Cena v Kč<input type="number" name="shipping_price[<?= $escape($code) ?>]" value="<?= $escape($form['shipping_price'][$code]) ?>" min="0" max="100000" required></label><label class="panel-check"><input type="checkbox" name="shipping_enabled[<?= $escape($code) ?>]" value="1" <?= $form['shipping_enabled'][$code] === '1' ? 'checked' : '' ?>> Nabízet</label></div>
