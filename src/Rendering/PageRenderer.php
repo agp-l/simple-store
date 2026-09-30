@@ -95,6 +95,12 @@ final class PageRenderer
         $error = (string) ($data['error'] ?? '');
         $step = (string) ($data['step'] ?? '');
         $bankConfigured = (bool) ($data['bankConfigured'] ?? false);
+        $comgateConfigured = (bool) ($data['comgateConfigured'] ?? false);
+        $paymentMethod = (string) ($data['paymentMethod'] ?? '');
+        $paymentStepReady = (bool) ($data['paymentStepReady'] ?? false);
+        $comgateAvailable = (bool) ($data['comgateAvailable'] ?? false);
+        $comgateState = $data['comgateState'] ?? null;
+        $paymentNotice = (string) ($data['paymentNotice'] ?? '');
         $shippingConfigured = (bool) ($data['shippingConfigured'] ?? false);
         $termsUrl = (string) ($data['termsUrl'] ?? '');
         $order = $data['order'] ?? [];
