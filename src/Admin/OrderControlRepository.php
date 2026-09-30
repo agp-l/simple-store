@@ -213,6 +213,7 @@ final class OrderControlRepository
             'total_czk' => (int) $order['total_czk'],
             'reason' => trim($reason),
             'admin_id' => $adminId,
+            'created_at' => gmdate('Y-m-d H:i:s'),
         ]);
     }
 
