@@ -10,7 +10,7 @@ use SimpleStore\Accounting\OrderMailQueue;
 use SimpleStore\Accounting\InvoiceRepository;
 use Throwable;
 
-/** HTTP boundary for the cart, delivery form, bank transfer and order receipt. */
+/** HTTP boundary for the cart, delivery form, payment choice and order receipt. */
 final class CheckoutController
 {
     private string $cartUrl;
@@ -42,7 +42,8 @@ final class CheckoutController
         ?BalikovnaPickupPoint $balikovna = null,
         private ?OrderMailQueue $mailQueue = null,
         private string $mailSender = '',
-        private ?InvoiceRepository $invoices = null
+        private ?InvoiceRepository $invoices = null,
+        private ?ComgatePaymentService $comgate = null
     ) {
         $this->cartUrl = $url->path('kosik');
         $this->checkoutUrl = $url->path('pokladna');
@@ -66,7 +67,8 @@ final class CheckoutController
         header('X-Content-Type-Options: nosniff');
         $name = $route['name'] ?? '';
         if ($name === 'order') {
-            if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET' || !$this->orders->installed()) {
+            $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+            if (!in_array($method, ['GET', 'POST'], true) || !$this->orders->installed()) {
                 $this->renderer->render('not-found', $this->shared, 404);
                 return;
             }
@@ -75,8 +77,43 @@ final class CheckoutController
                 $this->renderer->render('not-found', $this->shared, 404);
                 return;
             }
+            $paymentNotice = '';
+            $responseStatus = 200;
+            if ($method === 'POST') {
+                if (!$this->cart->validToken($_POST['csrf'] ?? null)) {
+                    $paymentNotice = 'Platnost formuláře vypršela. Obnov stránku a zkus platbu znovu.';
+                    $responseStatus = 403;
+                } elseif (($_POST['action'] ?? null) !== 'comgate_pay' ||
+                    ($order['payment_method'] ?? '') !== 'comgate' ||
+                    ($order['payment_status'] ?? '') === 'paid') {
+                    $this->renderer->render('not-found', $this->shared, 404);
+                    return;
+                } elseif ($this->comgate === null) {
+                    $paymentNotice = 'Online platba je nyní nedostupná. Kontaktujte prosím obchod.';
+                    $responseStatus = 503;
+                } else {
+                    try {
+                        $this->redirect($this->comgate->initiate($order));
+                    } catch (Throwable $error) {
+                        error_log('Comgate payment ' . (int) $order['id'] . ' initiation failed: ' . $error->getMessage());
+                        $paymentNotice = 'Platební bránu se nepodařilo otevřít. Objednávka zůstala uložená a není zaplacená. Zkus to později nebo kontaktuj obchod.';
+                        $responseStatus = 503;
+                    }
+                }
+            } elseif (($order['payment_method'] ?? '') === 'comgate' &&
+                ($_GET['comgate_return'] ?? '') === '1' && $this->comgate !== null) {
+                try {
+                    $order = $this->comgate->refresh($order);
+                } catch (Throwable $error) {
+                    error_log('Comgate payment ' . (int) $order['id'] . ' status check failed: ' . $error->getMessage());
+                    $paymentNotice = 'Stav platby se zatím nepodařilo ověřit. Obnov stránku později.';
+                }
+            }
+            if ($method === 'GET' && ($_GET['comgate_error'] ?? '') === '1' && $paymentNotice === '') {
+                $paymentNotice = 'Platební bránu se nepodařilo otevřít. Objednávka zůstala uložená. Platbu lze zkusit znovu.';
+            }
             $invoice = $this->invoices?->byOrder((int) $order['id']);
-            if (($_GET['invoice'] ?? '') === '1') {
+            if ($method === 'GET' && ($_GET['invoice'] ?? '') === '1') {
                 if ($invoice === null) {
                     $this->renderer->render('not-found', $this->shared, 404);
                     return;
@@ -93,7 +130,12 @@ final class CheckoutController
                     'objednavka/' . $order['order_token']) . '?invoice=1' : '',
                 'bankPayment' => ($order['payment_method'] ?? '') === 'bank_transfer'
                     ? BankTransferPayment::fromOrder($order)->details($order) : [],
-            ]);
+                'comgateAvailable' => $this->comgate !== null && $this->comgate->canInitiate(),
+                'comgateState' => $this->comgate !== null && $this->comgate->installed()
+                    ? $this->comgate->state((int) $order['id']) : null,
+                'paymentNotice' => $paymentNotice,
+                'cartToken' => $this->cart->token(),
+            ], $responseStatus);
             return;
         }
         if (!in_array($name, ['cart', 'checkout'], true)) {
@@ -118,6 +160,9 @@ final class CheckoutController
                 } elseif ($action === 'delivery') {
                     $this->saveDelivery();
                     $this->redirect($this->checkoutUrl . '?step=payment');
+                } elseif ($action === 'payment') {
+                    $this->savePayment();
+                    $this->redirect($this->checkoutUrl . '?step=review');
                 } elseif ($action === 'place') {
                     $this->placeOrder();
                     return;
@@ -127,7 +172,9 @@ final class CheckoutController
             } catch (InvalidArgumentException $exception) {
                 $error = $exception->getMessage();
                 $this->render($name === 'cart' ? 'cart' :
-                    ((($_POST['action'] ?? '') === 'place') ? 'review' : 'shipping'), $error, 422);
+                    match ($_POST['action'] ?? '') {
+                        'place' => 'review', 'payment' => 'payment', default => 'shipping',
+                    }, $error, 422);
                 return;
             }
         }
@@ -224,9 +271,36 @@ final class CheckoutController
         $this->cart->setDelivery($fields);
     }
 
+    private function savePayment(): void
+    {
+        if (!$this->cartService->summary($this->cart)['can_continue'] ||
+            !is_array($this->cart->state()['delivery'])) {
+            throw new InvalidArgumentException('Před výběrem platby zkontrolujte dopravu a košík.');
+        }
+        if ($this->testCheckout()) return;
+        $method = self::field('payment_method');
+        if (!$this->paymentAvailable($method)) {
+            throw new InvalidArgumentException('Vybraný způsob platby není dostupný.');
+        }
+        $this->cart->setPaymentMethod($method);
+    }
+
+    private function selectedPaymentMethod(): string
+    {
+        $selected = $this->cart->state()['payment_method'];
+        return is_string($selected) ? $selected : ($this->bank !== null ? 'bank_transfer' : 'comgate');
+    }
+
+    private function paymentAvailable(string $method): bool
+    {
+        return $method === 'bank_transfer' && $this->bank !== null ||
+            $method === 'comgate' && $this->comgate !== null && $this->comgate->canInitiate();
+    }
+
     private function placeOrder(): void
     {
         $testOrder = $this->testCheckout();
+        $paymentMethod = $this->selectedPaymentMethod();
         if (!$testOrder && $this->termsUrl !== '' && self::field('terms') !== '1') {
             throw new InvalidArgumentException('Pro odeslání objednávky potvrďte obchodní podmínky.');
         }
@@ -236,7 +310,7 @@ final class CheckoutController
         $selected = ShippingPolicy::known($methodCode) ? $this->shipping->method($methodCode) : null;
         $price = $selected['price_czk'] ?? null;
         if (!$summary['can_continue'] || !is_array($delivery) || $price === null ||
-            (!$testOrder && $this->bank === null) ||
+            (!$testOrder && !$this->paymentAvailable($paymentMethod)) ||
             !$this->orders->installed()) {
             throw new InvalidArgumentException('Objednávku nyní nelze dokončit. Zkontrolujte košík, doručení a nastavení obchodu.');
         }
@@ -274,10 +348,12 @@ final class CheckoutController
         if ($methodCode === 'gls_pickup') $shipping['pickup_source'] = 'gls_map';
         if ($methodCode === 'balikovna_pickup') $shipping['pickup_source'] = 'balikovna_map';
         $order = $this->orders->create($this->customerId, $delivery['email'], $summary['items'],
-            $shipping, $price, $this->cart->checkoutKey(), $testOrder);
+            $shipping, $price, $this->cart->checkoutKey(), $testOrder, $paymentMethod);
         if ($this->mailQueue !== null && !$testOrder) {
             try {
-                $messageId = $this->mailQueue->enqueueOrder($order);
+                $orderUrl = $paymentMethod === 'comgate' && $this->comgate !== null
+                    ? $this->comgate->receiptUrl($order, $this->url->getLanguage()) : '';
+                $messageId = $this->mailQueue->enqueueOrder($order, $orderUrl);
                 if ($messageId !== null && $this->mailSender !== '') {
                     $this->mailQueue->dispatch($messageId, $this->mailSender);
                 }
@@ -286,6 +362,14 @@ final class CheckoutController
             }
         }
         $this->cart->clear();
+        if (!$testOrder && $paymentMethod === 'comgate') {
+            try {
+                $this->redirect($this->comgate->initiate($order));
+            } catch (Throwable $error) {
+                error_log('Comgate payment ' . (int) $order['id'] . ' initiation failed: ' . $error->getMessage());
+                $this->redirect($this->url->path('objednavka/' . $order['order_token']) . '?comgate_error=1');
+            }
+        }
         $this->redirect($this->url->path('objednavka/' . $order['order_token']));
     }
 
@@ -369,9 +453,10 @@ final class CheckoutController
         $installed = $this->orders->installed();
         $shippingConfigured = $this->shippingOptions !== [];
         $testCheckout = $this->testCheckout();
-        $ready = $summary['can_continue'] && $shippingConfigured && $installed && $price !== null &&
-            $summary['subtotal_czk'] + $price <= 9999999 &&
-            ($testCheckout || $this->bank !== null);
+        $paymentMethod = $this->selectedPaymentMethod();
+        $baseReady = $summary['can_continue'] && $shippingConfigured && $installed && $price !== null &&
+            $summary['subtotal_czk'] + $price <= 9999999;
+        $ready = $baseReady && ($testCheckout || $this->paymentAvailable($paymentMethod));
         $data = array_merge($this->shared, [
             'title' => match ($step) {
                 'cart' => 'Košík — dobrodruzi.cz',
@@ -391,6 +476,10 @@ final class CheckoutController
             'glsSelection' => $glsSelection,
             'balikovnaSelection' => $balikovnaSelection,
             'shippingConfigured' => $shippingConfigured, 'bankConfigured' => $this->bank !== null,
+            'comgateConfigured' => $this->comgate !== null && $this->comgate->canInitiate(),
+            'paymentMethod' => $paymentMethod,
+            'paymentStepReady' => $baseReady && ($testCheckout || $this->bank !== null ||
+                $this->comgate !== null && $this->comgate->canInitiate()),
             'checkoutReady' => $ready, 'testCheckout' => $testCheckout, 'termsUrl' => $this->termsUrl,
             'error' => $error, 'step' => $step,
             'setupNotice' => !$installed ? 'Pro objednávky znovu importuj aktuální database/schema.sql.' : '',
@@ -400,7 +489,8 @@ final class CheckoutController
 
     private function testCheckout(): bool
     {
-        return $this->allowLocalPreview && $this->bank === null;
+        return $this->allowLocalPreview && $this->bank === null &&
+            ($this->comgate === null || !$this->comgate->canInitiate());
     }
 
     private static function field(string $name): string

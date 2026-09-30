@@ -22,6 +22,11 @@ final class CheckoutSettingsRepository
         $local['ppl'] = is_array($local['ppl'] ?? null)
             ? array_replace($example['ppl'] ?? ['widget_key' => ''], $local['ppl'])
             : ($example['ppl'] ?? ['widget_key' => '']);
+        $comgateDefaults = $example['comgate'] ?? [
+            'enabled' => false, 'test' => true, 'merchant' => '', 'secret' => '', 'return_base_url' => '',
+        ];
+        $local['comgate'] = is_array($local['comgate'] ?? null)
+            ? array_replace($comgateDefaults, $local['comgate']) : $comgateDefaults;
         if (($local['bank_transfer']['account_display'] ?? '') === '' &&
             ($local['bank_transfer']['recipient'] ?? '') === '') {
             $local['bank_transfer'] = $example['bank_transfer'];
@@ -112,11 +117,37 @@ final class CheckoutSettingsRepository
             preg_match('//u', $sender) !== 1)) {
             throw new InvalidArgumentException('Označení odesílatele Zásilkovny je neplatné.');
         }
+        $comgateMerchant = self::value($input, 'comgate_merchant');
+        if ($comgateMerchant !== '' && preg_match('/^[A-Za-z0-9._-]{1,100}$/D', $comgateMerchant) !== 1) {
+            throw new InvalidArgumentException('Identifikátor obchodníka Comgate může obsahovat jen písmena, číslice, tečku, pomlčku a podtržítko.');
+        }
+        $comgateSecret = self::value($input, 'comgate_secret');
+        if ($comgateSecret === '') {
+            $comgateSecret = ($input['comgate_clear_secret'] ?? null) === '1' ? '' :
+                (string) ($current['comgate']['secret'] ?? '');
+        }
+        if ($comgateSecret !== '' && (strlen($comgateSecret) > 256 ||
+            preg_match('/^[\x21-\x7e]+$/D', $comgateSecret) !== 1)) {
+            throw new InvalidArgumentException('Tajný klíč Comgate musí mít nejvýše 256 znaků bez mezer.');
+        }
+        $comgateEnabled = ($input['comgate_enabled'] ?? null) === '1';
+        $comgateReturnBaseUrl = self::comgateReturnBaseUrl(
+            self::value($input, 'comgate_return_base_url'), $basePath);
+        if ($comgateEnabled && $comgateReturnBaseUrl === '') {
+            throw new InvalidArgumentException('Před zapnutím Comgate vyplň veřejnou HTTPS adresu obchodu.');
+        }
         $settings = [
             'shipping_methods' => $shipping,
             'packeta' => ['api_key' => $packetaKey, 'api_password' => $password, 'sender' => $sender],
             'ppl' => ['widget_key' => $pplKey],
             'bank_transfer' => $bankSettings,
+            'comgate' => [
+                'enabled' => $comgateEnabled,
+                'test' => ($input['comgate_test'] ?? null) === '1',
+                'merchant' => $comgateMerchant,
+                'secret' => $comgateSecret,
+                'return_base_url' => $comgateReturnBaseUrl,
+            ],
             'terms_url' => $termsUrl,
             'local_test_checkout' => ($input['local_test_checkout'] ?? null) === '1',
         ];
@@ -164,5 +195,27 @@ final class CheckoutSettingsRepository
             throw new InvalidArgumentException('Neplatné pole nastavení: ' . $key . '.');
         }
         return trim($value);
+    }
+
+    private static function comgateReturnBaseUrl(string $url, string $basePath): string
+    {
+        if ($url === '') return '';
+        $parts = parse_url($url);
+        $host = is_array($parts) ? ($parts['host'] ?? '') : '';
+        $publicIpv4 = filter_var($host, FILTER_VALIDATE_IP,
+            FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
+        $publicDomain = is_string($host) && strlen($host) <= 253 &&
+            preg_match('/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{1,62}$/iD', $host) === 1 &&
+            !preg_match('/(?:^|\.)(?:localhost|local|internal)$/iD', $host);
+        $expectedPath = rtrim($basePath, '/');
+        if (!is_array($parts) || strtolower((string) ($parts['scheme'] ?? '')) !== 'https' ||
+            (!$publicIpv4 && !$publicDomain) || isset($parts['user']) ||
+            isset($parts['query']) || isset($parts['fragment']) ||
+            !in_array($parts['path'] ?? '', [$expectedPath, $expectedPath . '/'], true)) {
+            throw new InvalidArgumentException(
+                'Comgate vyžaduje veřejnou HTTPS adresu kořene obchodu bez parametrů, např. https://obchod.cz' .
+                rtrim($basePath, '/') . '.');
+        }
+        return rtrim($url, '/');
     }
 }

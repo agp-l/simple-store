@@ -26,7 +26,7 @@ final class OrderMailQueue
         ) > 0;
     }
 
-    public function enqueueOrder(array $order): ?int
+    public function enqueueOrder(array $order, string $orderUrl = ''): ?int
     {
         if (!$this->installed() || ($order['payment_method'] ?? '') === 'test') return null;
         $lines = ['Děkujeme za objednávku ' . $order['order_number'] . '.', '', 'Položky:'];
@@ -43,6 +43,17 @@ final class OrderMailQueue
             $lines[] = 'Číslo účtu: ' . ($bank['account_display'] ?? '');
             $lines[] = 'Variabilní symbol: ' . ($order['variable_symbol'] ?? '');
             $lines[] = 'Splatnost: ' . ($order['payment_due_at'] ?? '');
+        } elseif (($order['payment_method'] ?? '') === 'comgate') {
+            $lines[] = '';
+            $lines[] = 'Zvolená platba: online přes Comgate.';
+            $lines[] = 'O výsledku platby rozhoduje potvrzení brány.';
+            if ($orderUrl !== '') {
+                if (filter_var($orderUrl, FILTER_VALIDATE_URL) === false ||
+                    !str_starts_with($orderUrl, 'https://') || strlen($orderUrl) > 1000) {
+                    throw new InvalidArgumentException('Neplatný odkaz na objednávku.');
+                }
+                $lines[] = 'Stav objednávky a případné opakování platby: ' . $orderUrl;
+            }
         }
         $lines[] = '';
         $lines[] = 'Doprava: ' . ($order['shipping']['label'] ?? '');
@@ -70,7 +81,9 @@ final class OrderMailQueue
         }
         $lines[] = 'Doprava: ' . (int) $invoice['shipping_czk'] . ' Kč';
         $lines[] = 'Celkem: ' . (int) $invoice['total_czk'] . ' Kč';
-        $lines[] = 'Uhrazeno bankovním převodem · VS: ' . ($invoice['variable_symbol'] ?? '');
+        $lines[] = ($invoice['payment_method'] ?? 'bank_transfer') === 'comgate'
+            ? 'Uhrazeno online přes Comgate.'
+            : 'Uhrazeno bankovním převodem · VS: ' . ($invoice['variable_symbol'] ?? '');
         $lines[] = 'Nejsem plátce DPH.';
         $subject = 'Faktura ' . $invoice['document_number'];
         $body = implode("\n", $lines) . "\n";

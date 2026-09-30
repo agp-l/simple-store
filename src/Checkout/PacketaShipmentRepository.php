@@ -58,7 +58,7 @@ final class PacketaShipmentRepository
                 'SELECT *
                  FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId);
             $shipping = is_array($order) ? json_decode((string) $order['shipping_json'], true) : null;
-            if ($order === null || $order['payment_method'] !== 'bank_transfer' ||
+            if ($order === null || !in_array($order['payment_method'], ['bank_transfer', 'comgate'], true) ||
                 $order['payment_status'] !== 'paid' ||
                 ($order['fulfillment_source'] ?? 'own') === 'external' ||
                 in_array($order['status'], ['shipped', 'cancelled', 'completed', 'test'], true) ||

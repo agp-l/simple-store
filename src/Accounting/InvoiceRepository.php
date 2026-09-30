@@ -24,7 +24,11 @@ final class InvoiceRepository
                 $table
             ) === 0) return false;
         }
-        return true;
+        return (int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME=%s',
+            'shop_invoices', 'payment_method'
+        ) > 0;
     }
 
     public function issue(int $orderId, array $seller, array $buyerInput): array
@@ -36,7 +40,7 @@ final class InvoiceRepository
         $this->db->startTransaction();
         try {
             $order = $this->db->queryFirstRow('SELECT * FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId);
-            if ($order === null || $order['payment_method'] !== 'bank_transfer' ||
+            if ($order === null || !in_array($order['payment_method'], ['bank_transfer', 'comgate'], true) ||
                 $order['payment_status'] !== 'paid' || $order['status'] === 'test') {
                 throw new InvalidArgumentException('Fakturu lze vystavit jen k uhrazené skutečné objednávce.');
             }
@@ -48,8 +52,10 @@ final class InvoiceRepository
                 throw new InvalidArgumentException('Položky nebo kontakt objednávky nejsou úplné.');
             }
             $payment = json_decode((string) ($order['payment_details_json'] ?? '{}'), true);
-            $seller['bank_account'] = is_array($payment) && is_string($payment['account_display'] ?? null)
-                ? $payment['account_display'] : (string) ($seller['bank_account'] ?? '');
+            if ($order['payment_method'] === 'bank_transfer') {
+                $seller['bank_account'] = is_array($payment) && is_string($payment['account_display'] ?? null)
+                    ? $payment['account_display'] : (string) ($seller['bank_account'] ?? '');
+            }
             $today = new DateTimeImmutable('now', new DateTimeZone('Europe/Prague'));
             $year = (int) $today->format('Y');
             $this->db->query('INSERT IGNORE INTO shop_invoice_sequence (calendar_year, next_number) VALUES (%i, %i)',
@@ -77,6 +83,7 @@ final class InvoiceRepository
                 'shipping_czk' => (int) $order['shipping_czk'],
                 'total_czk' => (int) $order['total_czk'],
                 'variable_symbol' => $order['variable_symbol'],
+                'payment_method' => $order['payment_method'],
                 'bank_account' => (string) ($seller['bank_account'] ?? ''),
             ]);
             $invoice = $this->byOrder($orderId);

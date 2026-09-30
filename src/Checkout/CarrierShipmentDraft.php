@@ -13,7 +13,7 @@ final class CarrierShipmentDraft
         $shipping = $order['shipping'] ?? null;
         $method = is_array($shipping) ? ($shipping['method'] ?? '') : '';
         if (!in_array($method, ['balikovna_pickup', 'gls_pickup', 'gls_home'], true) ||
-            ($order['payment_method'] ?? '') !== 'bank_transfer' ||
+            !in_array($order['payment_method'] ?? '', ['bank_transfer', 'comgate'], true) ||
             ($order['payment_status'] ?? '') !== 'paid' ||
             ($order['fulfillment_source'] ?? 'own') !== 'own' ||
             in_array($order['status'] ?? '', ['shipped', 'completed', 'cancelled', 'test'], true)) {

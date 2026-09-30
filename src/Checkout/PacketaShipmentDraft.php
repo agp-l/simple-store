@@ -11,7 +11,7 @@ final class PacketaShipmentDraft
     public static function fromOrder(array $order, array $input, string $sender): array
     {
         $shipping = $order['shipping'] ?? null;
-        if (!is_array($shipping) || ($order['payment_method'] ?? '') !== 'bank_transfer' ||
+        if (!is_array($shipping) || !in_array($order['payment_method'] ?? '', ['bank_transfer', 'comgate'], true) ||
             ($order['payment_status'] ?? '') !== 'paid' ||
             ($order['fulfillment_source'] ?? 'own') === 'external' ||
             in_array($order['status'] ?? '', ['shipped', 'cancelled', 'completed', 'test'], true)) {

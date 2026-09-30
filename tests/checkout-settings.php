@@ -45,6 +45,8 @@ $fallback = CheckoutSettingsRepository::withDefaults($old, $example);
 if ($fallback['bank_transfer']['account_display'] !== '' ||
     $fallback['shipping_methods']['ppl_home']['price_czk'] !== 99 ||
     $fallback['ppl']['widget_key'] !== '' ||
+    $fallback['comgate'] !== ['enabled' => false, 'test' => true, 'merchant' => '',
+        'secret' => '', 'return_base_url' => ''] ||
     count($fallback['shipping_methods']) !== 9 ||
     $repo->load($fallback) !== $fallback) {
     throw new RuntimeException('Old private checkout settings did not receive the new defaults.');
@@ -60,6 +62,9 @@ $input = ['shipping_price' => array_map('strval', array_column(ShippingPolicy::d
     'packeta_api_key' => 'ABCDEF1234567890',
     'ppl_widget_key' => 'public-ppl-key-123',
     'packeta_api_password' => 'private-test-password', 'packeta_sender' => 'Dobrodruzi',
+    'comgate_enabled' => '1', 'comgate_test' => '1', 'comgate_merchant' => 'test-merchant',
+    'comgate_secret' => 'comgate-test-secret',
+    'comgate_return_base_url' => 'https://obchod.example/simple-store/',
     'local_test_checkout' => '1'];
 $input['shipping_price'] = array_combine(array_keys(ShippingPolicy::defaults()),
     array_values($input['shipping_price']));
@@ -71,27 +76,45 @@ if ($loaded != $saved || $saved['bank_transfer']['iban'] !== $generated->snapsho
     $saved['terms_url'] !== '/simple-store/cs/obchodni-podminky' ||
     $saved['packeta']['api_key'] !== 'ABCDEF1234567890' ||
     $saved['packeta']['api_password'] !== 'private-test-password' ||
+    $saved['comgate'] !== ['enabled' => true, 'test' => true,
+        'merchant' => 'test-merchant', 'secret' => 'comgate-test-secret',
+        'return_base_url' => 'https://obchod.example/simple-store'] ||
     $saved['packeta']['sender'] !== 'Dobrodruzi') {
     throw new RuntimeException('Checkout settings were not validated and loaded from the database.');
 }
 if ($saved['ppl']['widget_key'] !== 'public-ppl-key-123') {
     throw new RuntimeException('PPL widget key was not persisted.');
 }
-$withoutNewPassword = $repo->save(array_replace($input, ['packeta_api_password' => '']),
+$withoutNewPassword = $repo->save(array_replace($input,
+    ['packeta_api_password' => '', 'comgate_secret' => '']),
     '/simple-store/', $saved);
-if ($withoutNewPassword['packeta']['api_password'] !== 'private-test-password') {
-    throw new RuntimeException('Saving other settings erased the API password.');
+if ($withoutNewPassword['packeta']['api_password'] !== 'private-test-password' ||
+    $withoutNewPassword['comgate']['secret'] !== 'comgate-test-secret') {
+    throw new RuntimeException('Saving other settings erased an API secret.');
 }
 $cleared = $repo->save(array_replace($input, ['packeta_api_password' => '',
     'packeta_clear_password' => '1']), '/simple-store/', $saved);
 if ($cleared['packeta']['api_password'] !== '') {
     throw new RuntimeException('The explicit password removal failed.');
 }
+$comgateCleared = $repo->save(array_replace($input, ['comgate_secret' => '',
+    'comgate_clear_secret' => '1']), '/simple-store/', $saved);
+if ($comgateCleared['comgate']['secret'] !== '' || !$comgateCleared['comgate']['enabled']) {
+    throw new RuntimeException('Explicit Comgate secret removal changed the wrong setting.');
+}
 $repo->save($input, '/simple-store/');
 foreach ([['shipping_price' => array_replace($input['shipping_price'], ['ppl_home' => '-1'])],
     ['terms_url' => 'https://other.test/terms'],
     ['iban' => 'CZ0000000000000000000000'],
     ['packeta_api_key' => 'API-HESLO'],
+    ['comgate_merchant' => 'invalid merchant ID'],
+    ['comgate_secret' => "invalid\nsecret"],
+    ['comgate_return_base_url' => 'http://obchod.example/simple-store'],
+    ['comgate_return_base_url' => 'https://localhost/simple-store'],
+    ['comgate_return_base_url' => 'https://192.168.1.2/simple-store'],
+    ['comgate_return_base_url' => 'https://obchod.example/another-site'],
+    ['comgate_return_base_url' => 'https://obchod.example/simple-store?redirect=evil'],
+    ['comgate_return_base_url' => ''],
     ['ppl_widget_key' => 'invalid key with spaces']] as $change) {
     try {
         $repo->save(array_replace($input, $change), '/simple-store/');
@@ -108,6 +131,11 @@ $disabled = $repo->save(array_replace($input, [
 if ((new ShippingPolicy($disabled['shipping_methods']))->quote('gls_pickup') !== null ||
     (new ShippingPolicy($disabled['shipping_methods']))->quote('ppl_home') !== 120) {
     throw new RuntimeException('Disabled carrier remained available or edited price was lost.');
+}
+$withoutGateway = $repo->save(array_replace($input,
+    ['comgate_enabled' => '0', 'comgate_return_base_url' => '']), '/simple-store/');
+if ($withoutGateway['comgate']['enabled'] || $withoutGateway['comgate']['return_base_url'] !== '') {
+    throw new RuntimeException('A disabled Comgate gateway must not require a return URL.');
 }
 $db->json = json_encode(['shipping_methods' => ['home' => [
     'label' => 'Starý kurýr', 'price_czk' => 149, 'requires_address' => true,

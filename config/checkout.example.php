@@ -20,5 +20,12 @@ return [
         'recipient' => '',
         'payment_due_days' => 7,
     ],
+    'comgate' => [
+        'enabled' => false, // Enable only after entering merchant and secret in administration.
+        'test' => true, // Comgate test flag; a merchant profile and secret are still required.
+        'merchant' => '',
+        'secret' => '', // Never commit live credentials.
+        'return_base_url' => '', // Public HTTPS installation root, e.g. https://obchod.cz/simple-store.
+    ],
     'shipping_methods' => \SimpleStore\Checkout\ShippingPolicy::defaults(),
 ];

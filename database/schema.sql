@@ -123,6 +123,27 @@ CREATE TABLE IF NOT EXISTS shop_orders (
   KEY orders_fulfillment_status (status, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- A payment may be retried after cancellation. Keep every remote transaction so
+-- late notifications can still be reconciled against the original order.
+CREATE TABLE IF NOT EXISTS shop_comgate_payments (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  order_id BIGINT UNSIGNED NOT NULL,
+  status VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  merchant VARCHAR(80) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  test_mode TINYINT(1) NOT NULL,
+  trans_id VARCHAR(100) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  redirect_url VARCHAR(2048) NULL,
+  return_token CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  last_error VARCHAR(500) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY comgate_trans_id (trans_id),
+  UNIQUE KEY comgate_return_token (return_token),
+  KEY comgate_order_attempt (order_id, id),
+  CONSTRAINT comgate_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- One reservation per order prevents two API calls for the same parcel.
 -- An uncertain network result must be reconciled in the Packeta client section.
 CREATE TABLE IF NOT EXISTS shop_packeta_shipments (
@@ -278,6 +299,7 @@ CREATE TABLE IF NOT EXISTS shop_invoices (
   shipping_czk INT UNSIGNED NOT NULL,
   total_czk INT UNSIGNED NOT NULL,
   variable_symbol VARCHAR(10) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  payment_method VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'bank_transfer',
   bank_account VARCHAR(40) NOT NULL DEFAULT '',
   status VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'issued',
   emailed_at DATETIME NULL,
@@ -287,6 +309,14 @@ CREATE TABLE IF NOT EXISTS shop_invoices (
   KEY invoice_issue (issue_date, id),
   CONSTRAINT invoice_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET @invoice_method_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_invoices' AND COLUMN_NAME='payment_method');
+SET @invoice_method_upgrade = IF(@invoice_method_exists=0,
+  'ALTER TABLE shop_invoices ADD COLUMN payment_method VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT ''bank_transfer'' AFTER variable_symbol', 'SELECT 1');
+PREPARE invoice_method_statement FROM @invoice_method_upgrade;
+EXECUTE invoice_method_statement;
+DEALLOCATE PREPARE invoice_method_statement;
 
 CREATE TABLE IF NOT EXISTS shop_invoice_number_events (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,

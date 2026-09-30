@@ -302,9 +302,9 @@ final class TaxEvidenceRepository
     public function orderReceivables(): array
     {
         return $this->db->query('SELECT id, order_number, customer_email, total_czk, created_at
-            FROM shop_orders WHERE payment_method=%s AND payment_status=%s
+            FROM shop_orders WHERE payment_method IN (%s,%s) AND payment_status=%s
                 AND status NOT IN (%s,%s) ORDER BY id DESC LIMIT %i',
-            'bank_transfer', 'pending', 'cancelled', 'test', 100);
+            'bank_transfer', 'comgate', 'pending', 'cancelled', 'test', 100);
     }
 
     public function addStock(array $input): void

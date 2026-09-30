@@ -17,7 +17,7 @@ require __DIR__ . '/common.php';
         <address><?= $checkoutEscape($delivery['name'] ?? '') ?><br><?php if (($chosenShipping['group'] ?? '') === 'pickup'): ?>Výdejní místo: <?= $checkoutEscape($delivery['pickup_point'] ?? '') ?><br><?= $checkoutEscape($delivery['pickup_address'] ?? '') ?><?php if (!empty($delivery['pickup_code'])): ?><br>Kód místa: <?= $checkoutEscape($delivery['pickup_code']) ?><?php endif; ?><?php else: ?><?= $checkoutEscape($delivery['street'] ?? '') ?><br><?= $checkoutEscape($delivery['postal_code'] ?? '') ?> <?= $checkoutEscape($delivery['city'] ?? '') ?><?php endif; ?><br>Česká republika</address>
         <p><?= $checkoutEscape($delivery['email'] ?? '') ?><br><?= $checkoutEscape($delivery['phone'] ?? '') ?></p>
       </section>
-      <section class="checkout-panel"><div class="checkout-panel-title"><h2>Platba</h2><a href="<?= $checkoutEscape($checkoutUrl . '?step=payment') ?>">Zpět k platbě</a></div><p><?= ($testCheckout ?? false) ? 'Místní testovací objednávka. Platba se neprovádí.' : 'Bankovní převod. Platební údaje a QR kód se zobrazí po vytvoření objednávky.' ?></p></section>
+      <section class="checkout-panel"><div class="checkout-panel-title"><h2>Platba</h2><a href="<?= $checkoutEscape($checkoutUrl . '?step=payment') ?>">Změnit platbu</a></div><p><?= ($testCheckout ?? false) ? 'Místní testovací objednávka. Platba se neprovádí.' : (($paymentMethod ?? '') === 'comgate' ? 'Online platba Comgate. Po potvrzení objednávky budete přesměrováni na platební bránu.' : 'Bankovní převod. Platební údaje a QR kód se zobrazí po vytvoření objednávky.') ?></p></section>
     </div>
     <div class="checkout-sidebar">
       <?php require __DIR__ . '/summary.php'; ?>
@@ -28,7 +28,7 @@ require __DIR__ . '/common.php';
         <button type="submit" class="checkout-primary"><?= ($testCheckout ?? false) ? 'Vytvořit testovací objednávku' : 'Objednat s povinností platby' ?></button>
       </form>
       <?php else: ?><p class="checkout-alert" role="alert">Objednávku nyní nelze vytvořit. Vraťte se do košíku a zkontrolujte údaje.</p><?php endif; ?>
-      <p class="checkout-fineprint"><?= ($testCheckout ?? false) ? 'Testovací objednávku uvidíš v administraci. Neplať ji a nevyřizuj ji jako skutečný nákup.' : 'Objednávka vznikne až po potvrzení. K zaplacení pak použijete údaje na další stránce.' ?></p>
+      <p class="checkout-fineprint"><?= ($testCheckout ?? false) ? 'Testovací objednávku uvidíš v administraci. Neplať ji a nevyřizuj ji jako skutečný nákup.' : (($paymentMethod ?? '') === 'comgate' ? 'Objednávka vznikne po potvrzení. Poté vás přesměrujeme k online platbě Comgate.' : 'Objednávka vznikne po potvrzení. K zaplacení pak použijete údaje na další stránce.') ?></p>
     </div>
   </div>
 </main>

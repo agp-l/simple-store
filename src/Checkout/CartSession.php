@@ -30,6 +30,7 @@ final class CartSession
             'checkout_key' => $session['checkout_key'],
             'items' => $session['checkout_items'],
             'delivery' => $session['checkout_delivery'],
+            'payment_method' => $session['checkout_payment_method'],
         ]);
     }
 
@@ -119,11 +120,26 @@ final class CartSession
         });
     }
 
+    /** Payment choice belongs to this checkout attempt and is never read from the order form. */
+    public function setPaymentMethod(string $method): void
+    {
+        if (!in_array($method, ['bank_transfer', 'comgate'], true)) {
+            throw new InvalidArgumentException('Vyberte dostupný způsob platby.');
+        }
+        $this->access(static function (array &$session) use ($method): void {
+            if ($session['checkout_payment_method'] !== $method) {
+                $session['checkout_payment_method'] = $method;
+                $session['checkout_key'] = bin2hex(random_bytes(32));
+            }
+        });
+    }
+
     public function clear(): void
     {
         $this->access(static function (array &$session): void {
             $session['checkout_items'] = [];
             $session['checkout_delivery'] = null;
+            $session['checkout_payment_method'] = null;
             $session['checkout_key'] = bin2hex(random_bytes(32));
         });
     }
@@ -252,6 +268,9 @@ final class CartSession
             }
             if (!is_array($_SESSION['checkout_delivery'] ?? null)) {
                 $_SESSION['checkout_delivery'] = null;
+            }
+            if (!in_array($_SESSION['checkout_payment_method'] ?? null, ['bank_transfer', 'comgate'], true)) {
+                $_SESSION['checkout_payment_method'] = null;
             }
             return $operation($_SESSION);
         } finally {

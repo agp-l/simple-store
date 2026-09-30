@@ -74,6 +74,11 @@ $order = ['order_number' => 'DB-20260929-ABC', 'customer_email' => 'eva@example.
 $form = ['first_name' => 'Eva', 'surname' => 'Nová', 'weight_kg' => '0,750',
     'email' => 'eva@example.test', 'phone' => '+420 777-111-222'];
 $pickup = PacketaShipmentDraft::fromOrder($order, $form, 'Dobrodruzi');
+$comgateOrder = array_replace($order, ['payment_method' => 'comgate',
+    'provider_reference' => 'CG123456']);
+if (PacketaShipmentDraft::fromOrder($comgateOrder, $form, 'Dobrodruzi')['attributes']['addressId'] !== '12345') {
+    throw new RuntimeException('A paid Comgate order cannot prepare a Packeta packet.');
+}
 if ($pickup['attributes']['addressId'] !== '12345' || $pickup['attributes']['weight'] !== '0.750' ||
     $pickup['attributes']['phone'] !== '+420777111222' ||
     $pickup['attributes']['cod'] !== '0' || $pickup['attributes']['value'] !== '1200') {
@@ -96,6 +101,7 @@ if ($corrected['attributes']['email'] !== 'oprava@example.test' ||
     throw new RuntimeException('Contact correction changed the order or was not sent to Packeta.');
 }
 foreach ([array_replace($order, ['payment_status' => 'pending']),
+    array_replace($comgateOrder, ['payment_status' => 'pending']),
     array_replace($order, ['fulfillment_source' => 'external']),
     array_replace($order, ['shipping' => array_replace($shipping, ['pickup_verified' => false])])] as $invalid) {
     try {
@@ -108,7 +114,9 @@ $db = new MeekroDB();
 $db->order = ['payment_method' => 'bank_transfer', 'payment_status' => 'paid',
     'status' => 'processing', 'shipping_json' => json_encode($shipping, JSON_THROW_ON_ERROR)];
 $repo = new PacketaShipmentRepository($db);
+$db->order['payment_method'] = 'comgate';
 $repo->reserve(9, 3, $pickup);
+$db->order['payment_method'] = 'bank_transfer';
 try {
     $repo->reserve(9, 3, $pickup);
     throw new RuntimeException('Duplicate API submission was not blocked.');

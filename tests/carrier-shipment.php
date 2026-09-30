@@ -57,6 +57,11 @@ $order = ['order_number' => 'DB-20260930-123', 'payment_method' => 'bank_transfe
 $input = ['recipient' => 'Eva Nová', 'email' => 'eva@example.test',
     'phone' => '+420 777 123 456', 'weight_kg' => '0,750', 'city' => 'Praha'];
 $draft = CarrierShipmentDraft::fromOrder($order, $input);
+$comgateOrder = array_replace($order, ['payment_method' => 'comgate',
+    'provider_reference' => 'CG123456']);
+if (CarrierShipmentDraft::fromOrder($comgateOrder, $input)['pickup_code'] !== 'B10000') {
+    throw new RuntimeException('A paid Comgate order cannot prepare its carrier shipment.');
+}
 try {
     CarrierShipmentCsv::export($draft);
     throw new RuntimeException('Pickup widget data must not create a Balíkovna import.');
@@ -83,6 +88,12 @@ try {
     $repository->save(7, 2, $draft);
     throw new RuntimeException('Confirmed carrier shipment was overwritten.');
 } catch (InvalidArgumentException $expected) {}
+$db->shipment = null;
+$db->order['payment_method'] = 'comgate';
+$repository->save(8, 2, CarrierShipmentDraft::fromOrder($comgateOrder, $input));
+if ($repository->find(8)['status'] !== 'draft') {
+    throw new RuntimeException('A paid Comgate shipment draft was rejected by storage.');
+}
 
 $gls = array_replace($order, ['shipping' => [
     'method' => 'gls_pickup', 'pickup_code' => '26711-GLSCZ_DEPO47',
@@ -110,6 +121,7 @@ if (count($homeRow) !== 17 || $homeRow[5] !== 'Národní' || $homeRow[6] !== '1'
 }
 foreach ([
     array_replace($order, ['payment_status' => 'pending']),
+    array_replace($comgateOrder, ['payment_status' => 'pending']),
     array_replace($order, ['fulfillment_source' => 'external']),
     array_replace($order, ['status' => 'shipped']),
 ] as $invalidOrder) {

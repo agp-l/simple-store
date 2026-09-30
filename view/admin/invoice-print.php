@@ -40,9 +40,12 @@ $buyer = $selectedInvoice['buyer'];
 </div>
 <div class="columns"><p>Datum vystavení: <strong><?= $printEscape($selectedInvoice['issue_date']) ?></strong><br>
   Splatnost: <?= $printEscape($selectedInvoice['due_date']) ?></p>
-  <p>Platba: bankovním převodem, uhrazeno<br>
-  Účet: <?= $printEscape($selectedInvoice['bank_account']) ?><br>
-  Variabilní symbol: <?= $printEscape($selectedInvoice['variable_symbol'] ?? '') ?></p></div>
+  <p>Platba: <?= ($selectedInvoice['payment_method'] ?? 'bank_transfer') === 'comgate'
+    ? 'online přes Comgate' : 'bankovním převodem' ?>, uhrazeno<br>
+  <?php if (($selectedInvoice['payment_method'] ?? 'bank_transfer') === 'bank_transfer'): ?>
+    Účet: <?= $printEscape($selectedInvoice['bank_account']) ?><br>
+    Variabilní symbol: <?= $printEscape($selectedInvoice['variable_symbol'] ?? '') ?>
+  <?php else: ?>Objednávka: <?= $printEscape($selectedInvoice['order_number']) ?><?php endif; ?></p></div>
 <table><thead><tr><th>Položka</th><th>Počet</th><th class="money">Cena za kus</th><th class="money">Celkem</th></tr></thead><tbody>
 <?php foreach ($selectedInvoice['items'] as $item): ?>
   <tr><td><?= $printEscape($item['name'] ?? '') ?></td><td><?= (int) ($item['quantity'] ?? 0) ?></td>

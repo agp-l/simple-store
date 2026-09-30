@@ -26,6 +26,8 @@ jobs:
           php -l account.php
           php -l admin.php
           php -l index.php
+          php -l comgate-callback.php
+          php -l comgate-return.php
       - name: Test checkout and shared views
         run: |
           php tests/checkout-cart.php
@@ -92,4 +94,6 @@ jobs:
       - name: Verify full schema and tax workflow against MySQL
         env:
           MYSQL_TEST_PASSWORD: ci-only-password
-        run: php tests/tax-database.php
+        run: |
+          php tests/tax-database.php
+          php tests/comgate-database.php

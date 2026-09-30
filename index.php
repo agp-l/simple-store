@@ -9,6 +9,7 @@ use SimpleStore\Checkout\CheckoutController;
 use SimpleStore\Checkout\OrderRepository;
 use SimpleStore\Checkout\LocalCheckoutPreview;
 use SimpleStore\Checkout\CheckoutSettingsRepository;
+use SimpleStore\Checkout\ComgatePaymentService;
 use SimpleStore\Checkout\PacketaPickupPoint;
 use SimpleStore\Checkout\PplPickupPoint;
 use SimpleStore\Checkout\ShippingPolicy;
@@ -85,13 +86,9 @@ try {
     if (in_array($route['name'], ['cart', 'checkout', 'order'], true)) {
         $checkoutFile = __DIR__ . '/config/checkout.php';
         $exampleCheckout = require __DIR__ . '/config/checkout.example.php';
-        $checkoutConfig = $route['name'] === 'order'
-            ? ['bank_transfer' => [], 'shipping_methods' => [], 'terms_url' => '']
-            : (is_file($checkoutFile) ? require $checkoutFile : $exampleCheckout);
-        if ($route['name'] !== 'order') {
-            $checkoutConfig = (new CheckoutSettingsRepository($db))->load(
-                CheckoutSettingsRepository::withDefaults($checkoutConfig, $exampleCheckout));
-        }
+        $checkoutConfig = is_file($checkoutFile) ? require $checkoutFile : $exampleCheckout;
+        $checkoutConfig = (new CheckoutSettingsRepository($db))->load(
+            CheckoutSettingsRepository::withDefaults($checkoutConfig, $exampleCheckout));
         $bankSettings = $checkoutConfig['bank_transfer'] ?? [];
         $bank = null;
         if (is_array($bankSettings) &&
@@ -105,6 +102,13 @@ try {
         $ppl = new PplPickupPoint((string) ($checkoutConfig['ppl']['widget_key'] ?? ''));
         $dueDays = $bankSettings['payment_due_days'] ?? 7;
         $orders = new OrderRepository($db, $bank, $dueDays);
+        $comgate = null;
+        $comgateSettings = $checkoutConfig['comgate'] ?? [];
+        if (is_array($comgateSettings) &&
+            ($comgateSettings['merchant'] ?? '') !== '' && ($comgateSettings['secret'] ?? '') !== '') {
+            $candidate = new ComgatePaymentService($db, $comgateSettings);
+            if ($candidate->installed()) $comgate = $candidate;
+        }
         $localPreview = LocalCheckoutPreview::available($_SERVER, (bool) $site['debug'],
             ($checkoutConfig['local_test_checkout'] ?? true) === true);
         $customerId = null;
@@ -130,7 +134,7 @@ try {
             $shipping, $orders, $bank, $customerId, (string) ($checkoutConfig['terms_url'] ?? ''),
             $localPreview, $customerProfile, $customerAddresses, $packeta, $ppl, null, null,
             new OrderMailQueue($db), (string) ($taxSettings['mail_from'] ?? ''),
-            new InvoiceRepository($db));
+            new InvoiceRepository($db), $comgate);
         $controller->handle($route);
         exit;
     }

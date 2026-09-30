@@ -25,9 +25,14 @@ $form = [
     'packeta_api_key' => $settings['packeta']['api_key'] ?? '',
     'ppl_widget_key' => $settings['ppl']['widget_key'] ?? '',
     'packeta_sender' => $settings['packeta']['sender'] ?? '',
+    'comgate_merchant' => $settings['comgate']['merchant'] ?? '',
+    'comgate_return_base_url' => $settings['comgate']['return_base_url'] ?? '',
+    'comgate_enabled' => ($settings['comgate']['enabled'] ?? false) === true ? '1' : '0',
+    'comgate_test' => ($settings['comgate']['test'] ?? true) === true ? '1' : '0',
     'local_test_checkout' => ($settings['local_test_checkout'] ?? true) === true ? '1' : '0',
 ];
 $packetaPasswordConfigured = ($settings['packeta']['api_password'] ?? '') !== '';
+$comgateSecretConfigured = ($settings['comgate']['secret'] ?? '') !== '';
 foreach ($shippingCatalog as $code => $definition) {
     $saved = $settings['shipping_methods'][$code] ?? $definition;
     $form['shipping_price'][$code] = (string) ($saved['price_czk'] ?? $definition['price_czk']);
@@ -47,6 +52,8 @@ if ($method === 'POST') {
             }
         }
         $form['local_test_checkout'] = ($_POST['local_test_checkout'] ?? null) === '1' ? '1' : '0';
+        $form['comgate_enabled'] = ($_POST['comgate_enabled'] ?? null) === '1' ? '1' : '0';
+        $form['comgate_test'] = ($_POST['comgate_test'] ?? null) === '1' ? '1' : '0';
         foreach ($shippingCatalog as $code => $definition) {
             if (is_string($_POST['shipping_price'][$code] ?? null)) {
                 $form['shipping_price'][$code] = $_POST['shipping_price'][$code];

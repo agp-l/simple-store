@@ -6,6 +6,7 @@ use SimpleStore\Checkout\CarrierShipmentCsv;
 use SimpleStore\Checkout\CarrierShipmentDraft;
 use SimpleStore\Checkout\CarrierShipmentRepository;
 use SimpleStore\Checkout\CheckoutSettingsRepository;
+use SimpleStore\Checkout\ComgatePaymentService;
 use SimpleStore\Checkout\PacketaApiClient;
 use SimpleStore\Checkout\PacketaPickupPoint;
 use SimpleStore\Checkout\PacketaRejectedException;
@@ -33,6 +34,9 @@ $checkoutSettings = (new CheckoutSettingsRepository($db))->load(
 $packetaCredentials = $checkoutSettings['packeta'] ?? [];
 $packetaConfigured = ($packetaCredentials['api_password'] ?? '') !== '' &&
     ($packetaCredentials['sender'] ?? '') !== '';
+$comgateSettings = $checkoutSettings['comgate'] ?? [];
+$comgateConfigured = ($comgateSettings['merchant'] ?? '') !== '' &&
+    ($comgateSettings['secret'] ?? '') !== '';
 $orderError = '';
 $order = null;
 $packetaShipment = null;
@@ -83,6 +87,29 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'mark-order-paid') {
             http_response_code(422);
             $orderError = $exception->getMessage();
         }
+    }
+}
+
+if ($method === 'POST' && ($_POST['action'] ?? '') === 'comgate-refresh') {
+    $rawId = $_POST['id'] ?? null;
+    $id = is_string($rawId) && ctype_digit($rawId) ? filter_var($rawId, FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 1]]) : false;
+    try {
+        $targetOrder = $id === false || !$ordersReady ? null : $orders->findById($id);
+        if ($targetOrder === null || ($targetOrder['payment_method'] ?? '') !== 'comgate' ||
+            !is_string($targetOrder['provider_reference'] ?? null) ||
+            $targetOrder['provider_reference'] === '') {
+            throw new InvalidArgumentException('Pro objednávku zatím není dostupná transakce Comgate.');
+        }
+        (new ComgatePaymentService($db, $checkoutSettings['comgate'] ?? []))->refresh($targetOrder);
+        header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&payment_checked=1', true, 303);
+        exit;
+    } catch (InvalidArgumentException $exception) {
+        http_response_code(422);
+        $orderError = $exception->getMessage();
+    } catch (RuntimeException $exception) {
+        http_response_code(503);
+        $orderError = $exception->getMessage();
     }
 }
 

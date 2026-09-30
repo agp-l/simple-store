@@ -33,7 +33,8 @@ class MeekroDB
 
     public function queryFirstField(string $sql, mixed ...$args): mixed
     {
-        if (str_contains($sql, 'information_schema.TABLES')) return 1;
+        if (str_contains($sql, 'information_schema.TABLES') ||
+            str_contains($sql, 'information_schema.COLUMNS')) return 1;
         if (str_contains($sql, 'FROM shop_invoice_number_events')) {
             return count(array_filter($this->history, static fn (array $row): bool =>
                 $row['old_number'] === $args[0] || $row['new_number'] === $args[1]));
@@ -213,6 +214,36 @@ $html = (string) ob_get_clean();
 if (!str_contains($html, '&lt;Stan&gt;') || str_contains($html, '<Stan>') ||
     !str_contains($html, '990 Kč')) {
     throw new RuntimeException('Printable invoice is not escaped or has the wrong amount.');
+}
+$db->orders[10] = array_replace($db->orders[9], [
+    'id' => 10, 'order_number' => 'DB-COMGATE-2', 'payment_method' => 'comgate',
+    'payment_details_json' => '{}', 'variable_symbol' => '1234567891',
+    'customer_email' => 'online@example.test',
+]);
+$online = $repository->issue(10, $seller, $buyer);
+if ($online['payment_method'] !== 'comgate' || $online['total_czk'] !== 990) {
+    throw new RuntimeException('Paid gateway order did not produce a payment snapshot invoice.');
+}
+$onlineMail = $queue->enqueueInvoice($online);
+if (!str_contains($db->outbox[$onlineMail]['body_text'], 'Uhrazeno online přes Comgate') ||
+    str_contains($db->outbox[$onlineMail]['body_text'], 'Uhrazeno bankovním převodem')) {
+    throw new RuntimeException('Gateway invoice mail misstates the payment method.');
+}
+$orderMail = $queue->enqueueOrder($db->orders[10] + [
+    'items' => [['name' => 'Stan', 'quantity' => 2, 'unit_price_czk' => 450]],
+    'shipping' => ['label' => 'Kurýr'],
+]);
+if ($orderMail === null || !str_contains($db->outbox[$orderMail]['body_text'], 'online přes Comgate') ||
+    str_contains($db->outbox[$orderMail]['body_text'], 'Číslo účtu:')) {
+    throw new RuntimeException('Gateway order email contains bank transfer instructions.');
+}
+$selectedInvoice = $online;
+ob_start();
+require dirname(__DIR__) . '/view/admin/invoice-print.php';
+$onlineHtml = (string) ob_get_clean();
+if (!str_contains($onlineHtml, 'online přes Comgate') ||
+    str_contains($onlineHtml, 'Účet:') || str_contains($onlineHtml, 'bankovním převodem')) {
+    throw new RuntimeException('Gateway invoice print misstates the payment method.');
 }
 $tax = new TaxEvidenceRepository($db);
 $movement = ['entry_date' => '2026-09-30', 'direction' => 'income', 'account' => 'bank',

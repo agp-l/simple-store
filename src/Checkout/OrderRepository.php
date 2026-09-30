@@ -74,9 +74,13 @@ final class OrderRepository
         array $shipping,
         int $shippingCzk,
         string $idempotencyKey,
-        bool $testOrder = false
+        bool $testOrder = false,
+        string $paymentMethod = 'bank_transfer'
     ): array {
-        if (!$testOrder && $this->bank === null) {
+        if (!in_array($paymentMethod, ['bank_transfer', 'comgate'], true)) {
+            throw new InvalidArgumentException('Neplatný způsob platby.');
+        }
+        if (!$testOrder && $paymentMethod === 'bank_transfer' && $this->bank === null) {
             throw new RuntimeException('Platba převodem není nastavena.');
         }
         if ($userId !== null && $userId < 1) {
@@ -156,7 +160,7 @@ final class OrderRepository
             'items_json' => $itemsJson,
             'shipping_json' => $shippingJson,
             'shipping_czk' => $shippingCzk,
-            'payment_method' => $testOrder ? 'test' : 'bank_transfer',
+            'payment_method' => $testOrder ? 'test' : $paymentMethod,
         ];
 
         $this->db->startTransaction();
@@ -187,8 +191,9 @@ final class OrderRepository
                 'shipping_json' => $shippingJson,
                 'payment_method' => $request['payment_method'],
                 'payment_status' => $testOrder ? 'test' : 'pending',
-                'payment_details_json' => $testOrder ? null : self::json($this->bank->snapshot(), 2048),
-                'payment_due_at' => $testOrder ? null :
+                'payment_details_json' => $testOrder || $paymentMethod === 'comgate'
+                    ? null : self::json($this->bank->snapshot(), 2048),
+                'payment_due_at' => $testOrder || $paymentMethod === 'comgate' ? null :
                     $now->modify('+' . $this->dueDays . ' days')->format('Y-m-d H:i:s'),
                 'payment_paid_at' => null,
                 'payment_verified_by' => null,
