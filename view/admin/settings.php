@@ -1,5 +1,8 @@
 <?php
 declare(strict_types=1);
+$form += ['comgate_enabled' => '0', 'comgate_test' => '1', 'comgate_merchant' => '',
+    'comgate_return_base_url' => ''];
+$comgateSecretConfigured ??= false;
 ?>
 <div class="panel-intro"><div><p class="panel-eyebrow">Pokladna</p><h1>Nastavení obchodu</h1>
   <p>Uprav dopravu, platby a stránku obchodních podmínek. Změny se použijí pro nové objednávky.</p></div></div>
