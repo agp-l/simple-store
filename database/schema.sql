@@ -756,3 +756,26 @@ INSERT IGNORE INTO catalog_categories (language, path, title, sort_order) VALUES
   ('cs', 'boty', 'Boty', 6),
   ('cs', 'boty/panske-trailove-boty', 'Pánské trailové boty', 1),
   ('cs', 'boty/damske-trailove-boty', 'Dámské trailové boty', 2);
+
+-- Sellable pieces have one count per product identity, shared by translations and options.
+-- Existing products start at zero until an administrator enters a verified quantity.
+CREATE TABLE IF NOT EXISTS shop_product_inventory (
+  product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+  available_quantity INT UNSIGNED NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+INSERT IGNORE INTO shop_product_inventory (product_key, available_quantity)
+  SELECT DISTINCT product_key, 0 FROM product_revisions WHERE active_product_key IS NOT NULL;
+
+-- A reservation records why pieces left the sellable count. Consumed pieces remain
+-- deducted; cancelling an unshipped order may release its pieces exactly once.
+CREATE TABLE IF NOT EXISTS shop_order_stock_reservations (
+  order_id BIGINT UNSIGNED NOT NULL,
+  product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  quantity SMALLINT UNSIGNED NOT NULL,
+  state VARCHAR(12) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'reserved',
+  PRIMARY KEY (order_id, product_key),
+  KEY stock_reservation_product (product_key, state),
+  CONSTRAINT order_stock_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

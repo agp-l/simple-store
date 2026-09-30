@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
 use MeekroDB;
+use SimpleStore\Product\ProductStockRepository;
 use RuntimeException;
 use Throwable;
 
@@ -18,7 +19,8 @@ final class OrderRepository
     public function __construct(
         private MeekroDB $db,
         private ?BankTransferPayment $bank = null,
-        private int $dueDays = 7
+        private int $dueDays = 7,
+        private ?ProductStockRepository $stock = null
     ) {
         if ($dueDays < 1 || $dueDays > 60) {
             throw new InvalidArgumentException('Splatnost platby musí být mezi 1 a 60 dny.');
@@ -28,6 +30,7 @@ final class OrderRepository
     /** The checkout migration is required before accepting an order. */
     public function installed(): bool
     {
+        if ($this->stock !== null && !$this->stock->installed()) return false;
         foreach (['order_token', 'customer_email', 'subtotal_czk', 'shipping_czk',
             'payment_method', 'payment_status', 'payment_details_json', 'payment_due_at',
             'payment_paid_at', 'payment_verified_by',
@@ -205,6 +208,7 @@ final class OrderRepository
             if ($saved === null) {
                 throw new RuntimeException('Uloženou objednávku se nepodařilo načíst.');
             }
+            if (!$testOrder) $this->stock?->reserve((int) $saved['id'], $snapshots);
             if ((int) $this->db->queryFirstField(
                 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
                 'shop_sale_lines'
@@ -401,6 +405,8 @@ final class OrderRepository
                     throw new InvalidArgumentException('Nejdřív vyřeš nebo stornuj zásilku vytvořenou v tomto obchodě. Potom může objednávku převzít dodavatel.');
                 }
             }
+            if ($status === 'cancelled') $this->stock?->release($id);
+            if ($status === 'shipped') $this->stock?->consume($id);
             if ($hasSource) {
                 $this->db->query('UPDATE shop_orders SET status=%s, fulfillment_source=%s,
                     fulfillment_note=%s WHERE id=%i AND status=%s',

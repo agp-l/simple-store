@@ -16,6 +16,7 @@ $details = ProductDetails::decode($product['details_json'] ?? null, $product['si
 $categoryPath = CategoryPath::fromProduct($product);
 $categoryLabel = $categoryLabels[$categoryPath] ?? $categoryLabels[explode('/', $categoryPath)[0]] ?? 'Vybavení';
 $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_stock' => 'Není skladem'];
+$availability = $product['availability_status'] ?? $product['stock_status'];
 $editable = static function (string $field, string $value, ?int $index = null, string $operation = 'set') use ($editing, $escape): string {
     if (!$editing) return '';
     return ' contenteditable="plaintext-only" spellcheck="true" role="textbox"'
@@ -46,8 +47,19 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         <label>Dostupnost <select data-editor-select="stock_status">
           <?php foreach ($stockText as $code => $text): ?><option value="<?= $code ?>" <?= $product['stock_status'] === $code ? 'selected' : '' ?>><?= $escape($text) ?></option><?php endforeach; ?>
         </select></label>
+        <?php if ($stockReady ?? false): ?>
+          <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>" class="inline-stock-form">
+            <input type="hidden" name="action" value="set-product-stock"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>">
+            <input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
+            <input type="hidden" name="expected" value="<?= (int) ($product['stock_quantity'] ?? 0) ?>">
+            <label>Volné kusy skladem <input type="number" name="quantity" min="0" max="1000000" value="<?= (int) ($product['stock_quantity'] ?? 0) ?>" required inputmode="numeric"></label>
+            <button type="submit" class="inline-small">Uložit sklad</button>
+          </form>
+        <?php else: ?><a href="<?= $escape($siteRoot . 'admin.php?section=database') ?>">Pro počet kusů aktualizuj SQL tabulky ↗</a><?php endif; ?>
         <span>Adresa: <span class="inline-slug"<?= $editable('slug', $product['slug']) ?>><?= $escape($product['slug']) ?></span></span>
       </div>
+      <?php if (($_GET['stock_saved'] ?? '') === '1'): ?><p class="inline-stock-notice" role="status">Počet kusů skladem byl uložen.</p><?php endif; ?>
+      <p class="inline-stock-note">Počet je společný pro všechny varianty a jazyky. Zákazníci vidí jen dostupnost. „Na objednávku“ umožňuje objednání i bez kusů skladem.</p>
       <details class="inline-delete-product"><summary>Odstranit produkt</summary>
         <p>Smazání odstraní produkt a všechny jeho revize v tomto jazyce. Nahrané obrázky zůstanou na disku, protože mohou mít zkopírované odkazy.</p>
         <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>">
@@ -93,9 +105,9 @@ $editable = static function (string $field, string $value, ?int $index = null, s
           </div>
         <?php endforeach; ?>
         <?php if ($editing): ?><button class="inline-small" type="button" data-editor-action="option-add">＋ Přidat výběr (barva, velikost…)</button><?php endif; ?>
-        <div class="detail-price"><strong><span<?= $editable('price_czk', (string) $product['price_czk']) ?>><?= number_format((int) $product['price_czk'], 0, ',', ' ') ?></span> Kč</strong><span class="stock <?= $product['stock_status'] === 'in_stock' ? '' : 'stock-wait' ?>"><span class="stock-dot" aria-hidden="true"></span><?= $escape($stockText[$product['stock_status']] ?? '') ?></span></div>
+        <div class="detail-price"><strong><span<?= $editable('price_czk', (string) $product['price_czk']) ?>><?= number_format((int) $product['price_czk'], 0, ',', ' ') ?></span> Kč</strong><span class="stock <?= $availability === 'in_stock' ? '' : 'stock-wait' ?>"><span class="stock-dot" aria-hidden="true"></span><?= $escape($stockText[$availability] ?? '') ?></span></div>
         <div class="buy-row"><div class="quantity"><button type="button" id="minus" aria-label="Ubrat kus">−</button><input id="qty" type="number" name="quantity" min="1" max="99" value="1" aria-label="Počet kusů" required><button type="button" id="plus" aria-label="Přidat kus">＋</button></div>
-          <button class="detail-add" type="submit" id="detail-add" <?= $product['stock_status'] === 'out_of_stock' || empty($product['published']) ? 'disabled' : '' ?>><?= empty($product['published']) ? 'Neveřejný koncept' : ($product['stock_status'] === 'out_of_stock' ? 'Není skladem' : 'Přidat do košíku') ?></button></div>
+          <button class="detail-add" type="submit" id="detail-add" <?= $availability === 'out_of_stock' || empty($product['published']) ? 'disabled' : '' ?>><?= empty($product['published']) ? 'Neveřejný koncept' : ($availability === 'out_of_stock' ? 'Není skladem' : 'Přidat do košíku') ?></button></div>
         </form>
       </div>
     </div>

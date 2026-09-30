@@ -24,6 +24,7 @@ use SimpleStore\Customer\CustomerRepository;
 use SimpleStore\Navigation\StorefrontMenus;
 use SimpleStore\Navigation\UrlManager;
 use SimpleStore\Product\ProductRepository;
+use SimpleStore\Product\ProductStockRepository;
 use SimpleStore\Rendering\PageRenderer;
 use SimpleStore\Accounting\TaxEvidenceRepository;
 use SimpleStore\Accounting\OrderMailQueue;
@@ -66,6 +67,9 @@ if ($missing !== []) {
 try {
     $database = require $databaseFile;
     $db = ConnectionFactory::create($database);
+    $stock = new ProductStockRepository($db);
+    $stockReady = $stock->installed();
+    $productStock = $stockReady ? $stock : null;
     $contents = new ContentRepository($db, $site['languages'], $site['revision_limit']);
     $categories = new CategoryRepository($db);
     $navigation = StorefrontMenus::load($db, $url, $contents, $categories);
@@ -102,7 +106,7 @@ try {
         $packeta = new PacketaPickupPoint((string) ($checkoutConfig['packeta']['api_key'] ?? ''));
         $ppl = new PplPickupPoint((string) ($checkoutConfig['ppl']['widget_key'] ?? ''));
         $dueDays = $bankSettings['payment_due_days'] ?? 7;
-        $orders = new OrderRepository($db, $bank, $dueDays);
+        $orders = new OrderRepository($db, $bank, $dueDays, $stock);
         $comgate = null;
         $comgateSettings = $checkoutConfig['comgate'] ?? [];
         if (is_array($comgateSettings) &&
@@ -139,7 +143,7 @@ try {
         }
         $taxSettings = (new TaxEvidenceRepository($db))->settings();
         $controller = new CheckoutController($url, $renderer, $shared, $cart,
-            new CartService(new ProductRepository($db, $site['languages']), $site['languages']),
+            new CartService(new ProductRepository($db, $site['languages'], null, 50, $productStock), $site['languages']),
             $shipping, $orders, $bank, $customerId, (string) ($checkoutConfig['terms_url'] ?? ''),
             $localPreview, $customerProfile, $customerAddresses, $packeta, $ppl, null, null,
             new OrderMailQueue($db), (string) ($taxSettings['mail_from'] ?? ''),
@@ -214,7 +218,7 @@ try {
         if (!is_string($sort) || !in_array($sort, ['default', 'price-asc', 'price-desc', 'name'], true)) {
             $sort = 'default';
         }
-        $repository = new ProductRepository($db, $site['languages']);
+        $repository = new ProductRepository($db, $site['languages'], null, 50, $productStock);
         $batch = !$hasProducts ? ['items' => [], 'nextOffset' => null] :
             ($managingCatalog
                 ? $repository->managementPage($url->getLanguage(), $path, $search, $visibility, $offset)
@@ -256,7 +260,7 @@ try {
         }
         $renderer->render('catalog', $shared);
     } elseif ($route['name'] === 'product') {
-        $repository = new ProductRepository($db, $site['languages']);
+        $repository = new ProductRepository($db, $site['languages'], null, 50, $productStock);
         $item = $editRequested && $canEdit
             ? $repository->findCurrentBySlug($route['slug'], $url->getLanguage())
             : $repository->findPublished($route['slug'], $url->getLanguage());
@@ -277,7 +281,7 @@ try {
         $renderer->render($item === null ? 'not-found' : 'product-record', $shared + [
             'title' => $item === null ? 'Produkt nenalezen — dobrodruzi.cz' : $item['name'] . ' — dobrodruzi.cz',
             'description' => $item['summary'] ?? '', 'product' => $item,
-            'canEditProduct' => $canEdit, 'editMode' => $editMode,
+            'canEditProduct' => $canEdit, 'editMode' => $editMode, 'stockReady' => $stockReady,
             'categoryTrail' => $item === null ? [] : $categories->trail(
                 $url->getLanguage(), CategoryPath::fromProduct($item)
             ),

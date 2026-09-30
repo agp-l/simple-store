@@ -14,12 +14,14 @@ use SimpleStore\Checkout\PacketaRejectedException;
 use SimpleStore\Checkout\PacketaShipmentDraft;
 use SimpleStore\Checkout\PacketaShipmentRepository;
 use SimpleStore\Admin\OrderControlRepository;
+use SimpleStore\Product\ProductStockRepository;
 use SimpleStore\Accounting\InvoiceRepository;
 use SimpleStore\Accounting\TaxEvidenceRepository;
 
 // admin.php has already authenticated the administrator and verified POST CSRF.
 $screen = 'orders';
-$orders = new OrderRepository($db);
+$stock = new ProductStockRepository($db);
+$orders = new OrderRepository($db, null, 7, $stock);
 $ordersReady = $orders->installed();
 $fulfillmentSourceReady = $ordersReady && $orders->fulfillmentSourceInstalled();
 $packetaShipments = new PacketaShipmentRepository($db);
@@ -49,7 +51,7 @@ $carrierShipment = null;
 $carrierAction = '';
 $cancelledPackets = [];
 $packetaTrackingUrl = null;
-$orderControls = new OrderControlRepository($db);
+$orderControls = new OrderControlRepository($db, $stock->installed() ? $stock : null);
 $orderControlsReady = $orderControls->installed();
 $orderEvents = [];
 $orderInvoice = null;

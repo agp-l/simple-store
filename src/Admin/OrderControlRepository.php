@@ -5,12 +5,13 @@ namespace SimpleStore\Admin;
 
 use InvalidArgumentException;
 use MeekroDB;
+use SimpleStore\Product\ProductStockRepository;
 use Throwable;
 
 /** Exceptional administrator actions, deliberately separate from everyday order transitions. */
 final class OrderControlRepository
 {
-    public function __construct(private MeekroDB $db)
+    public function __construct(private MeekroDB $db, private ?ProductStockRepository $stock = null)
     {
     }
 
@@ -76,6 +77,7 @@ final class OrderControlRepository
                 throw new InvalidArgumentException('Stav objednávky nelze tímto způsobem opravit.');
             }
             $this->assertParcelCompatible($orderId, $order, $target);
+            if ($old === 'cancelled') $this->stock?->reopen($orderId);
 
             $this->db->query(
                 'UPDATE shop_orders SET status=%s WHERE id=%i AND status=%s
@@ -247,6 +249,8 @@ final class OrderControlRepository
                 $this->db->query('DELETE FROM shop_carrier_shipments WHERE order_id=%i AND status=%s',
                     $orderId, 'draft');
             }
+            $this->stock?->release($orderId);
+            $this->stock?->forget($orderId);
             $this->db->query(
                 'DELETE FROM shop_orders WHERE id=%i AND order_number=%s AND status=%s
                  AND payment_method=%s AND payment_status=%s',

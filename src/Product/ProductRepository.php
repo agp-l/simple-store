@@ -20,7 +20,8 @@ final class ProductRepository
         private MeekroDB $db,
         private array $languages = ['cs'],
         private ?CategoryRepository $categories = null,
-        private int $revisionLimit = 50
+        private int $revisionLimit = 50,
+        private ?ProductStockRepository $stock = null
     )
     {
         if ($revisionLimit < 1) {
@@ -67,7 +68,8 @@ final class ProductRepository
             ...$values
         );
         $hasMore = count($rows) > $limit;
-        return ['items' => array_slice($rows, 0, $limit), 'nextOffset' => $hasMore ? $offset + $limit : null];
+        return ['items' => $this->stock?->decorate(array_slice($rows, 0, $limit)) ?? array_slice($rows, 0, $limit),
+            'nextOffset' => $hasMore ? $offset + $limit : null];
     }
 
     /** Authenticated product browser, including drafts; never use on a public route. */
@@ -108,7 +110,7 @@ final class ProductRepository
              FROM product_revisions WHERE ' . $where . ' ORDER BY id DESC LIMIT %i OFFSET %i',
             ...$values
         );
-        return ['items' => array_slice($rows, 0, $limit),
+        return ['items' => $this->stock?->decorate(array_slice($rows, 0, $limit)) ?? array_slice($rows, 0, $limit),
             'nextOffset' => count($rows) > $limit ? $offset + $limit : null];
     }
 
@@ -138,10 +140,11 @@ final class ProductRepository
 
     public function findPublished(string $slug, string $language): ?array
     {
-        return $this->db->queryFirstRow(
+        $row = $this->db->queryFirstRow(
             'SELECT * FROM product_revisions WHERE slug=%s AND language=%s AND published=1
              AND active_product_key IS NOT NULL LIMIT 1', $slug, $language
         );
+        return $this->withStock($row);
     }
 
     /** Resolve cart entries by permanent identity; browser supplied prices are ignored. */
@@ -151,27 +154,35 @@ final class ProductRepository
             !in_array($language, $this->languages, true)) {
             throw new InvalidArgumentException('Neplatný produkt v košíku.');
         }
-        return $this->db->queryFirstRow(
+        $row = $this->db->queryFirstRow(
             'SELECT * FROM product_revisions WHERE product_key=%s AND language=%s
              AND active_product_key IS NOT NULL AND published=1 LIMIT 1', $key, $language
         );
+        return $this->withStock($row);
     }
 
     /** This lookup is for authenticated preview and never belongs on a public route. */
     public function findCurrentBySlug(string $slug, string $language): ?array
     {
-        return $this->db->queryFirstRow(
+        $row = $this->db->queryFirstRow(
             'SELECT * FROM product_revisions WHERE active_slug=%s AND language=%s
              AND active_product_key IS NOT NULL LIMIT 1', $slug, $language
         );
+        return $this->withStock($row);
     }
 
     public function current(string $key, string $language): ?array
     {
-        return $this->db->queryFirstRow(
+        $row = $this->db->queryFirstRow(
             'SELECT * FROM product_revisions WHERE product_key=%s AND language=%s
              AND active_product_key IS NOT NULL LIMIT 1', $key, $language
         );
+        return $this->withStock($row);
+    }
+
+    private function withStock(?array $row): ?array
+    {
+        return $row === null || $this->stock === null ? $row : $this->stock->decorate([$row])[0];
     }
 
     public function history(string $key, string $language): array
@@ -336,6 +347,7 @@ final class ProductRepository
                 'stock_status' => $stock, 'published' => (int) $published,
             ]);
             $id = $this->db->insertId();
+            $this->stock?->ensure($key);
             if ($revision > $this->revisionLimit) {
                 $this->db->query(
                     'DELETE FROM product_revisions WHERE product_key=%s AND language=%s

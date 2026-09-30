@@ -4,6 +4,7 @@ declare(strict_types=1);
 use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Product\ProductInlineEditor;
 use SimpleStore\Product\ProductRepository;
+use SimpleStore\Product\ProductStockRepository;
 
 // admin.php has already checked the administrator session and CSRF token.
 header('Content-Type: application/json; charset=utf-8');
@@ -25,7 +26,9 @@ try {
     }
 
     $categories = new CategoryRepository($db);
-    $repository = new ProductRepository($db, $site['languages'], $categories, $site['revision_limit']);
+    $stock = new ProductStockRepository($db);
+    if (!$stock->installed()) throw new InvalidArgumentException('Nejdřív aktualizuj SQL tabulky v sekci Databáze.');
+    $repository = new ProductRepository($db, $site['languages'], $categories, $site['revision_limit'], $stock);
     $current = $repository->current($key, $language);
     if ($current === null) {
         throw new InvalidArgumentException('Produkt neexistuje.');

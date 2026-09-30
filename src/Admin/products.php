@@ -4,6 +4,7 @@ declare(strict_types=1);
 use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Product\ProductInlineEditor;
 use SimpleStore\Product\ProductRepository;
+use SimpleStore\Product\ProductStockRepository;
 
 // This controller is reached only after admin.php has checked the session and CSRF token.
 if ($method !== 'POST') {
@@ -11,8 +12,9 @@ if ($method !== 'POST') {
     exit;
 }
 $categories = new CategoryRepository($db);
-$repository = new ProductRepository($db, $site['languages'], $categories, $site['revision_limit']);
-$productSchemaReady = $categories->installed() && $repository->detailsColumnExists();
+$stock = new ProductStockRepository($db);
+$repository = new ProductRepository($db, $site['languages'], $categories, $site['revision_limit'], $stock);
+$productSchemaReady = $categories->installed() && $repository->detailsColumnExists() && $stock->installed();
 $language = $_POST['language'] ?? null;
 if (!$productSchemaReady || !is_string($language) || !in_array($language, $site['languages'], true)) {
     throw new InvalidArgumentException('Nejdřív aktualizuj SQL tabulky v sekci Databáze a vyber platný jazyk.');

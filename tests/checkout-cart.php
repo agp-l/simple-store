@@ -134,6 +134,18 @@ $db->products[$key . ':cs']['published'] = 0;
 $check(!$service->summary($cart)['can_continue'], 'A hidden product must not be purchased.');
 $db->products[$key . ':cs']['published'] = 1;
 
+$db->products[$key . ':cs']['stock_status'] = 'in_stock';
+$db->products[$key . ':cs']['stock_quantity'] = 4;
+$check(!$service->summary($cart)['can_continue'],
+    'A cart with different variants exceeding the shared stock must block checkout.');
+$invalid(static fn () => $service->add($cart, $key, 'cs', [0 => 'Černá', 1 => 'S'], 1));
+$db->products[$key . ':cs']['stock_quantity'] = 5;
+$check($service->summary($cart)['can_continue'], 'Available pieces must permit checkout.');
+$db->products[$key . ':cs']['availability_status'] = 'out_of_stock';
+$check(!$service->summary($cart)['can_continue'], 'Effective unavailable state must block checkout.');
+unset($db->products[$key . ':cs']['availability_status']);
+unset($db->products[$key . ':cs']['stock_quantity']);
+
 $cart->remove($otherId);
 $invalid(static fn () => $cart->update($id, 100));
 $beforeDeliveryKey = $cart->checkoutKey();

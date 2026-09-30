@@ -40,7 +40,7 @@ final class SchemaUpdater
         // These two commands are for the CLI installer. The admin never changes databases.
         $statements = array_slice($all, 2);
         foreach ($statements as $statement) {
-            if (preg_match('/^(?:CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS|SET\s+@|PREPARE\s+\w+\s+FROM\s+@|EXECUTE\s+\w+|DEALLOCATE\s+PREPARE\s+\w+|UPDATE\s+shop_orders\s+SET|INSERT\s+IGNORE\s+INTO\s+catalog_categories)\b/i', $statement) !== 1) {
+            if (preg_match('/^(?:CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS|SET\s+@|PREPARE\s+\w+\s+FROM\s+@|EXECUTE\s+\w+|DEALLOCATE\s+PREPARE\s+\w+|UPDATE\s+shop_orders\s+SET|INSERT\s+IGNORE\s+INTO\s+(?:catalog_categories|shop_product_inventory))\b/i', $statement) !== 1) {
                 throw new RuntimeException('Soubor schématu obsahuje nepodporovaný příkaz. Aktualizaci nelze spustit.');
             }
         }

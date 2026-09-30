@@ -108,7 +108,7 @@ try {
             header('Location: ' . $adminUrl, true, 303);
             exit;
         } elseif (!in_array($action, array_merge(['create-content', 'create-translation', 'inline-content', 'create-product',
-            'inline-product', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
+            'inline-product', 'set-product-stock', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
             'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product',
             'save-checkout-settings', 'customer-create', 'customer-update', 'customer-active',
             'customer-password', 'schema-apply'], $orderActions, $taxActions), true) ||
@@ -137,6 +137,10 @@ try {
 
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'inline-product') {
         require __DIR__ . '/src/Admin/inline-product.php';
+        exit;
+    }
+    if ($method === 'POST' && ($_POST['action'] ?? '') === 'set-product-stock') {
+        require __DIR__ . '/src/Admin/product-stock.php';
         exit;
     }
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'inline-content') {
@@ -216,12 +220,15 @@ try {
         exit;
     }
     $deletingProduct = $method === 'POST' && ($_POST['action'] ?? '') === 'delete-product';
+    $changingStock = $method === 'POST' && ($_POST['action'] ?? '') === 'set-product-stock';
     $knownDeleteError = $deletingProduct && ($exception instanceof InvalidArgumentException ||
         ($exception instanceof RuntimeException && str_contains($exception->getMessage(), 'mezi')));
-    http_response_code($knownDeleteError
+    $knownStockError = $changingStock && ($exception instanceof InvalidArgumentException ||
+        ($exception instanceof RuntimeException && str_contains($exception->getMessage(), 'mezi')));
+    http_response_code($knownDeleteError || $knownStockError
         ? ($exception instanceof InvalidArgumentException ? 422 : 409) : 500);
     $screen = 'error';
-    $error = $knownDeleteError ? $exception->getMessage() :
+    $error = ($knownDeleteError || $knownStockError) ? $exception->getMessage() :
         ($site['debug'] ? (string) $exception : 'Administraci se nepodařilo načíst.');
 }
 

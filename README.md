@@ -263,3 +263,11 @@ Po aktualizaci v **Administrace → Databáze** otevři **Daňová evidence OSV�
 - **E-maily:** nákup vytvoří potvrzení s položkami, cenou dopravy a bankovními údaji; vystavení faktury vytvoří zprávu s jejím úplným textem. Odeslání používá PHP `mail()` a odesílatele z údajů OSVČ. Nastav poštovní službu hostingu a SPF/DKIM své domény; stav a opakování neúspěšného pokusu najdeš v záložce E-maily. Přijetí zprávy funkcí `mail()` ještě neprokazuje doručení zákazníkovi. E-mail faktury neobsahuje PDF přílohu; PDF si lze vytisknout ze soukromé stránky objednávky.
 
 Testovací objednávku vytvořenou místním testovacím režimem může správce smazat bez účetních záznamů. U skutečné bankovní objednávky lze odstranit její operativní záznam, avšak historie finančního zásahu, skutečný peněžní pohyb a rozpis zaplacených položek zůstávají v evidenci. Vydanou fakturu nebo vytvořenou zásilku je nejdřív nutné vyřešit; smazání objednávky nesmaže bankovní převod ani doklad zákazníka. Před smazáním zaplacené objednávky aktualizuj SQL tabulky.
+
+# Sklad produktů
+
+Po aktualizaci SQL tabulek v administraci otevři produkt a klikni na **Upravit tento produkt přímo na stránce**. V části **Volné kusy skladem** nastav ověřený počet a ulož jej. V přehledu všech produktů se tento počet zobrazuje správci, zákazník vidí jen „Skladem“ nebo „Není skladem“; konkrétní počet není veřejně vypisován. Nové i stávající produkty začínají na **0 kusech** a je potřeba je před prodejem naplnit. Stav „Na objednávku“ dovoluje objednávat i při nule, ruční „Není skladem“ prodej blokuje.
+
+Počet patří produktu jako celku a sdílí ho všechny jazykové verze i jeho volby (například barvy a velikosti). Objednávka odečte kusy v jediné databázové transakci; současné objednávky tak nemohou prodat stejný poslední kus. Storno dosud neodeslané objednávky je vrátí, opětovné otevření zrušené objednávky je musí znovu zajistit. Při odeslání se rezervace označí jako spotřebovaná a pozdější smazání objednávky již počet automaticky nenavyšuje. Ruční přepsání počtu v editoru aktualizuje dostupné kusy a odmítne uložení, pokud se mezitím změnily.
+
+Evidence pohybů v účetní části má jiný účel než provozní počet volných kusů. Pokud do ní zapíšeš příjem nebo výdej, uprav dostupný počet i v produktu; samotný účetní zápis jej nepřepíše.

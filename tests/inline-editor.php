@@ -45,6 +45,8 @@ try {
 
 $revision['product_key'] = str_repeat('a', 32);
 $revision['revision_number'] = 3;
+$revision['stock_quantity'] = 12;
+$revision['availability_status'] = 'in_stock';
 $data = [
     'basePath' => '/shop/', 'language' => 'cs', 'product' => $revision,
     'categoryLabels' => ['boty' => 'Boty'],
@@ -57,6 +59,7 @@ $public = ob_get_clean();
 ob_start();
 $renderer->render('product-record', $data + [
     'canEditProduct' => true, 'editMode' => true,
+    'stockReady' => true,
     'editToken' => 'test-token',
     'editorCategories' => [['path' => 'boty', 'title' => 'Boty']],
 ]);
@@ -66,6 +69,10 @@ if (str_contains($public, 'inline-editor-config') || str_contains($public, 'test
     !str_contains($editor, 'data-editor-action="section-add"') ||
     !str_contains($editor, 'section=media&amp;type=product&amp;key=' . str_repeat('a', 32)) ||
     !str_contains($editor, 'value="delete-product"') ||
+    !str_contains($editor, 'value="set-product-stock"') ||
+    !str_contains($editor, 'value="12"') ||
+    str_contains($public, 'value="set-product-stock"') ||
+    str_contains($public, '12 ks') ||
     str_contains($public, 'value="delete-product"') ||
     !str_contains($editor, 'test-token')) {
     throw new RuntimeException('The on-page controls leaked publicly or were missing from editor preview.');

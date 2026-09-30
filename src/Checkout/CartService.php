@@ -18,8 +18,17 @@ final class CartService
     public function add(CartSession $cart, string $key, string $language, array $choices, int $quantity = 1): string
     {
         $product = $this->publishedProduct($key, $language);
-        if ($product === null || !in_array($product['stock_status'] ?? '', ['in_stock', 'on_order'], true)) {
+        if ($product === null || !in_array($product['availability_status'] ?? $product['stock_status'] ?? '', ['in_stock', 'on_order'], true)) {
             throw new InvalidArgumentException('Tento produkt už není možné přidat do košíku.');
+        }
+        if (($product['stock_status'] ?? '') === 'in_stock' && isset($product['stock_quantity'])) {
+            $alreadyInCart = 0;
+            foreach ($cart->state()['items'] as $line) {
+                if (($line['key'] ?? null) === $key) $alreadyInCart += (int) ($line['quantity'] ?? 0);
+            }
+            if ($alreadyInCart + $quantity > (int) $product['stock_quantity']) {
+                throw new InvalidArgumentException('Požadované množství produktu není skladem.');
+            }
         }
         $options = self::optionsFromForm($product, $choices);
         return $cart->add($key, $language, $options, $quantity);
@@ -32,6 +41,12 @@ final class CartService
     public function summary(CartSession $cart): array
     {
         $stored = $cart->state()['items'];
+        $quantityByKey = [];
+        foreach ($stored as $line) {
+            if (is_array($line) && is_string($line['key'] ?? null) && is_int($line['quantity'] ?? null)) {
+                $quantityByKey[$line['key']] = ($quantityByKey[$line['key']] ?? 0) + $line['quantity'];
+            }
+        }
         $items = [];
         $issues = [];
         $count = 0;
@@ -64,8 +79,11 @@ final class CartService
             $issue = null;
             if ($product === null) {
                 $issue = 'Produkt už není v nabídce.';
-            } elseif (!in_array($product['stock_status'] ?? '', ['in_stock', 'on_order'], true)) {
+            } elseif (!in_array($product['availability_status'] ?? $product['stock_status'] ?? '', ['in_stock', 'on_order'], true)) {
                 $issue = 'Produkt momentálně není skladem.';
+            } elseif (($product['stock_status'] ?? '') === 'in_stock' && isset($product['stock_quantity']) &&
+                ($quantityByKey[$key] ?? 0) > (int) $product['stock_quantity']) {
+                $issue = 'Požadované množství produktu není skladem.';
             } elseif (!self::validStoredOptions($product, $options)) {
                 $issue = 'Možnosti produktu se změnily. Odeber položku a vyber variantu znovu.';
             }
@@ -88,7 +106,7 @@ final class CartService
                 'quantity' => $quantity,
                 'unit_price_czk' => $price,
                 'line_total_czk' => $lineTotal,
-                'stock_status' => $product['stock_status'] ?? '',
+                'stock_status' => $product['availability_status'] ?? $product['stock_status'] ?? '',
                 'issue' => $issue,
             ];
         }
