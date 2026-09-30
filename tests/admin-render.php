@@ -152,6 +152,42 @@ if (str_contains($html, 'name="action" value="mark-order-paid"') ||
     !str_contains($html, 'value="external"')) {
     throw new RuntimeException('Paid bank transfers must not show the confirmation form.');
 }
+$orderControlsReady = true;
+$orderEvents = [['created_at' => '2026-09-30 09:00:00', 'admin_id' => 3,
+    'old_status' => 'shipped', 'new_status' => 'processing', 'reason' => 'Oprava <script>']];
+$order['status'] = 'shipped';
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'name="action" value="correct-order-status"') ||
+    !str_contains($html, 'Opravit chybné odeslání') ||
+    !str_contains($html, 'Oprava &lt;script&gt;') ||
+    str_contains($html, 'Oprava <script>') ||
+    str_contains($html, 'name="action" value="delete-order"')) {
+    throw new RuntimeException('Shipped order correction must be confirmed, audited and escaped.');
+}
+$order['status'] = 'completed';
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'value="not_delivered"') ||
+    !str_contains($html, 'Vrátit na odesláno')) {
+    throw new RuntimeException('Accidental completion must be correctable.');
+}
+$order['payment_status'] = 'pending';
+$order['status'] = 'cancelled';
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'Obnovit objednávku') ||
+    !str_contains($html, 'name="action" value="delete-order"') ||
+    str_contains($html, 'name="action" value="mark-order-paid"')) {
+    throw new RuntimeException('Cancelled unpaid order should allow reopening or deletion, not payment confirmation.');
+}
+$order['status'] = 'awaiting_payment';
+$order['payment_status'] = 'paid';
+$orderEvents = [];
+$orderControlsReady = false;
 $packetaCancelReady = true;
 $packetaTrackingUrl = 'https://tracking.packeta.com/cs/?id=1234567890';
 $packetaShipment = ['status' => 'created', 'method' => 'zasilkovna_pickup',
@@ -215,6 +251,8 @@ if (!str_contains($html, 'Odeslané označení odesílatele') ||
 $packetaShipment = null;
 $orderPage = ['items' => [array_replace($order, ['shipment_status' => 'created'])], 'nextOffset' => 25];
 $ordersNextUrl = $orderBaseUrl . '&status=all&offset=25';
+$deletedOrders = [['order_number' => 'TEST-26-A1B2C3D4', 'created_at' => '2026-09-30 09:00:00',
+    'admin_id' => 3, 'reason' => 'Test <script>']];
 $order = null;
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
@@ -223,6 +261,9 @@ if (!str_contains($html, 'DB-20260929-1') ||
     !str_contains($html, '1234567890') ||
     !str_contains($html, 'Zásilka vytvořena') ||
     !str_contains($html, 'status=all&amp;offset=25') ||
+    !str_contains($html, 'Nedávno smazané objednávky') ||
+    !str_contains($html, 'Test &lt;script&gt;') ||
+    str_contains($html, 'Test <script>') ||
     !str_contains($html, 'Objednávky')) {
     throw new RuntimeException('Admin order list must show payment references and pagination.');
 }

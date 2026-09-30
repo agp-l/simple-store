@@ -8,6 +8,7 @@ use SimpleStore\Checkout\PacketaPickupPoint;
 use SimpleStore\Checkout\PacketaRejectedException;
 use SimpleStore\Checkout\PacketaShipmentDraft;
 use SimpleStore\Checkout\PacketaShipmentRepository;
+use SimpleStore\Admin\OrderControlRepository;
 
 // admin.php has already authenticated the administrator and verified POST CSRF.
 $screen = 'orders';
@@ -30,6 +31,10 @@ $order = null;
 $packetaShipment = null;
 $cancelledPackets = [];
 $packetaTrackingUrl = null;
+$orderControls = new OrderControlRepository($db);
+$orderControlsReady = $orderControls->installed();
+$orderEvents = [];
+$deletedOrders = [];
 $orderPage = ['items' => [], 'nextOffset' => null];
 $statusFilter = $_GET['status'] ?? 'all';
 $rawOffset = $_GET['offset'] ?? '0';
@@ -56,9 +61,14 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'mark-order-paid') {
         if ($admin === null) {
             throw new RuntimeException('Přihlášení správce vypršelo.');
         }
-        $orders->markPaid($id, (int) $admin['id']);
-        header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&paid=1', true, 303);
-        exit;
+        try {
+            $orders->markPaid($id, (int) $admin['id']);
+            header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&paid=1', true, 303);
+            exit;
+        } catch (InvalidArgumentException $exception) {
+            http_response_code(422);
+            $orderError = $exception->getMessage();
+        }
     }
 }
 
@@ -82,6 +92,45 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'set-order-status') {
             http_response_code(422);
             $orderError = $exception->getMessage();
         }
+    }
+}
+
+if ($method === 'POST' && in_array($_POST['action'] ?? '', ['correct-order-status', 'delete-order'], true)) {
+    $rawId = $_POST['id'] ?? null;
+    $id = is_string($rawId) && ctype_digit($rawId) ? filter_var($rawId, FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 1]]) : false;
+    $reason = $_POST['reason'] ?? null;
+    $confirmation = $_POST['confirmation'] ?? null;
+    $target = $_POST['order_status'] ?? null;
+    $number = $_POST['order_number'] ?? null;
+    try {
+        if (!$ordersReady || !$orderControlsReady) {
+            throw new InvalidArgumentException('Nejdřív aktualizuj SQL tabulky v sekci Databáze.');
+        }
+        if ($id === false || !is_string($reason) || !is_string($confirmation) ||
+            ($_POST['verified'] ?? null) !== '1') {
+            throw new InvalidArgumentException('Vyber objednávku, potvrď akci a vyplň důvod.');
+        }
+        $admin = $auth->user();
+        if ($admin === null) throw new RuntimeException('Přihlášení správce vypršelo.');
+        if ($_POST['action'] === 'correct-order-status') {
+            if (!is_string($target)) throw new InvalidArgumentException('Vyber cílový stav.');
+            $orderControls->correctFulfillment($id, $target, (int) $admin['id'], $reason, $confirmation);
+            header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&corrected=1', true, 303);
+        } else {
+            if (!is_string($number) || $confirmation !== 'delete') {
+                throw new InvalidArgumentException('Potvrď smazání a opiš přesné číslo objednávky.');
+            }
+            $orderControls->deleteOrder($id, $number, (int) $admin['id'], $reason);
+            header('Location: ' . $adminUrl . '?section=orders&deleted=1', true, 303);
+        }
+        exit;
+    } catch (InvalidArgumentException $exception) {
+        http_response_code(422);
+        $orderError = $exception->getMessage();
+    } catch (RuntimeException $exception) {
+        http_response_code(409);
+        $orderError = $exception->getMessage();
     }
 }
 
@@ -230,8 +279,14 @@ if ($rawId !== null) {
         $cancelledPackets = $packetaShipments->cancelledForOrder($id);
         $packetaTrackingUrl = PacketaShipmentRepository::trackingUrl($packetaShipment);
     }
+    if ($order !== null && $orderControlsReady) {
+        $orderEvents = $orderControls->eventsForOrder($id);
+    }
 } elseif ($ordersReady && $orderError === '') {
     $orderPage = $orders->managementPage($offset, 25, $statusFilter === 'all' ? null : $statusFilter);
+    if ($orderControlsReady && $offset === 0 && $statusFilter === 'all') {
+        $deletedOrders = $orderControls->recentDeletions();
+    }
 }
 
 if ($method === 'GET' && ($_GET['packeta_label'] ?? null) === '1' && $order !== null) {

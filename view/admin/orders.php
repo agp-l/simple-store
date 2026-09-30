@@ -21,6 +21,9 @@ $packetaTrackingUrl ??= null;
 $cancelledPackets ??= [];
 $packetaAction ??= '';
 $fulfillmentSourceReady ??= false;
+$orderControlsReady ??= false;
+$orderEvents ??= [];
+$deletedOrders ??= [];
 ?>
 <div class="panel-intro">
   <div><p class="panel-eyebrow">Prodej</p><h1>Objednávky</h1>
@@ -31,6 +34,7 @@ $fulfillmentSourceReady ??= false;
   <p class="panel-error" role="alert">Pro objednávky nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
 <?php endif; ?>
 <?php if ($orderError !== ''): ?><p class="panel-error" role="alert"><?= $escape($orderError) ?></p><?php endif; ?>
+<?php if ($order === null && ($_GET['deleted'] ?? '') === '1'): ?><p class="panel-notice" role="status">Objednávka byla smazána. Záznam o zásahu správce zůstal v databázi.</p><?php endif; ?>
 <?php if ($order !== null): ?>
   <?php
   $shipping = is_array($order['shipping'] ?? null) ? $order['shipping'] : [];
@@ -39,6 +43,7 @@ $fulfillmentSourceReady ??= false;
   $paid = ($order['payment_status'] ?? '') === 'paid';
   ?>
   <?php if (($_GET['paid'] ?? null) === '1' && $paid): ?><p class="panel-notice" role="status">Platba byla ručně označena jako přijatá.</p><?php endif; ?>
+  <?php if (($_GET['corrected'] ?? null) === '1'): ?><p class="panel-notice" role="status">Stav byl opraven. Důvod a původní stav jsou v historii zásahů níže.</p><?php endif; ?>
   <div class="panel-grid panel-order-detail">
     <div class="panel-workspace">
       <section class="panel-panel">
@@ -223,7 +228,7 @@ $fulfillmentSourceReady ??= false;
         <?php if (!empty($payment['iban'])): ?><div><dt>IBAN</dt><dd><?= $escape($payment['iban']) ?></dd></div><?php endif; ?>
         <?php if (!empty($order['payment_due_at'])): ?><div><dt>Splatnost</dt><dd><?= $escape($order['payment_due_at']) ?></dd></div><?php endif; ?>
       </dl>
-      <?php if ($bankTransfer && !$paid && ($order['payment_status'] ?? '') === 'pending'): ?>
+      <?php if ($bankTransfer && !$paid && ($order['payment_status'] ?? '') === 'pending' && !in_array($order['status'], ['cancelled', 'test'], true)): ?>
         <form class="panel-order-confirm" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
           <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
           <input type="hidden" name="action" value="mark-order-paid">
@@ -263,6 +268,72 @@ $fulfillmentSourceReady ??= false;
         <?php if ($paid && !$fulfillmentSourceReady): ?><p class="panel-help">Pro volbu externího dodavatele <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
       </form>
       <?php endif; ?>
+      <?php if (!$orderControlsReady): ?>
+        <p class="panel-help">Pro opravy a mazání objednávek <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
+      <?php else: ?>
+        <?php if (in_array($order['status'], ['shipped', 'completed'], true)): ?>
+          <section class="panel-order-controls" aria-label="Oprava chybného odeslání">
+            <h2>Opravit omylem nastavený stav</h2>
+            <p class="panel-help">Použij jen když balík ve skutečnosti nebyl předán dopravci. Oprava nemění platbu ani zásilku u dopravce; zůstane zapsána v historii.</p>
+            <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+              <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="correct-order-status"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="confirmation" value="not_handed">
+              <label>Skutečný stav <select name="order_status"><option value="processing">Připravuje se</option><option value="ready_to_ship">Připraveno k odeslání</option></select></label>
+              <label>Důvod opravy <textarea name="reason" minlength="8" maxlength="190" required placeholder="Například omylem označeno jako odeslané"></textarea></label>
+              <label class="panel-check"><input type="checkbox" name="verified" value="1" required> Potvrzuji, že balík nebyl předán dopravci.</label>
+              <button class="panel-button" type="submit">Opravit chybné odeslání</button>
+            </form>
+          </section>
+        <?php endif; ?>
+        <?php if ($order['status'] === 'completed'): ?>
+          <section class="panel-order-controls" aria-label="Oprava dokončení">
+            <h2>Vrátit z dokončeno na odesláno</h2>
+            <p class="panel-help">Když objednávka stále cestuje a doručení bylo potvrzeno omylem.</p>
+            <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+              <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="correct-order-status"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="order_status" value="shipped"><input type="hidden" name="confirmation" value="not_delivered">
+              <label>Důvod opravy <textarea name="reason" minlength="8" maxlength="190" required></textarea></label>
+              <label class="panel-check"><input type="checkbox" name="verified" value="1" required> Potvrzuji, že zásilka ještě nebyla doručena.</label>
+              <button class="panel-button" type="submit">Vrátit na odesláno</button>
+            </form>
+          </section>
+        <?php endif; ?>
+        <?php if ($order['status'] === 'cancelled' && !$paid): ?>
+          <section class="panel-order-controls" aria-label="Obnovení objednávky">
+            <h2>Obnovit zrušenou objednávku</h2>
+            <p class="panel-help">Zrušení bylo omyl; platba zůstává neověřená.</p>
+            <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+              <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="correct-order-status"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="order_status" value="new"><input type="hidden" name="confirmation" value="reopen">
+              <label>Důvod opravy <textarea name="reason" minlength="8" maxlength="190" required></textarea></label>
+              <label class="panel-check"><input type="checkbox" name="verified" value="1" required> Potvrzuji, že chci zrušenou objednávku znovu otevřít.</label>
+              <button class="panel-button" type="submit">Obnovit objednávku</button>
+            </form>
+          </section>
+        <?php endif; ?>
+        <?php $canOfferDeletion = ($order['status'] === 'test' && ($order['payment_method'] ?? '') === 'test' && ($order['payment_status'] ?? '') === 'test') ||
+            ($bankTransfer && !$paid && ($order['payment_status'] ?? '') === 'pending' && in_array($order['status'], ['new', 'cancelled'], true)); ?>
+        <?php if ($canOfferDeletion && $packetaShipment === null && $cancelledPackets === []): ?>
+          <section class="panel-order-controls" aria-label="Smazání objednávky">
+            <h2>Smazat zkušební nebo nezaplacenou objednávku</h2>
+            <p class="panel-help">Trvalé smazání odstraní objednávku i z účtu zákazníka. Nelze ho vrátit. Zásah s důvodem zůstane v administrátorském záznamu; do důvodu nepiš osobní údaje.</p>
+            <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+              <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="delete-order"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="confirmation" value="delete">
+              <label>Důvod smazání <textarea name="reason" minlength="8" maxlength="190" required placeholder="Například test pokladny"></textarea></label>
+              <label>Opiš číslo <?= $escape($order['order_number']) ?><input name="order_number" autocomplete="off" required></label>
+              <label class="panel-check"><input type="checkbox" name="verified" value="1" required><?= $bankTransfer ? ' Ověřil/a jsem, že objednávka nebyla uhrazena, a rozumím trvalému smazání.' : ' Rozumím, že jde o trvalé smazání testovací objednávky.' ?></label>
+              <button class="panel-button" type="submit">Trvale smazat objednávku</button>
+            </form>
+          </section>
+        <?php else: ?><p class="panel-help">Zaplacenou objednávku, objednávku se zásilkou nebo účetním dokladem nelze trvale smazat. Její historii zachovej.</p><?php endif; ?>
+        <?php if ($orderEvents !== []): ?>
+          <section class="panel-order-controls" aria-label="Historie zásahů">
+            <h2>Historie zásahů správce</h2>
+            <ul>
+              <?php foreach ($orderEvents as $event): ?>
+                <li><strong><?= $escape($event['created_at'] ?? '') ?></strong> · správce #<?= (int) ($event['admin_id'] ?? 0) ?> · <?= $escape($orderFulfillmentLabel($event['old_status'] ?? '')) ?> → <?= $escape($orderFulfillmentLabel($event['new_status'] ?? '')) ?><br><?= $escape($event['reason'] ?? '') ?></li>
+              <?php endforeach; ?>
+            </ul>
+          </section>
+        <?php endif; ?>
+      <?php endif; ?>
     </aside>
   </div>
 <?php elseif ($ordersReady): ?>
@@ -298,4 +369,15 @@ $fulfillmentSourceReady ??= false;
       </nav>
     <?php endif; ?>
   </section>
+  <?php if ($deletedOrders !== []): ?>
+    <section class="panel-panel" aria-labelledby="deleted-orders-heading">
+      <h2 id="deleted-orders-heading">Nedávno smazané objednávky</h2>
+      <p class="panel-help">Ponechává se číslo, správce, čas a zadaný důvod; neukládá se e-mail ani dodací adresa.</p>
+      <ul class="panel-deleted-orders">
+        <?php foreach ($deletedOrders as $deleted): ?>
+          <li><strong><?= $escape($deleted['order_number'] ?? '') ?></strong> · <?= $escape($deleted['created_at'] ?? '') ?> · správce #<?= (int) ($deleted['admin_id'] ?? 0) ?><br><?= $escape($deleted['reason'] ?? '') ?></li>
+        <?php endforeach; ?>
+      </ul>
+    </section>
+  <?php endif; ?>
 <?php endif; ?>

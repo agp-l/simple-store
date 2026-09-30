@@ -63,7 +63,7 @@ try {
     exit;
 }
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-$orderActions = ['mark-order-paid', 'set-order-status', 'packeta-create',
+$orderActions = ['mark-order-paid', 'set-order-status', 'correct-order-status', 'delete-order', 'packeta-create',
     'packeta-courier', 'packeta-reconcile', 'packeta-retry', 'packeta-cancel',
     'packeta-cancel-confirmed', 'packeta-cancel-not-done'];
 try {
@@ -178,6 +178,11 @@ try {
     if (in_array($action, $orderActions, true) ||
         ($method !== 'POST' && $section === 'orders')) {
         require __DIR__ . '/src/Admin/orders.php';
+        require __DIR__ . '/view/admin/layout.php';
+        exit;
+    }
+    if ($method !== 'POST' && $section === 'accounting') {
+        require __DIR__ . '/src/Admin/accounting.php';
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }

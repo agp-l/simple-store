@@ -185,6 +185,13 @@
 .panel-order-confirm input { width: 17px; height: 17px; margin: 1px 0 0; flex: none; accent-color: var(--forest); }
 .panel-order-confirm .panel-button { justify-self: start; }
 .panel-order-payment > .panel-help { margin-top: 17px; }
+.panel-order-controls { margin-top: 26px; padding-top: 23px; border-top: 1px solid var(--line); }
+.panel-order-controls > .panel-help { margin: -7px 0 15px; }
+.panel-order-controls h2 { font-size: 17px; }
+.panel-order-controls ul { margin: 0; padding-left: 19px; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.panel-order-controls li + li { margin-top: 12px; }
+.panel-deleted-orders { margin: 15px 0 0; padding-left: 19px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.panel-deleted-orders li + li { margin-top: 12px; }
 .panel-auth-switch { margin: 22px 0 0; font-size: 13px; }
 .panel-auth-switch a { color: #377b36; font-weight: 700; }
 @media (max-width: 1080px) {
