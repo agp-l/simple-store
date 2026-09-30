@@ -15,6 +15,7 @@ final class CheckoutController
     private array $shippingOptions;
     private string $termsUrl;
     private PacketaPickupPoint $packeta;
+    private PplPickupPoint $ppl;
 
     public function __construct(
         private UrlManager $url,
@@ -30,11 +31,13 @@ final class CheckoutController
         private bool $allowLocalPreview = false,
         private array $customerProfile = [],
         private array $customerAddresses = [],
-        ?PacketaPickupPoint $packeta = null
+        ?PacketaPickupPoint $packeta = null,
+        ?PplPickupPoint $ppl = null
     ) {
         $this->cartUrl = $url->path('kosik');
         $this->checkoutUrl = $url->path('pokladna');
         $this->packeta = $packeta ?? new PacketaPickupPoint();
+        $this->ppl = $ppl ?? new PplPickupPoint();
         $this->shippingOptions = array_values(array_filter($shipping->options(),
             fn (array $option): bool => $option['code'] !== 'zasilkovna_pickup' || $this->packeta->isConfigured()));
         $termsUrl = trim($termsUrl);
@@ -172,6 +175,11 @@ final class CheckoutController
             $fields['street'] = $fields['city'] = $fields['postal_code'] = '';
             if ($method === 'zasilkovna_pickup') {
                 $fields = array_replace($fields, $this->packeta->verify(self::field('packeta_point_id')));
+            } elseif ($method === 'ppl_pickup' && $this->ppl->isConfigured()) {
+                $fields = array_replace($fields, $this->ppl->selection(
+                    self::field('ppl_point_code'), self::field('ppl_point_name'),
+                    self::field('ppl_point_address'), self::field('ppl_point_country')
+                ));
             }
         } else {
             $fields['pickup_point'] = $fields['pickup_address'] = $fields['pickup_code'] = '';
@@ -197,6 +205,11 @@ final class CheckoutController
         }
         if ($methodCode === 'zasilkovna_pickup') {
             $delivery = array_replace($delivery, $this->packeta->verify((string) ($delivery['pickup_code'] ?? '')));
+        } elseif ($methodCode === 'ppl_pickup' && $this->ppl->isConfigured()) {
+            $delivery = array_replace($delivery, $this->ppl->selection(
+                (string) ($delivery['pickup_code'] ?? ''), (string) ($delivery['pickup_point'] ?? ''),
+                (string) ($delivery['pickup_address'] ?? ''), (string) ($delivery['country'] ?? '')
+            ));
         }
         if ($summary['subtotal_czk'] + $price > 9999999) {
             throw new InvalidArgumentException('Celková částka objednávky přesahuje dostupný limit.');
@@ -209,6 +222,7 @@ final class CheckoutController
         $shipping['label'] = $label;
         $shipping['recipient'] = $delivery['name'];
         if ($methodCode === 'zasilkovna_pickup') $shipping['pickup_verified'] = true;
+        if ($methodCode === 'ppl_pickup' && $this->ppl->isConfigured()) $shipping['pickup_source'] = 'ppl_widget';
         $order = $this->orders->create($this->customerId, $delivery['email'], $summary['items'],
             $shipping, $price, $this->cart->checkoutKey(), $testOrder);
         $this->cart->clear();
@@ -248,6 +262,19 @@ final class CheckoutController
             }
         }
         $methodCode = (string) ($delivery['method'] ?? '');
+        $pplSelection = $methodCode === 'ppl_pickup' ? [
+            'code' => (string) ($delivery['pickup_code'] ?? ''),
+            'name' => (string) ($delivery['pickup_point'] ?? ''),
+            'address' => (string) ($delivery['pickup_address'] ?? ''),
+            'country' => 'CZ',
+        ] : ['code' => '', 'name' => '', 'address' => '', 'country' => ''];
+        if ($step === 'shipping' && $error !== '' && $methodCode === 'ppl_pickup' &&
+            $this->ppl->isConfigured()) {
+            foreach (['code', 'name', 'address', 'country'] as $field) {
+                $raw = $_POST['ppl_point_' . $field] ?? null;
+                if (is_string($raw) && strlen($raw) <= 190) $pplSelection[$field] = $raw;
+            }
+        }
         $selected = ShippingPolicy::known($methodCode) ? $this->shipping->method($methodCode) : null;
         $price = $selected['price_czk'] ?? null;
         if ($price !== null && $summary['subtotal_czk'] !== null &&
@@ -275,6 +302,7 @@ final class CheckoutController
             'customerProfile' => $this->customerProfile,
             'shippingOptions' => $this->shippingOptions, 'selectedShippingPrice' => $price,
             'packetaApiKey' => $this->packeta->apiKey(), 'packetaOptions' => PacketaPickupPoint::options(),
+            'pplWidgetKey' => $this->ppl->apiKey(), 'pplSelection' => $pplSelection,
             'shippingConfigured' => $shippingConfigured, 'bankConfigured' => $this->bank !== null,
             'checkoutReady' => $ready, 'testCheckout' => $testCheckout, 'termsUrl' => $this->termsUrl,
             'error' => $error, 'step' => $step,

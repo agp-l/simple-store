@@ -23,6 +23,7 @@ $form = [
     'payment_due_days' => (string) ($settings['bank_transfer']['payment_due_days'] ?? 7),
     'terms_url' => $settings['terms_url'] ?? '',
     'packeta_api_key' => $settings['packeta']['api_key'] ?? '',
+    'ppl_widget_key' => $settings['ppl']['widget_key'] ?? '',
     'packeta_sender' => $settings['packeta']['sender'] ?? '',
     'local_test_checkout' => ($settings['local_test_checkout'] ?? true) === true ? '1' : '0',
 ];

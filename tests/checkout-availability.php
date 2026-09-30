@@ -123,5 +123,40 @@ try {
     throw new RuntimeException('Checkout accepted Packeta without a widget key.');
 } catch (InvalidArgumentException $expected) {
 }
+$ppl = new \SimpleStore\Checkout\PplPickupPoint('public-ppl-key-123');
+$_POST = ['method' => 'ppl_pickup', 'name' => 'Eva Nová',
+    'email' => 'eva@example.org', 'phone' => '123', 'country' => 'CZ',
+    'street' => '', 'city' => '', 'postal_code' => '',
+    'pickup_point' => 'Podvržená pobočka', 'pickup_address' => 'Podvržená adresa',
+    'pickup_code' => 'PODVRH', 'ppl_point_code' => 'KM1234567',
+    'ppl_point_name' => 'PPL ParcelShop Brno',
+    'ppl_point_address' => 'Nádražní 12, Brno, 60200', 'ppl_point_country' => 'CZ'];
+$pplCheckout = new CheckoutController($url, $renderer,
+    ['basePath' => '/simple-store/', 'language' => 'cs'], $cart,
+    new CartService(new ProductRepository($db), ['cs']),
+    $methods, new OrderRepository($db, $bank), $bank, null, '', false, [], [], null, $ppl);
+$saveDelivery->invoke($pplCheckout);
+$delivery = $cart->state()['delivery'];
+if ($delivery['pickup_code'] !== 'KM1234567' ||
+    $delivery['pickup_point'] !== 'PPL ParcelShop Brno' ||
+    $delivery['pickup_address'] !== 'Nádražní 12, Brno, 60200') {
+    throw new RuntimeException('PPL selection did not replace manual pickup fields.');
+}
+$_POST['ppl_point_code'] = 'KM12345';
+try {
+    $saveDelivery->invoke($pplCheckout);
+    throw new RuntimeException('Invalid PPL code reached the checkout session.');
+} catch (InvalidArgumentException $expected) {
+}
+if ($cart->state()['delivery']['pickup_code'] !== 'KM1234567') {
+    throw new RuntimeException('Invalid PPL selection overwrote the last valid delivery.');
+}
+$_POST['ppl_point_code'] = 'KM1234567';
+$_POST['ppl_point_country'] = 'AT';
+try {
+    $saveDelivery->invoke($pplCheckout);
+    throw new RuntimeException('Foreign PPL pickup point reached the checkout session.');
+} catch (InvalidArgumentException $expected) {
+}
 
 echo "Checkout availability tests passed.\n";

@@ -44,6 +44,7 @@ $old = ['bank_transfer' => ['iban' => '', 'account_display' => '', 'recipient' =
 $fallback = CheckoutSettingsRepository::withDefaults($old, $example);
 if ($fallback['bank_transfer']['account_display'] !== '' ||
     $fallback['shipping_methods']['ppl_home']['price_czk'] !== 99 ||
+    $fallback['ppl']['widget_key'] !== '' ||
     count($fallback['shipping_methods']) !== 9 ||
     $repo->load($fallback) !== $fallback) {
     throw new RuntimeException('Old private checkout settings did not receive the new defaults.');
@@ -57,6 +58,7 @@ $input = ['shipping_price' => array_map('strval', array_column(ShippingPolicy::d
     'account_display' => '1265098001/5500', 'iban' => '', 'recipient' => 'Test',
     'payment_due_days' => '10', 'terms_url' => '/simple-store/cs/obchodni-podminky',
     'packeta_api_key' => 'ABCDEF1234567890',
+    'ppl_widget_key' => 'public-ppl-key-123',
     'packeta_api_password' => 'private-test-password', 'packeta_sender' => 'Dobrodruzi',
     'local_test_checkout' => '1'];
 $input['shipping_price'] = array_combine(array_keys(ShippingPolicy::defaults()),
@@ -72,6 +74,9 @@ if ($loaded != $saved || $saved['bank_transfer']['iban'] !== $generated->snapsho
     $saved['packeta']['sender'] !== 'Dobrodruzi') {
     throw new RuntimeException('Checkout settings were not validated and loaded from the database.');
 }
+if ($saved['ppl']['widget_key'] !== 'public-ppl-key-123') {
+    throw new RuntimeException('PPL widget key was not persisted.');
+}
 $withoutNewPassword = $repo->save(array_replace($input, ['packeta_api_password' => '']),
     '/simple-store/', $saved);
 if ($withoutNewPassword['packeta']['api_password'] !== 'private-test-password') {
@@ -86,7 +91,8 @@ $repo->save($input, '/simple-store/');
 foreach ([['shipping_price' => array_replace($input['shipping_price'], ['ppl_home' => '-1'])],
     ['terms_url' => 'https://other.test/terms'],
     ['iban' => 'CZ0000000000000000000000'],
-    ['packeta_api_key' => 'API-HESLO']] as $change) {
+    ['packeta_api_key' => 'API-HESLO'],
+    ['ppl_widget_key' => 'invalid key with spaces']] as $change) {
     try {
         $repo->save(array_replace($input, $change), '/simple-store/');
         throw new RuntimeException('Invalid settings were accepted.');

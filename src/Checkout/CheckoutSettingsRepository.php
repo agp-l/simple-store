@@ -19,6 +19,9 @@ final class CheckoutSettingsRepository
             $example['shipping_methods']);
         $local['packeta'] = is_array($local['packeta'] ?? null)
             ? array_replace($example['packeta'], $local['packeta']) : $example['packeta'];
+        $local['ppl'] = is_array($local['ppl'] ?? null)
+            ? array_replace($example['ppl'] ?? ['widget_key' => ''], $local['ppl'])
+            : ($example['ppl'] ?? ['widget_key' => '']);
         if (($local['bank_transfer']['account_display'] ?? '') === '' &&
             ($local['bank_transfer']['recipient'] ?? '') === '') {
             $local['bank_transfer'] = $example['bank_transfer'];
@@ -94,6 +97,8 @@ final class CheckoutSettingsRepository
         }
         $packetaKey = self::value($input, 'packeta_api_key');
         new PacketaPickupPoint($packetaKey);
+        $pplKey = self::value($input, 'ppl_widget_key');
+        new PplPickupPoint($pplKey);
         $password = self::value($input, 'packeta_api_password');
         if ($password === '') {
             $password = ($input['packeta_clear_password'] ?? null) === '1' ? '' :
@@ -110,6 +115,7 @@ final class CheckoutSettingsRepository
         $settings = [
             'shipping_methods' => $shipping,
             'packeta' => ['api_key' => $packetaKey, 'api_password' => $password, 'sender' => $sender],
+            'ppl' => ['widget_key' => $pplKey],
             'bank_transfer' => $bankSettings,
             'terms_url' => $termsUrl,
             'local_test_checkout' => ($input['local_test_checkout'] ?? null) === '1',

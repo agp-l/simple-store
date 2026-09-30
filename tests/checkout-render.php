@@ -53,6 +53,28 @@ if (!str_contains($shipping, 'value="ppl_home"') || !str_contains($shipping, '99
     !str_contains($shipping, 'widget.packeta.com/v6/www/js/library.js')) {
     throw new RuntimeException('Carrier choices, pickup map and prices are missing.');
 }
+if (str_contains($shipping, 'data-ppl-widget') ||
+    !str_contains($shipping, 'value="ppl_pickup"') ||
+    !str_contains($shipping, 'name="pickup_address"')) {
+    throw new RuntimeException('PPL without a widget key must retain manual pickup entry.');
+}
+$pplData = $data;
+$pplData['pplWidgetKey'] = 'public-ppl-key-123';
+$pplData['delivery'] = ['method' => 'ppl_pickup', 'pickup_code' => 'KM1234567',
+    'pickup_point' => 'PPL ParcelShop', 'pickup_address' => 'Nádražní 12, Brno, 60200'];
+$pplData['pplSelection'] = ['code' => 'KM1234567', 'name' => 'PPL ParcelShop',
+    'address' => 'Nádražní 12, Brno, 60200', 'country' => 'CZ'];
+ob_start();
+$renderer->render('shipping', $pplData);
+$pplShipping = ob_get_clean();
+if (!str_contains($pplShipping, 'api-key="public-ppl-key-123"') ||
+    !str_contains($pplShipping, 'name="ppl_point_code" value="KM1234567"') ||
+    !str_contains($pplShipping, 'data-ppl-open') ||
+    !str_contains($pplShipping, 'assets/ppl-checkout.js') ||
+    !str_contains($pplShipping, 'https://www.ppl.cz/accesspointwidget/loader.js') ||
+    !str_contains($pplShipping, 'checkout-has-ppl-widget')) {
+    throw new RuntimeException('Configured PPL pickup must render its map and selected point.');
+}
 $data['customerAddresses'] = [['id' => 4, 'label' => 'Domů', 'street' => 'Polní 1',
     'city' => 'Brno', 'country' => 'CZ']];
 ob_start();

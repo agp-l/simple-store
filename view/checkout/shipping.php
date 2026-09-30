@@ -20,12 +20,12 @@ require __DIR__ . '/common.php';
       <?php endforeach; ?>
     </div></div><?php endif; ?>
     <div class="checkout-columns">
-      <form class="checkout-panel checkout-form" method="post" action="<?= $checkoutEscape($checkoutUrl) ?>">
+      <form class="checkout-panel checkout-form <?= ($pplWidgetKey ?? '') !== '' ? 'checkout-has-ppl-widget' : '' ?>" method="post" action="<?= $checkoutEscape($checkoutUrl) ?>">
         <input type="hidden" name="csrf" value="<?= $checkoutEscape($cartToken) ?>"><input type="hidden" name="action" value="delivery"><input type="hidden" name="country" value="CZ">
-        <fieldset><legend>1. Výdejní místa a boxy</legend><p class="checkout-field-help">U Zásilkovny vyberte místo přímo v mapě; do objednávky se doplní automaticky. U ostatních dopravců zatím adresu opište z jejich mapy.</p>
+        <fieldset><legend>1. Výdejní místa a boxy</legend><p class="checkout-field-help">U Zásilkovny<?= ($pplWidgetKey ?? '') !== '' ? ' a PPL' : '' ?> vyberte místo v mapě; údaje se doplní automaticky. U ostatních dopravců zatím adresu opište z jejich mapy.</p>
           <?php foreach ($availableShippingOptions as $option): ?>
             <?php if ($option['group'] !== 'pickup') continue; ?>
-            <div class="checkout-shipping-option"><label class="checkout-choice"><input type="radio" name="method" value="<?= $checkoutEscape($option['code']) ?>" <?= ($delivery['method'] ?? '') === $option['code'] ? 'checked' : '' ?> required><span><strong><?= $checkoutEscape($option['label']) ?></strong></span><strong><?= (int) $option['price_czk'] === 0 ? 'Zdarma' : $checkoutMoney((int) $option['price_czk']) ?></strong></label><?php if ($option['code'] === 'zasilkovna_pickup'): ?><button class="checkout-packeta-open" type="button" data-packeta-open>Vybrat výdejní místo Zásilkovny</button><?php elseif ($option['locator_url'] !== ''): ?><a href="<?= $checkoutEscape($option['locator_url']) ?>" target="_blank" rel="noopener noreferrer">Vybrat adresu výdejního místa ↗</a><?php endif; ?></div>
+            <div class="checkout-shipping-option"><label class="checkout-choice"><input type="radio" name="method" value="<?= $checkoutEscape($option['code']) ?>" <?= ($delivery['method'] ?? '') === $option['code'] ? 'checked' : '' ?> required><span><strong><?= $checkoutEscape($option['label']) ?></strong></span><strong><?= (int) $option['price_czk'] === 0 ? 'Zdarma' : $checkoutMoney((int) $option['price_czk']) ?></strong></label><?php if ($option['code'] === 'zasilkovna_pickup'): ?><button class="checkout-packeta-open" type="button" data-packeta-open>Vybrat výdejní místo Zásilkovny</button><?php elseif ($option['code'] === 'ppl_pickup' && ($pplWidgetKey ?? '') !== ''): ?><button class="checkout-packeta-open" type="button" data-ppl-open>Vybrat místo PPL v mapě</button><?php elseif ($option['locator_url'] !== ''): ?><a href="<?= $checkoutEscape($option['locator_url']) ?>" target="_blank" rel="noopener noreferrer">Vybrat adresu výdejního místa ↗</a><?php endif; ?></div>
           <?php endforeach; ?>
         </fieldset>
         <fieldset><legend>2. Doručení na adresu</legend>
@@ -51,10 +51,22 @@ require __DIR__ . '/common.php';
             <p class="checkout-packeta-selection" data-packeta-selection aria-live="polite"><?php if (($delivery['method'] ?? '') === 'zasilkovna_pickup' && !empty($delivery['pickup_code'])): ?><?= $checkoutEscape($delivery['pickup_point'] ?? '') ?> · <?= $checkoutEscape($delivery['pickup_address'] ?? '') ?> (ID <?= $checkoutEscape($delivery['pickup_code']) ?>)<?php else: ?>Místo zatím není vybrané. Použijte tlačítko u Zásilkovny.<?php endif; ?></p>
             <p class="checkout-field-help" data-packeta-status role="status"></p><noscript>Pro výběr výdejního místa Zásilkovny zapněte JavaScript.</noscript>
           </div>
+          <?php if (($pplWidgetKey ?? '') !== ''): ?>
+          <div class="checkout-ppl-fields">
+            <ppl-access-point-widget api-key="<?= $checkoutEscape($pplWidgetKey) ?>" config='<?= $checkoutEscape(json_encode(['viewMode' => 'modal', 'defaultCountry' => 'CZ', 'allowedCountries' => ['CZ'], 'defaultLang' => 'cs', 'codRequired' => false], JSON_THROW_ON_ERROR)) ?>' data-ppl-widget></ppl-access-point-widget>
+            <input type="hidden" name="ppl_point_code" value="<?= $checkoutEscape($pplSelection['code'] ?? '') ?>" data-ppl-code>
+            <input type="hidden" name="ppl_point_name" value="<?= $checkoutEscape($pplSelection['name'] ?? '') ?>" data-ppl-name>
+            <input type="hidden" name="ppl_point_address" value="<?= $checkoutEscape($pplSelection['address'] ?? '') ?>" data-ppl-address>
+            <input type="hidden" name="ppl_point_country" value="<?= $checkoutEscape($pplSelection['country'] ?? '') ?>" data-ppl-country>
+            <p class="checkout-packeta-selection" data-ppl-selection aria-live="polite"><?php if (($pplSelection['code'] ?? '') !== ''): ?><?= $checkoutEscape($pplSelection['name'] ?? '') ?> · <?= $checkoutEscape($pplSelection['address'] ?? '') ?> (<?= $checkoutEscape($pplSelection['code']) ?>)<?php else: ?>Místo zatím není vybrané. Použijte tlačítko u PPL.<?php endif; ?></p>
+            <p class="checkout-field-help" data-ppl-status role="status"></p><noscript>Pro výběr místa PPL zapněte JavaScript.</noscript>
+          </div>
+          <?php endif; ?>
           <div class="checkout-manual-pickup"><p class="checkout-field-help">Na mapě dopravce vyhledejte místo a opište jeho název a přesnou adresu.</p>
-          <div class="checkout-fields"><label class="checkout-span">Název výdejního místa nebo boxu <input type="text" name="pickup_point" value="<?= ($delivery['method'] ?? '') !== 'zasilkovna_pickup' ? $checkoutEscape($delivery['pickup_point'] ?? '') : '' ?>" maxlength="190" placeholder="Například PPL Parcelbox Hlavní nádraží"></label>
-            <label class="checkout-span">Adresa výdejního místa (ulice, město, PSČ) <input type="text" name="pickup_address" value="<?= ($delivery['method'] ?? '') !== 'zasilkovna_pickup' ? $checkoutEscape($delivery['pickup_address'] ?? '') : '' ?>" maxlength="190"></label>
-            <label>Kód místa (pokud je uveden) <input type="text" name="pickup_code" value="<?= ($delivery['method'] ?? '') !== 'zasilkovna_pickup' ? $checkoutEscape($delivery['pickup_code'] ?? '') : '' ?>" maxlength="80"></label></div></div>
+          <?php $manualSelection = ($delivery['method'] ?? '') !== 'zasilkovna_pickup' && !(($delivery['method'] ?? '') === 'ppl_pickup' && ($pplWidgetKey ?? '') !== ''); ?>
+          <div class="checkout-fields"><label class="checkout-span">Název výdejního místa nebo boxu <input type="text" name="pickup_point" value="<?= $manualSelection ? $checkoutEscape($delivery['pickup_point'] ?? '') : '' ?>" maxlength="190" placeholder="Například ParcelShop Hlavní nádraží"></label>
+            <label class="checkout-span">Adresa výdejního místa (ulice, město, PSČ) <input type="text" name="pickup_address" value="<?= $manualSelection ? $checkoutEscape($delivery['pickup_address'] ?? '') : '' ?>" maxlength="190"></label>
+            <label>Kód místa (pokud je uveden) <input type="text" name="pickup_code" value="<?= $manualSelection ? $checkoutEscape($delivery['pickup_code'] ?? '') : '' ?>" maxlength="80"></label></div></div>
         </fieldset>
         <div class="checkout-form-actions"><a class="checkout-back" href="<?= $checkoutEscape($cartUrl) ?>">← Zpět do košíku</a><button class="checkout-primary" type="submit">Pokračovat k platbě <span aria-hidden="true">→</span></button></div>
       </form>

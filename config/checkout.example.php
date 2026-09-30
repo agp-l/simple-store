@@ -11,6 +11,9 @@ return [
         'api_password' => '', // Private API password: never expose in the storefront or commit credentials.
         'sender' => '', // Sender indication from the Packeta client section.
     ],
+    'ppl' => [
+        'widget_key' => '', // Public Widget 2.0 key; allow this site's domains in PPL administration.
+    ],
     'bank_transfer' => [
         'iban' => '', // Calculated from the Czech account number if left empty.
         'account_display' => '', // Enter in administration; do not commit a private account.

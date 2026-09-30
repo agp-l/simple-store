@@ -74,8 +74,11 @@
 .checkout-packeta-open:hover, .checkout-packeta-open:focus-visible { background: #e3f2df; }
 .checkout-packeta-selection { padding: 13px 15px; border: 1px solid #c8d9c3; border-radius: 4px; background: #f5faf1; font-size: 13px; line-height: 1.5; }
 .checkout-packeta-fields { display: none; }
+.checkout-ppl-fields { display: none; }
 .checkout-form:has(input[name="method"][value="zasilkovna_pickup"]:checked) .checkout-packeta-fields { display: block; }
 .checkout-form:has(input[name="method"][value="zasilkovna_pickup"]:checked) .checkout-manual-pickup { display: none; }
+.checkout-has-ppl-widget:has(input[name="method"][value="ppl_pickup"]:checked) .checkout-ppl-fields { display: block; }
+.checkout-has-ppl-widget:has(input[name="method"][value="ppl_pickup"]:checked) .checkout-manual-pickup { display: none; }
 .checkout-form:has(input[name="method"][value$="_pickup"]:checked) .checkout-home-fields { display: none; }
 .checkout-form:not(:has(input[name="method"][value$="_pickup"]:checked)) .checkout-pickup-fields { display: none; }
 .checkout-choice:has(input:checked) { border-color: var(--forest); background: #f5faf1; }

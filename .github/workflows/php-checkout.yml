@@ -56,3 +56,5 @@ jobs:
         run: bash tests/admin-http.sh
       - name: Test payment QR
         run: node --test tests/payment-qr.mjs
+      - name: Test PPL pickup selection
+        run: node --test tests/ppl-checkout.mjs
