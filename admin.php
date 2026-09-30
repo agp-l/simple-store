@@ -63,6 +63,9 @@ try {
     exit;
 }
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+$orderActions = ['mark-order-paid', 'set-order-status', 'packeta-create',
+    'packeta-courier', 'packeta-reconcile', 'packeta-retry', 'packeta-cancel',
+    'packeta-cancel-confirmed', 'packeta-cancel-not-done'];
 try {
     $csrf = $auth->token();
     if ($method === 'POST' && $_POST === [] && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0 &&
@@ -101,13 +104,11 @@ try {
             $auth->signOut();
             header('Location: ' . $adminUrl, true, 303);
             exit;
-        } elseif (!in_array($action, ['create-content', 'create-translation', 'inline-content', 'create-product',
+        } elseif (!in_array($action, array_merge(['create-content', 'create-translation', 'inline-content', 'create-product',
             'inline-product', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
             'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product',
-            'mark-order-paid', 'set-order-status', 'packeta-create', 'packeta-courier',
-            'packeta-reconcile', 'packeta-retry', 'packeta-cancel', 'packeta-cancel-confirmed',
-            'packeta-cancel-not-done', 'save-checkout-settings', 'customer-create',
-            'customer-update', 'customer-active', 'customer-password', 'schema-apply'], true) ||
+            'save-checkout-settings', 'customer-create', 'customer-update', 'customer-active',
+            'customer-password', 'schema-apply'], $orderActions), true) ||
             !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach'], true)) {
                 header('Content-Type: application/json; charset=utf-8');
@@ -174,8 +175,7 @@ try {
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }
-    if (in_array($action, ['mark-order-paid', 'set-order-status', 'packeta-create',
-        'packeta-courier', 'packeta-reconcile', 'packeta-retry'], true) ||
+    if (in_array($action, $orderActions, true) ||
         ($method !== 'POST' && $section === 'orders')) {
         require __DIR__ . '/src/Admin/orders.php';
         require __DIR__ . '/view/admin/layout.php';
