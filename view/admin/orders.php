@@ -78,9 +78,9 @@ $fulfillmentSourceReady ??= false;
         <?php if (in_array($shipping['method'] ?? '', ['zasilkovna_pickup', 'zasilkovna_home'], true)): ?>
           <div class="panel-packeta-dispatch">
             <h3>Podání zásilky Zásilkovně</h3>
-            <?php if (!$packetaReady): ?>
+            <?php if (($order['fulfillment_source'] ?? 'own') !== 'external' && !$packetaReady): ?>
               <p class="panel-help">Nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>, aby vznikla tabulka zásilek.</p>
-            <?php elseif (!$packetaConfigured): ?>
+            <?php elseif (($order['fulfillment_source'] ?? 'own') !== 'external' && !$packetaConfigured): ?>
               <p class="panel-help">V <a href="<?= $escape($adminUrl . '?section=settings') ?>">nastavení obchodu</a> vyplň soukromé API heslo a označení odesílatele z klientské sekce Zásilkovny.</p>
             <?php endif; ?>
             <?php $packetaNotice = match ($_GET['packeta_result'] ?? '') {
@@ -154,7 +154,7 @@ $fulfillmentSourceReady ??= false;
                 </form>
               <?php endif; ?>
             <?php else: ?>
-              <?php if ($packetaShipment !== null && $packetaShipment['status'] === 'cancelled'): ?><p class="panel-notice">Původní zásilka <?= $escape($packetaShipment['barcode'] ?? '') ?> byla stornována. Oprav údaje a vytvoř novou zásilku.</p><?php endif; ?>
+              <?php if ($packetaShipment !== null && $packetaShipment['status'] === 'cancelled'): ?><p class="panel-notice">Původní zásilka <?= $escape($packetaShipment['barcode'] ?? '') ?> byla stornována.<?= ($order['fulfillment_source'] ?? 'own') === 'external' ? '' : ' Oprav údaje a vytvoř novou zásilku.' ?></p><?php endif; ?>
               <?php if ($packetaShipment !== null && $packetaShipment['status'] === 'rejected'): ?>
                 <p class="panel-error" role="alert"><?= $escape($packetaShipment['last_error'] ?: 'Zásilkovna zásilku odmítla.') ?></p>
                 <?php if (str_contains((string) ($packetaShipment['last_error'] ?? ''), 'eshop_id:')): ?>
@@ -165,7 +165,7 @@ $fulfillmentSourceReady ??= false;
               <?php endif; ?>
               <?php if (!$paid): ?><p class="panel-help">Nejdřív ověř platbu na bankovním výpisu a označ ji jako přijatou.</p><?php endif; ?>
               <?php if (($order['fulfillment_source'] ?? 'own') === 'external'): ?><p class="panel-help">Expedici zajišťuje externí dodavatel. Stav objednávky nastav v panelu Vyřízení; zásilku tímto účtem Zásilkovny nepodávej.</p><?php endif; ?>
-              <?php if (($shipping['method'] ?? '') === 'zasilkovna_pickup' &&
+              <?php if (($order['fulfillment_source'] ?? 'own') !== 'external' && ($shipping['method'] ?? '') === 'zasilkovna_pickup' &&
                   (($shipping['pickup_verified'] ?? false) !== true ||
                   preg_match('/^[0-9]{1,12}$/D', (string) ($shipping['pickup_code'] ?? '')) !== 1)): ?>
                 <p class="panel-help">U této starší objednávky nebylo výdejní místo ověřeno. Zadej správné ID; před podáním ho server ověří přes Zásilkovnu.</p>
@@ -246,7 +246,7 @@ $fulfillmentSourceReady ??= false;
             <option value="own" <?= $fulfillmentSource === 'own' ? 'selected' : '' ?>>Obchod</option>
             <option value="external" <?= $fulfillmentSource === 'external' ? 'selected' : '' ?>>Externí dodavatel</option>
           </select></label>
-          <label>Dodavatel nebo poznámka k expedici (volitelné)<input name="fulfillment_note" maxlength="190" value="<?= $escape($order['fulfillment_note'] ?? '') ?>"></label>
+          <label>Dodavatel nebo poznámka k externí expedici (volitelné)<input name="fulfillment_note" maxlength="190" value="<?= $escape($order['fulfillment_note'] ?? '') ?>"></label>
         <?php else: ?><input type="hidden" name="fulfillment_source" value="<?= $escape($fulfillmentSource) ?>"><input type="hidden" name="fulfillment_note" value="<?= $escape($order['fulfillment_note'] ?? '') ?>"><?php endif; ?>
         <label>Vyřízení objednávky <select name="order_status">
           <?php if ($paid): ?>
