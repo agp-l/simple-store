@@ -13,6 +13,7 @@ use SimpleStore\Checkout\PacketaShipmentRepository;
 $screen = 'orders';
 $orders = new OrderRepository($db);
 $ordersReady = $orders->installed();
+$fulfillmentSourceReady = $ordersReady && $orders->fulfillmentSourceInstalled();
 $packetaShipments = new PacketaShipmentRepository($db);
 $packetaReady = $packetaShipments->installed();
 $packetaCancelReady = $packetaReady && $packetaShipments->cancellationHistoryInstalled();
@@ -66,12 +67,15 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'set-order-status') {
     $id = is_string($rawId) && ctype_digit($rawId) ? filter_var($rawId, FILTER_VALIDATE_INT,
         ['options' => ['min_range' => 1]]) : false;
     $newStatus = $_POST['order_status'] ?? null;
-    if (!$ordersReady || $id === false || !is_string($newStatus)) {
+    $source = $_POST['fulfillment_source'] ?? 'own';
+    $note = $_POST['fulfillment_note'] ?? '';
+    if (!$ordersReady || $id === false || !is_string($newStatus) ||
+        !is_string($source) || !is_string($note)) {
         http_response_code(422);
         $orderError = 'Vyber objednávku a platný stav.';
     } else {
         try {
-            $orders->setFulfillmentStatus($id, $newStatus);
+            $orders->setFulfillmentStatus($id, $newStatus, $source, $note);
             header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&saved=1', true, 303);
             exit;
         } catch (InvalidArgumentException $exception) {

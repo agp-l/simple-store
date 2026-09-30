@@ -95,6 +95,8 @@ CREATE TABLE IF NOT EXISTS shop_orders (
   order_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   order_token CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL,
   status VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  fulfillment_source VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'own',
+  fulfillment_note VARCHAR(190) NULL DEFAULT NULL,
   customer_email VARCHAR(254) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL,
   subtotal_czk INT UNSIGNED NULL DEFAULT NULL,
   shipping_czk INT UNSIGNED NULL DEFAULT NULL,
@@ -173,6 +175,22 @@ SET @order_token_upgrade = IF(@order_token_exists=0,
 PREPARE order_token_statement FROM @order_token_upgrade;
 EXECUTE order_token_statement;
 DEALLOCATE PREPARE order_token_statement;
+
+SET @order_fulfillment_source_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='fulfillment_source');
+SET @order_fulfillment_source_upgrade = IF(@order_fulfillment_source_exists=0,
+  'ALTER TABLE shop_orders ADD COLUMN fulfillment_source VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT ''own'' AFTER status', 'SELECT 1');
+PREPARE order_fulfillment_source_statement FROM @order_fulfillment_source_upgrade;
+EXECUTE order_fulfillment_source_statement;
+DEALLOCATE PREPARE order_fulfillment_source_statement;
+
+SET @order_fulfillment_note_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='fulfillment_note');
+SET @order_fulfillment_note_upgrade = IF(@order_fulfillment_note_exists=0,
+  'ALTER TABLE shop_orders ADD COLUMN fulfillment_note VARCHAR(190) NULL DEFAULT NULL AFTER fulfillment_source', 'SELECT 1');
+PREPARE order_fulfillment_note_statement FROM @order_fulfillment_note_upgrade;
+EXECUTE order_fulfillment_note_statement;
+DEALLOCATE PREPARE order_fulfillment_note_statement;
 
 SET @order_email_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_orders' AND COLUMN_NAME='customer_email');

@@ -55,11 +55,12 @@ final class PacketaShipmentRepository
         $this->db->startTransaction();
         try {
             $order = $this->db->queryFirstRow(
-                'SELECT payment_method, payment_status, status, shipping_json
+                'SELECT *
                  FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId);
             $shipping = is_array($order) ? json_decode((string) $order['shipping_json'], true) : null;
             if ($order === null || $order['payment_method'] !== 'bank_transfer' ||
                 $order['payment_status'] !== 'paid' ||
+                ($order['fulfillment_source'] ?? 'own') === 'external' ||
                 in_array($order['status'], ['shipped', 'cancelled', 'completed', 'test'], true) ||
                 !is_array($shipping) || ($shipping['method'] ?? '') !== $draft['method']) {
                 throw new InvalidArgumentException('Objednávka není připravená k podání. Obnov stránku.');

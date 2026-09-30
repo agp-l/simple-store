@@ -229,6 +229,17 @@ final class OrderRepository
         return $row === null ? null : self::hydrate($row);
     }
 
+    public function fulfillmentSourceInstalled(): bool
+    {
+        foreach (['fulfillment_source', 'fulfillment_note'] as $column) {
+            if ((int) $this->db->queryFirstField(
+                'SELECT COUNT(*) FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME=%s',
+                'shop_orders', $column) === 0) return false;
+        }
+        return true;
+    }
+
     /** Bounded admin list with a single extra row for the next-page link. */
     public function managementPage(int $offset = 0, int $limit = 20, ?string $filter = null): array
     {
@@ -240,9 +251,11 @@ final class OrderRepository
         $parcelField = (new PacketaShipmentRepository($this->db))->installed()
             ? '(SELECT status FROM shop_packeta_shipments WHERE order_id=shop_orders.id)'
             : 'NULL';
+        $fulfillmentField = $this->fulfillmentSourceInstalled() ? 'fulfillment_source' : "'own'";
         $fields = 'SELECT id, order_number, status, customer_email, subtotal_czk, shipping_czk,
                           total_czk, payment_method, payment_status, variable_symbol, created_at,
-                          ' . $parcelField . ' AS shipment_status FROM shop_orders';
+                          ' . $parcelField . ' AS shipment_status,
+                          ' . $fulfillmentField . ' AS fulfillment_source FROM shop_orders';
         $rows = $filter === null
             ? $this->db->query($fields . ' ORDER BY id DESC LIMIT %i OFFSET %i', $limit + 1, $offset)
             : $this->db->query($fields . (in_array($filter, ['pending', 'paid', 'test'], true)
@@ -293,16 +306,27 @@ final class OrderRepository
     }
 
     /** Manual fulfillment state; a bank transfer must be verified before shipping. */
-    public function setFulfillmentStatus(int $id, string $status): void
+    public function setFulfillmentStatus(int $id, string $status, string $source = 'own', string $note = ''): void
     {
         if ($id < 1 || !in_array($status,
-            ['processing', 'ready_to_ship', 'shipped', 'completed', 'cancelled'], true)) {
+            ['processing', 'ready_to_ship', 'shipped', 'completed', 'cancelled'], true) ||
+            !in_array($source, ['own', 'external'], true)) {
             throw new InvalidArgumentException('Neplatný stav objednávky.');
+        }
+        $note = trim($note);
+        if (strlen($note) > 190 || preg_match('//u', $note) !== 1 ||
+            preg_match('/[\x00-\x1f\x7f]/', $note)) {
+            throw new InvalidArgumentException('Poznámka k expedici je příliš dlouhá nebo obsahuje nepovolené znaky.');
+        }
+        if ($source === 'own') $note = '';
+        $hasSource = $this->fulfillmentSourceInstalled();
+        if (!$hasSource && $source === 'external') {
+            throw new InvalidArgumentException('Pro expedici dodavatelem nejdřív aktualizuj SQL tabulky v administraci.');
         }
         $this->db->startTransaction();
         try {
             $row = $this->db->queryFirstRow(
-                'SELECT status, payment_status, shipping_json FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $id
+                'SELECT * FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $id
             );
             $allowed = match ($row['status'] ?? '') {
                 'new' => ['processing', 'ready_to_ship', 'shipped', 'cancelled'],
@@ -317,22 +341,41 @@ final class OrderRepository
                 ($status !== 'cancelled' && $row['payment_status'] !== 'paid')) {
                 throw new InvalidArgumentException('Tento přechod stavu není možný. Zaplacenou objednávku před zrušením nejprve vyřeš individuálně.');
             }
+            if (in_array($row['status'], ['shipped'], true) &&
+                $source !== ($row['fulfillment_source'] ?? 'own')) {
+                throw new InvalidArgumentException('U odeslané objednávky už nelze změnit způsob expedice.');
+            }
             $shipping = json_decode((string) ($row['shipping_json'] ?? ''), true);
-            if (in_array($status, ['ready_to_ship', 'shipped'], true) &&
-                in_array($shipping['method'] ?? '', ['zasilkovna_pickup', 'zasilkovna_home'], true)) {
+            if (in_array($shipping['method'] ?? '', ['zasilkovna_pickup', 'zasilkovna_home'], true)) {
                 if ((int) $this->db->queryFirstField(
                     'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
                     'shop_packeta_shipments') === 0) {
-                    throw new InvalidArgumentException('Aktualizuj SQL tabulky v sekci Databáze.');
+                    if ($source === 'own' && in_array($status, ['ready_to_ship', 'shipped'], true)) {
+                        throw new InvalidArgumentException('Aktualizuj SQL tabulky v sekci Databáze.');
+                    }
+                    $shipment = null;
+                } else {
+                    $shipment = $this->db->queryFirstRow(
+                        'SELECT status FROM shop_packeta_shipments WHERE order_id=%i LIMIT 1', $id);
                 }
-                $shipment = $this->db->queryFirstRow(
-                    'SELECT status FROM shop_packeta_shipments WHERE order_id=%i LIMIT 1', $id);
-                if ($shipment === null || $shipment['status'] !== 'created') {
+                if ($source === 'own' && in_array($status, ['ready_to_ship', 'shipped'], true) &&
+                    ($shipment === null || $shipment['status'] !== 'created')) {
                     throw new InvalidArgumentException('Nejdřív vytvoř aktivní zásilku u Zásilkovny. Storno či nejasný výsledek nelze označit jako připravené nebo odeslané.');
                 }
+                if ($source === 'external' && $shipment !== null &&
+                    in_array($shipment['status'], ['created', 'submitting', 'uncertain',
+                        'cancelling', 'cancel_uncertain'], true)) {
+                    throw new InvalidArgumentException('Nejdřív vyřeš nebo stornuj zásilku vytvořenou v tomto obchodě. Potom může objednávku převzít dodavatel.');
+                }
             }
-            $this->db->query('UPDATE shop_orders SET status=%s WHERE id=%i AND status=%s',
-                $status, $id, $row['status']);
+            if ($hasSource) {
+                $this->db->query('UPDATE shop_orders SET status=%s, fulfillment_source=%s,
+                    fulfillment_note=%s WHERE id=%i AND status=%s',
+                    $status, $source, $note === '' ? null : $note, $id, $row['status']);
+            } else {
+                $this->db->query('UPDATE shop_orders SET status=%s WHERE id=%i AND status=%s',
+                    $status, $id, $row['status']);
+            }
             $this->db->commit();
         } catch (Throwable $error) {
             $this->db->rollback();

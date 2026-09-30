@@ -20,6 +20,7 @@ $packetaShipment ??= null;
 $packetaTrackingUrl ??= null;
 $cancelledPackets ??= [];
 $packetaAction ??= '';
+$fulfillmentSourceReady ??= false;
 ?>
 <div class="panel-intro">
   <div><p class="panel-eyebrow">Prodej</p><h1>Objednávky</h1>
@@ -67,6 +68,7 @@ $packetaAction ??= '';
         <h2>Doručení a kontakt</h2>
         <dl class="panel-order-facts">
           <div><dt>Doprava</dt><dd><?= $escape($shipping['label'] ?? $shipping['method'] ?? 'Neuvedeno') ?></dd></div>
+          <div><dt>Expeduje</dt><dd><?= ($order['fulfillment_source'] ?? 'own') === 'external' ? 'Externí dodavatel' : 'Obchod' ?><?php if (!empty($order['fulfillment_note'])): ?><br><?= $escape($order['fulfillment_note']) ?><?php endif; ?></dd></div>
           <div><dt>Příjemce</dt><dd><?= $escape($shipping['recipient'] ?? $shipping['name'] ?? 'Neuvedeno') ?></dd></div>
           <div><dt>E-mail</dt><dd><?= $escape($order['customer_email'] ?? $shipping['email'] ?? 'Neuvedeno') ?></dd></div>
           <div><dt>Telefon</dt><dd><?= $escape($shipping['phone'] ?? 'Neuvedeno') ?></dd></div>
@@ -162,12 +164,13 @@ $packetaAction ??= '';
                 <?php endif; ?>
               <?php endif; ?>
               <?php if (!$paid): ?><p class="panel-help">Nejdřív ověř platbu na bankovním výpisu a označ ji jako přijatou.</p><?php endif; ?>
+              <?php if (($order['fulfillment_source'] ?? 'own') === 'external'): ?><p class="panel-help">Expedici zajišťuje externí dodavatel. Stav objednávky nastav v panelu Vyřízení; zásilku tímto účtem Zásilkovny nepodávej.</p><?php endif; ?>
               <?php if (($shipping['method'] ?? '') === 'zasilkovna_pickup' &&
                   (($shipping['pickup_verified'] ?? false) !== true ||
                   preg_match('/^[0-9]{1,12}$/D', (string) ($shipping['pickup_code'] ?? '')) !== 1)): ?>
                 <p class="panel-help">U této starší objednávky nebylo výdejní místo ověřeno. Zadej správné ID; před podáním ho server ověří přes Zásilkovnu.</p>
               <?php endif; ?>
-              <?php if ($packetaReady && $packetaConfigured && $paid && !in_array($order['status'], ['shipped', 'cancelled', 'completed', 'test'], true)): ?>
+              <?php if ($packetaReady && $packetaConfigured && $paid && ($order['fulfillment_source'] ?? 'own') !== 'external' && !in_array($order['status'], ['shipped', 'cancelled', 'completed', 'test'], true)): ?>
                 <?php
                 $recipientParts = preg_split('/\s+/u', trim((string) ($shipping['recipient'] ?? $shipping['name'] ?? ''))) ?: [];
                 $defaultSurname = count($recipientParts) > 1 ? array_pop($recipientParts) : '';
@@ -235,21 +238,29 @@ $packetaAction ??= '';
       <p class="panel-order-state"><?= $escape($orderFulfillmentLabel($order['status'] ?? '')) ?></p>
       <?php if (!in_array($order['status'], ['completed', 'cancelled', 'test'], true)): ?>
       <?php $packetaMethod = in_array($shipping['method'] ?? '', ['zasilkovna_pickup', 'zasilkovna_home'], true);
-      $activeParcel = ($packetaShipment['status'] ?? '') === 'created'; ?>
+      $fulfillmentSource = $order['fulfillment_source'] ?? 'own'; ?>
       <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
         <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="set-order-status"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
+        <?php if ($paid && $order['status'] !== 'shipped' && $fulfillmentSourceReady): ?>
+          <label>Expedici zajišťuje <select name="fulfillment_source">
+            <option value="own" <?= $fulfillmentSource === 'own' ? 'selected' : '' ?>>Obchod</option>
+            <option value="external" <?= $fulfillmentSource === 'external' ? 'selected' : '' ?>>Externí dodavatel</option>
+          </select></label>
+          <label>Dodavatel nebo poznámka k expedici (volitelné)<input name="fulfillment_note" maxlength="190" value="<?= $escape($order['fulfillment_note'] ?? '') ?>"></label>
+        <?php else: ?><input type="hidden" name="fulfillment_source" value="<?= $escape($fulfillmentSource) ?>"><input type="hidden" name="fulfillment_note" value="<?= $escape($order['fulfillment_note'] ?? '') ?>"><?php endif; ?>
         <label>Vyřízení objednávky <select name="order_status">
           <?php if ($paid): ?>
             <?php if ($order['status'] !== 'shipped'): ?>
               <option value="processing" <?= $order['status'] === 'processing' ? 'selected' : '' ?>>Připravuje se</option>
-              <?php if (!$packetaMethod || $activeParcel): ?><option value="ready_to_ship" <?= $order['status'] === 'ready_to_ship' ? 'selected' : '' ?>>Připraveno k odeslání</option><?php endif; ?>
+              <option value="ready_to_ship" <?= $order['status'] === 'ready_to_ship' ? 'selected' : '' ?>>Připraveno k odeslání</option>
             <?php endif; ?>
-            <?php if (!$packetaMethod || $activeParcel): ?><option value="shipped" <?= $order['status'] === 'shipped' ? 'selected' : '' ?>>Odesláno po předání dopravci</option><?php endif; ?>
+            <option value="shipped" <?= $order['status'] === 'shipped' ? 'selected' : '' ?>>Odesláno po předání dopravci</option>
             <?php if ($order['status'] === 'shipped'): ?><option value="completed">Dokončeno po doručení</option><?php endif; ?>
           <?php else: ?><option value="cancelled">Zrušeno (bez přijaté platby)</option><?php endif; ?>
         </select></label>
         <button class="panel-button" type="submit">Uložit stav</button>
-        <p class="panel-help">Připraveno znamená zabalenou zásilku s číslem či nalepeným štítkem. Odesláno nastav až po fyzickém předání dopravci, dokončeno po doručení. U Zásilkovny musí existovat aktivní zásilka. Dokončené a zrušené objednávky se zákazníkovi přesunou do historie.</p>
+        <p class="panel-help">Připraveno znamená zabalenou zásilku, případně potvrzení připravenosti od dodavatele. Odesláno nastav až po skutečném předání dopravci (u dodavatele po jeho potvrzení), dokončeno po doručení. <?= $packetaMethod ? 'Při expedici obchodem přes Zásilkovnu musí být místní zásilka vytvořená. Dodavatel může expedovat bez místního podání.' : '' ?> Dokončené a zrušené objednávky se zákazníkovi přesunou do historie.</p>
+        <?php if ($paid && !$fulfillmentSourceReady): ?><p class="panel-help">Pro volbu externího dodavatele <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
       </form>
       <?php endif; ?>
     </aside>
@@ -276,7 +287,7 @@ $packetaAction ??= '';
           <span><strong><?= $escape($listed['order_number'] ?? '') ?></strong><small><?= $escape($listed['created_at'] ?? '') ?> · <?= $escape($listed['customer_email'] ?? '') ?></small></span>
           <span class="panel-order-symbol"><?= ($listed['payment_method'] ?? '') === 'test' ? 'TEST' : 'VS ' . $escape($listed['variable_symbol'] ?? '–') ?></span>
           <strong><?= $orderMoney($listed['total_czk'] ?? 0) ?></strong>
-          <span class="panel-order-state <?= $listedPaid ? 'is-paid' : 'is-pending' ?>"><?= $escape($orderPaymentLabel($listed['payment_status'] ?? '')) ?> · <?= $escape($orderFulfillmentLabel($listed['status'] ?? '')) ?><?= $listedShipment !== '' ? ' · ' . $escape($listedShipment) : '' ?></span>
+          <span class="panel-order-state <?= $listedPaid ? 'is-paid' : 'is-pending' ?>"><?= $escape($orderPaymentLabel($listed['payment_status'] ?? '')) ?> · <?= $escape($orderFulfillmentLabel($listed['status'] ?? '')) ?><?= ($listed['fulfillment_source'] ?? 'own') === 'external' ? ' · Externí dodavatel' : '' ?><?= $listedShipment !== '' ? ' · ' . $escape($listedShipment) : '' ?></span>
         </a>
       <?php endforeach; ?>
     </div>

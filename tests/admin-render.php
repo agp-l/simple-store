@@ -138,6 +138,7 @@ if (!str_contains($html, 'Podání zásilky Zásilkovně') ||
     throw new RuntimeException('Packeta dispatch should wait for the payment.');
 }
 $order['payment_status'] = 'paid';
+$fulfillmentSourceReady = true;
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
@@ -146,7 +147,9 @@ if (str_contains($html, 'name="action" value="mark-order-paid"') ||
     !str_contains($html, 'Zaplaceno') ||
     !str_contains($html, 'name="action" value="packeta-create"') ||
     !str_contains($html, 'Původní místo: Praha (ID 123456)') ||
-    str_contains($html, 'value="ready_to_ship"')) {
+    !str_contains($html, 'value="ready_to_ship"') ||
+    !str_contains($html, 'name="fulfillment_source"') ||
+    !str_contains($html, 'value="external"')) {
     throw new RuntimeException('Paid bank transfers must not show the confirmation form.');
 }
 $packetaCancelReady = true;
@@ -170,10 +173,25 @@ require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
 if (!str_contains($html, 'name="action" value="packeta-cancel-confirmed"') ||
     !str_contains($html, 'name="action" value="packeta-cancel-not-done"') ||
-    str_contains($html, 'value="shipped"')) {
+    !str_contains($html, 'Výsledek storna zásilky')) {
     throw new RuntimeException('Uncertain cancellation must block shipping and allow manual resolution.');
 }
-$packetaShipment['status'] = 'created';
+$packetaShipment = null;
+$order['fulfillment_source'] = 'external';
+$order['fulfillment_note'] = 'Dodavatel A <script>';
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'Externí dodavatel') ||
+    !str_contains($html, 'Dodavatel A &lt;script&gt;') ||
+    str_contains($html, 'Dodavatel A <script>') ||
+    str_contains($html, 'name="action" value="packeta-create"')) {
+    throw new RuntimeException('External supplier must be visible and bypass local packet creation.');
+}
+unset($order['fulfillment_source'], $order['fulfillment_note']);
+$packetaShipment = ['status' => 'created', 'method' => 'zasilkovna_pickup',
+    'barcode_text' => 'Z 123 4567 890', 'barcode' => 'Z1234567890',
+    'weight_kg' => '0.750', 'courier_number' => null, 'last_error' => null];
 $packetaShipment['method'] = 'zasilkovna_home';
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';

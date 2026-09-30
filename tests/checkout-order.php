@@ -31,7 +31,8 @@ class MeekroDB
                 throw new RuntimeException('Duplicate unique key.');
             }
         }
-        $this->rows[] = ['id' => count($this->rows) + 1, 'created_at' => '2026-09-29 12:00:00'] + $fields;
+        $this->rows[] = ['id' => count($this->rows) + 1, 'created_at' => '2026-09-29 12:00:00',
+            'fulfillment_source' => 'own', 'fulfillment_note' => null] + $fields;
     }
 
     public function queryFirstRow(string $sql, mixed ...$values): ?array
@@ -55,9 +56,15 @@ class MeekroDB
     public function query(string $sql, mixed ...$values): array
     {
         if (str_contains($sql, 'UPDATE shop_orders SET status=')) {
+            $withSource = str_contains($sql, 'fulfillment_source=%s');
             foreach ($this->rows as &$row) {
-                if ($row['id'] === $values[1] && $row['status'] === $values[2]) {
+                if ($row['id'] === $values[$withSource ? 3 : 1] &&
+                    $row['status'] === $values[$withSource ? 4 : 2]) {
                     $row['status'] = $values[0];
+                    if ($withSource) {
+                        $row['fulfillment_source'] = $values[1];
+                        $row['fulfillment_note'] = $values[2];
+                    }
                 }
             }
             unset($row);
@@ -264,4 +271,30 @@ $repository->setFulfillmentStatus((int) $packetaOrder['id'], 'ready_to_ship');
 if ($db->rows[(int) $packetaOrder['id'] - 1]['status'] !== 'ready_to_ship') {
     throw new RuntimeException('A confirmed Packeta parcel was not ready to ship.');
 }
+$externalOrder = $repository->create(null, 'supplier@example.org', $items,
+    $packetaShipping, 90, str_repeat('2', 64));
+$repository->markPaid((int) $externalOrder['id'], 4);
+foreach (['created', 'cancel_uncertain'] as $active) {
+    $db->shipment = ['status' => $active];
+    try {
+        $repository->setFulfillmentStatus((int) $externalOrder['id'], 'shipped',
+            'external', 'Dodavatel A');
+        throw new RuntimeException('An active Packeta API parcel was ignored for external shipping.');
+    } catch (InvalidArgumentException $expected) {}
+}
+$db->shipment = null;
+$repository->setFulfillmentStatus((int) $externalOrder['id'], 'ready_to_ship',
+    'external', 'Dodavatel A');
+$repository->setFulfillmentStatus((int) $externalOrder['id'], 'shipped',
+    'external', 'Dodavatel A');
+if ($db->rows[(int) $externalOrder['id'] - 1]['fulfillment_source'] !== 'external' ||
+    $db->rows[(int) $externalOrder['id'] - 1]['fulfillment_note'] !== 'Dodavatel A') {
+    throw new RuntimeException('External dispatch without a local Packeta parcel was not recorded.');
+}
+try {
+    $repository->setFulfillmentStatus((int) $externalOrder['id'], 'completed', 'own');
+    throw new RuntimeException('Fulfillment source changed after shipping.');
+} catch (InvalidArgumentException $expected) {}
+$repository->setFulfillmentStatus((int) $externalOrder['id'], 'completed',
+    'external', 'Dodavatel A');
 echo "Checkout order and bank transfer tests passed.\n";

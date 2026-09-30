@@ -13,6 +13,7 @@ final class PacketaShipmentDraft
         $shipping = $order['shipping'] ?? null;
         if (!is_array($shipping) || ($order['payment_method'] ?? '') !== 'bank_transfer' ||
             ($order['payment_status'] ?? '') !== 'paid' ||
+            ($order['fulfillment_source'] ?? 'own') === 'external' ||
             in_array($order['status'] ?? '', ['shipped', 'cancelled', 'completed', 'test'], true)) {
             throw new InvalidArgumentException('Podat lze pouze zaplacenou aktivní objednávku.');
         }

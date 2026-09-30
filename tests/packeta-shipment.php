@@ -96,6 +96,7 @@ if ($corrected['attributes']['email'] !== 'oprava@example.test' ||
     throw new RuntimeException('Contact correction changed the order or was not sent to Packeta.');
 }
 foreach ([array_replace($order, ['payment_status' => 'pending']),
+    array_replace($order, ['fulfillment_source' => 'external']),
     array_replace($order, ['shipping' => array_replace($shipping, ['pickup_verified' => false])])] as $invalid) {
     try {
         PacketaShipmentDraft::fromOrder($invalid, $form, 'Dobrodruzi');
@@ -171,6 +172,14 @@ $db->order['status'] = 'shipped';
 try {
     $repo->reserveCancellation(9, 3);
     throw new RuntimeException('Cancellation was allowed after shipping.');
+} catch (InvalidArgumentException $expected) {}
+$db->order['status'] = 'processing';
+$db->order['fulfillment_source'] = 'external';
+$externalDb = new MeekroDB();
+$externalDb->order = $db->order;
+try {
+    (new PacketaShipmentRepository($externalDb))->reserve(10, 3, $pickup);
+    throw new RuntimeException('The store created a parcel for an external supplier.');
 } catch (InvalidArgumentException $expected) {}
 
 if (function_exists('simplexml_load_string')) {
