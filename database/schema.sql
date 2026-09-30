@@ -830,7 +830,7 @@ DEALLOCATE PREPARE comgate_amount_statement;
 SET @comgate_link_nullable = (SELECT COUNT(*) FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_comgate_payments' AND COLUMN_NAME='order_id' AND IS_NULLABLE='YES');
 SET @comgate_link_upgrade = IF(@comgate_link_nullable=0,
-  'ALTER TABLE shop_comgate_payments DROP FOREIGN KEY comgate_order_fk, MODIFY COLUMN order_id BIGINT UNSIGNED NULL, ADD CONSTRAINT comgate_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE SET NULL', 'SELECT 1');
+  'ALTER TABLE shop_comgate_payments DROP FOREIGN KEY comgate_order_fk, MODIFY COLUMN order_id BIGINT UNSIGNED NULL, ADD CONSTRAINT comgate_detached_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE SET NULL', 'SELECT 1');
 PREPARE comgate_link_statement FROM @comgate_link_upgrade;
 EXECUTE comgate_link_statement;
 DEALLOCATE PREPARE comgate_link_statement;
@@ -854,7 +854,7 @@ DEALLOCATE PREPARE gopay_amount_statement;
 SET @gopay_link_nullable = (SELECT COUNT(*) FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_gopay_payments' AND COLUMN_NAME='order_id' AND IS_NULLABLE='YES');
 SET @gopay_link_upgrade = IF(@gopay_link_nullable=0,
-  'ALTER TABLE shop_gopay_payments DROP FOREIGN KEY gopay_order_fk, MODIFY COLUMN order_id BIGINT UNSIGNED NULL, ADD CONSTRAINT gopay_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE SET NULL', 'SELECT 1');
+  'ALTER TABLE shop_gopay_payments DROP FOREIGN KEY gopay_order_fk, MODIFY COLUMN order_id BIGINT UNSIGNED NULL, ADD CONSTRAINT gopay_detached_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE SET NULL', 'SELECT 1');
 PREPARE gopay_link_statement FROM @gopay_link_upgrade;
 EXECUTE gopay_link_statement;
 DEALLOCATE PREPARE gopay_link_statement;
@@ -862,7 +862,7 @@ DEALLOCATE PREPARE gopay_link_statement;
 SET @invoice_link_nullable = (SELECT COUNT(*) FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_invoices' AND COLUMN_NAME='order_id' AND IS_NULLABLE='YES');
 SET @invoice_link_upgrade = IF(@invoice_link_nullable=0,
-  'ALTER TABLE shop_invoices DROP FOREIGN KEY invoice_order_fk, MODIFY COLUMN order_id BIGINT UNSIGNED NULL, ADD CONSTRAINT invoice_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE SET NULL', 'SELECT 1');
+  'ALTER TABLE shop_invoices DROP FOREIGN KEY invoice_order_fk, MODIFY COLUMN order_id BIGINT UNSIGNED NULL, ADD CONSTRAINT invoice_detached_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE SET NULL', 'SELECT 1');
 PREPARE invoice_link_statement FROM @invoice_link_upgrade;
 EXECUTE invoice_link_statement;
 DEALLOCATE PREPARE invoice_link_statement;
