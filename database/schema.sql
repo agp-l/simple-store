@@ -209,6 +209,127 @@ CREATE TABLE IF NOT EXISTS shop_order_financial_events (
   KEY financial_events_order (order_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- OSVČ tax records. Money movements are entered for the actual bank/cash date;
+-- an unpaid order is a receivable, not taxable cash income.
+CREATE TABLE IF NOT EXISTS shop_tax_settings (
+  id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+  settings_json LONGTEXT NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shop_tax_entries (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  entry_date DATE NOT NULL,
+  direction VARCHAR(12) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  account VARCHAR(12) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  tax_kind VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  amount_czk INT UNSIGNED NOT NULL,
+  description VARCHAR(255) NOT NULL,
+  counterparty VARCHAR(190) NOT NULL DEFAULT '',
+  reference VARCHAR(100) NOT NULL DEFAULT '',
+  order_id BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY tax_entries_date (entry_date, id),
+  KEY tax_entries_order (order_id, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shop_tax_balances (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  kind VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  opened_on DATE NOT NULL,
+  closed_on DATE NULL,
+  amount_czk INT UNSIGNED NOT NULL,
+  counterparty VARCHAR(190) NOT NULL DEFAULT '',
+  description VARCHAR(255) NOT NULL,
+  reference VARCHAR(100) NOT NULL DEFAULT '',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY tax_balances_open (kind, closed_on, opened_on)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shop_invoice_sequence (
+  calendar_year SMALLINT UNSIGNED NOT NULL PRIMARY KEY,
+  next_number INT UNSIGNED NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shop_invoices (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  order_id BIGINT UNSIGNED NOT NULL,
+  order_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  document_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  issue_date DATE NOT NULL,
+  due_date DATE NOT NULL,
+  seller_json LONGTEXT NOT NULL,
+  buyer_json LONGTEXT NOT NULL,
+  items_json LONGTEXT NOT NULL,
+  subtotal_czk INT UNSIGNED NOT NULL,
+  shipping_czk INT UNSIGNED NOT NULL,
+  total_czk INT UNSIGNED NOT NULL,
+  variable_symbol VARCHAR(10) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  bank_account VARCHAR(40) NOT NULL DEFAULT '',
+  status VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'issued',
+  emailed_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY invoice_order (order_id),
+  UNIQUE KEY invoice_number (document_number),
+  KEY invoice_issue (issue_date, id),
+  CONSTRAINT invoice_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shop_invoice_number_events (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  invoice_id BIGINT UNSIGNED NOT NULL,
+  old_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  new_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  reason VARCHAR(190) NOT NULL,
+  admin_id BIGINT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY invoice_number_events_invoice (invoice_id, id),
+  CONSTRAINT invoice_number_event_fk FOREIGN KEY (invoice_id) REFERENCES shop_invoices(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Queue is durable; a checkout succeeds even when the mail transport is offline.
+CREATE TABLE IF NOT EXISTS shop_mail_outbox (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  event_key VARCHAR(100) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  order_id BIGINT UNSIGNED NULL,
+  recipient_email VARCHAR(254) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  subject VARCHAR(190) NOT NULL,
+  body_text LONGTEXT NOT NULL,
+  state VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'queued',
+  attempts INT UNSIGNED NOT NULL DEFAULT 0,
+  last_error VARCHAR(255) NULL,
+  sent_at DATETIME NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY outbox_event (event_key),
+  KEY outbox_state (state, id),
+  KEY outbox_order (order_id, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Quantity is a count of physical units; sale snapshots never change with a product edit.
+CREATE TABLE IF NOT EXISTS shop_sale_lines (
+  order_id BIGINT UNSIGNED NOT NULL,
+  line_no SMALLINT UNSIGNED NOT NULL,
+  product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  quantity SMALLINT UNSIGNED NOT NULL,
+  unit_price_czk INT UNSIGNED NOT NULL,
+  PRIMARY KEY (order_id, line_no),
+  KEY sale_lines_product (product_key, order_id),
+  CONSTRAINT sale_lines_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shop_stock_movements (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  movement_date DATE NOT NULL,
+  quantity_change INT NOT NULL,
+  unit_cost_czk INT UNSIGNED NULL,
+  description VARCHAR(255) NOT NULL,
+  reference VARCHAR(100) NOT NULL DEFAULT '',
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY stock_product_date (product_key, movement_date, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Additive upgrade for installations with the older customer order placeholder.
 -- Nullable new columns preserve historical rows without inventing payment details.
 SET @order_user_nullable = (SELECT IS_NULLABLE FROM information_schema.COLUMNS

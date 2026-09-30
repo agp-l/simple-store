@@ -1,0 +1,246 @@
+<?php
+declare(strict_types=1);
+
+namespace SimpleStore\Accounting;
+
+use DateTimeImmutable;
+use InvalidArgumentException;
+use MeekroDB;
+
+/** Cash-basis tax records for a Czech sole trader who is not a VAT payer. */
+final class TaxEvidenceRepository
+{
+    public function __construct(private MeekroDB $db)
+    {
+    }
+
+    public function installed(): bool
+    {
+        foreach (['shop_tax_settings', 'shop_tax_entries', 'shop_tax_balances',
+            'shop_stock_movements', 'shop_sale_lines'] as $table) {
+            if ((int) $this->db->queryFirstField(
+                'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
+                $table
+            ) === 0) return false;
+        }
+        return true;
+    }
+
+    public function settings(): array
+    {
+        $defaults = ['name' => '', 'ico' => '', 'street' => '', 'city' => '',
+            'postal_code' => '', 'email' => '', 'phone' => '', 'bank_account' => '',
+            'mail_from' => ''];
+        if (!$this->installed()) return $defaults;
+        $row = $this->db->queryFirstRow('SELECT settings_json FROM shop_tax_settings WHERE id=%i', 1);
+        if ($row === null) return $defaults;
+        $saved = json_decode((string) $row['settings_json'], true, 512, JSON_THROW_ON_ERROR);
+        return is_array($saved) ? array_replace($defaults, array_intersect_key($saved, $defaults)) : $defaults;
+    }
+
+    public function saveSettings(array $input): void
+    {
+        $fields = [];
+        foreach (['name' => 120, 'ico' => 8, 'street' => 160, 'city' => 100,
+            'postal_code' => 6, 'email' => 254, 'phone' => 40, 'bank_account' => 40,
+            'mail_from' => 254] as $key => $limit) {
+            $fields[$key] = self::text($input[$key] ?? '', $limit);
+        }
+        if (($fields['ico'] !== '' && preg_match('/^[0-9]{8}$/D', $fields['ico']) !== 1) ||
+            ($fields['postal_code'] !== '' && preg_match('/^[0-9]{3} ?[0-9]{2}$/D', $fields['postal_code']) !== 1) ||
+            ($fields['email'] !== '' && filter_var($fields['email'], FILTER_VALIDATE_EMAIL) === false) ||
+            ($fields['mail_from'] !== '' && filter_var($fields['mail_from'], FILTER_VALIDATE_EMAIL) === false)) {
+            throw new InvalidArgumentException('Zkontroluj IČO, PSČ a e-mailové adresy.');
+        }
+        $this->db->query('INSERT INTO shop_tax_settings (id, settings_json) VALUES (%i, %s)
+            ON DUPLICATE KEY UPDATE settings_json=VALUES(settings_json), updated_at=CURRENT_TIMESTAMP',
+            1, json_encode($fields, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+    }
+
+    public static function invoiceReady(array $settings): bool
+    {
+        return ($settings['name'] ?? '') !== '' &&
+            preg_match('/^[0-9]{8}$/D', (string) ($settings['ico'] ?? '')) === 1 &&
+            ($settings['street'] ?? '') !== '' && ($settings['city'] ?? '') !== '' &&
+            ($settings['postal_code'] ?? '') !== '';
+    }
+
+    public function addEntry(array $input): void
+    {
+        $date = self::date($input['entry_date'] ?? null);
+        $direction = $input['direction'] ?? '';
+        $account = $input['account'] ?? '';
+        $kind = $input['tax_kind'] ?? '';
+        $amount = filter_var($input['amount_czk'] ?? null, FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 1, 'max_range' => 99999999]]);
+        if (!in_array($direction, ['income', 'expense'], true) ||
+            !in_array($account, ['bank', 'cash'], true) ||
+            !in_array($kind, $direction === 'income' ? ['taxable', 'nontaxable'] :
+                ['deductible', 'nondeductible'], true) || $amount === false) {
+            throw new InvalidArgumentException('Vyplň směr, banku/pokladnu, daňové zařazení a částku.');
+        }
+        $description = self::text($input['description'] ?? '', 255);
+        if ($description === '') throw new InvalidArgumentException('Popiš peněžní pohyb.');
+        $this->db->insert('shop_tax_entries', [
+            'entry_date' => $date, 'direction' => $direction, 'account' => $account,
+            'tax_kind' => $kind, 'amount_czk' => $amount, 'description' => $description,
+            'counterparty' => self::text($input['counterparty'] ?? '', 190),
+            'reference' => self::text($input['reference'] ?? '', 100),
+            'order_id' => null,
+        ]);
+    }
+
+    /** Link a verified bank receipt to its order; never infer bank activity from checkout. */
+    public function addOrderReceipt(int $orderId, array $input): void
+    {
+        $date = self::date($input['entry_date'] ?? null);
+        $reference = self::text($input['reference'] ?? '', 100);
+        $this->db->startTransaction();
+        try {
+            $order = $this->db->queryFirstRow(
+                'SELECT id, order_number, payment_status, payment_method, total_czk, variable_symbol
+                 FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId);
+            if ($order === null || $order['payment_method'] !== 'bank_transfer' ||
+                $order['payment_status'] !== 'paid') {
+                throw new InvalidArgumentException('Příjem lze přiřadit jen k zaplacené objednávce převodem.');
+            }
+            $already = $this->db->queryFirstField(
+                'SELECT COUNT(*) FROM shop_tax_entries WHERE order_id=%i', $orderId);
+            if ((int) $already > 0) throw new InvalidArgumentException('Tato objednávka už má zapsaný příjem.');
+            $this->db->insert('shop_tax_entries', [
+                'entry_date' => $date, 'direction' => 'income', 'account' => 'bank',
+                'tax_kind' => 'taxable', 'amount_czk' => (int) $order['total_czk'],
+                'description' => 'Úhrada objednávky ' . $order['order_number'],
+                'counterparty' => '', 'reference' => $reference !== '' ? $reference :
+                    (string) ($order['variable_symbol'] ?? ''), 'order_id' => $orderId,
+            ]);
+            $this->db->commit();
+        } catch (\Throwable $error) {
+            $this->db->rollback();
+            throw $error;
+        }
+    }
+
+    public function entries(int $year): array
+    {
+        self::year($year);
+        return $this->db->query(
+            'SELECT id, entry_date, direction, account, tax_kind, amount_czk,
+                    description, counterparty, reference, order_id
+             FROM shop_tax_entries WHERE entry_date >= %s AND entry_date < %s
+             ORDER BY entry_date DESC, id DESC LIMIT %i',
+            $year . '-01-01', ($year + 1) . '-01-01', 500
+        );
+    }
+
+    public function summary(int $year): array
+    {
+        self::year($year);
+        $row = $this->db->queryFirstRow(
+            'SELECT COALESCE(SUM(CASE WHEN direction=%s AND tax_kind=%s THEN amount_czk ELSE 0 END),0) AS income,
+                    COALESCE(SUM(CASE WHEN direction=%s AND tax_kind=%s THEN amount_czk ELSE 0 END),0) AS expenses
+             FROM shop_tax_entries WHERE entry_date >= %s AND entry_date < %s',
+            'income', 'taxable', 'expense', 'deductible', $year . '-01-01', ($year + 1) . '-01-01'
+        ) ?? [];
+        return ['income' => (int) ($row['income'] ?? 0), 'expenses' => (int) ($row['expenses'] ?? 0)];
+    }
+
+    public function addBalance(array $input): void
+    {
+        $kind = $input['kind'] ?? '';
+        $amount = filter_var($input['amount_czk'] ?? null, FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 1, 'max_range' => 99999999]]);
+        if (!in_array($kind, ['receivable', 'liability', 'asset'], true) || $amount === false) {
+            throw new InvalidArgumentException('Vyber majetek, pohledávku nebo dluh a částku.');
+        }
+        $description = self::text($input['description'] ?? '', 255);
+        if ($description === '') throw new InvalidArgumentException('Vyplň popis záznamu.');
+        $this->db->insert('shop_tax_balances', [
+            'kind' => $kind, 'opened_on' => self::date($input['opened_on'] ?? null),
+            'amount_czk' => $amount, 'description' => $description,
+            'counterparty' => self::text($input['counterparty'] ?? '', 190),
+            'reference' => self::text($input['reference'] ?? '', 100),
+        ]);
+    }
+
+    public function closeBalance(int $id, string $date): void
+    {
+        if ($id < 1) throw new InvalidArgumentException('Neplatný záznam.');
+        $closed = self::date($date);
+        $this->db->query('UPDATE shop_tax_balances SET closed_on=%s
+            WHERE id=%i AND closed_on IS NULL AND opened_on<=%s', $closed, $id, $closed);
+    }
+
+    public function balances(int $year): array
+    {
+        self::year($year);
+        return $this->db->query('SELECT * FROM shop_tax_balances
+            WHERE opened_on < %s AND (closed_on IS NULL OR closed_on >= %s)
+            ORDER BY id DESC LIMIT %i', ($year + 1) . '-01-01', $year . '-01-01', 500);
+    }
+
+    public function addStock(array $input): void
+    {
+        $key = $input['product_key'] ?? '';
+        $quantity = filter_var($input['quantity_change'] ?? null, FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => -100000, 'max_range' => 100000]]);
+        $cost = ($input['unit_cost_czk'] ?? '') === '' ? null : filter_var($input['unit_cost_czk'],
+            FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 99999999]]);
+        if (!is_string($key) || preg_match('/^[a-f0-9]{32}$/D', $key) !== 1 ||
+            $quantity === false || $quantity === 0 || $cost === false) {
+            throw new InvalidArgumentException('Vyber produkt, nenulovou změnu kusů a správnou pořizovací cenu.');
+        }
+        $description = self::text($input['description'] ?? '', 255);
+        if ($description === '') throw new InvalidArgumentException('Uveď důvod pohybu skladu.');
+        $this->db->insert('shop_stock_movements', [
+            'product_key' => $key, 'movement_date' => self::date($input['movement_date'] ?? null),
+            'quantity_change' => $quantity, 'unit_cost_czk' => $cost,
+            'description' => $description, 'reference' => self::text($input['reference'] ?? '', 100),
+        ]);
+    }
+
+    public function stockMovements(): array
+    {
+        return $this->db->query('SELECT * FROM shop_stock_movements ORDER BY id DESC LIMIT %i', 100);
+    }
+
+    public function saleLines(int $year): array
+    {
+        self::year($year);
+        return $this->db->query(
+            'SELECT l.order_id, o.order_number, l.product_key, l.name, l.quantity,
+                    l.unit_price_czk, o.created_at, o.status
+             FROM shop_sale_lines l JOIN shop_orders o ON o.id=l.order_id
+             WHERE o.created_at >= %s AND o.created_at < %s AND o.status<>%s
+             ORDER BY o.id DESC, l.line_no ASC LIMIT %i',
+            $year . '-01-01', ($year + 1) . '-01-01', 'cancelled', 500
+        );
+    }
+
+    public static function year(int $year): void
+    {
+        if ($year < 2000 || $year > 2100) throw new InvalidArgumentException('Neplatný rok evidence.');
+    }
+
+    private static function date(mixed $value): string
+    {
+        if (!is_string($value)) throw new InvalidArgumentException('Zadej platné datum.');
+        $date = DateTimeImmutable::createFromFormat('!Y-m-d', $value);
+        if ($date === false || $date->format('Y-m-d') !== $value ||
+            $date->format('Y') < '2000' || $date->format('Y') > '2100') {
+            throw new InvalidArgumentException('Zadej platné datum.');
+        }
+        return $value;
+    }
+
+    private static function text(mixed $value, int $limit): string
+    {
+        if (!is_string($value)) throw new InvalidArgumentException('Zadej platný text.');
+        $value = trim($value);
+        if (strlen($value) > $limit || preg_match('//u', $value) !== 1 ||
+            preg_match('/[\x00-\x1f\x7f]/', $value) === 1) {
+            throw new InvalidArgumentException('Text je příliš dlouhý nebo obsahuje neplatné znaky.');
+        }
+        return $value;
+    }
+}
