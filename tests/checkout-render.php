@@ -129,22 +129,37 @@ if (!str_contains($shipping, '?step=shipping&amp;address=4') ||
 ob_start();
 $renderer->render('payment', $data + ['delivery' => ['method' => 'home'], 'selectedShippingPrice' => 99]);
 $payment = ob_get_clean();
-if (!str_contains($payment, 'Bankovní převod není nastavený') ||
+if (!str_contains($payment, 'Není nastavený žádný způsob platby') ||
     str_contains($payment, 'Zkontrolovat objednávku')) {
-    throw new RuntimeException('Checkout without bank settings must explain what to configure.');
+    throw new RuntimeException('Checkout without payment methods must explain what to configure.');
 }
 
 $bankData = $data + ['delivery' => ['method' => 'ppl_home', 'name' => 'Eva Nová',
     'street' => 'Polní 1', 'postal_code' => '11000', 'city' => 'Praha',
     'email' => 'eva@example.org', 'phone' => '123'], 'selectedShippingPrice' => 99];
 $bankData['bankConfigured'] = true;
+$bankData['paymentStepReady'] = true;
+$bankData['paymentMethod'] = 'bank_transfer';
 $bankData['checkoutReady'] = true;
 ob_start();
 $renderer->render('payment', $bankData);
 $payment = ob_get_clean();
 if (!str_contains($payment, 'Zkontrolovat objednávku') ||
-    str_contains($payment, 'Bankovní převod není nastavený')) {
+    !str_contains($payment, 'name="payment_method" value="bank_transfer"') ||
+    str_contains($payment, 'Není nastavený žádný způsob platby')) {
     throw new RuntimeException('Configured bank transfer must continue without a terms page.');
+}
+$comgateData = $bankData;
+$comgateData['bankConfigured'] = false;
+$comgateData['comgateConfigured'] = true;
+$comgateData['paymentMethod'] = 'comgate';
+ob_start();
+$renderer->render('payment', $comgateData);
+$onlinePayment = ob_get_clean();
+if (!str_contains($onlinePayment, 'name="payment_method" value="comgate"') ||
+    !str_contains($onlinePayment, 'Zkontrolovat objednávku') ||
+    str_contains($onlinePayment, 'name="payment_method" value="bank_transfer"')) {
+    throw new RuntimeException('Comgate-only checkout must offer the online method.');
 }
 ob_start();
 $renderer->render('review', $bankData);
