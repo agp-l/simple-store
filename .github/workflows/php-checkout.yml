@@ -99,8 +99,8 @@ jobs:
         env:
           MYSQL_TEST_PASSWORD: ci-only-password
         run: |
-          php tests/legacy-order-migration.php
           php tests/tax-database.php
+          php tests/legacy-order-migration.php
           php tests/comgate-database.php
           php tests/gopay-database.php
           php tests/stock-database.php
