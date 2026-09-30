@@ -89,6 +89,7 @@ final class PageRenderer
         $packetaOptions = $data['packetaOptions'] ?? [];
         $pplWidgetKey = (string) ($data['pplWidgetKey'] ?? '');
         $pplSelection = $data['pplSelection'] ?? [];
+        $glsSelection = $data['glsSelection'] ?? [];
         $selectedShippingPrice = $data['selectedShippingPrice'] ?? null;
         $error = (string) ($data['error'] ?? '');
         $step = (string) ($data['step'] ?? '');

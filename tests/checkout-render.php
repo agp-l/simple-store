@@ -58,6 +58,25 @@ if (str_contains($shipping, 'data-ppl-widget') ||
     !str_contains($shipping, 'name="pickup_address"')) {
     throw new RuntimeException('PPL without a widget key must retain manual pickup entry.');
 }
+if (!str_contains($shipping, 'data-gls-open') ||
+    !str_contains($shipping, 'name="gls_point_id"') ||
+    !str_contains($shipping, 'data-gls-map') ||
+    !str_contains($shipping, 'maps.gls-czech.cz/?find=1&amp;ctrcode=CZ&amp;lng=cs') ||
+    !str_contains($shipping, 'assets/gls-checkout.js')) {
+    throw new RuntimeException('GLS map and parcelshop ID field are missing from checkout.');
+}
+$glsData = $data;
+$glsData['delivery'] = ['method' => 'gls_pickup', 'pickup_code' => '26711-GLSCZ_DEPO47',
+    'pickup_point' => 'GLS ParcelShop Brno', 'pickup_address' => 'Nádražní 12, Brno, 60200'];
+$glsData['glsSelection'] = ['id' => '26711-GLSCZ_DEPO47', 'name' => 'GLS ParcelShop Brno',
+    'address' => 'Nádražní 12, Brno, 60200', 'country' => 'CZ'];
+ob_start();
+$renderer->render('shipping', $glsData);
+$glsShipping = ob_get_clean();
+if (!str_contains($glsShipping, 'name="gls_point_id" value="26711-GLSCZ_DEPO47"') ||
+    !str_contains($glsShipping, 'GLS ParcelShop Brno · Nádražní 12, Brno, 60200')) {
+    throw new RuntimeException('Previously selected GLS point was not restored.');
+}
 $pplData = $data;
 $pplData['pplWidgetKey'] = 'public-ppl-key-123';
 $pplData['delivery'] = ['method' => 'ppl_pickup', 'pickup_code' => 'KM1234567',

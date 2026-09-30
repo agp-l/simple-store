@@ -158,5 +158,35 @@ try {
     throw new RuntimeException('Foreign PPL pickup point reached the checkout session.');
 } catch (InvalidArgumentException $expected) {
 }
+$_POST = ['method' => 'gls_pickup', 'name' => 'Eva Nová',
+    'email' => 'eva@example.org', 'phone' => '123', 'country' => 'CZ',
+    'street' => '', 'city' => '', 'postal_code' => '',
+    'pickup_point' => 'Podvržená pobočka', 'pickup_address' => 'Podvržená adresa',
+    'pickup_code' => 'PODVRH', 'gls_point_id' => '26711-GLSCZ_DEPO47',
+    'gls_point_name' => 'GLS ParcelShop Brno',
+    'gls_point_address' => 'Nádražní 12, Brno, 60200', 'gls_point_country' => 'CZ'];
+$saveDelivery->invoke($withoutKey);
+$delivery = $cart->state()['delivery'];
+if ($delivery['pickup_code'] !== '26711-GLSCZ_DEPO47' ||
+    $delivery['pickup_point'] !== 'GLS ParcelShop Brno' ||
+    $delivery['pickup_address'] !== 'Nádražní 12, Brno, 60200') {
+    throw new RuntimeException('GLS selection did not replace manual pickup fields.');
+}
+$_POST['gls_point_country'] = 'AT';
+try {
+    $saveDelivery->invoke($withoutKey);
+    throw new RuntimeException('Foreign GLS point reached the checkout session.');
+} catch (InvalidArgumentException $expected) {
+}
+$_POST['gls_point_country'] = 'CZ';
+$_POST['gls_point_id'] = 'invalid/id';
+try {
+    $saveDelivery->invoke($withoutKey);
+    throw new RuntimeException('Invalid GLS ID reached the checkout session.');
+} catch (InvalidArgumentException $expected) {
+}
+if ($cart->state()['delivery']['pickup_code'] !== '26711-GLSCZ_DEPO47') {
+    throw new RuntimeException('Invalid GLS selection overwrote the last valid delivery.');
+}
 
 echo "Checkout availability tests passed.\n";

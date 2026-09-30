@@ -58,3 +58,5 @@ jobs:
         run: node --test tests/payment-qr.mjs
       - name: Test PPL pickup selection
         run: node --test tests/ppl-checkout.mjs
+      - name: Test GLS pickup selection
+        run: node --test tests/gls-checkout.mjs
