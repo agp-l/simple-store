@@ -50,7 +50,7 @@ assert.equal(dialog.open, true);
 assert.equal(radio.checked, true);
 assert.match(frame.src, /type=BALIKOVNY/);
 
-const point = { id: 123, type: 'BALIKOVNY', zip: '10000', name: 'Praha 10',
+const point = { id: 'B10000', type: 'BALIKOVNY', zip: '10000', name: 'Praha 10',
   address: 'Černokostelecká 2020/20, Strašnice, 10000, Praha' };
 const message = (origin, source, payload = { message: 'pickerResult', point }) =>
   handlers.get('window:message')({ origin, source, data: payload });
@@ -74,7 +74,7 @@ assert.equal(prevented, true);
 assert.equal(button.focused, true);
 
 message('https://b2c.cpost.cz', frame.contentWindow);
-assert.equal(id.value, '123');
+assert.equal(id.value, 'B10000');
 assert.equal(zip.value, '10000');
 assert.equal(type.value, 'BALIKOVNY');
 assert.equal(name.value, 'Praha 10');

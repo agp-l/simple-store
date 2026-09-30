@@ -13,7 +13,9 @@ final class BalikovnaPickupPoint
     /** Keep the ZIP separately: a future shipping label must not derive it from the display address. */
     public function selection(string $id, string $name, string $address, string $zip, string $type): array
     {
-        if (preg_match('/^[0-9]{1,12}$/D', $id) !== 1 || preg_match('/^[0-9]{5}$/D', $zip) !== 1 ||
+        // The live map uses IDs like B10000; numeric IDs are retained for older widget responses.
+        if (preg_match('/^(?:B[0-9]{5,12}|[0-9]{1,12})$/D', $id) !== 1 ||
+            preg_match('/^[0-9]{5}$/D', $zip) !== 1 ||
             $type !== 'BALIKOVNY' || !self::validText($name) || !self::validText($address)) {
             throw new InvalidArgumentException('Vyber výdejní místo nebo box přímo v mapě Balíkovny.');
         }

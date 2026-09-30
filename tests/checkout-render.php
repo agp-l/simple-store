@@ -74,15 +74,15 @@ if (!str_contains($shipping, 'data-balikovna-open') ||
     throw new RuntimeException('Balíkovna map and its point ID/ZIP fields are missing from checkout.');
 }
 $balikovnaData = $data;
-$balikovnaData['delivery'] = ['method' => 'balikovna_pickup', 'pickup_code' => '123',
+$balikovnaData['delivery'] = ['method' => 'balikovna_pickup', 'pickup_code' => 'B10000',
     'pickup_point' => 'Praha 10', 'pickup_address' => 'Černokostelecká 2020/20, Praha',
     'pickup_postal_code' => '10000'];
-$balikovnaData['balikovnaSelection'] = ['id' => '123', 'name' => 'Praha 10',
+$balikovnaData['balikovnaSelection'] = ['id' => 'B10000', 'name' => 'Praha 10',
     'address' => 'Černokostelecká 2020/20, Praha', 'zip' => '10000', 'type' => 'BALIKOVNY'];
 ob_start();
 $renderer->render('shipping', $balikovnaData);
 $balikovnaShipping = ob_get_clean();
-if (!str_contains($balikovnaShipping, 'name="balikovna_point_id" value="123"') ||
+if (!str_contains($balikovnaShipping, 'name="balikovna_point_id" value="B10000"') ||
     !str_contains($balikovnaShipping, 'name="balikovna_point_zip" value="10000"') ||
     !str_contains($balikovnaShipping, 'Praha 10 · Černokostelecká 2020/20, Praha')) {
     throw new RuntimeException('Previously selected Balíkovna was not restored.');

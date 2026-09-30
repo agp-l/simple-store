@@ -18,7 +18,9 @@
   const status = form.querySelector('[data-balikovna-status]');
   const value = (field) => typeof field === 'string' ? field.trim() : '';
   const bytes = (field) => new TextEncoder().encode(field).length;
-  const valid = () => /^[0-9]{1,12}$/.test(id.value) && /^[0-9]{5}$/.test(zip.value) &&
+  // Current Balíkovna IDs include a B prefix (for example B10000); the older manual shows a number.
+  const validId = (pointId) => /^(?:B[0-9]{5,12}|[0-9]{1,12})$/.test(pointId);
+  const valid = () => validId(id.value) && /^[0-9]{5}$/.test(zip.value) &&
     type.value === 'BALIKOVNY' && name.value.length > 0 && address.value.length > 0 &&
     bytes(name.value) <= 190 && bytes(address.value) <= 190;
 
@@ -46,7 +48,7 @@
     const pointName = value(point.name);
     const pointAddress = value(point.address);
     const pointZip = value(point.zip);
-    if (!/^[0-9]{1,12}$/.test(pointId) || !/^[0-9]{5}$/.test(pointZip) ||
+    if (!validId(pointId) || !/^[0-9]{5}$/.test(pointZip) ||
         point.type !== 'BALIKOVNY' || !pointName || !pointAddress ||
         bytes(pointName) > 190 || bytes(pointAddress) > 190) {
       dialogStatus.textContent = 'Vybrané místo nemá úplné údaje Balíkovny. Zvolte prosím jiné místo.';
