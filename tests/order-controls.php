@@ -227,11 +227,12 @@ $db->orders[18] = orderRow(18, 'completed');
 $db->orders[18]['payment_paid_at'] = '2026-09-29 12:00:00';
 $db->orders[18]['payment_verified_by'] = 3;
 $controls->correctPayment(18, 4, 'Chybné párování ve výpisu banky.', 'not_received');
+$correctionEvent = $db->financialEvents[array_key_last($db->financialEvents)];
 if ($db->orders[18]['payment_status'] !== 'pending' ||
     $db->orders[18]['payment_paid_at'] !== null ||
     $db->orders[18]['payment_verified_by'] !== null ||
-    $db->financialEvents[0]['payment_paid_at'] !== '2026-09-29 12:00:00' ||
-    $db->financialEvents[0]['variable_symbol'] !== $db->orders[18]['variable_symbol'] ||
+    $correctionEvent['payment_paid_at'] !== '2026-09-29 12:00:00' ||
+    $correctionEvent['variable_symbol'] !== $db->orders[18]['variable_symbol'] ||
     $controls->eventsForOrder(18)[0]['action'] !== 'payment_correction') {
     throw new RuntimeException('Payment correction lost the prior paid evidence.');
 }
@@ -240,14 +241,15 @@ expectInvalid(static fn () => $controls->correctPayment(18, 4, $reason, 'not_rec
 $db->carriers[18] = ['status' => 'draft'];
 $controls->deleteOrder(18, 'DB-20260930-18', 4, 'Test zaplacené objednávky po opravě.');
 if (isset($db->orders[18]) || isset($db->carriers[18]) ||
-    $db->financialEvents[1]['action'] !== 'order_deleted') {
+    $db->financialEvents[array_key_last($db->financialEvents)]['action'] !== 'order_deleted') {
     throw new RuntimeException('Corrected bank order or its draft was not deleted with an audit trail.');
 }
 $db->orders[19] = orderRow(19, 'completed');
 $db->orders[19]['payment_paid_at'] = '2026-09-29 13:00:00';
 $controls->deleteOrder(19, 'DB-20260930-19', 4, 'Přímé smazání duplicitní platby.');
-if (isset($db->orders[19]) || $db->financialEvents[2]['payment_status_before'] !== 'paid' ||
-    $db->financialEvents[2]['total_czk'] !== 1790) {
+$deletionEvent = $db->financialEvents[array_key_last($db->financialEvents)];
+if (isset($db->orders[19]) || $deletionEvent['payment_status_before'] !== 'paid' ||
+    $deletionEvent['total_czk'] !== 1790) {
     throw new RuntimeException('Paid deletion lost its financial snapshot.');
 }
 
