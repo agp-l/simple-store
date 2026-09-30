@@ -2,6 +2,9 @@
 declare(strict_types=1);
 
 use SimpleStore\Checkout\OrderRepository;
+use SimpleStore\Checkout\CarrierShipmentCsv;
+use SimpleStore\Checkout\CarrierShipmentDraft;
+use SimpleStore\Checkout\CarrierShipmentRepository;
 use SimpleStore\Checkout\CheckoutSettingsRepository;
 use SimpleStore\Checkout\PacketaApiClient;
 use SimpleStore\Checkout\PacketaPickupPoint;
@@ -16,6 +19,8 @@ $orders = new OrderRepository($db);
 $ordersReady = $orders->installed();
 $fulfillmentSourceReady = $ordersReady && $orders->fulfillmentSourceInstalled();
 $packetaShipments = new PacketaShipmentRepository($db);
+$carrierShipments = new CarrierShipmentRepository($db);
+$carrierReady = $carrierShipments->installed();
 $packetaReady = $packetaShipments->installed();
 $packetaCancelReady = $packetaReady && $packetaShipments->cancellationHistoryInstalled();
 $checkoutExample = require __DIR__ . '/../../config/checkout.example.php';
@@ -29,6 +34,8 @@ $packetaConfigured = ($packetaCredentials['api_password'] ?? '') !== '' &&
 $orderError = '';
 $order = null;
 $packetaShipment = null;
+$carrierShipment = null;
+$carrierAction = '';
 $cancelledPackets = [];
 $packetaTrackingUrl = null;
 $orderControls = new OrderControlRepository($db);
@@ -130,6 +137,40 @@ if ($method === 'POST' && in_array($_POST['action'] ?? '', ['correct-order-statu
         $orderError = $exception->getMessage();
     } catch (RuntimeException $exception) {
         http_response_code(409);
+        $orderError = $exception->getMessage();
+    }
+}
+
+$carrierAction = $method === 'POST' ? ($_POST['action'] ?? '') : '';
+if (in_array($carrierAction, ['carrier-save', 'carrier-register'], true)) {
+    $rawId = $_POST['id'] ?? null;
+    $id = is_string($rawId) && ctype_digit($rawId) ? filter_var($rawId, FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 1]]) : false;
+    try {
+        if ($id === false || !$ordersReady || !$carrierReady ||
+            ($targetOrder = $orders->findById($id)) === null) {
+            throw new InvalidArgumentException('Objednávka nebo tabulka podkladů chybí. Aktualizuj SQL tabulky v sekci Databáze.');
+        }
+        $admin = $auth->user();
+        if ($admin === null) throw new RuntimeException('Přihlášení správce vypršelo.');
+        if ($carrierAction === 'carrier-save') {
+            $draft = CarrierShipmentDraft::fromOrder($targetOrder, $_POST);
+            $carrierShipments->save($id, (int) $admin['id'], $draft);
+        } else {
+            $number = $_POST['tracking_number'] ?? null;
+            if (($_POST['carrier_confirmed'] ?? '') !== '1' || !is_string($number)) {
+                throw new InvalidArgumentException('Nejdřív ověř podání v systému dopravce a zadej přidělené číslo.');
+            }
+            $carrierShipments->register($id, (int) $admin['id'], $number);
+        }
+        header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&carrier_saved=' .
+            rawurlencode($carrierAction), true, 303);
+        exit;
+    } catch (InvalidArgumentException $exception) {
+        http_response_code(422);
+        $orderError = $exception->getMessage();
+    } catch (RuntimeException $exception) {
+        http_response_code(503);
         $orderError = $exception->getMessage();
     }
 }
@@ -279,6 +320,9 @@ if ($rawId !== null) {
         $cancelledPackets = $packetaShipments->cancelledForOrder($id);
         $packetaTrackingUrl = PacketaShipmentRepository::trackingUrl($packetaShipment);
     }
+    if ($order !== null && $carrierReady) {
+        $carrierShipment = $carrierShipments->find($id);
+    }
     if ($order !== null && $orderControlsReady) {
         $orderEvents = $orderControls->eventsForOrder($id);
     }
@@ -286,6 +330,26 @@ if ($rawId !== null) {
     $orderPage = $orders->managementPage($offset, 25, $statusFilter === 'all' ? null : $statusFilter);
     if ($orderControlsReady && $offset === 0 && $statusFilter === 'all') {
         $deletedOrders = $orderControls->recentDeletions();
+    }
+}
+
+if ($method === 'GET' && ($_GET['carrier_csv'] ?? null) === '1' && $order !== null) {
+    try {
+        if ($carrierShipment === null || !is_array($carrierShipment['draft'] ?? null) ||
+            !in_array($carrierShipment['status'], ['draft', 'registered'], true)) {
+            throw new InvalidArgumentException('Podklady k exportu zatím nejsou uložené.');
+        }
+        $csv = CarrierShipmentCsv::export($carrierShipment['draft']);
+        $carrier = $carrierShipment['method'] === 'balikovna_pickup' ? 'balikovna' : 'gls';
+        header('Content-Type: text/csv; charset=UTF-8');
+        header('Content-Disposition: attachment; filename="' . $carrier . '-' . (int) $order['id'] . '.csv"');
+        header('Cache-Control: private, no-store');
+        header('X-Content-Type-Options: nosniff');
+        echo $csv;
+        exit;
+    } catch (InvalidArgumentException $exception) {
+        http_response_code(422);
+        $orderError = $exception->getMessage();
     }
 }
 

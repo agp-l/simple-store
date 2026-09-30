@@ -38,7 +38,8 @@ class MeekroDB
             return match ($args[0]) {
                 'shop_order_admin_events' => $this->eventsInstalled ? 1 : 0,
                 'shop_documents' => $this->documentsInstalled ? 1 : 0,
-                'shop_packeta_shipments', 'shop_packeta_cancelled_shipments' => 1,
+                'shop_packeta_shipments', 'shop_packeta_cancelled_shipments',
+                'shop_carrier_shipments' => 1,
                 default => throw new RuntimeException('Unknown table check.'),
             };
         }
@@ -49,6 +50,7 @@ class MeekroDB
         if (str_contains($sql, 'FROM shop_packeta_shipments')) {
             return isset($this->shipments[$id]) ? 1 : 0;
         }
+        if (str_contains($sql, 'FROM shop_carrier_shipments')) return 0;
         if (str_contains($sql, 'FROM shop_documents')) {
             return isset($this->documents[$id]) ? 1 : 0;
         }

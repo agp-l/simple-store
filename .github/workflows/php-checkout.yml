@@ -34,6 +34,7 @@ jobs:
           php tests/checkout-settings.php
           php tests/packeta-pickup.php
           php tests/packeta-shipment.php
+          php tests/carrier-shipment.php
           php tests/schema-updater.php
           php tests/checkout-order.php
           php tests/order-controls.php

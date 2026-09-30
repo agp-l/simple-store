@@ -257,10 +257,14 @@ final class OrderRepository
         $parcelField = (new PacketaShipmentRepository($this->db))->installed()
             ? '(SELECT status FROM shop_packeta_shipments WHERE order_id=shop_orders.id)'
             : 'NULL';
+        $carrierField = (new CarrierShipmentRepository($this->db))->installed()
+            ? '(SELECT status FROM shop_carrier_shipments WHERE order_id=shop_orders.id)'
+            : 'NULL';
         $fulfillmentField = $this->fulfillmentSourceInstalled() ? 'fulfillment_source' : "'own'";
         $fields = 'SELECT id, order_number, status, customer_email, subtotal_czk, shipping_czk,
                           total_czk, payment_method, payment_status, variable_symbol, created_at,
                           ' . $parcelField . ' AS shipment_status,
+                          ' . $carrierField . ' AS carrier_shipment_status,
                           ' . $fulfillmentField . ' AS fulfillment_source FROM shop_orders';
         $rows = $filter === null
             ? $this->db->query($fields . ' ORDER BY id DESC LIMIT %i OFFSET %i', $limit + 1, $offset)

@@ -20,6 +20,9 @@ $packetaShipment ??= null;
 $packetaTrackingUrl ??= null;
 $cancelledPackets ??= [];
 $packetaAction ??= '';
+$carrierReady ??= false;
+$carrierShipment ??= null;
+$carrierAction ??= '';
 $fulfillmentSourceReady ??= false;
 $orderControlsReady ??= false;
 $orderEvents ??= [];
@@ -214,6 +217,71 @@ $deletedOrders ??= [];
             <?php endif; ?>
           </div>
         <?php endif; ?>
+        <?php if (in_array($shipping['method'] ?? '', ['balikovna_pickup', 'gls_pickup', 'gls_home'], true)): ?>
+          <div class="panel-packeta-dispatch">
+            <h3>Podklady k podání <?= ($shipping['method'] ?? '') === 'balikovna_pickup' ? 'Balíkovně' : 'GLS' ?></h3>
+            <?php if (!$carrierReady): ?>
+              <p class="panel-help">Nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
+            <?php else: ?>
+              <?php if (($_GET['carrier_saved'] ?? '') === 'carrier-save'): ?><p class="panel-notice" role="status">Podklady byly uloženy. Zásilka ještě nevznikla u dopravce.</p><?php endif; ?>
+              <?php if (($_GET['carrier_saved'] ?? '') === 'carrier-register'): ?><p class="panel-notice" role="status">Číslo zásilky od dopravce bylo uloženo. Objednávku označ jako odeslanou až po předání balíku.</p><?php endif; ?>
+              <?php if ($carrierShipment !== null): ?>
+                <p class="panel-order-state"><?= $carrierShipment['status'] === 'draft' ? 'Podklady připraveny · čeká na import' : 'Číslo dopravce zapsáno · čeká na předání' ?></p>
+                <?php if ($carrierShipment['status'] === 'registered'): ?>
+                  <dl class="panel-order-facts"><div><dt>Číslo zásilky</dt><dd><strong><?= $escape($carrierShipment['tracking_number']) ?></strong></dd></div></dl>
+                <?php endif; ?>
+                <p><a class="panel-button" href="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id'] . '&carrier_csv=1') ?>">Stáhnout CSV s podklady</a></p>
+              <?php endif; ?>
+              <?php if (($shipping['method'] ?? '') === 'balikovna_pickup'): ?>
+                <p class="panel-help">CSV pro vlastní konfiguraci importu v Podání Online: vyber službu NB, jako cílové PSČ mapuj <strong>ID Balíkovny <?= $escape($shipping['pickup_code'] ?? '') ?></strong>, nikoliv fyzické PSČ <?= $escape($shipping['pickup_postal_code'] ?? '') ?>. Nastav odesílatele, podací místo a kódování UTF-8 v portálu. Před potvrzením zkontroluj náhled a přidělené číslo zásilky.</p>
+              <?php else: ?>
+                <p class="panel-help">CSV pro vlastní profil importu GLS Online / MyGLS. U výdejního místa mapuj sloupec Services jako <strong>PSD(ID místa)</strong>, adresu místa jako doručovací adresu a zákazníka jako kontaktní osobu. Vyber v portálu svůj účet a zkontroluj náhled; číslo a štítek vzniknou až tam.</p>
+              <?php endif; ?>
+              <?php if ($carrierShipment === null || $carrierShipment['status'] === 'draft'): ?>
+                <?php if (!$paid || ($order['fulfillment_source'] ?? 'own') !== 'own' || in_array($order['status'], ['shipped', 'completed', 'cancelled', 'test'], true)): ?>
+                  <p class="panel-help">Podklady lze připravovat jen pro zaplacenou aktivní objednávku expedovanou obchodem. Externí dodavatel podává sám.</p>
+                <?php else: ?>
+                  <?php
+                    $addressDefaults = \SimpleStore\Checkout\CarrierShipmentDraft::addressDefaults($shipping);
+                    $savedDraft = is_array($carrierShipment['draft'] ?? null) ? $carrierShipment['draft'] : [];
+                    $enteredDraft = ($method ?? 'GET') === 'POST' && $carrierAction === 'carrier-save' &&
+                        (string) ($_POST['id'] ?? '') === (string) $order['id'] ? $_POST : [];
+                    $draftValue = static fn (string $key, string $default): string =>
+                        is_string($enteredDraft[$key] ?? null) ? $enteredDraft[$key] :
+                        (is_string($savedDraft[$key] ?? null) ? $savedDraft[$key] : $default);
+                  ?>
+                  <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+                    <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="carrier-save"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
+                    <label>Příjemce / kontaktní osoba<input name="recipient" value="<?= $escape($draftValue('recipient', (string) ($shipping['recipient'] ?? $shipping['name'] ?? ''))) ?>" maxlength="140" required></label>
+                    <label>E-mail<input type="email" name="email" value="<?= $escape($draftValue('email', (string) ($order['customer_email'] ?? ''))) ?>" maxlength="254" required></label>
+                    <label>Telefon<input type="tel" name="phone" value="<?= $escape($draftValue('phone', (string) ($shipping['phone'] ?? ''))) ?>" maxlength="40" required></label>
+                    <label>Hmotnost zabalené zásilky v kg<input name="weight_kg" inputmode="decimal" value="<?= $escape($draftValue('weight_kg', '1')) ?>" required></label>
+                    <?php if (($shipping['method'] ?? '') === 'balikovna_pickup'): ?>
+                      <?php $pickupCity = ''; if (preg_match('/\b[0-9]{3}\s?[0-9]{2}\s+([^,]+)$/u', (string) ($shipping['pickup_address'] ?? ''), $cityMatch)) $pickupCity = trim($cityMatch[1]); ?>
+                      <label>Obec vybrané Balíkovny<input name="city" value="<?= $escape($draftValue('city', $pickupCity)) ?>" maxlength="120" required></label>
+                      <p class="panel-help">Vybrané místo: <?= $escape($shipping['pickup_point'] ?? '') ?> · <?= $escape($shipping['pickup_address'] ?? '') ?>. Ověř obec podle mapy.</p>
+                    <?php else: ?>
+                      <p class="panel-help"><?= ($shipping['method'] ?? '') === 'gls_pickup' ? 'Adresu místa GLS zkontroluj podle vybraného bodu v objednávce.' : 'Zkontroluj adresu příjemce.' ?></p>
+                      <label>Ulice a číslo<input name="street" value="<?= $escape($draftValue('street', $addressDefaults['street'])) ?>" maxlength="120" required></label>
+                      <label>Obec<input name="city" value="<?= $escape($draftValue('city', $addressDefaults['city'])) ?>" maxlength="120" required></label>
+                      <label>PSČ<input name="postal_code" value="<?= $escape($draftValue('postal_code', $addressDefaults['postal_code'])) ?>" maxlength="12" required></label>
+                    <?php endif; ?>
+                    <button class="panel-button" type="submit"><?= $carrierShipment === null ? 'Uložit podklady k podání' : 'Upravit podklady' ?></button>
+                  </form>
+                <?php endif; ?>
+              <?php endif; ?>
+              <?php if ($carrierShipment !== null && $carrierShipment['status'] === 'draft'): ?>
+                <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+                  <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="carrier-register"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
+                  <label>Skutečné číslo zásilky od dopravce<input name="tracking_number" autocomplete="off" minlength="6" maxlength="50" required></label>
+                  <label class="panel-check"><input type="checkbox" name="carrier_confirmed" value="1" required> Zkontroloval/a jsem import v portálu dopravce a opisuji číslo skutečně vytvořené zásilky.</label>
+                  <button class="panel-button" type="submit">Zapsat číslo dopravce</button>
+                </form>
+              <?php endif; ?>
+              <p class="panel-help">CSV a místní číslo nenahrazují štítek ani potvrzení podání. Balík označ až štítkem nebo kódem od dopravce. Stav vyřízení objednávky nastav zvlášť po skutečném předání.</p>
+            <?php endif; ?>
+          </div>
+        <?php endif; ?>
       </section>
     </div>
     <aside class="panel-panel panel-order-payment">
@@ -310,7 +378,7 @@ $deletedOrders ??= [];
         <?php endif; ?>
         <?php $canOfferDeletion = ($order['status'] === 'test' && ($order['payment_method'] ?? '') === 'test' && ($order['payment_status'] ?? '') === 'test') ||
             ($bankTransfer && !$paid && ($order['payment_status'] ?? '') === 'pending' && in_array($order['status'], ['new', 'cancelled'], true)); ?>
-        <?php if ($canOfferDeletion && $packetaShipment === null && $cancelledPackets === []): ?>
+        <?php if ($canOfferDeletion && $packetaShipment === null && $carrierShipment === null && $cancelledPackets === []): ?>
           <section class="panel-order-controls" aria-label="Smazání objednávky">
             <h2>Smazat zkušební nebo nezaplacenou objednávku</h2>
             <p class="panel-help">Trvalé smazání odstraní objednávku i z účtu zákazníka. Nelze ho vrátit. Zásah s důvodem zůstane v administrátorském záznamu; do důvodu nepiš osobní údaje.</p>
@@ -354,11 +422,15 @@ $deletedOrders ??= [];
             'submitting', 'uncertain' => 'Podání k ověření', 'rejected' => 'Podání odmítnuto',
             default => '',
         }; ?>
+        <?php $listedCarrier = match ($listed['carrier_shipment_status'] ?? '') {
+            'draft' => 'Podklady k podání', 'registered' => 'Číslo zásilky zapsáno',
+            default => '',
+        }; ?>
         <a class="panel-order-row" href="<?= $escape($orderBaseUrl . '&id=' . (int) $listed['id']) ?>">
           <span><strong><?= $escape($listed['order_number'] ?? '') ?></strong><small><?= $escape($listed['created_at'] ?? '') ?> · <?= $escape($listed['customer_email'] ?? '') ?></small></span>
           <span class="panel-order-symbol"><?= ($listed['payment_method'] ?? '') === 'test' ? 'TEST' : 'VS ' . $escape($listed['variable_symbol'] ?? '–') ?></span>
           <strong><?= $orderMoney($listed['total_czk'] ?? 0) ?></strong>
-          <span class="panel-order-state <?= $listedPaid ? 'is-paid' : 'is-pending' ?>"><?= $escape($orderPaymentLabel($listed['payment_status'] ?? '')) ?> · <?= $escape($orderFulfillmentLabel($listed['status'] ?? '')) ?><?= ($listed['fulfillment_source'] ?? 'own') === 'external' ? ' · Externí dodavatel' : '' ?><?= $listedShipment !== '' ? ' · ' . $escape($listedShipment) : '' ?></span>
+          <span class="panel-order-state <?= $listedPaid ? 'is-paid' : 'is-pending' ?>"><?= $escape($orderPaymentLabel($listed['payment_status'] ?? '')) ?> · <?= $escape($orderFulfillmentLabel($listed['status'] ?? '')) ?><?= ($listed['fulfillment_source'] ?? 'own') === 'external' ? ' · Externí dodavatel' : '' ?><?= $listedShipment !== '' ? ' · ' . $escape($listedShipment) : '' ?><?= $listedCarrier !== '' ? ' · ' . $escape($listedCarrier) : '' ?></span>
         </a>
       <?php endforeach; ?>
     </div>

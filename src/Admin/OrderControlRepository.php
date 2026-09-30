@@ -121,6 +121,7 @@ final class OrderControlRepository
                 $order['payment_paid_at'] !== null || $order['payment_verified_by'] !== null ||
                 ($order['provider_reference'] ?? null) !== null ||
                 $this->hasRelatedRow('shop_packeta_shipments', $orderId) ||
+                $this->hasRelatedRow('shop_carrier_shipments', $orderId) ||
                 $this->hasRelatedRow('shop_packeta_cancelled_shipments', $orderId) ||
                 $this->hasRelatedRow('shop_documents', $orderId)) {
                 throw new InvalidArgumentException('Objednávku s platbou, dokladem nebo zásilkou nelze smazat.');

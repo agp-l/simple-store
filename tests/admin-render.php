@@ -152,6 +152,45 @@ if (str_contains($html, 'name="action" value="mark-order-paid"') ||
     !str_contains($html, 'value="external"')) {
     throw new RuntimeException('Paid bank transfers must not show the confirmation form.');
 }
+$order['shipping'] = ['method' => 'gls_pickup', 'label' => 'GLS ParcelShop',
+    'recipient' => 'Eva Nová', 'phone' => '+420777123456',
+    'pickup_code' => '26711-GLSCZ_DEPO47', 'pickup_point' => 'Brno',
+    'pickup_address' => 'Nádražní 1, Brno, 602 00'];
+$carrierReady = true;
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'name="action" value="carrier-save"') ||
+    !str_contains($html, 'name="street" value="Nádražní 1"') ||
+    !str_contains($html, 'name="postal_code" value="602 00"') ||
+    !str_contains($html, 'PSD(ID místa)')) {
+    throw new RuntimeException('GLS order must offer carrier dispatch preparation with the selected address.');
+}
+$carrierShipment = ['status' => 'draft', 'method' => 'gls_pickup',
+    'draft' => ['street' => 'Nádražní 1', 'city' => 'Brno', 'postal_code' => '60200']];
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'carrier_csv=1') ||
+    !str_contains($html, 'name="action" value="carrier-register"')) {
+    throw new RuntimeException('Saved draft must be exportable and record the real carrier number.');
+}
+$carrierShipment = null;
+$order['shipping'] = ['method' => 'balikovna_pickup', 'label' => 'Balíkovna',
+    'recipient' => 'Eva Nová', 'phone' => '+420777123456',
+    'pickup_code' => 'B10000', 'pickup_postal_code' => '11000',
+    'pickup_point' => 'Praha', 'pickup_address' => 'Národní 1, 110 00 Praha'];
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'ID Balíkovny B10000') ||
+    !str_contains($html, 'name="city" value="Praha"')) {
+    throw new RuntimeException('Balíkovna dispatch must use the selected point ID and city.');
+}
+$order['shipping'] = ['method' => 'zasilkovna_pickup', 'label' => 'Zásilkovna',
+    'recipient' => 'Eva Nová', 'phone' => '+420123456789',
+    'pickup_code' => '123456', 'pickup_point' => 'Praha',
+    'pickup_address' => 'Ulice 1, Praha, 110 00', 'pickup_verified' => true];
 $orderControlsReady = true;
 $orderEvents = [['created_at' => '2026-09-30 09:00:00', 'admin_id' => 3,
     'old_status' => 'shipped', 'new_status' => 'processing', 'reason' => 'Oprava <script>']];

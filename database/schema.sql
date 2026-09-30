@@ -143,6 +143,22 @@ CREATE TABLE IF NOT EXISTS shop_packeta_shipments (
   CONSTRAINT packeta_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Local dispatch drafts imported by an administrator into the carrier portal.
+-- No number or label is fabricated; the real carrier number is entered after import.
+CREATE TABLE IF NOT EXISTS shop_carrier_shipments (
+  order_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  status VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  method VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  draft_json LONGTEXT NOT NULL,
+  tracking_number VARCHAR(50) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+  created_by BIGINT UNSIGNED NOT NULL,
+  updated_by BIGINT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY carrier_tracking_number (tracking_number),
+  CONSTRAINT carrier_shipment_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Retain cancelled parcel numbers and submitted details when a replacement is created.
 CREATE TABLE IF NOT EXISTS shop_packeta_cancelled_shipments (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
