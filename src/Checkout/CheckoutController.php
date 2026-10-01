@@ -395,7 +395,7 @@ final class CheckoutController
                 $orderUrl = $gateway !== null
                     ? $gateway->receiptUrl($order, $this->url->getLanguage()) : '';
                 $messageId = $this->mailQueue->enqueueOrder($order, $orderUrl);
-                if ($messageId !== null && $this->mailSender !== '') {
+                if ($messageId !== null && $this->mailQueue->sender($this->mailSender) !== '') {
                     $this->mailQueue->dispatch($messageId, $this->mailSender);
                 }
             } catch (Throwable $error) {

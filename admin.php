@@ -63,7 +63,7 @@ try {
     exit;
 }
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-$orderActions = ['mark-order-paid', 'set-order-status', 'correct-order-status', 'correct-order-payment', 'delete-order', 'packeta-create',
+$orderActions = ['mark-order-paid', 'set-order-status', 'save-order-tracking', 'correct-order-status', 'correct-order-payment', 'delete-order', 'packeta-create',
     'packeta-courier', 'packeta-reconcile', 'packeta-retry', 'packeta-cancel',
     'packeta-cancel-confirmed', 'packeta-cancel-not-done', 'carrier-save', 'carrier-register'];
 $taxActions = ['tax-save-settings', 'tax-add-entry', 'tax-add-balance', 'tax-close-balance',
@@ -110,7 +110,7 @@ try {
         } elseif (!in_array($action, array_merge(['create-content', 'create-translation', 'inline-content', 'create-product',
             'inline-product', 'set-product-stock', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
             'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product',
-            'save-checkout-settings', 'customer-create', 'customer-update', 'customer-active',
+            'save-checkout-settings', 'save-mail-settings', 'mail-test', 'customer-create', 'customer-update', 'customer-active',
             'customer-password', 'schema-apply'], $orderActions, $taxActions), true) ||
             !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach'], true)) {

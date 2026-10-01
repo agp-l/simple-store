@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace SimpleStore\Checkout;
 
+use SimpleStore\Accounting\OrderMailQueue;
+
 use InvalidArgumentException;
 use MeekroDB;
 use RuntimeException;
@@ -278,6 +280,7 @@ final class GoPayPaymentService
                 in_array($local, ['paid', 'partially_refunded', 'refunded'], true)) {
                 $this->recordDetachedSettlement($currentAttempt, $id, $local);
             }
+            $newlyPaid = false;
             if (!$detached && $remote === 'PAID') {
                 if ($currentOrder['payment_status'] === 'pending' &&
                     !in_array($currentAttempt['status'], ['partially_refunded', 'refunded'], true)) {
@@ -286,6 +289,7 @@ final class GoPayPaymentService
                          payment_verified_by=NULL, provider_reference=%s WHERE id=%i AND payment_status=%s',
                         'paid', $id, $attempt['order_id'], 'pending'
                     );
+                    $newlyPaid = true;
                 } elseif ($currentOrder['payment_status'] === 'paid' &&
                     (string) $currentOrder['provider_reference'] !== $id) {
                     throw new RuntimeException('Jiná platba již uhradila tuto objednávku. Prověř možné dvojí stržení.');
@@ -296,6 +300,10 @@ final class GoPayPaymentService
                 $local, $attempt['id']
             );
             $this->db->commit();
+            if ($newlyPaid) {
+                try { (new OrderMailQueue($this->db))->notifyStage((int) $attempt['order_id'], 'paid'); }
+                catch (Throwable $mailError) { error_log('GoPay payment email: ' . $mailError->getMessage()); }
+            }
         } catch (Throwable $error) {
             $this->db->rollback();
             throw $error;

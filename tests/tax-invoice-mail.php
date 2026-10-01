@@ -53,6 +53,7 @@ class MeekroDB
 
     public function queryFirstRow(string $sql, mixed ...$args): ?array
     {
+        if (str_contains($sql, 'FROM shop_mail_settings')) return null;
         if (str_contains($sql, 'FROM shop_btcpay_payments')) {
             $payment = $this->btcpayPayments[$args[0]] ?? null;
             return $payment !== null && $payment['invoice_id'] === $args[1] ?
@@ -102,6 +103,7 @@ class MeekroDB
 
     public function query(string $sql, mixed ...$args): array
     {
+        if (str_contains($sql, 'FROM shop_mail_templates')) return [];
         if (str_contains($sql, 'INSERT IGNORE INTO shop_invoice_sequence')) {
             $this->sequences[$args[0]] ??= $args[1];
         } elseif (str_contains($sql, 'UPDATE shop_invoice_sequence')) {
@@ -114,12 +116,13 @@ class MeekroDB
             foreach ($this->outbox as $row) if ($row['event_key'] === $args[0]) return [];
             $id = count($this->outbox) + 1;
             $this->outbox[$id] = ['id' => $id, 'event_key' => $args[0], 'order_id' => $args[1],
-                'recipient_email' => $args[2], 'subject' => $args[3], 'body_text' => $args[4],
+                'recipient_email' => $args[2], 'subject' => $args[3], 'body_text' => $args[4], 'body_html' => $args[5],
                 'state' => 'queued', 'attempts' => 0];
         } elseif (str_contains($sql, 'UPDATE shop_mail_outbox SET subject=')) {
-            if (in_array($this->outbox[$args[2]]['state'], ['queued', 'failed'], true)) {
-                $this->outbox[$args[2]]['subject'] = $args[0];
-                $this->outbox[$args[2]]['body_text'] = $args[1];
+            if (in_array($this->outbox[$args[3]]['state'], ['queued', 'failed'], true)) {
+                $this->outbox[$args[3]]['subject'] = $args[0];
+                $this->outbox[$args[3]]['body_text'] = $args[1];
+                $this->outbox[$args[3]]['body_html'] = $args[2];
             }
         } elseif (str_contains($sql, 'UPDATE shop_mail_outbox SET state=%s, attempts=')) {
             $this->outbox[$args[1]]['state'] = $args[0];
@@ -207,7 +210,8 @@ $reliable = new OrderMailQueue($db, static function (...$args) use (&$accepted):
 });
 if (!$reliable->dispatch($mailId, 'shop@example.test') ||
     $db->outbox[$mailId]['attempts'] !== 2 || $db->invoices[1]['emailed_at'] === null ||
-    !str_contains($accepted[2], '<Stan>')) {
+    !str_contains($accepted[2], chunk_split(base64_encode($db->outbox[$mailId]['body_text']), 76, "\r\n")) ||
+    !str_contains($accepted[3], 'multipart/alternative')) {
     throw new RuntimeException('Mail retry did not deliver the invoice snapshot.');
 }
 if ($reliable->dispatch($mailId, 'shop@example.test')) {

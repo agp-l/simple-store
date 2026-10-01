@@ -163,16 +163,18 @@ $balanceKind = ['receivable'=>'Pohledávka', 'liability'=>'Dluh', 'asset'=>'Maje
     <?php endif; ?>
   <?php elseif ($accountingTab === 'mail'): ?>
     <section class="panel-panel"><h2>Oznámení zákazníkům</h2>
-      <p class="panel-help">Potvrzení objednávky se vytvoří při dokončení pokladny. Faktura se vytvoří při jejím vystavení. E-mail se odešle přes PHP mail() s odesílatelem z nastavení OSVČ; pokud server odeslání odmítne, zůstane zde k opakování. Doručení do schránky samotné odeslání nezaručuje.</p>
-      <?php if (($taxSettings['mail_from'] ?? '') === ''): ?><p class="panel-notice">Vyplň adresu odesílatele v <a href="<?= $escape($taxUrl . '&tab=settings') ?>">údajích OSVČ</a>.</p><?php endif; ?>
+      <p class="panel-help">Potvrzení objednávky, změny stavu a faktury se připravují do fronty. Odesílatele a texty nastavíš v <a href="<?= $escape($adminUrl . '?section=settings&tab=mail') ?>">nastavení e-mailů</a>. Odmítnuté zprávy můžeš zopakovat; přijetí zprávy poštovním serverem samo nezaručuje doručení do schránky.</p>
+      <?php if (($taxSettings['mail_from'] ?? '') === '' && $mailQueue->sender() === ''): ?><p class="panel-notice">Vyplň adresu odesílatele v <a href="<?= $escape($adminUrl . '?section=settings&tab=mail') ?>">nastavení e-mailů</a>.</p><?php endif; ?>
       <?php foreach ($mailRows as $row): ?><div class="panel-order-row"><span><strong><?= $escape($row['subject']) ?></strong><small><?= $escape($row['recipient_email']) ?></small></span><span><?= $escape($row['state']) ?> · pokusů <?= (int) $row['attempts'] ?><?php if ($row['last_error'] !== null): ?><br><?= $escape($row['last_error']) ?><?php endif; ?></span><?php if (in_array($row['state'], ['queued','failed'], true)): ?><form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="mail"><input type="hidden" name="action" value="mail-retry"><input type="hidden" name="id" value="<?= (int) $row['id'] ?>"><button class="panel-button" type="submit">Zkusit odeslat</button></form><?php endif; ?></div><?php endforeach; ?>
       <?php if ($mailRows === []): ?><p class="panel-empty">Fronta je prázdná.</p><?php endif; ?>
     </section>
   <?php elseif ($accountingTab === 'settings'): ?>
-    <section class="panel-panel"><h2>Údaje OSVČ pro faktury a e-maily</h2>
+    <section class="panel-panel"><h2>Údaje OSVČ pro faktury</h2>
       <p class="panel-help">Režim této evidence je OSVČ s daňovou evidencí bez DPH. Při změně na plátce DPH bude potřeba doplnit příslušnou evidenci a doklady. Uložené faktury se po změně nastavení nepřepisují.</p>
       <form class="panel-form" method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="settings"><input type="hidden" name="action" value="tax-save-settings">
-        <?php foreach (['name'=>'Jméno a příjmení podnikatele', 'ico'=>'IČO', 'street'=>'Ulice a číslo sídla', 'city'=>'Město', 'postal_code'=>'PSČ', 'email'=>'Kontaktní e-mail', 'phone'=>'Telefon', 'bank_account'=>'Číslo účtu na faktuře', 'mail_from'=>'E-mail odesílatele (vlastní doména)'] as $key=>$label): ?><label><?= $escape($label) ?><input name="<?= $key ?>" value="<?= $escape($taxSettings[$key] ?? '') ?>" maxlength="<?= $key === 'ico' ? 8 : 254 ?>"></label><?php endforeach; ?>
+        <input type="hidden" name="mail_from" value="<?= $escape($taxSettings['mail_from'] ?? '') ?>">
+        <?php foreach (['name'=>'Jméno a příjmení podnikatele', 'ico'=>'IČO', 'street'=>'Ulice a číslo sídla', 'city'=>'Město', 'postal_code'=>'PSČ', 'email'=>'Kontaktní e-mail', 'phone'=>'Telefon', 'bank_account'=>'Číslo účtu na faktuře'] as $key=>$label): ?><label><?= $escape($label) ?><input name="<?= $key ?>" value="<?= $escape($taxSettings[$key] ?? '') ?>" maxlength="<?= $key === 'ico' ? 8 : 254 ?>"></label><?php endforeach; ?>
+        <p class="panel-help">Odesílání zákaznických zpráv a jejich obsah najdeš v <a href="<?= $escape($adminUrl . '?section=settings&tab=mail') ?>">nastavení obchodu → E-maily</a>.</p>
         <button class="panel-button" type="submit">Uložit údaje OSVČ</button>
       </form>
     </section>

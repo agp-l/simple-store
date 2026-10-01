@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace SimpleStore\Checkout;
 
+use SimpleStore\Accounting\OrderMailQueue;
+
 use InvalidArgumentException;
 use MeekroDB;
 use RuntimeException;
@@ -258,6 +260,7 @@ final class BTCPayPaymentService
                     'admin_id' => 0,
                 ]);
             }
+            $newlyPaid = false;
             if ($order !== null && $state === 'settled') {
                 if ($order['payment_status'] === 'pending') {
                     $this->db->query(
@@ -265,6 +268,7 @@ final class BTCPayPaymentService
                          payment_verified_by=NULL, provider_reference=%s WHERE id=%i AND payment_status=%s',
                         'paid', $id, $order['id'], 'pending'
                     );
+                    $newlyPaid = true;
                 } elseif ($order['payment_status'] === 'paid' && $order['provider_reference'] !== $id) {
                     throw new RuntimeException('Objednávka již má jinou platbu. Prověř možné dvojí zaplacení.');
                 }
@@ -274,6 +278,10 @@ final class BTCPayPaymentService
                 $state, $current['id']
             );
             $this->db->commit();
+            if ($newlyPaid) {
+                try { (new OrderMailQueue($this->db))->notifyStage((int) $order['id'], 'paid'); }
+                catch (Throwable $mailError) { error_log('BTCPay payment email: ' . $mailError->getMessage()); }
+            }
         } catch (Throwable $error) {
             $this->db->rollback();
             throw $error;

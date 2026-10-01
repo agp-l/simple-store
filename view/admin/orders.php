@@ -1,5 +1,7 @@
 <?php
 declare(strict_types=1);
+$orderTrackingReady ??= false;
+$orderManualTracking ??= ['number' => '', 'url' => ''];
 
 $orderMoney = static fn (mixed $amount): string => number_format((int) $amount, 0, ',', ' ') . ' Kč';
 $orderPaymentLabel = static fn (mixed $status): string => match ($status) {
@@ -190,7 +192,8 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
             <button class="panel-order-copy" type="button" data-order-copy="<?= $escape($carrierCopy) ?>">Kopírovat pro dopravce</button>
           </div>
         </div>
-        <p class="panel-order-copy-feedback" role="status" aria-live="polite"></p>
+  <p class="panel-order-copy-feedback" role="status" aria-live="polite"></p>
+        <?php if (($_GET['tracking_saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Sledovací údaje byly uloženy. Pokud už byla objednávka předána dopravci, zákazníkovi se připravila zpráva s údaji.</p><?php endif; ?>
         <dl class="panel-order-facts">
           <div><dt>Aktuální doprava</dt><dd><strong><?= $escape($shipping['label'] ?? $shipping['method'] ?? 'Neuvedeno') ?></strong></dd></div>
           <?php if (!empty($order['dispatch_shipping_changed'])): ?><div><dt>Původně objednáno</dt><dd><?= $escape($order['shipping_ordered']['label'] ?? $order['shipping_ordered']['method'] ?? 'Neuvedeno') ?> · účtováno <?= $orderMoney($order['shipping_czk'] ?? 0) ?></dd></div><?php endif; ?>
@@ -201,6 +204,17 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
           <?php if (!empty($shipping['pickup_point'])): ?><div><dt>Výdejní místo</dt><dd><?= $escape($shipping['pickup_point']) ?><br><?= $escape($shipping['pickup_address'] ?? '') ?><?php if (!empty($shipping['pickup_code'])): ?><br>Kód: <?= $escape($shipping['pickup_code']) ?><?php endif; ?><?php if (($shipping['method'] ?? '') === 'balikovna_pickup' && !empty($shipping['pickup_postal_code'])): ?><br>PSČ Balíkovny: <?= $escape($shipping['pickup_postal_code']) ?><?php endif; ?></dd></div>
           <?php else: ?><div><dt>Adresa</dt><dd><?= $escape($shipping['street'] ?? '') ?><br><?= $escape(trim((string) ($shipping['postal_code'] ?? '') . ' ' . (string) ($shipping['city'] ?? ''))) ?><br><?= $escape($shipping['country'] ?? 'CZ') ?></dd></div><?php endif; ?>
         </dl>
+        <?php if ($orderTrackingReady): ?>
+          <details class="panel-order-accordion"><summary>Sledování zásilky a externí dodavatel</summary>
+            <p class="panel-help">U Zásilkovny se použije odkaz z API, u GLS a Balíkovny registrované číslo. Číslo nebo HTTPS odkaz můžeš doplnit i ručně. Po předání dopravci se nové údaje pošlou zákazníkovi; stejné uložení zprávu neopakuje.</p>
+            <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+              <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="save-order-tracking"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
+              <label>Číslo zásilky<input name="tracking_number" maxlength="100" value="<?= $escape($orderManualTracking['number']) ?>" placeholder="Číslo přidělené dopravcem"></label>
+              <label>Veřejný odkaz pro sledování<input type="url" name="tracking_url" maxlength="1000" value="<?= $escape($orderManualTracking['url']) ?>" placeholder="https://..."></label>
+              <button class="panel-button" type="submit">Uložit sledování</button>
+            </form>
+          </details>
+        <?php endif; ?>
         <?php if ($shippingChangeReady && $shippingChangeOptions !== []): ?>
           <details class="panel-order-accordion" <?= $shippingEntered !== [] ? 'open' : '' ?>>
             <summary>Změnit skutečného dopravce</summary>

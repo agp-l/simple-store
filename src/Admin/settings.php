@@ -3,16 +3,36 @@ declare(strict_types=1);
 
 use SimpleStore\Checkout\CheckoutSettingsRepository;
 use SimpleStore\Checkout\ShippingPolicy;
+use SimpleStore\Accounting\MailSettingsRepository;
+use SimpleStore\Accounting\OrderMailQueue;
+use SimpleStore\Accounting\TaxEvidenceRepository;
 
 // admin.php has already verified the administrator session and form token.
 $screen = 'settings';
 $settingsError = '';
+$settingsTab = ($_GET['tab'] ?? '') === 'mail' ? 'mail' : 'checkout';
 $example = require __DIR__ . '/../../config/checkout.example.php';
 $localFile = __DIR__ . '/../../config/checkout.php';
 $fallback = CheckoutSettingsRepository::withDefaults(
     is_file($localFile) ? require $localFile : $example, $example);
 $repository = new CheckoutSettingsRepository($db);
 $settings = $repository->load($fallback);
+$mailSettingsStore = new MailSettingsRepository($db);
+$mailSettingsReady = $mailSettingsStore->installed();
+$taxMailFrom = (string) ((new TaxEvidenceRepository($db))->settings()['mail_from'] ?? '');
+$mailConfiguration = $mailSettingsStore->load($taxMailFrom);
+$mailPreview = null;
+$previewCode = $_GET['preview'] ?? null;
+if ($settingsTab === 'mail' && is_string($previewCode) && isset(MailSettingsRepository::EVENTS[$previewCode])) {
+    $previewOrder = ['order_number' => 'DB-2026-0001', 'total_czk' => 1079, 'shipping_czk' => 79,
+        'shipping' => ['label' => 'GLS na adresu', 'recipient' => 'Eva Nová'],
+        'items' => [['name' => 'Lehký batoh', 'quantity' => 1, 'unit_price_czk' => 1000]],
+        'payment_method' => 'bank_transfer', 'payment_details' => ['account_display' => '123456789/0000'],
+        'variable_symbol' => '20260001', 'payment_due_at' => '2026-10-15'];
+    $mailPreview = \SimpleStore\Accounting\OrderEmailComposer::compose($previewCode,
+        $previewOrder, $mailConfiguration['templates'][$previewCode],
+        ['number' => 'GLS123456789', 'url' => 'https://example.com/sledovani']);
+}
 $shippingCatalog = ShippingPolicy::defaults();
 $form = [
     'btc_prices_enabled' => ($settings['btc_prices_enabled'] ?? true) === true ? '1' : '0',
@@ -53,12 +73,45 @@ foreach ($shippingCatalog as $code => $definition) {
 }
 if ($method === 'POST') {
     try {
+        if (($_POST['action'] ?? null) === 'save-mail-settings') {
+            $mailSettingsStore->save($_POST);
+            header('Location: ' . $adminUrl . '?section=settings&tab=mail&saved=1', true, 303);
+            exit;
+        }
+        if (($_POST['action'] ?? null) === 'mail-test') {
+            if (!$mailSettingsReady) throw new InvalidArgumentException('Nejdřív aktualizuj SQL tabulky.');
+            $mailQueue = new OrderMailQueue($db);
+            $recipient = $_POST['test_recipient'] ?? null;
+            if (!is_string($recipient)) throw new InvalidArgumentException('Zadej e-mail příjemce testu.');
+            $mailId = $mailQueue->enqueueTest($recipient);
+            $sent = $mailQueue->dispatch($mailId, $taxMailFrom);
+            header('Location: ' . $adminUrl . '?section=settings&tab=mail&test=' . ($sent ? 'sent' : 'failed'), true, 303);
+            exit;
+        }
+        if (($_POST['action'] ?? null) !== 'save-checkout-settings') {
+            throw new InvalidArgumentException('Neznámá akce nastavení.');
+        }
         $repository->save($_POST, $basePath, $settings);
         header('Location: ' . $adminUrl . '?section=settings&saved=1', true, 303);
         exit;
     } catch (InvalidArgumentException $exception) {
         http_response_code(422);
         $settingsError = $exception->getMessage();
+        if ($settingsTab === 'mail') {
+            foreach (['from_email', 'from_name', 'reply_to', 'public_base_url'] as $key) {
+                if (is_string($_POST[$key] ?? null)) $mailConfiguration['settings'][$key] = $_POST[$key];
+            }
+            $mailConfiguration['settings']['automatic_enabled'] = ($_POST['automatic_enabled'] ?? null) === '1';
+            foreach ($mailConfiguration['templates'] as $code => &$entry) {
+                if (is_array($_POST['templates'][$code] ?? null)) {
+                    foreach (['subject', 'message'] as $key) {
+                        if (is_string($_POST['templates'][$code][$key] ?? null)) $entry[$key] = $_POST['templates'][$code][$key];
+                    }
+                    $entry['enabled'] = ($_POST['templates'][$code]['enabled'] ?? null) === '1';
+                }
+            }
+            unset($entry);
+        }
         foreach ($form as $key => $value) {
             if (is_string($_POST[$key] ?? null)) {
                 $form[$key] = $_POST[$key];
@@ -77,5 +130,8 @@ if ($method === 'POST') {
             }
             $form['shipping_enabled'][$code] = ($_POST['shipping_enabled'][$code] ?? null) === '1' ? '1' : '0';
         }
+    } catch (RuntimeException $exception) {
+        http_response_code(503);
+        $settingsError = $exception->getMessage();
     }
 }

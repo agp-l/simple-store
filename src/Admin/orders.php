@@ -15,17 +15,24 @@ use SimpleStore\Checkout\PacketaPickupPoint;
 use SimpleStore\Checkout\PacketaRejectedException;
 use SimpleStore\Checkout\PacketaShipmentDraft;
 use SimpleStore\Checkout\PacketaShipmentRepository;
+use SimpleStore\Checkout\OrderTrackingRepository;
 use SimpleStore\Admin\OrderControlRepository;
 use SimpleStore\Admin\OrderShippingRepository;
 use SimpleStore\Admin\OrderProductLinks;
 use SimpleStore\Product\ProductStockRepository;
 use SimpleStore\Accounting\InvoiceRepository;
 use SimpleStore\Accounting\TaxEvidenceRepository;
+use SimpleStore\Accounting\OrderMailQueue;
 
 // admin.php has already authenticated the administrator and verified POST CSRF.
 $screen = 'orders';
 $stock = new ProductStockRepository($db);
 $orders = new OrderRepository($db, null, 7, $stock);
+$orderMail = new OrderMailQueue($db);
+$orderMailSender = (string) ((new TaxEvidenceRepository($db))->settings()['mail_from'] ?? '');
+$trackingStore = new OrderTrackingRepository($db);
+$orderTrackingReady = $trackingStore->installed();
+$orderManualTracking = ['number' => '', 'url' => ''];
 $ordersReady = $orders->installed();
 $fulfillmentSourceReady = $ordersReady && $orders->fulfillmentSourceInstalled();
 $packetaShipments = new PacketaShipmentRepository($db);
@@ -115,6 +122,8 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'mark-order-paid') {
         }
         try {
             $orders->markPaid($id, (int) $admin['id']);
+            try { $orderMail->notifyStage($id, 'paid', $orderMailSender); }
+            catch (Throwable $mailError) { error_log('Payment notification: ' . $mailError->getMessage()); }
             header('Location: ' . (($_POST['return_list'] ?? null) === '1'
                 ? $orderListReturnUrl . '&payment_saved=1'
                 : $adminUrl . '?section=orders&id=' . $id . '&paid=1'), true, 303);
@@ -209,6 +218,8 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'set-order-status') {
     } else {
         try {
             $orders->setFulfillmentStatus($id, $newStatus, $source, $note);
+            try { $orderMail->notifyStage($id, $newStatus, $orderMailSender); }
+            catch (Throwable $mailError) { error_log('Order stage notification: ' . $mailError->getMessage()); }
             header('Location: ' . (($_POST['return_list'] ?? null) === '1'
                 ? $orderListReturnUrl . '&saved=1'
                 : $adminUrl . '?section=orders&id=' . $id . '&saved=1'), true, 303);
@@ -217,6 +228,30 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'set-order-status') {
             http_response_code(422);
             $orderError = $exception->getMessage();
         }
+    }
+}
+
+if ($method === 'POST' && ($_POST['action'] ?? '') === 'save-order-tracking') {
+    $id = filter_var($_POST['id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    try {
+        if (!$ordersReady || $id === false || $id === null || $orders->findById((int) $id) === null ||
+            !is_string($_POST['tracking_number'] ?? null) || !is_string($_POST['tracking_url'] ?? null)) {
+            throw new InvalidArgumentException('Objednávka nebo sledovací údaje nejsou platné.');
+        }
+        $previous = $trackingStore->manual((int) $id);
+        $trackingStore->save((int) $id, $_POST['tracking_number'], $_POST['tracking_url']);
+        $current = $trackingStore->manual((int) $id);
+        if ($current !== $previous && ($current['number'] !== '' || $current['url'] !== '')) {
+            try {
+                $key = 'tracking:' . (int) $id . ':' . substr(hash('sha256', $current['number'] . "\n" . $current['url']), 0, 24);
+                $orderMail->notifyStage((int) $id, 'tracking', $orderMailSender, $key);
+            } catch (Throwable $mailError) { error_log('Tracking notification: ' . $mailError->getMessage()); }
+        }
+        header('Location: ' . $adminUrl . '?section=orders&id=' . (int) $id . '&tracking_saved=1', true, 303);
+        exit;
+    } catch (InvalidArgumentException $exception) {
+        http_response_code(422);
+        $orderError = $exception->getMessage();
     }
 }
 
@@ -314,6 +349,9 @@ if (in_array($carrierAction, ['carrier-save', 'carrier-register'], true)) {
                 throw new InvalidArgumentException('Nejdřív ověř podání v systému dopravce a zadej přidělené číslo.');
             }
             $carrierShipments->register($id, (int) $admin['id'], $number);
+            try { $orderMail->notifyStage($id, 'tracking', $orderMailSender,
+                'tracking:' . $id . ':' . substr(hash('sha256', $number), 0, 24)); }
+            catch (Throwable $mailError) { error_log('Carrier notification: ' . $mailError->getMessage()); }
         }
         header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&carrier_saved=' .
             rawurlencode($carrierAction), true, 303);
@@ -477,6 +515,9 @@ if ($rawId !== null) {
     }
     if ($order !== null && $carrierReady) {
         $carrierShipment = $carrierShipments->find($id);
+    }
+    if ($order !== null && $orderTrackingReady) {
+        $orderManualTracking = $trackingStore->manual($id);
     }
     if ($order !== null && $shippingChangeReady &&
         ($packetaShipment === null || in_array($packetaShipment['status'], ['cancelled', 'rejected'], true)) &&

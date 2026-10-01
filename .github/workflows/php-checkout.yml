@@ -38,6 +38,7 @@ jobs:
           php tests/checkout-render.php
           php tests/checkout-availability.php
           php tests/checkout-settings.php
+          php tests/mail-render.php
           php tests/bitcoin-prices.php
           php tests/btcpay-client.php
           php tests/btcpay-signature.php
@@ -105,6 +106,7 @@ jobs:
           MYSQL_TEST_PASSWORD: ci-only-password
         run: |
           php tests/tax-database.php
+          php tests/mail-database.php
           php tests/legacy-order-migration.php
           php tests/comgate-database.php
           php tests/gopay-database.php

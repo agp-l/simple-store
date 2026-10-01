@@ -387,6 +387,29 @@ CREATE TABLE IF NOT EXISTS shop_invoice_number_events (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Queue is durable; a checkout succeeds even when the mail transport is offline.
+CREATE TABLE IF NOT EXISTS shop_mail_settings (
+  id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+  settings_json LONGTEXT NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shop_mail_templates (
+  event_code VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+  enabled TINYINT(1) NOT NULL DEFAULT 1,
+  subject VARCHAR(190) NOT NULL,
+  message_text TEXT NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Optional tracking data for externally fulfilled orders or carriers without an API.
+CREATE TABLE IF NOT EXISTS shop_order_tracking (
+  order_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  tracking_number VARCHAR(100) NOT NULL DEFAULT '',
+  tracking_url VARCHAR(1000) NOT NULL DEFAULT '',
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  CONSTRAINT order_tracking_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS shop_mail_outbox (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   event_key VARCHAR(100) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
@@ -394,6 +417,7 @@ CREATE TABLE IF NOT EXISTS shop_mail_outbox (
   recipient_email VARCHAR(254) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   subject VARCHAR(190) NOT NULL,
   body_text LONGTEXT NOT NULL,
+  body_html LONGTEXT NULL,
   state VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'queued',
   attempts INT UNSIGNED NOT NULL DEFAULT 0,
   last_error VARCHAR(255) NULL,
@@ -403,6 +427,14 @@ CREATE TABLE IF NOT EXISTS shop_mail_outbox (
   KEY outbox_state (state, id),
   KEY outbox_order (order_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET @mail_html_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_mail_outbox' AND COLUMN_NAME='body_html');
+SET @mail_html_upgrade = IF(@mail_html_exists=0,
+  'ALTER TABLE shop_mail_outbox ADD COLUMN body_html LONGTEXT NULL AFTER body_text', 'SELECT 1');
+PREPARE mail_html_statement FROM @mail_html_upgrade;
+EXECUTE mail_html_statement;
+DEALLOCATE PREPARE mail_html_statement;
 
 -- Quantity is a count of physical units; sale snapshots never change with a product edit.
 CREATE TABLE IF NOT EXISTS shop_sale_lines (

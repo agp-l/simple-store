@@ -62,6 +62,17 @@
 .panel-empty { color: var(--muted); font-size: 14px; line-height: 1.55; }
 .panel-section-heading h2 { margin: 6px 0 16px; }
 .panel-form, .panel-editor, .panel-centered form { display: grid; gap: 17px; }
+.panel-settings-form { gap: 18px; }
+.panel-settings-nav { display: flex; flex-wrap: wrap; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
+.panel-settings-nav a { padding: 9px 12px; border-radius: 4px; color: #31612f; background: var(--soft); font-size: 13px; font-weight: 700; text-decoration: none; }
+.panel-settings-nav a:hover, .panel-settings-nav a:focus-visible { background: #dfefda; }
+.panel-settings-block { display: grid; gap: 16px; scroll-margin-top: 20px; }
+.panel-settings-block h2, .panel-settings-block h3 { margin: 0; }
+.panel-settings-block h3:not(:first-child) { padding-top: 12px; border-top: 1px solid var(--line); }
+.panel-settings-details { border-top: 1px solid var(--line); padding-top: 14px; }
+.panel-settings-details summary { cursor: pointer; color: var(--ink); font-size: 16px; font-weight: 750; }
+.panel-settings-fields { display: grid; gap: 16px; padding-top: 17px; }
+.panel-settings-save { position: sticky; bottom: 0; z-index: 2; display: flex; justify-content: flex-end; padding: 12px; border: 1px solid var(--line); border-radius: 6px; background: #fff; }
 .panel-form label, .panel-editor label, .panel-centered label, .panel-language label { display: grid; gap: 7px; color: #3a483b; font-size: 13px; font-weight: 650; }
 .panel-form input:not([type=checkbox]), .panel-form select, .panel-form textarea,
 .panel-editor input:not([type=checkbox]), .panel-editor select, .panel-editor textarea,

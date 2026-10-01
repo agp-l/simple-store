@@ -1,5 +1,6 @@
 <?php
 declare(strict_types=1);
+$settingsTab ??= 'checkout';
 $form += ['btc_prices_enabled' => '1', 'comgate_enabled' => '0', 'comgate_test' => '1', 'comgate_merchant' => '',
     'comgate_return_base_url' => '', 'gopay_enabled' => '0', 'gopay_test' => '1',
     'gopay_goid' => '', 'gopay_client_id' => '', 'gopay_return_base_url' => '',
@@ -10,23 +11,37 @@ $gopaySecretConfigured ??= false;
 $btcpayApiKeyConfigured ??= false;
 $btcpayWebhookSecretConfigured ??= false;
 ?>
-<div class="panel-intro"><div><p class="panel-eyebrow">Pokladna</p><h1>Nastavení obchodu</h1>
-  <p>Uprav dopravu, platby a stránku obchodních podmínek. Změny se použijí pro nové objednávky.</p></div></div>
-<?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Nastavení bylo uloženo.</p><?php endif; ?>
+<div class="panel-intro"><div><p class="panel-eyebrow">Správa obchodu</p><h1>Nastavení obchodu</h1>
+  <p>Doprava, platby, zákaznické e-maily a další údaje na jednom místě. Uložení potvrdí zpráva nahoře.</p></div></div>
+<?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Nastavení bylo uloženo do databáze.</p><?php endif; ?>
 <?php if ($settingsError !== ''): ?><p class="panel-error" role="alert"><?= $escape($settingsError) ?></p><?php endif; ?>
-<form class="panel-panel panel-form" method="post" action="<?= $escape($adminUrl . '?section=settings') ?>">
+<?php if ($settingsTab === 'mail'): ?>
+<?php require __DIR__ . '/settings-mail.php'; ?>
+<?php else: ?>
+<form class="panel-form panel-settings-form" method="post" action="<?= $escape($adminUrl . '?section=settings') ?>">
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
   <input type="hidden" name="action" value="save-checkout-settings">
+  <nav class="panel-settings-nav" aria-label="Části nastavení">
+    <a href="#settings-delivery">Doprava</a><a href="#settings-carriers">Dopravci</a>
+    <a href="#settings-payment">Platby</a><a href="#settings-prices">Ceny</a>
+    <a href="<?= $escape($adminUrl . '?section=settings&tab=mail') ?>">E-maily</a>
+    <a href="#settings-legal">Podmínky a vývoj</a>
+  </nav>
+  <section class="panel-panel panel-settings-block" id="settings-prices">
   <h2>Zobrazení cen</h2>
   <label class="panel-check"><input type="checkbox" name="btc_prices_enabled" value="1" <?= $form['btc_prices_enabled'] === '1' ? 'checked' : '' ?>> Ukazovat orientační cenu v BTC vedle ceny v Kč</label>
   <p class="panel-help">Přepočet používá kurz CoinGecko uložený na 15 minut. Objednávky se dál účtují v Kč; skutečnou částku k platbě bitcoinem určí BTCPay při vytvoření platby. Když kurz není dostupný, zobrazí se jen cena v Kč. Vyžaduje aktualizovanou databázi.</p>
-  <h2>Výdejní místa a boxy</h2>
+  </section>
+  <section class="panel-panel panel-settings-block" id="settings-delivery">
+  <h2>Doprava</h2><h3>Výdejní místa a boxy</h3>
   <p class="panel-help">U Zásilkovny, GLS a Balíkovny zákazník vybere místo přímo v mapě; u PPL po nastavení klíče widgetu. Mapa Balíkovny ani GLS nevyžaduje klíč.</p>
   <?php foreach ($shippingCatalog as $code => $definition): ?>
-    <?php if (str_ends_with($code, '_home') && $code === 'gls_home'): ?><h2>Na adresu</h2><?php endif; ?>
+    <?php if (str_ends_with($code, '_home') && $code === 'gls_home'): ?><h3>Na adresu</h3><?php endif; ?>
     <div class="panel-shipping-row"><strong><?= $escape($definition['label']) ?></strong><label>Cena v Kč<input type="number" name="shipping_price[<?= $escape($code) ?>]" value="<?= $escape($form['shipping_price'][$code]) ?>" min="0" max="100000" required></label><label class="panel-check"><input type="checkbox" name="shipping_enabled[<?= $escape($code) ?>]" value="1" <?= $form['shipping_enabled'][$code] === '1' ? 'checked' : '' ?>> Nabízet</label></div>
   <?php endforeach; ?>
-  <h3>Zásilkovna – mapa výdejních míst</h3>
+  </section>
+  <section class="panel-panel panel-settings-block" id="settings-carriers">
+  <h2>Napojení dopravců</h2><h3>Zásilkovna – mapa výdejních míst</h3>
   <label>Veřejný API klíč widgetu<input name="packeta_api_key" value="<?= $escape($form['packeta_api_key'] ?? '') ?>" maxlength="16" pattern="[A-Za-z0-9]{16}" autocomplete="off" placeholder="16 znaků z klientské sekce"></label>
   <p class="panel-help">Klíč pro mapu získáš v klientské sekci Zásilkovny. Je určený pro webový widget; <strong>nevkládej sem API heslo</strong>. Bez klíče se doprava Zásilkovnou v pokladně nenabídne, i když je nahoře zapnutá.</p>
   <h3>PPL – mapa výdejních míst</h3>
@@ -38,12 +53,14 @@ $btcpayWebhookSecretConfigured ??= false;
   <label>API heslo Zásilkovny<input type="password" name="packeta_api_password" value="" maxlength="128" autocomplete="new-password" placeholder="<?= !empty($packetaPasswordConfigured) ? 'Heslo je uloženo; pro změnu zadej nové' : 'Zadej soukromé API heslo' ?>"></label>
   <p class="panel-help">API heslo je jiné než veřejný klíč widgetu. Prázdné pole ponechá uložené heslo beze změny. Heslo se na veřejných stránkách ani v administraci znovu nevypisuje.</p>
   <?php if (!empty($packetaPasswordConfigured)): ?><label class="panel-check"><input type="checkbox" name="packeta_clear_password" value="1"> Odstranit uložené API heslo</label><?php endif; ?>
-  <h2>Bankovní převod</h2>
+  </section>
+  <section class="panel-panel panel-settings-block" id="settings-payment">
+  <h2>Platby</h2><h3>Bankovní převod</h3>
   <label>Číslo účtu<input name="account_display" value="<?= $escape($form['account_display']) ?>" placeholder="číslo/kód banky" autocomplete="off"></label>
   <label>IBAN (nepovinný, z čísla účtu se dopočítá)<input name="iban" value="<?= $escape($form['iban']) ?>" autocomplete="off"></label>
   <label>Jméno příjemce<input name="recipient" value="<?= $escape($form['recipient']) ?>" maxlength="120" autocomplete="off"></label>
   <label>Splatnost v dnech<input type="number" name="payment_due_days" value="<?= $escape($form['payment_due_days']) ?>" min="1" max="60" required></label>
-  <h2>Comgate – online platba</h2>
+  <details class="panel-settings-details"><summary>Comgate – online platba</summary><div class="panel-settings-fields">
   <label class="panel-check"><input type="checkbox" name="comgate_enabled" value="1" <?= $form['comgate_enabled'] === '1' ? 'checked' : '' ?>> Nabízet platbu přes Comgate (po vyplnění přístupových údajů)</label>
   <label class="panel-check"><input type="checkbox" name="comgate_test" value="1" <?= $form['comgate_test'] === '1' ? 'checked' : '' ?>> Testovací režim Comgate</label>
   <p class="panel-help">Testovací režim vyžaduje vlastní identifikátor obchodníka a tajný klíč Comgate. Vypni jej až po ověření testovací platby a schválení produkčního provozu.</p>
@@ -53,7 +70,8 @@ $btcpayWebhookSecretConfigured ??= false;
   <label>Tajný klíč API (secret)<input type="password" name="comgate_secret" value="" maxlength="256" autocomplete="new-password" placeholder="<?= $comgateSecretConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'Tajný klíč z klientského portálu' ?>"></label>
   <p class="panel-help">Prázdné pole ponechá uložený klíč beze změny. Klíč se znovu nezobrazuje ani se neposílá zákazníkovi. V Comgate nastav adresu pro PUSH oznámení na <code><?= $escape(($form['comgate_return_base_url'] !== '' ? rtrim($form['comgate_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/')) . '/comgate-callback.php') ?></code>. Návratové adresy pro zaplacenou, čekající a zrušenou platbu se předají API automaticky. Pro místní test přijímající oznámení použij veřejnou testovací doménu; Comgate se na localhost nedostane.</p>
   <?php if ($comgateSecretConfigured): ?><label class="panel-check"><input type="checkbox" name="comgate_clear_secret" value="1"> Odstranit uložený tajný klíč</label><?php endif; ?>
-  <h2>GoPay – online platba</h2>
+  </div></details>
+  <details class="panel-settings-details"><summary>GoPay – online platba</summary><div class="panel-settings-fields">
   <label class="panel-check"><input type="checkbox" name="gopay_enabled" value="1" <?= $form['gopay_enabled'] === '1' ? 'checked' : '' ?>> Nabízet platbu přes GoPay (po vyplnění přístupových údajů)</label>
   <label class="panel-check"><input type="checkbox" name="gopay_test" value="1" <?= $form['gopay_test'] === '1' ? 'checked' : '' ?>> Testovací prostředí GoPay</label>
   <p class="panel-help">Testovací prostředí vyžaduje testovací GoID, Client ID a Client secret přidělené GoPay. Před ostrým provozem ověř testovací objednávku a potom vyplň produkční údaje a vypni testovací režim.</p>
@@ -64,7 +82,8 @@ $btcpayWebhookSecretConfigured ??= false;
   <label>Client secret<input type="password" name="gopay_client_secret" value="" maxlength="256" autocomplete="new-password" placeholder="<?= $gopaySecretConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'Client secret od GoPay' ?>"></label>
   <p class="panel-help">Prázdné pole ponechá uložený klíč beze změny. Tajný klíč se zde znovu nevypisuje. GoPay zavolá URL oznámení <code><?= $escape(($form['gopay_return_base_url'] !== '' ? rtrim($form['gopay_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/')) . '/gopay-callback.php') ?></code> a zákazníka vrátí přes <code>gopay-return.php</code>. Místní localhost GoPay nemůže zavolat.</p>
   <?php if ($gopaySecretConfigured): ?><label class="panel-check"><input type="checkbox" name="gopay_clear_secret" value="1"> Odstranit uložený Client secret</label><?php endif; ?>
-  <h2>BTCPay Server – platba bitcoinem</h2>
+  </div></details>
+  <details class="panel-settings-details"><summary>BTCPay Server – platba bitcoinem</summary><div class="panel-settings-fields">
   <label class="panel-check"><input type="checkbox" name="btcpay_enabled" value="1" <?= $form['btcpay_enabled'] === '1' ? 'checked' : '' ?>> Nabízet platbu bitcoinem přes BTCPay Server</label>
   <p class="panel-help">V BTCPay vytvoř obchod s nastavenou peněženkou. API klíči uděl jen oprávnění <code>btcpay.store.cancreateinvoice</code> a <code>btcpay.store.canviewinvoices</code> pro tento obchod. Platební metoda se nabídne až po úplném nastavení.</p>
   <label>HTTPS adresa instance BTCPay<input type="url" name="btcpay_server_url" value="<?= $escape($form['btcpay_server_url']) ?>" maxlength="1000" autocomplete="off" placeholder="https://platby.obchod.cz"></label>
@@ -76,11 +95,16 @@ $btcpayWebhookSecretConfigured ??= false;
   <label>Tajný klíč webhooku<input type="password" name="btcpay_webhook_secret" value="" maxlength="512" autocomplete="new-password" placeholder="<?= $btcpayWebhookSecretConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'Secret z nastavení webhooku v BTCPay' ?>"></label>
   <?php if ($btcpayWebhookSecretConfigured): ?><label class="panel-check"><input type="checkbox" name="btcpay_clear_webhook_secret" value="1"> Odstranit uložený tajný klíč webhooku</label><?php endif; ?>
   <p class="panel-help">V BTCPay v nastavení tohoto obchodu založ webhook pro události faktur. Jeho URL nastav na <code><?= $escape(($form['btcpay_return_base_url'] !== '' ? rtrim($form['btcpay_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/')) . '/btcpay-callback.php') ?></code>. Secret webhooku zkopíruj sem. Prázdná pole s klíči ponechají uložené hodnoty beze změny; klíče se na stránce znovu nevypisují.</p>
-  <h2>Obchodní podmínky</h2>
+  </div></details>
+  </section>
+  <section class="panel-panel panel-settings-block" id="settings-legal">
+  <h2>Obchodní podmínky a vývoj</h2>
   <label>Adresa publikované stránky<input name="terms_url" value="<?= $escape($form['terms_url']) ?>" placeholder="<?= $escape($basePath . 'cs/obchodni-podminky') ?>"></label>
   <p class="panel-help">Můžeš je doplnit později. Až stránku vytvoříš a publikuješ, vlož sem její cestu začínající <?= $escape($basePath) ?>.</p>
   <h2>Místní vývoj</h2>
   <label class="panel-check"><input type="checkbox" name="local_test_checkout" value="1" <?= $form['local_test_checkout'] === '1' ? 'checked' : '' ?>> Povolit testovací objednávky na localhostu, pokud chybí bankovní účet</label>
   <p class="panel-help">Testovací objednávka nemá platební údaje ani QR kód. Mimo localhost je tento režim vypnutý.</p>
-  <button class="panel-button" type="submit">Uložit nastavení</button>
+  </section>
+  <div class="panel-settings-save"><button class="panel-button" type="submit">Uložit dopravu, platby a ceny</button></div>
 </form>
+<?php endif; ?>

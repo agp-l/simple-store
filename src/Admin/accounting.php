@@ -104,10 +104,10 @@ if ($method === 'POST') {
                     'ico' => $_POST['buyer_ico'] ?? '',
                 ]);
                 $returnOrder = $id;
-                if ($mailReady) {
+                if ($mailReady && $mailQueue->automaticEnabled()) {
                     try {
                         $mailId = $mailQueue->enqueueInvoice($invoice);
-                        if ($taxSettings['mail_from'] !== '') $mailQueue->dispatch($mailId, $taxSettings['mail_from']);
+                        if ($mailQueue->sender($taxSettings['mail_from']) !== '') $mailQueue->dispatch($mailId, $taxSettings['mail_from']);
                     } catch (Throwable $mailError) {
                         error_log('Invoice mail queue failed: ' . $mailError->getMessage());
                     }
@@ -124,7 +124,7 @@ if ($method === 'POST') {
                 $invoice = $invoicesRepository->byId($id);
                 if ($invoice === null) throw new InvalidArgumentException('Faktura nebyla nalezena.');
                 $mailId = $mailQueue->enqueueInvoice($invoice);
-                if ($taxSettings['mail_from'] !== '') $mailQueue->dispatch($mailId, $taxSettings['mail_from']);
+                if ($mailQueue->sender($taxSettings['mail_from']) !== '') $mailQueue->dispatch($mailId, $taxSettings['mail_from']);
                 $accountingTab = 'mail';
                 break;
             case 'mail-retry':

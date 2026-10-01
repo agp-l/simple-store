@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 namespace SimpleStore\Checkout;
 
+use SimpleStore\Accounting\OrderMailQueue;
+
 use InvalidArgumentException;
 use MeekroDB;
 use RuntimeException;
@@ -249,11 +251,13 @@ final class ComgatePaymentService
                 !$this->matches($status, $reference, $currentAttempt)) {
                 throw new RuntimeException('Ověření platby Comgate nesouhlasí s objednávkou.');
             }
+            $newlyPaid = false;
             if (!$detached && $remote === 'PAID') {
                 if ($currentOrder['payment_status'] === 'pending') {
                     $this->db->query('UPDATE shop_orders SET payment_status=%s, payment_paid_at=UTC_TIMESTAMP(),
                         payment_verified_by=NULL, provider_reference=%s WHERE id=%i AND payment_status=%s',
                         'paid', $attempt['trans_id'], $attempt['order_id'], 'pending');
+                    $newlyPaid = true;
                 } elseif ($currentOrder['payment_status'] === 'paid' &&
                     $currentOrder['provider_reference'] !== $attempt['trans_id']) {
                     // Never silently settle two separate charges against one order.
@@ -270,6 +274,10 @@ final class ComgatePaymentService
                     updated_at=UTC_TIMESTAMP() WHERE id=%i', $local, $attempt['id']);
             }
             $this->db->commit();
+            if ($newlyPaid) {
+                try { (new OrderMailQueue($this->db))->notifyStage((int) $attempt['order_id'], 'paid'); }
+                catch (Throwable $mailError) { error_log('Comgate payment email: ' . $mailError->getMessage()); }
+            }
         } catch (Throwable $error) {
             $this->db->rollback();
             throw $error;
