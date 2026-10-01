@@ -46,6 +46,9 @@ final class MailSettingsRepository
 
     public function load(string $legacySender = ''): array
     {
+        if ($legacySender === '') {
+            $legacySender = (string) ((new TaxEvidenceRepository($this->db))->settings()['mail_from'] ?? '');
+        }
         $settings = ['from_email' => $legacySender, 'from_name' => 'dobrodruzi.cz',
             'reply_to' => '', 'public_base_url' => '', 'automatic_enabled' => true];
         $templates = [];

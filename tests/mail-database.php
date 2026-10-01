@@ -5,6 +5,7 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 
 use SimpleStore\Accounting\MailSettingsRepository;
 use SimpleStore\Accounting\OrderMailQueue;
+use SimpleStore\Accounting\TaxEvidenceRepository;
 use SimpleStore\Checkout\OrderTrackingRepository;
 use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Database\SchemaUpdater;
@@ -14,6 +15,10 @@ $db = ConnectionFactory::create(['host' => '127.0.0.1', 'user' => 'root',
 (new SchemaUpdater($db, dirname(__DIR__) . '/database/schema.sql'))->apply();
 $settings = new MailSettingsRepository($db);
 if (!$settings->installed()) throw new RuntimeException('Mail template schema missing.');
+(new TaxEvidenceRepository($db))->saveSettings(['mail_from' => 'legacy@example.test']);
+if ($settings->load()['settings']['from_email'] !== 'legacy@example.test') {
+    throw new RuntimeException('Existing OSVČ sender must work before saving the new mail settings.');
+}
 $templates = [];
 foreach (MailSettingsRepository::EVENTS as $code => $definition) {
     $templates[$code] = ['enabled' => '1', 'subject' => $definition['subject'],
