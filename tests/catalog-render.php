@@ -48,6 +48,18 @@ if (!str_contains($cards, '/shop/cs/produkt/bota') || str_contains($cards, '<htm
     throw new RuntimeException('The additional catalog batch must render only the reusable product cards.');
 }
 
+$display = new \SimpleStore\Pricing\BitcoinPriceDisplay([
+    'rate' => 2000000.0, 'updated_at' => '2026-10-01 12:00:00',
+]);
+$btcCards = $renderer->cards('product', [$product], [
+    'basePath' => '/shop/', 'language' => 'cs', 'categoryLabels' => ['boty' => 'Boty'],
+    'cartToken' => 'test-cart-token', 'priceDisplay' => $display,
+]);
+if (!str_contains($btcCards, '3 990 Kč') || !str_contains($btcCards, '≈ 0.00199500 BTC') ||
+    str_contains($cards, ' BTC')) {
+    throw new RuntimeException('BTC must accompany CZK in later product batches only when enabled.');
+}
+
 $draft = $product + ['published' => 0, 'product_key' => str_repeat('a', 32),
     'revision_number' => 3];
 ob_start();

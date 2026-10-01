@@ -51,6 +51,7 @@ if ($fallback['bank_transfer']['account_display'] !== '' ||
         'client_id' => '', 'client_secret' => '', 'return_base_url' => ''] ||
     $fallback['btcpay'] !== ['enabled' => false, 'server_url' => '', 'store_id' => '',
         'api_key' => '', 'webhook_secret' => '', 'return_base_url' => ''] ||
+    $fallback['btc_prices_enabled'] !== true ||
     count($fallback['shipping_methods']) !== 9 ||
     $repo->load($fallback) !== $fallback) {
     throw new RuntimeException('Old private checkout settings did not receive the new defaults.');
@@ -76,6 +77,7 @@ $input = ['shipping_price' => array_map('strval', array_column(ShippingPolicy::d
     'btcpay_store_id' => 'TestStore123', 'btcpay_api_key' => 'btcpay-test-key',
     'btcpay_webhook_secret' => 'btcpay-test-webhook-secret',
     'btcpay_return_base_url' => 'https://obchod.example/simple-store/',
+    'btc_prices_enabled' => '1',
     'local_test_checkout' => '1'];
 $input['shipping_price'] = array_combine(array_keys(ShippingPolicy::defaults()),
     array_values($input['shipping_price']));
@@ -97,11 +99,18 @@ if ($loaded != $saved || $saved['bank_transfer']['iban'] !== $generated->snapsho
         'store_id' => 'TestStore123', 'api_key' => 'btcpay-test-key',
         'webhook_secret' => 'btcpay-test-webhook-secret',
         'return_base_url' => 'https://obchod.example/simple-store'] ||
+    $saved['btc_prices_enabled'] !== true ||
     $saved['packeta']['sender'] !== 'Dobrodruzi') {
     throw new RuntimeException('Checkout settings were not validated and loaded from the database.');
 }
 if ($saved['ppl']['widget_key'] !== 'public-ppl-key-123') {
     throw new RuntimeException('PPL widget key was not persisted.');
+}
+$withoutBitcoin = $repo->save(array_replace($input, ['btc_prices_enabled' => '']),
+    '/simple-store/', $saved);
+if ($withoutBitcoin['btc_prices_enabled'] !== false ||
+    $repo->load($fallback)['btc_prices_enabled'] !== false) {
+    throw new RuntimeException('The storefront BTC display switch did not persist.');
 }
 $withoutNewPassword = $repo->save(array_replace($input,
     ['packeta_api_password' => '', 'comgate_secret' => '', 'gopay_client_secret' => '',

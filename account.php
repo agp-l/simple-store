@@ -10,6 +10,8 @@ use SimpleStore\Customer\CustomerRepository;
 use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Navigation\StorefrontMenus;
 use SimpleStore\Navigation\UrlManager;
+use SimpleStore\Checkout\CheckoutSettingsRepository;
+use SimpleStore\Pricing\BitcoinPriceDisplay;
 
 $site = require __DIR__ . '/src/bootstrap.php';
 header('Cache-Control: private, no-store');
@@ -30,6 +32,7 @@ $addresses = [];
 $orders = [];
 $orderPage = ['items' => [], 'nextOffset' => null];
 $orderDetail = null;
+$priceDisplay = null;
 $orderTrackingUrl = null;
 $orderHistory = ($_GET['history'] ?? '') === '1';
 $orderOffset = filter_var($_GET['offset'] ?? '0', FILTER_VALIDATE_INT,
@@ -54,6 +57,14 @@ if (!is_file(__DIR__ . '/config/database.php') || !is_file(__DIR__ . '/vendor/au
 
 try {
     $db = ConnectionFactory::create(require __DIR__ . '/config/database.php');
+    if ($section === 'orders' || $section === 'overview') {
+        $checkoutFile = __DIR__ . '/config/checkout.php';
+        $exampleCheckout = require __DIR__ . '/config/checkout.example.php';
+        $checkoutConfig = is_file($checkoutFile) ? require $checkoutFile : $exampleCheckout;
+        $checkoutConfig = (new CheckoutSettingsRepository($db))->load(
+            CheckoutSettingsRepository::withDefaults($checkoutConfig, $exampleCheckout));
+        $priceDisplay = BitcoinPriceDisplay::fromSettings($db, $checkoutConfig);
+    }
     $menuUrl = new UrlManager($basePath . $site['default_language'],
         $_SERVER['SCRIPT_NAME'] ?? '/account.php', $site['languages'], $site['default_language']);
     $chrome = StorefrontMenus::load($db, $menuUrl,

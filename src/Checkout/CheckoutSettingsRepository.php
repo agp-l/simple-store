@@ -15,6 +15,8 @@ final class CheckoutSettingsRepository
 
     public static function withDefaults(array $local, array $example): array
     {
+        $local['btc_prices_enabled'] = is_bool($local['btc_prices_enabled'] ?? null)
+            ? $local['btc_prices_enabled'] : ($example['btc_prices_enabled'] ?? true);
         $local['shipping_methods'] = self::normalizedMethods($local['shipping_methods'] ?? [],
             $example['shipping_methods']);
         $local['packeta'] = is_array($local['packeta'] ?? null)
@@ -190,6 +192,7 @@ final class CheckoutSettingsRepository
             throw new InvalidArgumentException('Před zapnutím BTCPay vyplň adresu serveru, ID obchodu, API klíč, tajný klíč webhooku a veřejnou HTTPS adresu obchodu.');
         }
         $settings = [
+            'btc_prices_enabled' => ($input['btc_prices_enabled'] ?? null) === '1',
             'shipping_methods' => $shipping,
             'packeta' => ['api_key' => $packetaKey, 'api_password' => $password, 'sender' => $sender],
             'ppl' => ['widget_key' => $pplKey],

@@ -30,6 +30,7 @@ use SimpleStore\Rendering\PageRenderer;
 use SimpleStore\Accounting\TaxEvidenceRepository;
 use SimpleStore\Accounting\OrderMailQueue;
 use SimpleStore\Accounting\InvoiceRepository;
+use SimpleStore\Pricing\BitcoinPriceDisplay;
 
 $site = require __DIR__ . '/src/bootstrap.php';
 $renderer = new PageRenderer(__DIR__ . '/view');
@@ -78,6 +79,14 @@ try {
     $hasContent = $navigation['hasContent'];
     unset($navigation['manager'], $navigation['hasContent']);
     $shared = array_merge($shared, $navigation);
+    if (in_array($route['name'], ['catalog', 'category', 'product'], true)) {
+        $checkoutFile = __DIR__ . '/config/checkout.php';
+        $exampleCheckout = require __DIR__ . '/config/checkout.example.php';
+        $checkoutConfig = is_file($checkoutFile) ? require $checkoutFile : $exampleCheckout;
+        $checkoutConfig = (new CheckoutSettingsRepository($db))->load(
+            CheckoutSettingsRepository::withDefaults($checkoutConfig, $exampleCheckout));
+        $shared['priceDisplay'] = BitcoinPriceDisplay::fromSettings($db, $checkoutConfig);
+    }
 
     // Cart sessions are short-lived and separate from administrator/customer login.
     // Read and close the cart session before opening either account session.
@@ -95,6 +104,7 @@ try {
         $checkoutConfig = is_file($checkoutFile) ? require $checkoutFile : $exampleCheckout;
         $checkoutConfig = (new CheckoutSettingsRepository($db))->load(
             CheckoutSettingsRepository::withDefaults($checkoutConfig, $exampleCheckout));
+        $shared['priceDisplay'] = BitcoinPriceDisplay::fromSettings($db, $checkoutConfig);
         $bankSettings = $checkoutConfig['bank_transfer'] ?? [];
         $bank = null;
         if (is_array($bankSettings) &&

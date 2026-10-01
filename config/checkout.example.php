@@ -4,6 +4,7 @@ declare(strict_types=1);
 // Copy to config/checkout.php to set the bank account and legal page.
 // Nine delivery services are editable in the administration.
 return [
+    'btc_prices_enabled' => true, // Indicative storefront quote beside CZK; does not change checkout currency.
     'local_test_checkout' => true, // Only on localhost in debug mode; no payment is requested.
     'terms_url' => '', // Optional local published page, e.g. /cs/obchodni-podminky.
     'packeta' => [

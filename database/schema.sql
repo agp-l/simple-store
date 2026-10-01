@@ -78,6 +78,14 @@ CREATE TABLE IF NOT EXISTS shop_checkout_settings (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- One shared, short-lived market quote. Never used for charging or accounting.
+CREATE TABLE IF NOT EXISTS shop_btc_rate_cache (
+  id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+  rate_czk DECIMAL(15,2) NULL,
+  source_updated_at DATETIME NULL,
+  checked_at DATETIME NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- The admin updater records the last completed version and progress here.
 CREATE TABLE IF NOT EXISTS shop_schema_updates (
   id TINYINT UNSIGNED NOT NULL PRIMARY KEY,

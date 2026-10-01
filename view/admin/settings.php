@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-$form += ['comgate_enabled' => '0', 'comgate_test' => '1', 'comgate_merchant' => '',
+$form += ['btc_prices_enabled' => '1', 'comgate_enabled' => '0', 'comgate_test' => '1', 'comgate_merchant' => '',
     'comgate_return_base_url' => '', 'gopay_enabled' => '0', 'gopay_test' => '1',
     'gopay_goid' => '', 'gopay_client_id' => '', 'gopay_return_base_url' => '',
     'btcpay_enabled' => '0', 'btcpay_server_url' => '', 'btcpay_store_id' => '',
@@ -17,6 +17,9 @@ $btcpayWebhookSecretConfigured ??= false;
 <form class="panel-panel panel-form" method="post" action="<?= $escape($adminUrl . '?section=settings') ?>">
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
   <input type="hidden" name="action" value="save-checkout-settings">
+  <h2>Zobrazení cen</h2>
+  <label class="panel-check"><input type="checkbox" name="btc_prices_enabled" value="1" <?= $form['btc_prices_enabled'] === '1' ? 'checked' : '' ?>> Ukazovat orientační cenu v BTC vedle ceny v Kč</label>
+  <p class="panel-help">Přepočet používá kurz CoinGecko uložený na 15 minut. Objednávky se dál účtují v Kč; skutečnou částku k platbě bitcoinem určí BTCPay při vytvoření platby. Když kurz není dostupný, zobrazí se jen cena v Kč. Vyžaduje aktualizovanou databázi.</p>
   <h2>Výdejní místa a boxy</h2>
   <p class="panel-help">U Zásilkovny, GLS a Balíkovny zákazník vybere místo přímo v mapě; u PPL po nastavení klíče widgetu. Mapa Balíkovny ani GLS nevyžaduje klíč.</p>
   <?php foreach ($shippingCatalog as $code => $definition): ?>

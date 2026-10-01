@@ -679,6 +679,10 @@
       letter-spacing: -.01em;
     }
 
+    .product-prices, .detail-prices { display: grid; gap: 3px; min-width: 0; }
+    .product-prices small, .detail-prices small { color: var(--muted); font-size: 12px; font-weight: 600; }
+    .detail-prices small { font-size: 14px; }
+
     .add-button {
       display: inline-flex;
       align-items: center;

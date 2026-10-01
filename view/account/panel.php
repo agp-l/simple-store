@@ -1,5 +1,7 @@
 <?php
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+$accountMoney = static fn (int $czk): string => $escape($priceDisplay instanceof \SimpleStore\Pricing\BitcoinPriceDisplay
+    ? $priceDisplay->format($czk) : number_format($czk, 0, ',', ' ') . ' Kč');
 $sectionNames = ['overview' => 'Přehled', 'orders' => 'Objednávky', 'addresses' => 'Moje adresy',
     'payments' => 'Platby', 'settings' => 'Nastavení účtu'];
 $checkoutReturn = $checkoutReturn ?? $accountUrl;
@@ -43,7 +45,7 @@ $checkoutReturn = $checkoutReturn ?? $accountUrl;
                   'processing' => 'Připravuje se', 'ready_to_ship' => 'Připraveno k odeslání', 'test' => 'Testovací objednávka',
                   default => (($order['payment_status'] ?? '') === 'paid' ? 'Zaplaceno, čeká na zpracování' : 'Čeká na platbu'),
               }; ?>
-              <div class="panel-order"><strong>Objednávka <?= $escape($order['order_number']) ?></strong><span><?= $escape($order['created_at']) ?> · <?= $escape($orderLabel) ?></span><strong><?= number_format((int) $order['total_czk'], 0, ',', ' ') ?> Kč</strong>
+              <div class="panel-order"><strong>Objednávka <?= $escape($order['order_number']) ?></strong><span><?= $escape($order['created_at']) ?> · <?= $escape($orderLabel) ?></span><strong><?= $accountMoney((int) $order['total_czk']) ?></strong>
                 <a href="<?= $escape($accountUrl . '?section=orders' . ($orderHistory ? '&history=1' : '') . '&id=' . (int) $order['id']) ?>">Podrobnosti objednávky →</a>
               </div>
             <?php endforeach; ?></div><?php endif; ?>
@@ -60,10 +62,10 @@ $checkoutReturn = $checkoutReturn ?? $accountUrl;
                 'paid' => 'Zaplaceno', 'pending' => 'Čeká na platbu', 'test' => 'Testovací platba', default => 'Neznámý stav',
             }) ?></p>
             <?php foreach ($orderDetail['items'] as $item): ?><?php if (!is_array($item)) continue; ?>
-              <div class="panel-order-line"><span><?= $escape($item['name'] ?? 'Položka') ?> · <?= (int) ($item['quantity'] ?? 0) ?> ks</span><strong><?= number_format((int) ($item['unit_price_czk'] ?? 0) * (int) ($item['quantity'] ?? 0), 0, ',', ' ') ?> Kč</strong></div>
+              <div class="panel-order-line"><span><?= $escape($item['name'] ?? 'Položka') ?> · <?= (int) ($item['quantity'] ?? 0) ?> ks</span><strong><?= $accountMoney((int) ($item['unit_price_czk'] ?? 0) * (int) ($item['quantity'] ?? 0)) ?></strong></div>
             <?php endforeach; ?>
-            <p>Produkty: <?= number_format((int) $orderDetail['subtotal_czk'], 0, ',', ' ') ?> Kč · <?= $escape($orderDetail['shipping']['label'] ?? 'Doprava') ?>: <?= number_format((int) $orderDetail['shipping_czk'], 0, ',', ' ') ?> Kč</p>
-            <p><strong>Celkem <?= number_format((int) $orderDetail['total_czk'], 0, ',', ' ') ?> Kč</strong></p>
+            <p>Produkty: <?= $accountMoney((int) $orderDetail['subtotal_czk']) ?> · <?= $escape($orderDetail['shipping']['label'] ?? 'Doprava') ?>: <?= $accountMoney((int) $orderDetail['shipping_czk']) ?></p>
+            <p><strong>Celkem <?= $accountMoney((int) $orderDetail['total_czk']) ?></strong></p>
             <?php if (!empty($orderDetail['shipping']['pickup_point'])): ?><p>Výdejní místo: <?= $escape($orderDetail['shipping']['pickup_point']) ?>, <?= $escape($orderDetail['shipping']['pickup_address'] ?? '') ?></p>
             <?php else: ?><p>Doručení: <?= $escape($orderDetail['shipping']['recipient'] ?? $orderDetail['shipping']['name'] ?? '') ?>, <?= $escape($orderDetail['shipping']['street'] ?? '') ?>, <?= $escape($orderDetail['shipping']['postal_code'] ?? '') ?> <?= $escape($orderDetail['shipping']['city'] ?? '') ?></p><?php endif; ?>
             <?php if ($orderTrackingUrl !== null): ?><p><a class="panel-text-link" href="<?= $escape($orderTrackingUrl) ?>" target="_blank" rel="noopener noreferrer">Sledovat zásilku u Zásilkovny →</a></p><?php endif; ?>

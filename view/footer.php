@@ -40,5 +40,5 @@ $drawFooterBranch = static function (array $links) use (&$drawFooterBranch, $foo
       </nav>
       <?php endif; ?>
     </div>
-    <div class="wrap footer-bottom"><span>© 2026 dobrodruzi.cz</span><span>Na další cestu připraveni.</span></div>
+    <div class="wrap footer-bottom"><span>© 2026 dobrodruzi.cz</span><?php if (($priceDisplay ?? null) instanceof \SimpleStore\Pricing\BitcoinPriceDisplay && $priceDisplay->updatedAt() !== null): ?><span>BTC přepočet je orientační (kurz <?= $footerEscape($priceDisplay->updatedAt()) ?> UTC). Data poskytuje <a href="https://www.coingecko.com/en/api" target="_blank" rel="noopener noreferrer">CoinGecko</a>.</span><?php else: ?><span>Na další cestu připraveni.</span><?php endif; ?></div>
   </footer>

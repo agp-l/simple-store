@@ -39,6 +39,16 @@ if (!str_contains($cart, 'href="/simple-store/cs/pokladna?step=shipping"') ||
     str_contains($cart, 'Doprava na adresu zatím není nastavená')) {
     throw new RuntimeException('Cart must lead to home delivery before payment settings are complete.');
 }
+$bitcoinData = $data + ['priceDisplay' => new \SimpleStore\Pricing\BitcoinPriceDisplay([
+    'rate' => 2000000.0, 'updated_at' => '2026-10-01 12:00:00',
+])];
+ob_start();
+$renderer->render('cart', $bitcoinData);
+$bitcoinCart = ob_get_clean();
+if (!str_contains($bitcoinCart, '1 000 Kč (≈ 0.00050000 BTC)') ||
+    !str_contains($bitcoinCart, 'Data poskytuje <a href="https://www.coingecko.com/en/api"')) {
+    throw new RuntimeException('The cart must show CZK and indicative BTC with feed attribution.');
+}
 
 ob_start();
 $renderer->render('shipping', $data);

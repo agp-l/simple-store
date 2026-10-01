@@ -15,6 +15,7 @@ $repository = new CheckoutSettingsRepository($db);
 $settings = $repository->load($fallback);
 $shippingCatalog = ShippingPolicy::defaults();
 $form = [
+    'btc_prices_enabled' => ($settings['btc_prices_enabled'] ?? true) === true ? '1' : '0',
     'shipping_price' => [],
     'shipping_enabled' => [],
     'account_display' => $settings['bank_transfer']['account_display'] ?? '',
@@ -64,6 +65,7 @@ if ($method === 'POST') {
             }
         }
         $form['local_test_checkout'] = ($_POST['local_test_checkout'] ?? null) === '1' ? '1' : '0';
+        $form['btc_prices_enabled'] = ($_POST['btc_prices_enabled'] ?? null) === '1' ? '1' : '0';
         $form['comgate_enabled'] = ($_POST['comgate_enabled'] ?? null) === '1' ? '1' : '0';
         $form['comgate_test'] = ($_POST['comgate_test'] ?? null) === '1' ? '1' : '0';
         $form['gopay_enabled'] = ($_POST['gopay_enabled'] ?? null) === '1' ? '1' : '0';

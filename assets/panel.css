@@ -176,7 +176,7 @@
 .panel-order-line { display: flex; align-items: start; justify-content: space-between; gap: 15px; padding: 13px 0; border-top: 1px solid var(--line); font-size: 13px; }
 .panel-order-line > div { display: grid; gap: 5px; min-width: 0; }
 .panel-order-line small { color: var(--muted); overflow-wrap: anywhere; }
-.panel-order-line > strong { white-space: nowrap; }
+.panel-order-line > strong { text-align: right; overflow-wrap: anywhere; }
 .panel-order-totals { margin: 13px 0 0; padding-top: 13px; border-top: 1px solid var(--line); }
 .panel-order-totals div { display: flex; justify-content: space-between; gap: 15px; padding: 5px 0; font-size: 13px; }
 .panel-order-totals div:last-child { margin-top: 7px; padding-top: 13px; border-top: 1px solid var(--line); font-size: 16px; font-weight: 750; }

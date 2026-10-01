@@ -27,6 +27,7 @@ final class PageRenderer
         $language = (string) ($data['language'] ?? 'cs');
         $basePath = (string) ($data['basePath'] ?? '/');
         $siteRoot = htmlspecialchars($basePath, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $priceDisplay = $data['priceDisplay'] ?? null;
         $primaryMenu = $data['primaryMenu'] ?? [];
         $utilityMenu = $data['utilityMenu'] ?? [];
         $footerMenu = $data['footerMenu'] ?? [];
@@ -132,6 +133,7 @@ final class PageRenderer
         $basePath = (string) $data['basePath'];
         $language = (string) $data['language'];
         $siteRoot = htmlspecialchars($basePath, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $priceDisplay = $data['priceDisplay'] ?? null;
         $categoryLabels = $data['categoryLabels'] ?? [];
         $canManageContent = (bool) ($data['canManageContent'] ?? false);
         $managingCatalog = (bool) ($data['managingCatalog'] ?? false);
