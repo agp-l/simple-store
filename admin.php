@@ -193,7 +193,8 @@ try {
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }
-    if ($action === 'save-checkout-settings' || ($method !== 'POST' && $section === 'settings')) {
+    if (in_array($action, ['save-checkout-settings', 'save-mail-settings', 'mail-test'], true) ||
+        ($method !== 'POST' && $section === 'settings')) {
         require __DIR__ . '/src/Admin/settings.php';
         require __DIR__ . '/view/admin/layout.php';
         exit;
