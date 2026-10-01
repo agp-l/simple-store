@@ -15,6 +15,7 @@ class MeekroDB
     public array $archivedShipments = [];
     public array $gopayAttempts = [];
     public array $comgateAttempts = [];
+    public array $btcpayAttempts = [];
     public bool $failEvent = false;
     public bool $failDelete = false;
     public bool $eventsInstalled = true;
@@ -26,7 +27,8 @@ class MeekroDB
     {
         $this->snapshot = [$this->orders, $this->events, $this->financialEvents,
             $this->carriers, $this->archivedSales, $this->shipments, $this->cancelledShipments,
-            $this->archivedShipments, $this->invoices, $this->gopayAttempts, $this->comgateAttempts];
+            $this->archivedShipments, $this->invoices, $this->gopayAttempts,
+            $this->comgateAttempts, $this->btcpayAttempts];
     }
 
     public function commit(): void
@@ -39,7 +41,8 @@ class MeekroDB
         if ($this->snapshot !== null) {
             [$this->orders, $this->events, $this->financialEvents,
                 $this->carriers, $this->archivedSales, $this->shipments, $this->cancelledShipments,
-                $this->archivedShipments, $this->invoices, $this->gopayAttempts, $this->comgateAttempts] = $this->snapshot;
+                $this->archivedShipments, $this->invoices, $this->gopayAttempts,
+                $this->comgateAttempts, $this->btcpayAttempts] = $this->snapshot;
             $this->snapshot = null;
         }
     }
@@ -55,13 +58,14 @@ class MeekroDB
                 'shop_packeta_shipments', 'shop_packeta_cancelled_shipments',
                 'shop_carrier_shipments' => 1,
                 'shop_sale_lines', 'shop_deleted_sale_lines', 'shop_deleted_shipments',
-                'shop_comgate_payments', 'shop_gopay_payments' => 1,
+                'shop_comgate_payments', 'shop_gopay_payments', 'shop_btcpay_payments' => 1,
                 'shop_tax_entries', 'shop_mail_outbox', 'shop_stock_movements' => 0,
                 default => throw new RuntimeException('Unknown table check.'),
             };
         }
         if (str_contains($sql, 'information_schema.COLUMNS')) {
-            return in_array($args[0], ['shop_gopay_payments', 'shop_comgate_payments', 'shop_invoices'], true) ? 1 : 0;
+            return in_array($args[0], ['shop_gopay_payments', 'shop_comgate_payments',
+                'shop_btcpay_payments', 'shop_invoices'], true) ? 1 : 0;
         }
         $id = $args[0];
         if (str_starts_with(ltrim($sql), 'SELECT') &&
@@ -100,6 +104,9 @@ class MeekroDB
         }
         if (str_contains($sql, 'FROM shop_gopay_payments')) {
             return $this->gopayAttempts[$args[0]] ?? [];
+        }
+        if (str_contains($sql, 'FROM shop_btcpay_payments')) {
+            return $this->btcpayAttempts[$args[0]] ?? [];
         }
         if (str_starts_with(ltrim($sql), 'SELECT') &&
             str_contains($sql, 'FROM shop_order_admin_events')) {
@@ -163,6 +170,12 @@ class MeekroDB
                     $this->gopayAttempts[$args[2]][$index]['order_id'] = null;
                     $this->gopayAttempts[$args[2]][$index]['order_number'] = $args[0];
                     $this->gopayAttempts[$args[2]][$index]['total_czk'] = $args[1];
+                }
+            } elseif (str_contains($sql, 'shop_btcpay_payments')) {
+                foreach ($this->btcpayAttempts[$args[2]] ?? [] as $index => $row) {
+                    $this->btcpayAttempts[$args[2]][$index]['order_id'] = null;
+                    $this->btcpayAttempts[$args[2]][$index]['order_number'] = $args[0];
+                    $this->btcpayAttempts[$args[2]][$index]['total_czk'] = $args[1];
                 }
             } else {
                 foreach ($this->comgateAttempts[$args[2]] ?? [] as $index => $row) {
@@ -387,6 +400,23 @@ expectInvalid(static fn () => $controls->deleteOrder(107, 'DB-20260930-107', 3, 
     'Uncertain Packeta submission was discarded without external reconciliation.');
 if (!isset($db->orders[107]) || !isset($db->shipments[107])) {
     throw new RuntimeException('An unresolved parcel must remain linked for reconciliation.');
+}
+
+$db->orders[108] = orderRow(108, 'completed', 'btcpay');
+$db->btcpayAttempts[108] = [['order_id' => 108, 'status' => 'settled']];
+$controls->deleteOrder(108, 'DB-20260930-108', 3, 'Odstranění duplicitní úhrady BTCPay.');
+if (isset($db->orders[108]) || $db->btcpayAttempts[108][0]['order_id'] !== null ||
+    $db->btcpayAttempts[108][0]['order_number'] !== 'DB-20260930-108' ||
+    $db->btcpayAttempts[108][0]['total_czk'] !== 1790) {
+    throw new RuntimeException('BTCPay invoice lost its order snapshot after deletion.');
+}
+
+$db->orders[109] = orderRow(109, 'new', 'btcpay', 'pending');
+$db->btcpayAttempts[109] = [['order_id' => 109, 'status' => 'uncertain']];
+expectInvalid(static fn () => $controls->deleteOrder(109, 'DB-20260930-109', 3, $reason),
+    'An uncertain BTCPay invoice was detached without reconciliation.');
+if (!isset($db->orders[109]) || $db->btcpayAttempts[109][0]['order_id'] !== 109) {
+    throw new RuntimeException('Failed BTCPay deletion did not roll back its invoice attempt.');
 }
 
 $db->orders[17] = orderRow(17, 'test', 'test', 'test');
