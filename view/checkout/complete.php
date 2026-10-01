@@ -9,16 +9,19 @@ $paymentPaid = ($order['payment_status'] ?? '') === 'paid';
 $testOrder = ($order['payment_method'] ?? '') === 'test';
 $comgateOrder = ($order['payment_method'] ?? '') === 'comgate';
 $gopayOrder = ($order['payment_method'] ?? '') === 'gopay';
+$btcpayOrder = ($order['payment_method'] ?? '') === 'btcpay';
 $comgateStatus = is_array($comgateState ?? null) ? (string) ($comgateState['status'] ?? '') : '';
 $gopayStatus = is_array($gopayState ?? null) ? (string) ($gopayState['status'] ?? '') : '';
+$btcpayStatus = is_array($btcpayState ?? null) ? (string) ($btcpayState['status'] ?? '') : '';
 $gopayRefund = $gopayOrder && in_array($gopayStatus, ['refunded', 'partially_refunded'], true)
     ? $gopayStatus : '';
-$onlineOrder = $comgateOrder || $gopayOrder;
-$onlineProvider = $gopayOrder ? 'GoPay' : 'Comgate';
-$onlineStatus = $gopayOrder ? $gopayStatus : $comgateStatus;
+$onlineOrder = $comgateOrder || $gopayOrder || $btcpayOrder;
+$onlineProvider = $btcpayOrder ? 'BTCPay Server' : ($gopayOrder ? 'GoPay' : 'Comgate');
+$onlineStatus = $btcpayOrder ? $btcpayStatus : ($gopayOrder ? $gopayStatus : $comgateStatus);
 $onlineUncertain = in_array($onlineStatus, ['creating', 'uncertain'], true);
-$onlineAvailable = $gopayOrder ? ($gopayAvailable ?? false) : ($comgateAvailable ?? false);
-$onlineAction = $gopayOrder ? 'gopay_pay' : 'comgate_pay';
+$onlineAvailable = $btcpayOrder ? ($btcpayAvailable ?? false) :
+    ($gopayOrder ? ($gopayAvailable ?? false) : ($comgateAvailable ?? false));
+$onlineAction = $btcpayOrder ? 'btcpay_pay' : ($gopayOrder ? 'gopay_pay' : 'comgate_pay');
 if ($testOrder) {
     $paymentMessage = 'je testovací. Nic neplaťte; nebyly vytvořeny platební údaje ani QR kód.';
 } elseif ($gopayRefund === 'refunded') {
@@ -28,7 +31,7 @@ if ($testOrder) {
 } elseif ($paymentPaid) {
     $paymentMessage = 'je zaplacená. Děkujeme.';
 } elseif ($onlineOrder) {
-    $paymentMessage = in_array($onlineStatus, ['cancelled', 'canceled', 'timeouted', 'rejected'], true)
+    $paymentMessage = in_array($onlineStatus, ['cancelled', 'canceled', 'timeouted', 'expired', 'invalid', 'rejected'], true)
         ? 'čeká na další pokus o online platbu přes ' . $onlineProvider . '.'
         : 'čeká na potvrzení online platby přes ' . $onlineProvider . '.';
 } else {
@@ -62,7 +65,7 @@ if ($testOrder) {
     <?php elseif ($onlineOrder && !$paymentPaid): ?>
     <section class="checkout-panel checkout-bank" aria-labelledby="checkout-online-title">
       <h2 id="checkout-online-title">Online platba <?= $checkoutEscape($onlineProvider) ?></h2>
-      <p><?= in_array($onlineStatus, ['cancelled', 'canceled', 'timeouted'], true) ? 'Platba byla zrušena nebo nebyla dokončena. Objednávku můžete zaplatit znovu.' : ($onlineStatus === 'rejected' ? 'Platební brána nepřijala poslední pokus o platbu. Můžete to zkusit znovu.' : ($onlineUncertain ? 'Stav posledního pokusu o platbu se ověřuje. Kontaktujte obchod, pokud se stav brzy neaktualizuje.' : 'Objednávka je uložená. Pokud jste platbu nedokončili, můžete se k ní vrátit.')) ?></p>
+      <p><?= in_array($onlineStatus, ['cancelled', 'canceled', 'timeouted', 'expired', 'invalid'], true) ? 'Platba byla zrušena nebo nebyla dokončena. Objednávku můžete zaplatit znovu.' : ($onlineStatus === 'rejected' ? 'Platební brána nepřijala poslední pokus o platbu. Můžete to zkusit znovu.' : ($onlineUncertain ? 'Stav posledního pokusu o platbu se ověřuje. Kontaktujte obchod, pokud se stav brzy neaktualizuje.' : 'Objednávka je uložená. Pokud jste platbu nedokončili, můžete se k ní vrátit.')) ?></p>
       <p><strong>Částka k úhradě: <?= $checkoutMoney($paymentAmount) ?></strong></p>
       <?php if ($onlineAvailable && !$onlineUncertain): ?><form method="post" action="<?= $checkoutEscape($orderUrl) ?>"><input type="hidden" name="csrf" value="<?= $checkoutEscape($cartToken) ?>"><input type="hidden" name="action" value="<?= $checkoutEscape($onlineAction) ?>"><button type="submit" class="checkout-primary">Přejít k online platbě</button></form><?php elseif (!$onlineAvailable): ?><p class="checkout-fineprint">Online platba je dočasně nedostupná. Kontaktujte prosím obchod a neprovádějte další platbu bez ověření objednávky.</p><?php endif; ?>
       <?php if ($orderUrl !== ''): ?><p class="checkout-fineprint">Uložte si odkaz na objednávku pro pozdější kontrolu stavu. Potvrzení o přijetí objednávky může přijít také e-mailem.</p><label class="checkout-return-link">Odkaz na objednávku <input type="text" readonly value="<?= $checkoutEscape($orderUrl) ?>"></label><?php endif; ?>

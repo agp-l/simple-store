@@ -126,6 +126,13 @@ $db->order['payment_method'] = 'gopay';
 $db->order['payment_status'] = 'pending';
 rejectsShipping(static fn () => $shipping->change(14, 1, 'ppl_home', 'gls_home', 'Neuhrazená brána'),
     'Unpaid gateway order was changed.');
+$db->order['payment_method'] = 'btcpay';
+rejectsShipping(static fn () => $shipping->change(14, 1, 'ppl_home', 'gls_home', 'Neuhrazený bitcoin'),
+    'Unpaid BTCPay order was changed.');
+$db->order['payment_status'] = 'paid';
+expectOrderShipping(isset($shipping->optionsFor($db->order + [
+    'shipping_ordered' => $original, 'shipping' => $original])['ppl_home']),
+    'Paid BTCPay order must allow an authorized change of delivery method.');
 
 $pickupDb = new MeekroDB();
 $pickup = ['method' => 'gls_pickup', 'label' => 'GLS – ParcelShop',

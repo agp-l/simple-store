@@ -2,7 +2,7 @@
 
 Jednoduchý obchod, redakční systém a zákaznický účet v PHP 8.1+ a MySQL. Obchod, administrace i účet používají stejnou hlavičku a patičku z `view/`. Architektura a důvody jednotlivých rozhodnutí jsou popsané v [docs/architecture.md](docs/architecture.md).
 
-Online platby: [Comgate](docs/comgate.md) a [GoPay](docs/gopay.md). GoPay používá oficiální PHP SDK, testovací přístupy vydává přímo GoPay a ostrý provoz podléhá jejich kontrole integrace.
+Online platby: [Comgate](docs/comgate.md), [GoPay](docs/gopay.md) a [BTCPay Server](docs/btcpay.md). GoPay používá oficiální PHP SDK; BTCPay komunikuje se serverem přes Greenfield API.
 
 **Nejdřív spusť v kořeni projektu:**
 
@@ -51,7 +51,7 @@ Aktuální `database/schema.sql` doplní do `users` zákaznický e-mail, jméno 
 
 ### Košík, objednávka a bankovní převod
 
-Košík na `/cs/kosik` ukládá vybrané produkty a množství do samostatné PHP session. Pokladna na `/cs/pokladna` kontroluje aktuálně publikované produkty a jejich ceny v databázi; cenu ani dopravu nepřebírá z prohlížeče. Zákazník může objednat i bez registrace, případně se při nákupu přihlásit nebo registrovat a vrátit se do pokladny. Zadá jméno, e-mail, telefon a adresu nebo výdejní místo, zkontroluje rozepsaný souhrn a potvrdí obchodní podmínky. Platba je zatím převodem v Kč.
+Košík na `/cs/kosik` ukládá vybrané produkty a množství do samostatné PHP session. Pokladna na `/cs/pokladna` kontroluje aktuálně publikované produkty a jejich ceny v databázi; cenu ani dopravu nepřebírá z prohlížeče. Zákazník může objednat i bez registrace, případně se při nákupu přihlásit nebo registrovat a vrátit se do pokladny. Zadá jméno, e-mail, telefon a adresu nebo výdejní místo, zkontroluje rozepsaný souhrn a potvrdí obchodní podmínky. Dostupné platby závisí na nastavení obchodu.
 
 V administraci lze každou dopravu zapnout či vypnout a určit její cenu. Výchozí výdejní místa: PPL 80 Kč, Zásilkovna 90 Kč, GLS ParcelShop 59 Kč a Balíkovna 120 Kč. Na adresu: GLS 79 Kč, PPL 99 Kč, Česká pošta Balík Do ruky 121 Kč, DPD 99 Kč a Zásilkovna domů HD 121 Kč. Cenu položek i dopravy vypočítá server a objednávka si uloží vlastní kopii ceny a vybrané metody. Zásilkovna používá oficiální widget v6: zákazník v něm klikne na výdejní místo či Z-BOX, formulář uloží ID bodu a server před pokračováním i před vytvořením objednávky ověří jeho aktuální dostupnost a získá skutečný název a adresu. Bez výběru bodu objednávka nepokračuje.
 
@@ -98,7 +98,7 @@ Jakmile je vyplněný platný bankovní účet a příjemce, lze odeslat skuteč
 
 Po potvrzení běžné objednávky vznikne řádek v `shop_orders` s kopií položek, cen, dopravy a bankovních údajů platných při objednání. Stránka `/cs/objednavka/<token>` ukáže číslo účtu, IBAN, částku a jedinečný variabilní symbol. QR platba se vytvoří v prohlížeči z údajů připravených PHP; údaje pro ruční převod jsou k dispozici i bez JavaScriptu. **Objednávka hosta nemá přihlašovací účet:** odkaz s tokenem si musí zákazník uložit. Potvrzení se zatím neposílá e-mailem. S odkazem zacházej jako se soukromým údajem, protože umožňuje zobrazit platební údaje objednávky. Přihlášený zákazník najde své objednávky také v účtu.
 
-V `admin.php?section=orders` správce vidí přijaté objednávky. Po kontrole **částky a variabilního symbolu na bankovním výpisu** ručně označí převod jako přijatý; stav se z banky nenačítá automaticky. Objednávka zatím nerezervuje skladové kusy ani nevytváří zásilku u dopravce. Sloupce `payment_method` a `provider_reference` připravují záznam pro další platební metody, například Comgate nebo BTCPay Server. Žádná z nich zatím není napojená. Náhodný klíč v session a unikátní `idempotency_key` brání dvojímu vytvoření téže objednávky při opakovaném odeslání. Ověřování webhooků a jejich idempotentní zpracování bude potřeba navrhnout až při integraci konkrétního poskytovatele.
+V `admin.php?section=orders` správce vidí přijaté objednávky. Po kontrole **částky a variabilního symbolu na bankovním výpisu** ručně označí bankovní převod jako přijatý; stav se z banky nenačítá automaticky. U Comgate, GoPay a BTCPay lze v detailu znovu ověřit stav přímo u poskytovatele. Náhodný klíč v session a unikátní `idempotency_key` brání dvojímu vytvoření téže objednávky při opakovaném odeslání. Pro podrobnosti o bitcoinové platbě viz [nastavení BTCPay](docs/btcpay.md).
 
 ### Opravy, mazání a čísla objednávek
 

@@ -170,6 +170,28 @@ CREATE TABLE IF NOT EXISTS shop_gopay_payments (
   CONSTRAINT gopay_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Keep invoice attempts even when an administrator removes an order. The
+-- immutable order/amount snapshot permits safe late webhook reconciliation.
+CREATE TABLE IF NOT EXISTS shop_btcpay_payments (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  order_id BIGINT UNSIGNED NULL,
+  order_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  total_czk INT UNSIGNED NOT NULL,
+  status VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  store_id VARCHAR(100) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  invoice_id VARCHAR(100) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  redirect_url VARCHAR(2048) NULL,
+  return_token CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  last_error VARCHAR(500) NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (id),
+  UNIQUE KEY btcpay_invoice_id (invoice_id),
+  UNIQUE KEY btcpay_return_token (return_token),
+  KEY btcpay_order_attempt (order_id, id),
+  CONSTRAINT btcpay_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- One reservation per order prevents two API calls for the same parcel.
 -- An uncertain network result must be reconciled in the Packeta client section.
 CREATE TABLE IF NOT EXISTS shop_packeta_shipments (

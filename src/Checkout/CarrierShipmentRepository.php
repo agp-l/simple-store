@@ -47,7 +47,7 @@ final class CarrierShipmentRepository
             $shipping = $order === null ? null : json_decode((string)
                 ($order['dispatch_shipping_json'] ?? $order['shipping_json']), true);
             if ($order === null || !is_array($shipping) ||
-                !in_array($order['payment_method'], ['bank_transfer', 'comgate', 'gopay'], true) ||
+                !in_array($order['payment_method'], ['bank_transfer', 'comgate', 'gopay', 'btcpay'], true) ||
                 $order['payment_status'] !== 'paid' ||
                 ($order['fulfillment_source'] ?? 'own') !== 'own' ||
                 in_array($order['status'], ['shipped', 'completed', 'cancelled', 'test'], true) ||
@@ -58,6 +58,9 @@ final class CarrierShipmentRepository
             }
             if ($order['payment_method'] === 'gopay') {
                 (new GoPayPaidOrderGuard($this->db))->assertPaid($orderId,
+                    (string) ($order['provider_reference'] ?? ''));
+            } elseif ($order['payment_method'] === 'btcpay') {
+                (new BTCPayPaidOrderGuard($this->db))->assertPaid($orderId,
                     (string) ($order['provider_reference'] ?? ''));
             }
             $row = $this->db->queryFirstRow(
@@ -105,6 +108,9 @@ final class CarrierShipmentRepository
             }
             if ($order['payment_method'] === 'gopay') {
                 (new GoPayPaidOrderGuard($this->db))->assertPaid($orderId,
+                    (string) ($order['provider_reference'] ?? ''));
+            } elseif ($order['payment_method'] === 'btcpay') {
+                (new BTCPayPaidOrderGuard($this->db))->assertPaid($orderId,
                     (string) ($order['provider_reference'] ?? ''));
             }
             $this->db->query('UPDATE shop_carrier_shipments SET status=%s, tracking_number=%s,

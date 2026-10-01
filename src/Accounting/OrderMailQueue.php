@@ -43,8 +43,12 @@ final class OrderMailQueue
             $lines[] = 'Číslo účtu: ' . ($bank['account_display'] ?? '');
             $lines[] = 'Variabilní symbol: ' . ($order['variable_symbol'] ?? '');
             $lines[] = 'Splatnost: ' . ($order['payment_due_at'] ?? '');
-        } elseif (in_array($order['payment_method'] ?? '', ['comgate', 'gopay'], true)) {
-            $gateway = $order['payment_method'] === 'gopay' ? 'GoPay' : 'Comgate';
+        } elseif (in_array($order['payment_method'] ?? '', ['comgate', 'gopay', 'btcpay'], true)) {
+            $gateway = match ($order['payment_method']) {
+                'gopay' => 'GoPay',
+                'btcpay' => 'BTCPay Server',
+                default => 'Comgate',
+            };
             $lines[] = '';
             $lines[] = 'Zvolená platba: online přes ' . $gateway . '.';
             $lines[] = 'O výsledku platby rozhoduje potvrzení brány.';
@@ -85,6 +89,7 @@ final class OrderMailQueue
         $lines[] = match ($invoice['payment_method'] ?? 'bank_transfer') {
             'comgate' => 'Uhrazeno online přes Comgate.',
             'gopay' => 'Platba online přes GoPay byla při vystavení faktury potvrzená.',
+            'btcpay' => 'Platba přes BTCPay Server byla při vystavení faktury potvrzená.',
             default => 'Uhrazeno bankovním převodem · VS: ' . ($invoice['variable_symbol'] ?? ''),
         };
         $lines[] = 'Nejsem plátce DPH.';

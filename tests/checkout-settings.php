@@ -49,6 +49,8 @@ if ($fallback['bank_transfer']['account_display'] !== '' ||
         'secret' => '', 'return_base_url' => ''] ||
     $fallback['gopay'] !== ['enabled' => false, 'test' => true, 'goid' => '',
         'client_id' => '', 'client_secret' => '', 'return_base_url' => ''] ||
+    $fallback['btcpay'] !== ['enabled' => false, 'server_url' => '', 'store_id' => '',
+        'api_key' => '', 'webhook_secret' => '', 'return_base_url' => ''] ||
     count($fallback['shipping_methods']) !== 9 ||
     $repo->load($fallback) !== $fallback) {
     throw new RuntimeException('Old private checkout settings did not receive the new defaults.');
@@ -70,6 +72,10 @@ $input = ['shipping_price' => array_map('strval', array_column(ShippingPolicy::d
     'gopay_enabled' => '1', 'gopay_test' => '1', 'gopay_goid' => '1234567890',
     'gopay_client_id' => 'sandbox-client', 'gopay_client_secret' => 'sandbox-secret',
     'gopay_return_base_url' => 'https://obchod.example/simple-store/',
+    'btcpay_enabled' => '1', 'btcpay_server_url' => 'https://btcpay.example/pay/',
+    'btcpay_store_id' => 'TestStore123', 'btcpay_api_key' => 'btcpay-test-key',
+    'btcpay_webhook_secret' => 'btcpay-test-webhook-secret',
+    'btcpay_return_base_url' => 'https://obchod.example/simple-store/',
     'local_test_checkout' => '1'];
 $input['shipping_price'] = array_combine(array_keys(ShippingPolicy::defaults()),
     array_values($input['shipping_price']));
@@ -87,6 +93,10 @@ if ($loaded != $saved || $saved['bank_transfer']['iban'] !== $generated->snapsho
     $saved['gopay'] !== ['enabled' => true, 'test' => true, 'goid' => '1234567890',
         'client_id' => 'sandbox-client', 'client_secret' => 'sandbox-secret',
         'return_base_url' => 'https://obchod.example/simple-store'] ||
+    $saved['btcpay'] !== ['enabled' => true, 'server_url' => 'https://btcpay.example/pay',
+        'store_id' => 'TestStore123', 'api_key' => 'btcpay-test-key',
+        'webhook_secret' => 'btcpay-test-webhook-secret',
+        'return_base_url' => 'https://obchod.example/simple-store'] ||
     $saved['packeta']['sender'] !== 'Dobrodruzi') {
     throw new RuntimeException('Checkout settings were not validated and loaded from the database.');
 }
@@ -94,11 +104,14 @@ if ($saved['ppl']['widget_key'] !== 'public-ppl-key-123') {
     throw new RuntimeException('PPL widget key was not persisted.');
 }
 $withoutNewPassword = $repo->save(array_replace($input,
-    ['packeta_api_password' => '', 'comgate_secret' => '', 'gopay_client_secret' => '']),
+    ['packeta_api_password' => '', 'comgate_secret' => '', 'gopay_client_secret' => '',
+        'btcpay_api_key' => '', 'btcpay_webhook_secret' => '']),
     '/simple-store/', $saved);
 if ($withoutNewPassword['packeta']['api_password'] !== 'private-test-password' ||
     $withoutNewPassword['comgate']['secret'] !== 'comgate-test-secret' ||
-    $withoutNewPassword['gopay']['client_secret'] !== 'sandbox-secret') {
+    $withoutNewPassword['gopay']['client_secret'] !== 'sandbox-secret' ||
+    $withoutNewPassword['btcpay']['api_key'] !== 'btcpay-test-key' ||
+    $withoutNewPassword['btcpay']['webhook_secret'] !== 'btcpay-test-webhook-secret') {
     throw new RuntimeException('Saving other settings erased an API secret.');
 }
 $cleared = $repo->save(array_replace($input, ['packeta_api_password' => '',
@@ -116,6 +129,13 @@ $gopayCleared = $repo->save(array_replace($input, ['gopay_client_secret' => '',
 if ($gopayCleared['gopay']['client_secret'] !== '' || !$gopayCleared['gopay']['enabled'] ||
     $gopayCleared['comgate']['secret'] !== 'comgate-test-secret') {
     throw new RuntimeException('Explicit GoPay secret removal changed the wrong setting.');
+}
+$btcpayCleared = $repo->save(array_replace($input, ['btcpay_api_key' => '',
+    'btcpay_webhook_secret' => '', 'btcpay_enabled' => '0',
+    'btcpay_clear_api_key' => '1', 'btcpay_clear_webhook_secret' => '1']), '/simple-store/', $saved);
+if ($btcpayCleared['btcpay']['api_key'] !== '' ||
+    $btcpayCleared['btcpay']['webhook_secret'] !== '' || $btcpayCleared['btcpay']['enabled']) {
+    throw new RuntimeException('Explicit BTCPay key removal changed the wrong setting.');
 }
 $repo->save($input, '/simple-store/');
 foreach ([['shipping_price' => array_replace($input['shipping_price'], ['ppl_home' => '-1'])],
@@ -140,6 +160,19 @@ foreach ([['shipping_price' => array_replace($input['shipping_price'], ['ppl_hom
     ['gopay_return_base_url' => 'https://obchod.example/another-site'],
     ['gopay_return_base_url' => 'https://obchod.example/simple-store?redirect=evil'],
     ['gopay_return_base_url' => ''],
+    ['btcpay_server_url' => 'http://btcpay.example'],
+    ['btcpay_server_url' => 'https://localhost'],
+    ['btcpay_server_url' => 'https://user@btcpay.example'],
+    ['btcpay_server_url' => 'https://btcpay.example/pay/../other'],
+    ['btcpay_server_url' => 'https://btcpay.example/pay?redirect=evil'],
+    ['btcpay_server_url' => ''],
+    ['btcpay_store_id' => 'bad store id'],
+    ['btcpay_api_key' => "bad\nkey"],
+    ['btcpay_webhook_secret' => "bad\nsecret"],
+    ['btcpay_return_base_url' => 'http://obchod.example/simple-store'],
+    ['btcpay_return_base_url' => 'https://localhost/simple-store'],
+    ['btcpay_return_base_url' => 'https://obchod.example/another-site'],
+    ['btcpay_return_base_url' => ''],
     ['ppl_widget_key' => 'invalid key with spaces']] as $change) {
     try {
         $repo->save(array_replace($input, $change), '/simple-store/');
@@ -166,6 +199,14 @@ $withoutGoPay = $repo->save(array_replace($input,
     ['gopay_enabled' => '0', 'gopay_return_base_url' => '']), '/simple-store/');
 if ($withoutGoPay['gopay']['enabled'] || $withoutGoPay['gopay']['return_base_url'] !== '') {
     throw new RuntimeException('A disabled GoPay gateway must not require a return URL.');
+}
+$withoutBtcpay = $repo->save(array_replace($input, [
+    'btcpay_enabled' => '0', 'btcpay_server_url' => '', 'btcpay_store_id' => '',
+    'btcpay_api_key' => '', 'btcpay_webhook_secret' => '', 'btcpay_return_base_url' => '',
+]), '/simple-store/');
+if ($withoutBtcpay['btcpay']['enabled'] || $withoutBtcpay['btcpay']['server_url'] !== '' ||
+    $withoutBtcpay['btcpay']['return_base_url'] !== '') {
+    throw new RuntimeException('A disabled BTCPay gateway must not require connection settings.');
 }
 $db->json = json_encode(['shipping_methods' => ['home' => [
     'label' => 'Starý kurýr', 'price_czk' => 149, 'requires_address' => true,

@@ -27,7 +27,7 @@ $balanceKind = ['receivable'=>'Pohledávka', 'liability'=>'Dluh', 'asset'=>'Maje
         <div><dt>Rozdíl</dt><dd><strong><?= $taxMoney($taxSummary['income'] - $taxSummary['expenses']) ?></strong></dd></div>
         <div><dt>Neuhrazené objednávky</dt><dd><?= count($taxReceivables) ?> v posledních 100</dd></div>
       </dl>
-      <p class="panel-help">Deník používá datum příjmu či výdaje zadané správcem. Potvrzení platby objednávky samo nevytváří bankovní pohyb: převod zapiš na detailu objednávky podle výpisu, výplatu od Comgate nebo GoPay a související poplatky zde podle vyúčtování brány a bankovního výpisu. Souhrn nepředstavuje hotové daňové přiznání.</p>
+      <p class="panel-help">Deník používá datum příjmu či výdaje zadané správcem. Potvrzení platby objednávky samo nevytváří bankovní pohyb: převod zapiš na detailu objednávky podle výpisu, výplatu od Comgate nebo GoPay a související poplatky zde podle vyúčtování brány a bankovního výpisu. Platbu přes BTCPay eviduj podle skutečného převodu a dokladů peněženky či směnárny. Souhrn nepředstavuje hotové daňové přiznání.</p>
       <?php if (!\SimpleStore\Accounting\TaxEvidenceRepository::invoiceReady($taxSettings)): ?><p class="panel-notice">Pro vystavování faktur doplň <a href="<?= $escape($taxUrl . '&tab=settings') ?>">údaje OSVČ</a>.</p><?php endif; ?>
     </section>
     <section class="panel-panel"><h2>Na konci roku zkontroluj</h2>

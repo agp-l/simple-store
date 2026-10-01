@@ -170,7 +170,7 @@ final class OrderShippingRepository
         if (($order['payment_method'] ?? '') === 'bank_transfer') {
             return in_array($order['payment_status'] ?? '', ['pending', 'paid'], true);
         }
-        return in_array($order['payment_method'] ?? '', ['comgate', 'gopay'], true) &&
+        return in_array($order['payment_method'] ?? '', ['comgate', 'gopay', 'btcpay'], true) &&
             ($order['payment_status'] ?? '') === 'paid';
     }
 

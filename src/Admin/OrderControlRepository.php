@@ -160,7 +160,7 @@ final class OrderControlRepository
             $test = ($order['payment_method'] ?? '') === 'test' &&
                 ($order['payment_status'] ?? '') === 'test' && ($order['status'] ?? '') === 'test';
             $actualSale = in_array($order['payment_method'] ?? '',
-                ['bank_transfer', 'comgate', 'gopay', 'legacy'], true);
+                ['bank_transfer', 'comgate', 'gopay', 'btcpay', 'legacy'], true);
             $carrier = $this->tableExists('shop_carrier_shipments') ? $this->db->queryFirstRow(
                 'SELECT status, method, tracking_number FROM shop_carrier_shipments
                  WHERE order_id=%i LIMIT 1 FOR UPDATE', $orderId
@@ -199,7 +199,7 @@ final class OrderControlRepository
 
             // Provider rows survive with immutable order/amount snapshots. An in-flight
             // create request has no reliable provider ID yet and must be reconciled first.
-            foreach (['shop_comgate_payments', 'shop_gopay_payments'] as $paymentTable) {
+            foreach (['shop_comgate_payments', 'shop_gopay_payments', 'shop_btcpay_payments'] as $paymentTable) {
                 if (!$this->tableExists($paymentTable)) continue;
                 $attempts = $this->db->query('SELECT status FROM ' . $paymentTable .
                     ' WHERE order_id=%i FOR UPDATE', $orderId);

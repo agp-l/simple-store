@@ -11,6 +11,7 @@ use SimpleStore\Checkout\LocalCheckoutPreview;
 use SimpleStore\Checkout\CheckoutSettingsRepository;
 use SimpleStore\Checkout\ComgatePaymentService;
 use SimpleStore\Checkout\GoPayPaymentService;
+use SimpleStore\Checkout\BTCPayPaymentService;
 use SimpleStore\Checkout\PacketaPickupPoint;
 use SimpleStore\Checkout\PplPickupPoint;
 use SimpleStore\Checkout\ShippingPolicy;
@@ -122,6 +123,13 @@ try {
             $candidate = new GoPayPaymentService($db, $gopaySettings);
             if ($candidate->installed()) $gopay = $candidate;
         }
+        $btcpay = null;
+        $btcpaySettings = $checkoutConfig['btcpay'] ?? [];
+        if (is_array($btcpaySettings) && ($btcpaySettings['server_url'] ?? '') !== '' &&
+            ($btcpaySettings['store_id'] ?? '') !== '' && ($btcpaySettings['api_key'] ?? '') !== '') {
+            $candidate = new BTCPayPaymentService($db, $btcpaySettings);
+            if ($candidate->installed()) $btcpay = $candidate;
+        }
         $localPreview = LocalCheckoutPreview::available($_SERVER, (bool) $site['debug'],
             ($checkoutConfig['local_test_checkout'] ?? true) === true);
         $customerId = null;
@@ -147,7 +155,7 @@ try {
             $shipping, $orders, $bank, $customerId, (string) ($checkoutConfig['terms_url'] ?? ''),
             $localPreview, $customerProfile, $customerAddresses, $packeta, $ppl, null, null,
             new OrderMailQueue($db), (string) ($taxSettings['mail_from'] ?? ''),
-            new InvoiceRepository($db), $comgate, $gopay);
+            new InvoiceRepository($db), $comgate, $gopay, $btcpay);
         $controller->handle($route);
         exit;
     }

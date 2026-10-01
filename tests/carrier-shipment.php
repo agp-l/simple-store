@@ -62,6 +62,11 @@ $comgateOrder = array_replace($order, ['payment_method' => 'comgate',
 if (CarrierShipmentDraft::fromOrder($comgateOrder, $input)['pickup_code'] !== 'B10000') {
     throw new RuntimeException('A paid Comgate order cannot prepare its carrier shipment.');
 }
+$btcpayOrder = array_replace($order, ['payment_method' => 'btcpay',
+    'provider_reference' => 'bitcoin-invoice-123']);
+if (CarrierShipmentDraft::fromOrder($btcpayOrder, $input)['pickup_code'] !== 'B10000') {
+    throw new RuntimeException('A paid BTCPay order cannot prepare its carrier shipment.');
+}
 try {
     CarrierShipmentCsv::export($draft);
     throw new RuntimeException('Pickup widget data must not create a Balíkovna import.');
@@ -122,6 +127,7 @@ if (count($homeRow) !== 17 || $homeRow[5] !== 'Národní' || $homeRow[6] !== '1'
 foreach ([
     array_replace($order, ['payment_status' => 'pending']),
     array_replace($comgateOrder, ['payment_status' => 'pending']),
+    array_replace($btcpayOrder, ['payment_status' => 'pending']),
     array_replace($order, ['fulfillment_source' => 'external']),
     array_replace($order, ['status' => 'shipped']),
 ] as $invalidOrder) {

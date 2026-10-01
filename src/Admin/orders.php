@@ -8,6 +8,8 @@ use SimpleStore\Checkout\CarrierShipmentRepository;
 use SimpleStore\Checkout\CheckoutSettingsRepository;
 use SimpleStore\Checkout\ComgatePaymentService;
 use SimpleStore\Checkout\GoPayPaymentService;
+use SimpleStore\Checkout\BTCPayPaymentService;
+use SimpleStore\Checkout\BTCPayPaidOrderGuard;
 use SimpleStore\Checkout\PacketaApiClient;
 use SimpleStore\Checkout\PacketaPickupPoint;
 use SimpleStore\Checkout\PacketaRejectedException;
@@ -51,6 +53,10 @@ $goPaySettings = $checkoutSettings['gopay'] ?? [];
 $goPayConfigured = (string) ($goPaySettings['goid'] ?? '') !== '' &&
     ($goPaySettings['client_id'] ?? '') !== '' &&
     ($goPaySettings['client_secret'] ?? '') !== '';
+$btcpaySettings = $checkoutSettings['btcpay'] ?? [];
+$btcpayConfigured = (string) ($btcpaySettings['server_url'] ?? '') !== '' &&
+    (string) ($btcpaySettings['store_id'] ?? '') !== '' &&
+    (string) ($btcpaySettings['api_key'] ?? '') !== '';
 $orderError = '';
 $order = null;
 $orderProductLinks = [];
@@ -65,6 +71,7 @@ $orderEvents = [];
 $orderInvoice = null;
 $orderReceipt = null;
 $goPayState = null;
+$btcpayState = null;
 $orderTaxReady = false;
 $orderInvoiceReady = false;
 $sellerSettings = [];
@@ -78,7 +85,7 @@ $offset = is_string($rawOffset) ? filter_var($rawOffset, FILTER_VALIDATE_INT,
 if (!is_string($statusFilter) || !in_array($statusFilter,
     ['pending', 'paid', 'processing', 'ready_to_ship', 'shipped', 'completed', 'cancelled', 'test', 'all'], true) ||
     !is_string($paymentFilter) || !in_array($paymentFilter,
-        ['all', 'bank_transfer', 'comgate', 'gopay', 'test'], true) ||
+        ['all', 'bank_transfer', 'comgate', 'gopay', 'btcpay', 'test'], true) ||
     !is_string($orderSearch) || strlen($orderSearch) > 100 ||
     preg_match('//u', $orderSearch) !== 1 ||
     preg_match('/[\x00-\x1f\x7f]/', $orderSearch) ||
@@ -154,6 +161,29 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'gopay-refresh') {
             throw new InvalidArgumentException('Pro objednávku zatím není dostupná transakce GoPay.');
         }
         (new GoPayPaymentService($db, $goPaySettings))->refresh($targetOrder);
+        header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&payment_checked=1', true, 303);
+        exit;
+    } catch (InvalidArgumentException $exception) {
+        http_response_code(422);
+        $orderError = $exception->getMessage();
+    } catch (RuntimeException $exception) {
+        http_response_code(503);
+        $orderError = $exception->getMessage();
+    }
+}
+
+if ($method === 'POST' && ($_POST['action'] ?? '') === 'btcpay-refresh') {
+    $rawId = $_POST['id'] ?? null;
+    $id = is_string($rawId) && ctype_digit($rawId) ? filter_var($rawId, FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 1]]) : false;
+    try {
+        $targetOrder = $id === false || !$ordersReady ? null : $orders->findById($id);
+        if ($targetOrder === null || ($targetOrder['payment_method'] ?? '') !== 'btcpay' ||
+            !is_string($targetOrder['provider_reference'] ?? null) ||
+            $targetOrder['provider_reference'] === '') {
+            throw new InvalidArgumentException('Pro objednávku zatím není dostupná faktura BTCPay.');
+        }
+        (new BTCPayPaymentService($db, $btcpaySettings))->refresh($targetOrder);
         header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&payment_checked=1', true, 303);
         exit;
     } catch (InvalidArgumentException $exception) {
@@ -465,6 +495,13 @@ if ($rawId !== null) {
             $goPayState = null;
         }
     }
+    if ($order !== null && ($order['payment_method'] ?? '') === 'btcpay' && $btcpayConfigured) {
+        try {
+            $btcpayState = (new BTCPayPaymentService($db, $btcpaySettings))->state($id);
+        } catch (RuntimeException $exception) {
+            $btcpayState = null;
+        }
+    }
     if ($order !== null) {
         $taxEvidence = new TaxEvidenceRepository($db);
         $invoiceStore = new InvoiceRepository($db);
@@ -488,6 +525,10 @@ if ($method === 'GET' && ($_GET['carrier_csv'] ?? null) === '1' && $order !== nu
             ($goPayState === null || ($goPayState['status'] ?? '') !== 'paid' ||
             (string) ($goPayState['payment_id'] ?? '') !== (string) ($order['provider_reference'] ?? ''))) {
             throw new InvalidArgumentException('Nejdřív ověř, že platba GoPay nebyla vrácena.');
+        }
+        if (($order['payment_method'] ?? '') === 'btcpay') {
+            (new BTCPayPaidOrderGuard($db))->assertPaid((int) $order['id'],
+                (string) ($order['provider_reference'] ?? ''));
         }
         if ($carrierShipment === null || !is_array($carrierShipment['draft'] ?? null) ||
             !in_array($carrierShipment['method'], ['gls_pickup', 'gls_home'], true) ||

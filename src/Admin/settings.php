@@ -34,11 +34,17 @@ $form = [
     'gopay_return_base_url' => $settings['gopay']['return_base_url'] ?? '',
     'gopay_enabled' => ($settings['gopay']['enabled'] ?? false) === true ? '1' : '0',
     'gopay_test' => ($settings['gopay']['test'] ?? true) === true ? '1' : '0',
+    'btcpay_enabled' => ($settings['btcpay']['enabled'] ?? false) === true ? '1' : '0',
+    'btcpay_server_url' => $settings['btcpay']['server_url'] ?? '',
+    'btcpay_store_id' => $settings['btcpay']['store_id'] ?? '',
+    'btcpay_return_base_url' => $settings['btcpay']['return_base_url'] ?? '',
     'local_test_checkout' => ($settings['local_test_checkout'] ?? true) === true ? '1' : '0',
 ];
 $packetaPasswordConfigured = ($settings['packeta']['api_password'] ?? '') !== '';
 $comgateSecretConfigured = ($settings['comgate']['secret'] ?? '') !== '';
 $gopaySecretConfigured = ($settings['gopay']['client_secret'] ?? '') !== '';
+$btcpayApiKeyConfigured = ($settings['btcpay']['api_key'] ?? '') !== '';
+$btcpayWebhookSecretConfigured = ($settings['btcpay']['webhook_secret'] ?? '') !== '';
 foreach ($shippingCatalog as $code => $definition) {
     $saved = $settings['shipping_methods'][$code] ?? $definition;
     $form['shipping_price'][$code] = (string) ($saved['price_czk'] ?? $definition['price_czk']);
@@ -62,6 +68,7 @@ if ($method === 'POST') {
         $form['comgate_test'] = ($_POST['comgate_test'] ?? null) === '1' ? '1' : '0';
         $form['gopay_enabled'] = ($_POST['gopay_enabled'] ?? null) === '1' ? '1' : '0';
         $form['gopay_test'] = ($_POST['gopay_test'] ?? null) === '1' ? '1' : '0';
+        $form['btcpay_enabled'] = ($_POST['btcpay_enabled'] ?? null) === '1' ? '1' : '0';
         foreach ($shippingCatalog as $code => $definition) {
             if (is_string($_POST['shipping_price'][$code] ?? null)) {
                 $form['shipping_price'][$code] = $_POST['shipping_price'][$code];

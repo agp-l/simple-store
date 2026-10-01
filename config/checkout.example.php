@@ -35,5 +35,13 @@ return [
         'client_secret' => '', // Never commit live credentials.
         'return_base_url' => '', // Public HTTPS installation root, e.g. https://obchod.cz/simple-store.
     ],
+    'btcpay' => [
+        'enabled' => false, // Enable after configuring the store and webhook in administration.
+        'server_url' => '', // HTTPS base URL of your BTCPay Server instance.
+        'store_id' => '',
+        'api_key' => '', // Store-scoped invoice create/view permissions; never commit credentials.
+        'webhook_secret' => '', // Secret from a manually created BTCPay invoice webhook.
+        'return_base_url' => '', // Public HTTPS installation root, e.g. https://obchod.cz/simple-store.
+    ],
     'shipping_methods' => \SimpleStore\Checkout\ShippingPolicy::defaults(),
 ];

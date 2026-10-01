@@ -43,6 +43,7 @@ $buyer = $selectedInvoice['buyer'];
   <p>Platba: <?= match ($selectedInvoice['payment_method'] ?? 'bank_transfer') {
       'comgate' => 'online přes Comgate',
       'gopay' => 'online přes GoPay',
+      'btcpay' => 'přes BTCPay Server',
       default => 'bankovním převodem',
   } ?>, při vystavení evidováno jako uhrazené<br>
   <?php if (($selectedInvoice['payment_method'] ?? 'bank_transfer') === 'bank_transfer'): ?>

@@ -30,12 +30,16 @@ jobs:
           php -l comgate-return.php
           php -l gopay-callback.php
           php -l gopay-return.php
+          php -l btcpay-callback.php
+          php -l btcpay-return.php
       - name: Test checkout and shared views
         run: |
           php tests/checkout-cart.php
           php tests/checkout-render.php
           php tests/checkout-availability.php
           php tests/checkout-settings.php
+          php tests/btcpay-client.php
+          php tests/btcpay-signature.php
           php tests/packeta-pickup.php
           php tests/packeta-shipment.php
           php tests/carrier-shipment.php
@@ -103,6 +107,7 @@ jobs:
           php tests/legacy-order-migration.php
           php tests/comgate-database.php
           php tests/gopay-database.php
+          php tests/btcpay-database.php
           php tests/stock-database.php
           php tests/shipping-database.php
 

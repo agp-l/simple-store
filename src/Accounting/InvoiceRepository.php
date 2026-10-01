@@ -7,6 +7,7 @@ use DateTimeImmutable;
 use DateTimeZone;
 use InvalidArgumentException;
 use MeekroDB;
+use SimpleStore\Checkout\BTCPayPaidOrderGuard;
 use SimpleStore\Checkout\GoPayPaidOrderGuard;
 use Throwable;
 
@@ -41,12 +42,15 @@ final class InvoiceRepository
         $this->db->startTransaction();
         try {
             $order = $this->db->queryFirstRow('SELECT * FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId);
-            if ($order === null || !in_array($order['payment_method'], ['bank_transfer', 'comgate', 'gopay'], true) ||
+            if ($order === null || !in_array($order['payment_method'], ['bank_transfer', 'comgate', 'gopay', 'btcpay'], true) ||
                 $order['payment_status'] !== 'paid' || $order['status'] === 'test') {
                 throw new InvalidArgumentException('Fakturu lze vystavit jen k uhrazené skutečné objednávce.');
             }
             if ($order['payment_method'] === 'gopay') {
                 (new GoPayPaidOrderGuard($this->db))->assertPaid($orderId,
+                    (string) ($order['provider_reference'] ?? ''));
+            } elseif ($order['payment_method'] === 'btcpay') {
+                (new BTCPayPaidOrderGuard($this->db))->assertPaid($orderId,
                     (string) ($order['provider_reference'] ?? ''));
             }
             if ($this->db->queryFirstRow('SELECT id FROM shop_invoices WHERE order_id=%i LIMIT 1', $orderId) !== null) {

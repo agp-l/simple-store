@@ -33,6 +33,12 @@ final class CheckoutSettingsRepository
         ];
         $local['gopay'] = is_array($local['gopay'] ?? null)
             ? array_replace($gopayDefaults, $local['gopay']) : $gopayDefaults;
+        $btcpayDefaults = $example['btcpay'] ?? [
+            'enabled' => false, 'server_url' => '', 'store_id' => '', 'api_key' => '',
+            'webhook_secret' => '', 'return_base_url' => '',
+        ];
+        $local['btcpay'] = is_array($local['btcpay'] ?? null)
+            ? array_replace($btcpayDefaults, $local['btcpay']) : $btcpayDefaults;
         if (($local['bank_transfer']['account_display'] ?? '') === '' &&
             ($local['bank_transfer']['recipient'] ?? '') === '') {
             $local['bank_transfer'] = $example['bank_transfer'];
@@ -166,6 +172,23 @@ final class CheckoutSettingsRepository
         if ($gopayEnabled && $gopayReturnBaseUrl === '') {
             throw new InvalidArgumentException('Před zapnutím GoPay vyplň veřejnou HTTPS adresu obchodu.');
         }
+        $btcpayEnabled = ($input['btcpay_enabled'] ?? null) === '1';
+        $btcpayServerUrl = self::btcpayServerUrl(self::value($input, 'btcpay_server_url'));
+        $btcpayStoreId = self::value($input, 'btcpay_store_id');
+        if ($btcpayStoreId !== '' && preg_match('/^[A-Za-z0-9_-]{1,100}$/D', $btcpayStoreId) !== 1) {
+            throw new InvalidArgumentException('ID obchodu BTCPay musí obsahovat nejvýše 100 znaků bez mezer.');
+        }
+        $btcpayApiKey = self::retainedSecret($input, 'btcpay_api_key', 'btcpay_clear_api_key',
+            (string) ($current['btcpay']['api_key'] ?? ''), 'API klíč BTCPay');
+        $btcpayWebhookSecret = self::retainedSecret($input, 'btcpay_webhook_secret',
+            'btcpay_clear_webhook_secret', (string) ($current['btcpay']['webhook_secret'] ?? ''),
+            'Tajný klíč webhooku BTCPay');
+        $btcpayReturnBaseUrl = self::paymentReturnBaseUrl(
+            self::value($input, 'btcpay_return_base_url'), $basePath, 'BTCPay');
+        if ($btcpayEnabled && ($btcpayServerUrl === '' || $btcpayStoreId === '' || $btcpayApiKey === '' ||
+            $btcpayWebhookSecret === '' || $btcpayReturnBaseUrl === '')) {
+            throw new InvalidArgumentException('Před zapnutím BTCPay vyplň adresu serveru, ID obchodu, API klíč, tajný klíč webhooku a veřejnou HTTPS adresu obchodu.');
+        }
         $settings = [
             'shipping_methods' => $shipping,
             'packeta' => ['api_key' => $packetaKey, 'api_password' => $password, 'sender' => $sender],
@@ -185,6 +208,14 @@ final class CheckoutSettingsRepository
                 'client_id' => $gopayClientId,
                 'client_secret' => $gopayClientSecret,
                 'return_base_url' => $gopayReturnBaseUrl,
+            ],
+            'btcpay' => [
+                'enabled' => $btcpayEnabled,
+                'server_url' => $btcpayServerUrl,
+                'store_id' => $btcpayStoreId,
+                'api_key' => $btcpayApiKey,
+                'webhook_secret' => $btcpayWebhookSecret,
+                'return_base_url' => $btcpayReturnBaseUrl,
             ],
             'terms_url' => $termsUrl,
             'local_test_checkout' => ($input['local_test_checkout'] ?? null) === '1',
@@ -240,6 +271,41 @@ final class CheckoutSettingsRepository
         return self::paymentReturnBaseUrl($url, $basePath, 'Comgate');
     }
 
+    private static function retainedSecret(array $input, string $field, string $clearField,
+        string $current, string $label): string
+    {
+        $secret = self::value($input, $field);
+        if ($secret === '') {
+            $secret = ($input[$clearField] ?? null) === '1' ? '' : $current;
+        }
+        if ($secret !== '' && (strlen($secret) > 512 ||
+            preg_match('/^[\x21-\x7e]+$/D', $secret) !== 1)) {
+            throw new InvalidArgumentException($label . ' musí mít nejvýše 512 znaků bez mezer.');
+        }
+        return $secret;
+    }
+
+    private static function btcpayServerUrl(string $url): string
+    {
+        if ($url === '') return '';
+        $parts = parse_url($url);
+        $host = is_array($parts) ? ($parts['host'] ?? '') : '';
+        $domain = is_string($host) && strlen($host) <= 253 &&
+            preg_match('/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{1,62}$/iD', $host) === 1;
+        $publicIpv4 = filter_var($host, FILTER_VALIDATE_IP,
+            FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
+        $path = is_array($parts) ? (string) ($parts['path'] ?? '') : '';
+        $segments = explode('/', trim($path, '/'));
+        if (!is_array($parts) || strtolower((string) ($parts['scheme'] ?? '')) !== 'https' ||
+            (!$domain && !$publicIpv4) || isset($parts['user']) || isset($parts['pass']) ||
+            isset($parts['query']) || isset($parts['fragment']) ||
+            preg_match('~^/(?:[A-Za-z0-9._~-]+/?)*$~D', $path === '' ? '/' : $path) !== 1 ||
+            in_array('.', $segments, true) || in_array('..', $segments, true)) {
+            throw new InvalidArgumentException('BTCPay vyžaduje HTTPS adresu serveru, např. https://platby.obchod.cz.');
+        }
+        return rtrim($url, '/');
+    }
+
     private static function paymentReturnBaseUrl(string $url, string $basePath, string $provider): string
     {
         if ($url === '') return '';
@@ -252,7 +318,7 @@ final class CheckoutSettingsRepository
             !preg_match('/(?:^|\.)(?:localhost|local|internal)$/iD', $host);
         $expectedPath = rtrim($basePath, '/');
         if (!is_array($parts) || strtolower((string) ($parts['scheme'] ?? '')) !== 'https' ||
-            (!$publicIpv4 && !$publicDomain) || isset($parts['user']) ||
+            (!$publicIpv4 && !$publicDomain) || isset($parts['user']) || isset($parts['pass']) ||
             isset($parts['query']) || isset($parts['fragment']) ||
             !in_array($parts['path'] ?? '', [$expectedPath, $expectedPath . '/'], true)) {
             throw new InvalidArgumentException(

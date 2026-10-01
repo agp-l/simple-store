@@ -44,7 +44,8 @@ final class CheckoutController
         private string $mailSender = '',
         private ?InvoiceRepository $invoices = null,
         private ?ComgatePaymentService $comgate = null,
-        private ?GoPayPaymentService $gopay = null
+        private ?GoPayPaymentService $gopay = null,
+        private ?BTCPayPaymentService $btcpay = null
     ) {
         $this->cartUrl = $url->path('kosik');
         $this->checkoutUrl = $url->path('pokladna');
@@ -85,17 +86,24 @@ final class CheckoutController
                 if (!$this->cart->validToken($_POST['csrf'] ?? null)) {
                     $paymentNotice = 'Platnost formuláře vypršela. Obnov stránku a zkus platbu znovu.';
                     $responseStatus = 403;
-                } elseif (!in_array($_POST['action'] ?? null, ['comgate_pay', 'gopay_pay'], true) ||
-                    ($_POST['action'] === 'comgate_pay' ? 'comgate' : 'gopay') !== ($order['payment_method'] ?? '') ||
+                } elseif (!in_array($_POST['action'] ?? null, ['comgate_pay', 'gopay_pay', 'btcpay_pay'], true) ||
+                    str_replace('_pay', '', (string) $_POST['action']) !== ($order['payment_method'] ?? '') ||
                     ($order['payment_status'] ?? '') === 'paid') {
                     $this->renderer->render('not-found', $this->shared, 404);
                     return;
-                } elseif (($_POST['action'] === 'comgate_pay' ? $this->comgate : $this->gopay) === null) {
+                } elseif (match ($_POST['action']) {
+                    'comgate_pay' => $this->comgate, 'gopay_pay' => $this->gopay,
+                    default => $this->btcpay,
+                } === null) {
                     $paymentNotice = 'Online platba je nyní nedostupná. Kontaktujte prosím obchod.';
                     $responseStatus = 503;
                 } else {
                     try {
-                        $service = $_POST['action'] === 'comgate_pay' ? $this->comgate : $this->gopay;
+                        $service = match ($_POST['action']) {
+                            'comgate_pay' => $this->comgate, 'gopay_pay' => $this->gopay,
+                            default => $this->btcpay,
+                        };
+                        if ($_POST['action'] === 'btcpay_pay') $order = $service->refresh($order);
                         $gatewayUrl = $service->initiate($order);
                         if ($_POST['action'] === 'gopay_pay') {
                             $gopayGatewayUrl = $gatewayUrl;
@@ -124,12 +132,22 @@ final class CheckoutController
                     error_log('GoPay payment ' . (int) $order['id'] . ' status check failed: ' . $error->getMessage());
                     $paymentNotice = 'Stav platby se zatím nepodařilo ověřit. Obnov stránku později.';
                 }
+            } elseif (($order['payment_method'] ?? '') === 'btcpay' && $this->btcpay !== null) {
+                try {
+                    $order = $this->btcpay->refresh($order);
+                } catch (Throwable $error) {
+                    error_log('BTCPay payment ' . (int) $order['id'] . ' status check failed: ' . $error->getMessage());
+                    $paymentNotice = 'Stav bitcoinové platby se zatím nepodařilo ověřit. Obnov stránku později.';
+                }
             }
             if ($method === 'GET' && ($_GET['comgate_error'] ?? '') === '1' && $paymentNotice === '') {
                 $paymentNotice = 'Platební bránu se nepodařilo otevřít. Objednávka zůstala uložená. Platbu lze zkusit znovu.';
             }
             if ($method === 'GET' && ($_GET['gopay_error'] ?? '') === '1' && $paymentNotice === '') {
                 $paymentNotice = 'Platební bránu se nepodařilo otevřít. Objednávka zůstala uložená. Platbu lze zkusit znovu.';
+            }
+            if ($method === 'GET' && ($_GET['btcpay_error'] ?? '') === '1' && $paymentNotice === '') {
+                $paymentNotice = 'Bitcoinovou platbu se nepodařilo otevřít. Objednávka zůstala uložená. Prověř stav před opakováním.';
             }
             $invoice = $this->invoices?->byOrder((int) $order['id']);
             if ($method === 'GET' && ($_GET['invoice'] ?? '') === '1') {
@@ -300,14 +318,16 @@ final class CheckoutController
         if (is_string($selected)) return $selected;
         if ($this->bank !== null) return 'bank_transfer';
         if ($this->comgate !== null && $this->comgate->canInitiate()) return 'comgate';
-        return 'gopay';
+        if ($this->gopay !== null && $this->gopay->canInitiate()) return 'gopay';
+        return 'btcpay';
     }
 
     private function paymentAvailable(string $method): bool
     {
         return $method === 'bank_transfer' && $this->bank !== null ||
             $method === 'comgate' && $this->comgate !== null && $this->comgate->canInitiate() ||
-            $method === 'gopay' && $this->gopay !== null && $this->gopay->canInitiate();
+            $method === 'gopay' && $this->gopay !== null && $this->gopay->canInitiate() ||
+            $method === 'btcpay' && $this->btcpay !== null && $this->btcpay->canInitiate();
     }
 
     private function placeOrder(): void
@@ -368,8 +388,10 @@ final class CheckoutController
             $shipping, $price, $this->cart->checkoutKey(), $testOrder, $paymentMethod);
         if ($this->mailQueue !== null && !$testOrder) {
             try {
-                $gateway = $paymentMethod === 'comgate' ? $this->comgate :
-                    ($paymentMethod === 'gopay' ? $this->gopay : null);
+                $gateway = match ($paymentMethod) {
+                    'comgate' => $this->comgate, 'gopay' => $this->gopay,
+                    'btcpay' => $this->btcpay, default => null,
+                };
                 $orderUrl = $gateway !== null
                     ? $gateway->receiptUrl($order, $this->url->getLanguage()) : '';
                 $messageId = $this->mailQueue->enqueueOrder($order, $orderUrl);
@@ -381,9 +403,12 @@ final class CheckoutController
             }
         }
         $this->cart->clear();
-        if (!$testOrder && in_array($paymentMethod, ['comgate', 'gopay'], true)) {
+        if (!$testOrder && in_array($paymentMethod, ['comgate', 'gopay', 'btcpay'], true)) {
             try {
-                $gateway = $paymentMethod === 'comgate' ? $this->comgate : $this->gopay;
+                $gateway = match ($paymentMethod) {
+                    'comgate' => $this->comgate, 'gopay' => $this->gopay,
+                    default => $this->btcpay,
+                };
                 $gatewayUrl = $gateway->initiate($order);
                 if ($paymentMethod === 'gopay') {
                     $this->renderOrder($order, '', 200, $gatewayUrl);
@@ -422,6 +447,9 @@ final class CheckoutController
             'gopayAvailable' => $this->gopay !== null && $this->gopay->canInitiate(),
             'gopayState' => $this->gopay !== null && $this->gopay->installed()
                 ? $this->gopay->state((int) $order['id']) : null,
+            'btcpayAvailable' => $this->btcpay !== null && $this->btcpay->canInitiate(),
+            'btcpayState' => $this->btcpay !== null && $this->btcpay->installed()
+                ? $this->btcpay->state((int) $order['id']) : null,
             'gopayGatewayUrl' => $gopayGatewayUrl,
             'paymentNotice' => $paymentNotice, 'cartToken' => $this->cart->token(),
         ]), $responseStatus);
@@ -532,10 +560,12 @@ final class CheckoutController
             'shippingConfigured' => $shippingConfigured, 'bankConfigured' => $this->bank !== null,
             'comgateConfigured' => $this->comgate !== null && $this->comgate->canInitiate(),
             'gopayConfigured' => $this->gopay !== null && $this->gopay->canInitiate(),
+            'btcpayConfigured' => $this->btcpay !== null && $this->btcpay->canInitiate(),
             'paymentMethod' => $paymentMethod,
             'paymentStepReady' => $baseReady && ($testCheckout || $this->bank !== null ||
                 $this->comgate !== null && $this->comgate->canInitiate() ||
-                $this->gopay !== null && $this->gopay->canInitiate()),
+                $this->gopay !== null && $this->gopay->canInitiate() ||
+                $this->btcpay !== null && $this->btcpay->canInitiate()),
             'checkoutReady' => $ready, 'testCheckout' => $testCheckout, 'termsUrl' => $this->termsUrl,
             'error' => $error, 'step' => $step,
             'setupNotice' => !$installed ? 'Pro objednávky znovu importuj aktuální database/schema.sql.' : '',
@@ -547,7 +577,8 @@ final class CheckoutController
     {
         return $this->allowLocalPreview && $this->bank === null &&
             ($this->comgate === null || !$this->comgate->canInitiate()) &&
-            ($this->gopay === null || !$this->gopay->canInitiate());
+            ($this->gopay === null || !$this->gopay->canInitiate()) &&
+            ($this->btcpay === null || !$this->btcpay->canInitiate());
     }
 
     private static function field(string $name): string

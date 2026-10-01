@@ -12,6 +12,7 @@ class MeekroDB
     public array $entryEvents = [];
     public array $sales = [];
     public array $stock = [];
+    public array $btcpayPayments = [];
     private ?array $snapshot = null;
 
     public function startTransaction(): void
@@ -52,6 +53,11 @@ class MeekroDB
 
     public function queryFirstRow(string $sql, mixed ...$args): ?array
     {
+        if (str_contains($sql, 'FROM shop_btcpay_payments')) {
+            $payment = $this->btcpayPayments[$args[0]] ?? null;
+            return $payment !== null && $payment['invoice_id'] === $args[1] ?
+                ['status' => $payment['status']] : null;
+        }
         if (str_contains($sql, 'FROM shop_orders')) return $this->orders[$args[0]] ?? null;
         if (str_contains($sql, 'FROM shop_invoice_sequence')) {
             return ['next_number' => $this->sequences[$args[0]] ?? 0];
@@ -244,6 +250,46 @@ $onlineHtml = (string) ob_get_clean();
 if (!str_contains($onlineHtml, 'online přes Comgate') ||
     str_contains($onlineHtml, 'Účet:') || str_contains($onlineHtml, 'bankovním převodem')) {
     throw new RuntimeException('Gateway invoice print misstates the payment method.');
+}
+$db->orders[11] = array_replace($db->orders[10], [
+    'id' => 11, 'order_number' => 'DB-BTCPAY-3', 'payment_method' => 'btcpay',
+    'provider_reference' => 'invoice-123', 'variable_symbol' => '1234567892',
+]);
+$db->btcpayPayments[11] = ['invoice_id' => 'invoice-123', 'status' => 'processing'];
+try {
+    $repository->issue(11, $seller, $buyer);
+    throw new RuntimeException('Processing BTCPay invoice must not produce an accounting invoice.');
+} catch (InvalidArgumentException $expected) {}
+$db->btcpayPayments[11]['status'] = 'settled';
+$db->btcpayPayments[11]['invoice_id'] = 'different-invoice';
+try {
+    $repository->issue(11, $seller, $buyer);
+    throw new RuntimeException('Settlement of an unrelated BTCPay invoice must not issue an accounting invoice.');
+} catch (InvalidArgumentException $expected) {}
+$db->btcpayPayments[11]['invoice_id'] = 'invoice-123';
+$bitcoinInvoice = $repository->issue(11, $seller, $buyer);
+$bitcoinMail = $queue->enqueueInvoice($bitcoinInvoice);
+if ($bitcoinInvoice['payment_method'] !== 'btcpay' ||
+    !str_contains($db->outbox[$bitcoinMail]['body_text'], 'přes BTCPay Server') ||
+    str_contains($db->outbox[$bitcoinMail]['body_text'], 'bankovním převodem')) {
+    throw new RuntimeException('Confirmed BTCPay invoice or customer mail has wrong payment details.');
+}
+$selectedInvoice = $bitcoinInvoice;
+ob_start();
+require dirname(__DIR__) . '/view/admin/invoice-print.php';
+$bitcoinHtml = (string) ob_get_clean();
+if (!str_contains($bitcoinHtml, 'přes BTCPay Server') || str_contains($bitcoinHtml, 'Účet:')) {
+    throw new RuntimeException('BTCPay accounting invoice print misstates the payment method.');
+}
+$bitcoinOrderMail = $queue->enqueueOrder($db->orders[11] + [
+    'items' => [['name' => 'Stan', 'quantity' => 2, 'unit_price_czk' => 450]],
+    'shipping' => ['label' => 'Kurýr'],
+], 'https://shop.example/cs/objednavka/private-token');
+if ($bitcoinOrderMail === null ||
+    !str_contains($db->outbox[$bitcoinOrderMail]['body_text'], 'online přes BTCPay Server') ||
+    !str_contains($db->outbox[$bitcoinOrderMail]['body_text'], 'https://shop.example') ||
+    str_contains($db->outbox[$bitcoinOrderMail]['body_text'], 'Číslo účtu:')) {
+    throw new RuntimeException('BTCPay order email must include payment instructions and order link.');
 }
 $tax = new TaxEvidenceRepository($db);
 $movement = ['entry_date' => '2026-09-30', 'direction' => 'income', 'account' => 'bank',

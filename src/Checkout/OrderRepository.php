@@ -81,7 +81,7 @@ final class OrderRepository
         bool $testOrder = false,
         string $paymentMethod = 'bank_transfer'
     ): array {
-        if (!in_array($paymentMethod, ['bank_transfer', 'comgate', 'gopay'], true)) {
+        if (!in_array($paymentMethod, ['bank_transfer', 'comgate', 'gopay', 'btcpay'], true)) {
             throw new InvalidArgumentException('Neplatný způsob platby.');
         }
         if (!$testOrder && $paymentMethod === 'bank_transfer' && $this->bank === null) {
@@ -275,7 +275,7 @@ final class OrderRepository
         if ($offset < 0 || $offset > 100000 || $limit < 1 || $limit > 100 ||
             !in_array($filter, [null, 'pending', 'paid', 'test', 'processing', 'ready_to_ship',
                 'shipped', 'completed', 'cancelled'], true) ||
-            !in_array($paymentMethod, [null, 'bank_transfer', 'comgate', 'gopay', 'test'], true) ||
+            !in_array($paymentMethod, [null, 'bank_transfer', 'comgate', 'gopay', 'btcpay', 'test'], true) ||
             strlen($search) > 100 || preg_match('//u', $search) !== 1 ||
             preg_match('/[\x00-\x1f\x7f]/', $search)) {
             throw new InvalidArgumentException('Neplatný filtr objednávek.');
@@ -306,6 +306,15 @@ final class OrderRepository
                 WHERE order_id=shop_orders.id AND payment_id=shop_orders.provider_reference
                 ORDER BY id DESC LIMIT 1)'
             : 'NULL';
+        $hasBtcpayAttempts = (int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
+            'shop_btcpay_payments') > 0;
+        $btcpayPaymentState = $hasBtcpayAttempts
+            ? '(SELECT status FROM shop_btcpay_payments
+                WHERE order_id=shop_orders.id AND invoice_id=shop_orders.provider_reference
+                ORDER BY id DESC LIMIT 1)'
+            : 'NULL';
         $hasFulfillmentSource = $this->fulfillmentSourceInstalled();
         $fulfillmentField = $hasFulfillmentSource ? 'fulfillment_source' : "'own'";
         $fulfillmentNoteField = $hasFulfillmentSource ? 'fulfillment_note' : 'NULL';
@@ -324,7 +333,8 @@ final class OrderRepository
                           ' . $fulfillmentNoteField . ' AS fulfillment_note,
                           ' . $invoiceId . ' AS invoice_id,
                           ' . $invoiceNumber . ' AS invoice_number,
-                          ' . $goPayPaymentState . ' AS gopay_payment_state FROM shop_orders';
+                          ' . $goPayPaymentState . ' AS gopay_payment_state,
+                          ' . $btcpayPaymentState . ' AS btcpay_payment_state FROM shop_orders';
         $conditions = [];
         $parameters = [];
         if ($filter !== null) {
@@ -435,6 +445,11 @@ final class OrderRepository
             if ($row['payment_method'] === 'gopay' &&
                 in_array($status, ['ready_to_ship', 'shipped', 'completed'], true)) {
                 (new GoPayPaidOrderGuard($this->db))->assertPaid($id,
+                    (string) ($row['provider_reference'] ?? ''));
+            }
+            if ($row['payment_method'] === 'btcpay' &&
+                in_array($status, ['processing', 'ready_to_ship', 'shipped', 'completed'], true)) {
+                (new BTCPayPaidOrderGuard($this->db))->assertPaid($id,
                     (string) ($row['provider_reference'] ?? ''));
             }
             $shipping = json_decode((string) ($row['dispatch_shipping_json'] ?? $row['shipping_json'] ?? ''), true);

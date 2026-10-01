@@ -59,7 +59,7 @@ final class PacketaShipmentRepository
                  FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId);
             $shipping = is_array($order) ? json_decode((string)
                 ($order['dispatch_shipping_json'] ?? $order['shipping_json']), true) : null;
-            if ($order === null || !in_array($order['payment_method'], ['bank_transfer', 'comgate', 'gopay'], true) ||
+            if ($order === null || !in_array($order['payment_method'], ['bank_transfer', 'comgate', 'gopay', 'btcpay'], true) ||
                 $order['payment_status'] !== 'paid' ||
                 ($order['fulfillment_source'] ?? 'own') === 'external' ||
                 in_array($order['status'], ['shipped', 'cancelled', 'completed', 'test'], true) ||
@@ -68,6 +68,9 @@ final class PacketaShipmentRepository
             }
             if ($order['payment_method'] === 'gopay') {
                 (new GoPayPaidOrderGuard($this->db))->assertPaid($orderId,
+                    (string) ($order['provider_reference'] ?? ''));
+            } elseif ($order['payment_method'] === 'btcpay') {
+                (new BTCPayPaidOrderGuard($this->db))->assertPaid($orderId,
                     (string) ($order['provider_reference'] ?? ''));
             }
             $current = $this->find($orderId);

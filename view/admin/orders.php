@@ -28,9 +28,21 @@ $goPayStatusLabel = static fn (mixed $status): string => match ($status) {
     'rejected' => 'Brána odmítla založení',
     default => (string) $status,
 };
+$btcpayStatusLabel = static fn (mixed $status): string => match ($status) {
+    'creating' => 'Založení faktury probíhá',
+    'uncertain' => 'Založení faktury je nejisté',
+    'new' => 'Čeká na zaplacení',
+    'processing' => 'Platba se potvrzuje',
+    'settled' => 'Zaplaceno',
+    'expired' => 'Vypršela platnost',
+    'invalid' => 'Neplatná platba',
+    'rejected' => 'Založení faktury bylo odmítnuto',
+    default => (string) $status,
+};
 $packetaReady ??= false;
 $comgateConfigured ??= false;
 $goPayConfigured ??= false;
+$btcpayConfigured ??= false;
 $packetaConfigured ??= false;
 $packetaCancelReady ??= false;
 $packetaShipment ??= null;
@@ -47,6 +59,7 @@ $orderTaxReady ??= false;
 $orderInvoiceReady ??= false;
 $orderReceipt ??= null;
 $goPayState ??= null;
+$btcpayState ??= null;
 $orderInvoice ??= null;
 $sellerSettings ??= [];
 $shippingChangeReady ??= false;
@@ -58,7 +71,7 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
 ?>
 <div class="panel-intro">
   <div><p class="panel-eyebrow">Prodej</p><h1>Objednávky</h1>
-    <p>Přehled přijatých objednávek. Převod potvrď po kontrole bankovního výpisu; platby Comgate a GoPay ověřuj přímo u příslušné brány.</p></div>
+    <p>Přehled přijatých objednávek. Převod potvrď po kontrole bankovního výpisu; platby Comgate, GoPay a BTCPay ověřuj u příslušné brány.</p></div>
   <?php if ($order !== null): ?><div class="panel-quick"><a href="<?= $escape($orderBaseUrl) ?>">← Všechny objednávky</a></div><?php endif; ?>
 </div>
 <?php if (!$ordersReady): ?>
@@ -73,18 +86,23 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
   $bankTransfer = ($order['payment_method'] ?? '') === 'bank_transfer';
   $comgatePayment = ($order['payment_method'] ?? '') === 'comgate';
   $goPayPayment = ($order['payment_method'] ?? '') === 'gopay';
-  $onlineGateway = $comgatePayment || $goPayPayment;
-  $gatewayName = $goPayPayment ? 'GoPay' : 'Comgate';
-  $gatewayConfigured = $goPayPayment ? $goPayConfigured : $comgateConfigured;
+  $btcpayPayment = ($order['payment_method'] ?? '') === 'btcpay';
+  $onlineGateway = $comgatePayment || $goPayPayment || $btcpayPayment;
+  $gatewayName = $btcpayPayment ? 'BTCPay Server' : ($goPayPayment ? 'GoPay' : 'Comgate');
+  $gatewayConfigured = $btcpayPayment ? $btcpayConfigured : ($goPayPayment ? $goPayConfigured : $comgateConfigured);
   $paid = ($order['payment_status'] ?? '') === 'paid';
   $goPayRefunded = $goPayPayment && in_array($goPayState['status'] ?? '', ['refunded', 'partially_refunded'], true);
-  $paymentHighlight = $paid && !$goPayRefunded;
+  $btcpayDispatchBlocked = $btcpayPayment && $paid &&
+      ($btcpayState === null || ($btcpayState['status'] ?? '') !== 'settled' ||
+      (string) ($btcpayState['invoice_id'] ?? '') !== (string) ($order['provider_reference'] ?? ''));
+  $paymentHighlight = $paid && !$goPayRefunded && !$btcpayDispatchBlocked;
   $paymentDisplayLabel = $goPayRefunded
       ? (($goPayState['status'] ?? '') === 'refunded' ? 'Platba vrácena' : 'Platba částečně vrácena')
-      : $orderPaymentLabel($order['payment_status'] ?? '');
+      : ($btcpayDispatchBlocked ? 'Platba k ověření' : $orderPaymentLabel($order['payment_status'] ?? ''));
   $goPayDispatchBlocked = $goPayPayment && $paid &&
       ($goPayState === null || ($goPayState['status'] ?? '') !== 'paid' ||
       (string) ($goPayState['payment_id'] ?? '') !== (string) ($order['provider_reference'] ?? ''));
+  $gatewayDispatchBlocked = $goPayDispatchBlocked || $btcpayDispatchBlocked;
   $recipientName = trim((string) ($shipping['recipient'] ?? $shipping['name'] ?? ''));
   $contactEmail = trim((string) ($order['customer_email'] ?? $shipping['email'] ?? ''));
   $contactPhone = trim((string) ($shipping['phone'] ?? ''));
@@ -121,6 +139,7 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
   <?php if (($_GET['tax_saved'] ?? null) === '1'): ?><p class="panel-notice" role="status">Účetní údaj byl uložen.</p><?php endif; ?>
   <?php if ($goPayRefunded): ?><p class="panel-error" role="alert">GoPay eviduje vrácení platby. Původní úhrada zůstává v historii objednávky; před expedicí zkontroluj vrácenou částku, účetní zápisy a další postup se zákazníkem.</p><?php endif; ?>
   <?php if ($goPayDispatchBlocked && !$goPayRefunded): ?><p class="panel-error" role="alert">U této objednávky nemáme potvrzenou stále uhrazenou transakci GoPay. Před expedicí načti aktuální stav platby u brány.</p><?php endif; ?>
+  <?php if ($btcpayDispatchBlocked): ?><p class="panel-error" role="alert">U této objednávky není lokálně potvrzená uhrazená faktura BTCPay. Před expedicí načti stav přímo z BTCPay Serveru.</p><?php endif; ?>
   <div class="panel-grid panel-order-detail">
     <div class="panel-workspace">
       <section class="panel-panel">
@@ -300,7 +319,7 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
                   preg_match('/^[0-9]{1,12}$/D', (string) ($shipping['pickup_code'] ?? '')) !== 1)): ?>
                 <p class="panel-help">U této starší objednávky nebylo výdejní místo ověřeno. Zadej správné ID; před podáním ho server ověří přes Zásilkovnu.</p>
               <?php endif; ?>
-              <?php if ($packetaReady && $packetaConfigured && $paid && !$goPayDispatchBlocked && ($order['fulfillment_source'] ?? 'own') !== 'external' && !in_array($order['status'], ['shipped', 'cancelled', 'completed', 'test'], true)): ?>
+              <?php if ($packetaReady && $packetaConfigured && $paid && !$gatewayDispatchBlocked && ($order['fulfillment_source'] ?? 'own') !== 'external' && !in_array($order['status'], ['shipped', 'cancelled', 'completed', 'test'], true)): ?>
                 <?php
                 $recipientParts = preg_split('/\s+/u', trim((string) ($shipping['recipient'] ?? $shipping['name'] ?? ''))) ?: [];
                 $defaultSurname = count($recipientParts) > 1 ? array_pop($recipientParts) : '';
@@ -364,7 +383,7 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
                     <div><dt>Výdejní místo</dt><dd><?= $escape($carrierShipment['draft']['pickup_point'] ?? '') ?> · <?= $escape($carrierShipment['draft']['pickup_address'] ?? '') ?><br>ID <?= $escape($carrierShipment['draft']['pickup_code'] ?? '') ?> · PSČ <?= $escape($carrierShipment['draft']['postal_code'] ?? '') ?></dd></div>
                     <div><dt>Hmotnost</dt><dd><?= $escape($carrierShipment['draft']['weight_kg'] ?? '') ?> kg</dd></div>
                   </dl>
-                <?php elseif (!$goPayDispatchBlocked): ?><p><a class="panel-button" href="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id'] . '&carrier_csv=1') ?>">Stáhnout CSV pro GLS e-Balík</a></p><?php endif; ?>
+                <?php elseif (!$gatewayDispatchBlocked): ?><p><a class="panel-button" href="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id'] . '&carrier_csv=1') ?>">Stáhnout CSV pro GLS e-Balík</a></p><?php endif; ?>
               <?php endif; ?>
               <?php if ($carrierBalik): ?>
                 <p class="panel-help">Vyhledávací mapa Balíkovny pouze vrací vybrané místo; sama nevytváří zásilku ani čárový kód. Údaje níže si připrav pro <a href="https://www.balikovna.cz/cs/web/guest/poslat-balik" target="_blank" rel="noopener noreferrer">podání na webu Balíkovny ↗</a>. Po vytvoření zásilky tam získáš štítek nebo podací kód. Tento e-shop bez podání u dopravce platný štítek nevytvoří.</p>
@@ -372,7 +391,7 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
                 <p class="panel-help">CSV má 17 sloupců bez hlavičky pro <strong>výchozí import GLS e-Balík</strong>. U ParcelShopu je ID místa v posledním sloupci; při doručení na adresu zůstává prázdný. Zkontroluj náhled importu, vygenerovaný štítek i cenu dopravy v portálu.</p>
               <?php endif; ?>
               <?php if ($carrierShipment === null || $carrierShipment['status'] === 'draft'): ?>
-                <?php if (!$paid || $goPayDispatchBlocked || ($order['fulfillment_source'] ?? 'own') !== 'own' || in_array($order['status'], ['shipped', 'completed', 'cancelled', 'test'], true)): ?>
+                <?php if (!$paid || $gatewayDispatchBlocked || ($order['fulfillment_source'] ?? 'own') !== 'own' || in_array($order['status'], ['shipped', 'completed', 'cancelled', 'test'], true)): ?>
                   <p class="panel-help">Podklady lze připravovat jen pro zaplacenou aktivní objednávku expedovanou obchodem. Externí dodavatel podává sám.</p>
                 <?php else: ?>
                   <?php
@@ -408,7 +427,7 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
                   <?php if ($carrierShipment !== null): ?></details><?php endif; ?>
                 <?php endif; ?>
               <?php endif; ?>
-              <?php if ($carrierShipment !== null && $carrierShipment['status'] === 'draft' && !$goPayDispatchBlocked): ?>
+              <?php if ($carrierShipment !== null && $carrierShipment['status'] === 'draft' && !$gatewayDispatchBlocked): ?>
                 <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="carrier-register"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                   <label>Skutečné číslo zásilky od dopravce<input name="tracking_number" autocomplete="off" minlength="6" maxlength="50" required></label>
@@ -430,10 +449,14 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
         <div><dt>Metoda</dt><dd><?= $bankTransfer ? 'Bankovní převod' : ($onlineGateway ? $gatewayName : $escape($order['payment_method'] ?? 'Neuvedeno')) ?></dd></div>
         <div><dt>Částka</dt><dd><strong><?= $orderMoney($order['total_czk'] ?? 0) ?></strong></dd></div>
         <?php if ($bankTransfer): ?><div><dt>Variabilní symbol</dt><dd><strong><?= $escape($order['variable_symbol'] ?? 'Neuveden') ?></strong></dd></div><?php endif; ?>
-        <?php if ($onlineGateway && !empty($order['provider_reference'])): ?><div><dt>Transakce <?= $gatewayName ?></dt><dd><strong><?= $escape($order['provider_reference']) ?></strong></dd></div><?php endif; ?>
+        <?php if ($onlineGateway && !empty($order['provider_reference'])): ?><div><dt><?= $btcpayPayment ? 'Faktura' : 'Transakce' ?> <?= $gatewayName ?></dt><dd><strong><?= $escape($order['provider_reference']) ?></strong></dd></div><?php endif; ?>
         <?php if ($goPayPayment && $goPayState !== null): ?>
           <div><dt>Stav u GoPay</dt><dd><?= $escape($goPayStatusLabel($goPayState['status'] ?? '')) ?><?= (int) ($goPayState['test_mode'] ?? 0) === 1 ? ' · testovací' : '' ?></dd></div>
           <?php if (empty($order['provider_reference']) && !empty($goPayState['payment_id'])): ?><div><dt>ID platby GoPay</dt><dd><?= $escape($goPayState['payment_id']) ?></dd></div><?php endif; ?>
+        <?php endif; ?>
+        <?php if ($btcpayPayment && $btcpayState !== null): ?>
+          <div><dt>Stav u BTCPay</dt><dd><?= $escape($btcpayStatusLabel($btcpayState['status'] ?? '')) ?></dd></div>
+          <?php if (empty($order['provider_reference']) && !empty($btcpayState['invoice_id'])): ?><div><dt>ID faktury BTCPay</dt><dd><?= $escape($btcpayState['invoice_id']) ?></dd></div><?php endif; ?>
         <?php endif; ?>
         <?php if ($paid && !empty($order['payment_paid_at'])): ?><div><dt><?= $onlineGateway ? 'Potvrzeno bránou' : 'Ověřeno' ?></dt><dd><?= $escape($order['payment_paid_at']) ?><?php if (!empty($order['payment_verified_by'])): ?> · správce #<?= (int) $order['payment_verified_by'] ?><?php endif; ?></dd></div><?php endif; ?>
         <?php if ($bankTransfer): ?><div><dt>Účet</dt><dd><?= $escape($payment['account_display'] ?? 'Neuveden') ?></dd></div><?php endif; ?>
@@ -450,6 +473,9 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
       <?php if ($goPayPayment && $goPayState !== null && in_array($goPayState['status'] ?? '', ['creating', 'uncertain'], true)): ?>
         <p class="panel-error" role="alert">Založení platby má nejasný výsledek. Neopakuj požadavek naslepo; nejprve vyhledej transakci v administraci GoPay podle čísla objednávky.</p>
       <?php endif; ?>
+      <?php if ($btcpayPayment && $btcpayState !== null && in_array($btcpayState['status'] ?? '', ['creating', 'uncertain'], true)): ?>
+        <p class="panel-error" role="alert">Založení faktury má nejasný výsledek. Před dalším pokusem ji vyhledej v BTCPay Serveru podle čísla objednávky.</p>
+      <?php endif; ?>
       <?php if ($bankTransfer && !$paid && ($order['payment_status'] ?? '') === 'pending' && !in_array($order['status'], ['cancelled', 'test'], true)): ?>
         <form class="panel-order-confirm" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
           <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
@@ -463,7 +489,7 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
         <?php if ($gatewayConfigured): ?>
           <form class="panel-order-confirm" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
             <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
-            <input type="hidden" name="action" value="<?= $goPayPayment ? 'gopay-refresh' : 'comgate-refresh' ?>">
+            <input type="hidden" name="action" value="<?= $btcpayPayment ? 'btcpay-refresh' : ($goPayPayment ? 'gopay-refresh' : 'comgate-refresh') ?>">
             <input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
             <button class="panel-button" type="submit">Ověřit stav u <?= $gatewayName ?></button>
           </form>
@@ -498,13 +524,15 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
               <button class="panel-button" type="submit">Zapsat příjem <?= $orderMoney($order['total_czk']) ?></button>
             </form>
           <?php endif; ?>
+          <?php elseif ($btcpayPayment): ?>
+            <p class="panel-help">BTCPay potvrdil úhradu zákazníka. Příjem bitcoinu a jeho hodnotu v Kč zapiš do <a href="<?= $escape($adminUrl . '?section=accounting&tab=money') ?>">peněžního deníku</a> podle skutečných podkladů.</p>
           <?php else: ?>
             <p class="panel-help"><?= $gatewayName ?> potvrdil úhradu zákazníka. Výplatu a poplatky zaznamenej v <a href="<?= $escape($adminUrl . '?section=accounting&tab=money') ?>">peněžním deníku</a> podle skutečného vyúčtování brány a bankovního výpisu; mohou zahrnovat více objednávek.</p>
           <?php endif; ?>
           <?php if ($orderInvoice !== null): ?>
             <p>Faktura <strong><?= $escape($orderInvoice['document_number']) ?></strong> · <a href="<?= $escape($invoiceDetailUrl) ?>">detail, tisk a e-mail</a></p>
-          <?php elseif ($goPayDispatchBlocked): ?>
-            <p class="panel-help">Před vystavením faktury nejprve vyřeš vrácení platby nebo ověř u GoPay její aktuální stav.</p>
+          <?php elseif ($gatewayDispatchBlocked): ?>
+            <p class="panel-help">Před vystavením faktury nejprve ověř u <?= $gatewayName ?> její aktuální stav a případné vrácení platby.</p>
           <?php elseif ($orderInvoiceReady && \SimpleStore\Accounting\TaxEvidenceRepository::invoiceReady($sellerSettings)): ?>
             <h3>Vystavit fakturu</h3>
             <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=accounting') ?>">
@@ -523,7 +551,7 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
       <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Stav vyřízení objednávky byl uložen.</p><?php endif; ?>
       <h2>Vyřízení</h2>
       <p class="panel-order-state"><?= $escape($orderFulfillmentLabel($order['status'] ?? '')) ?></p>
-      <?php if (!in_array($order['status'], ['completed', 'cancelled', 'test'], true) && !$goPayDispatchBlocked): ?>
+      <?php if (!in_array($order['status'], ['completed', 'cancelled', 'test'], true) && !$gatewayDispatchBlocked): ?>
       <?php $packetaMethod = in_array($shipping['method'] ?? '', ['zasilkovna_pickup', 'zasilkovna_home'], true);
       $fulfillmentSource = $order['fulfillment_source'] ?? 'own'; ?>
       <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
@@ -549,7 +577,7 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
         <p class="panel-help">Připravena k odeslání znamená zabalenou zásilku, případně potvrzení připravenosti od dodavatele. Stav Předána dopravci nastav až po skutečném předání balíku (u dodavatele po jeho potvrzení), Dokončena po doručení. <?= $packetaMethod ? 'Při expedici obchodem přes Zásilkovnu musí být místní zásilka vytvořená. Dodavatel může expedovat bez místního podání.' : '' ?> Dokončené a stornované objednávky se zákazníkovi přesunou do historie.</p>
         <?php if ($paid && !$fulfillmentSourceReady): ?><p class="panel-help">Pro volbu externího dodavatele <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
       </form>
-      <?php elseif ($goPayDispatchBlocked): ?>
+      <?php elseif ($gatewayDispatchBlocked): ?>
         <p class="panel-help">Běžnou expedici po vrácení nebo neověřeném stavu platby nelze potvrdit. Pokud opravuješ omylem uložený stav, použij níže ovládání oprav s uvedením důvodu.</p>
       <?php endif; ?>
       <?php if (!$orderControlsReady): ?>
@@ -593,7 +621,7 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
           </details>
         <?php endif; ?>
         <?php $canOfferDeletion = in_array(($order['payment_method'] ?? ''),
-            ['bank_transfer', 'comgate', 'gopay', 'legacy'], true) ||
+            ['bank_transfer', 'comgate', 'gopay', 'btcpay', 'legacy'], true) ||
             (($order['status'] ?? '') === 'test' && ($order['payment_method'] ?? '') === 'test' &&
                 ($order['payment_status'] ?? '') === 'test'); ?>
         <?php if ($canOfferDeletion): ?>
@@ -632,7 +660,7 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
       '&payment=' . rawurlencode($paymentFilter) . '&q=' . rawurlencode($orderSearch);
   $orderMethodLabel = static fn (mixed $method): string => match ($method) {
       'bank_transfer' => 'Převod na účet', 'comgate' => 'Comgate',
-      'gopay' => 'GoPay', 'test' => 'Test', default => (string) $method,
+      'gopay' => 'GoPay', 'btcpay' => 'BTCPay Server', 'test' => 'Test', default => (string) $method,
   };
   ?>
   <nav class="panel-quick panel-order-filters" aria-label="Filtrovat objednávky">
@@ -647,7 +675,7 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
     </label>
     <label>Způsob platby
       <select name="payment">
-        <?php foreach (['all' => 'Všechny platby', 'bank_transfer' => 'Převod na účet', 'comgate' => 'Comgate', 'gopay' => 'GoPay', 'test' => 'Test'] as $method => $label): ?>
+        <?php foreach (['all' => 'Všechny platby', 'bank_transfer' => 'Převod na účet', 'comgate' => 'Comgate', 'gopay' => 'GoPay', 'btcpay' => 'BTCPay Server', 'test' => 'Test'] as $method => $label): ?>
           <option value="<?= $escape($method) ?>" <?= $paymentFilter === $method ? 'selected' : '' ?>><?= $escape($label) ?></option>
         <?php endforeach; ?>
       </select>
@@ -667,13 +695,18 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
         <?php
         $listedGoPay = ($listed['payment_method'] ?? '') === 'gopay';
         $listedGoPayState = $listedGoPay ? ($listed['gopay_payment_state'] ?? null) : null;
+        $listedBtcpay = ($listed['payment_method'] ?? '') === 'btcpay';
+        $listedBtcpayState = $listedBtcpay ? ($listed['btcpay_payment_state'] ?? null) : null;
         $listedRefunded = in_array($listedGoPayState, ['refunded', 'partially_refunded'], true);
-        $listedGatewayBlocked = $listedGoPay && ($listed['payment_status'] ?? '') === 'paid' &&
-            $listedGoPayState !== 'paid';
+        $listedGatewayBlocked = ($listed['payment_status'] ?? '') === 'paid' &&
+            (($listedGoPay && $listedGoPayState !== 'paid') ||
+            ($listedBtcpay && $listedBtcpayState !== 'settled'));
         $listedPaid = ($listed['payment_status'] ?? '') === 'paid' && !$listedGatewayBlocked;
         $listedPaymentLabel = $listedGoPayState === 'refunded' ? 'Platba vrácena' :
             ($listedGoPayState === 'partially_refunded' ? 'Platba částečně vrácena' :
-            ($listedGatewayBlocked ? 'Platba k ověření' : $orderPaymentLabel($listed['payment_status'] ?? '')));
+            ($listedGatewayBlocked ? 'Platba k ověření' :
+            ($listedBtcpay && $listedBtcpayState === 'processing' ? 'Platba se potvrzuje' :
+            $orderPaymentLabel($listed['payment_status'] ?? ''))));
         $listedStatus = $listed['status'] ?? '';
         $listedShipping = json_decode((string) ($listed['shipping_json'] ?? ''), true);
         $listedShipping = is_array($listedShipping) ? $listedShipping : [];

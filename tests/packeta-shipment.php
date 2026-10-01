@@ -79,6 +79,11 @@ $comgateOrder = array_replace($order, ['payment_method' => 'comgate',
 if (PacketaShipmentDraft::fromOrder($comgateOrder, $form, 'Dobrodruzi')['attributes']['addressId'] !== '12345') {
     throw new RuntimeException('A paid Comgate order cannot prepare a Packeta packet.');
 }
+$btcpayOrder = array_replace($order, ['payment_method' => 'btcpay',
+    'provider_reference' => 'bitcoin-invoice-123']);
+if (PacketaShipmentDraft::fromOrder($btcpayOrder, $form, 'Dobrodruzi')['attributes']['addressId'] !== '12345') {
+    throw new RuntimeException('A paid BTCPay order cannot prepare a Packeta packet.');
+}
 if ($pickup['attributes']['addressId'] !== '12345' || $pickup['attributes']['weight'] !== '0.750' ||
     $pickup['attributes']['phone'] !== '+420777111222' ||
     $pickup['attributes']['cod'] !== '0' || $pickup['attributes']['value'] !== '1200') {
@@ -102,6 +107,7 @@ if ($corrected['attributes']['email'] !== 'oprava@example.test' ||
 }
 foreach ([array_replace($order, ['payment_status' => 'pending']),
     array_replace($comgateOrder, ['payment_status' => 'pending']),
+    array_replace($btcpayOrder, ['payment_status' => 'pending']),
     array_replace($order, ['fulfillment_source' => 'external']),
     array_replace($order, ['shipping' => array_replace($shipping, ['pickup_verified' => false])])] as $invalid) {
     try {
