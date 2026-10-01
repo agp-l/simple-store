@@ -193,7 +193,7 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
           </div>
         </div>
   <p class="panel-order-copy-feedback" role="status" aria-live="polite"></p>
-        <?php if (($_GET['tracking_saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Sledovací údaje byly uloženy. Pokud už byla objednávka předána dopravci, zákazníkovi se připravila zpráva s údaji.</p><?php endif; ?>
+        <?php if (($_GET['tracking_saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Sledovací údaje byly uloženy. Pokud už byla objednávka předána dopravci a automatické zprávy jsou zapnuté, zpráva zákazníkovi se připravila podle nastavení e-mailů.</p><?php endif; ?>
         <dl class="panel-order-facts">
           <div><dt>Aktuální doprava</dt><dd><strong><?= $escape($shipping['label'] ?? $shipping['method'] ?? 'Neuvedeno') ?></strong></dd></div>
           <?php if (!empty($order['dispatch_shipping_changed'])): ?><div><dt>Původně objednáno</dt><dd><?= $escape($order['shipping_ordered']['label'] ?? $order['shipping_ordered']['method'] ?? 'Neuvedeno') ?> · účtováno <?= $orderMoney($order['shipping_czk'] ?? 0) ?></dd></div><?php endif; ?>

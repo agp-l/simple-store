@@ -137,7 +137,7 @@ final class OrderMailQueue
         $sender = (string) $config['from_email'];
         if ($id < 1 || filter_var($sender, FILTER_VALIDATE_EMAIL) === false ||
             preg_match('/[\r\n]/', $sender) === 1) {
-            throw new InvalidArgumentException('Pro odesílání vyplň e-mail odesílatele v účetnictví.');
+            throw new InvalidArgumentException('Pro odesílání vyplň e-mail odesílatele v Nastavení obchodu → E-maily.');
         }
         $this->db->startTransaction();
         try {
