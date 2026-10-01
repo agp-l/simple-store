@@ -54,6 +54,7 @@ class MeekroDB
     public function queryFirstRow(string $sql, mixed ...$args): ?array
     {
         if (str_contains($sql, 'FROM shop_mail_settings')) return null;
+        if (str_contains($sql, 'FROM shop_tax_settings')) return null;
         if (str_contains($sql, 'FROM shop_btcpay_payments')) {
             $payment = $this->btcpayPayments[$args[0]] ?? null;
             return $payment !== null && $payment['invoice_id'] === $args[1] ?
