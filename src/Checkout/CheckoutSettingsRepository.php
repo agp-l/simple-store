@@ -299,7 +299,7 @@ final class CheckoutSettingsRepository
         if (!is_array($parts) || strtolower((string) ($parts['scheme'] ?? '')) !== 'https' ||
             (!$domain && !$publicIpv4) || isset($parts['user']) || isset($parts['pass']) ||
             isset($parts['query']) || isset($parts['fragment']) ||
-            preg_match('~^/(?:[A-Za-z0-9._~-]+/?)*$~D', $path === '' ? '/' : $path) !== 1 ||
+            preg_match('#^/(?:[A-Za-z0-9._~-]+/?)*$#D', $path === '' ? '/' : $path) !== 1 ||
             in_array('.', $segments, true) || in_array('..', $segments, true)) {
             throw new InvalidArgumentException('BTCPay vyžaduje HTTPS adresu serveru, např. https://platby.obchod.cz.');
         }
