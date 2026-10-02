@@ -731,6 +731,14 @@ CREATE TABLE IF NOT EXISTS product_revisions (
   KEY products_for_catalog (language, published, active_product_key, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- A row is created when the administrator makes the first explicit homepage selection.
+-- Until then the homepage continues to display the regular catalog.
+CREATE TABLE IF NOT EXISTS shop_homepage_selections (
+  language CHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+  product_keys_json LONGTEXT NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Upgrade installations with products created before details_json was introduced.
 -- Prepared SQL keeps this single schema safe to re-import in both MySQL and MariaDB.
 SET @details_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS

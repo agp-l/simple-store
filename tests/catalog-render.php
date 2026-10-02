@@ -48,6 +48,30 @@ if (!str_contains($cards, '/shop/cs/produkt/bota') || str_contains($cards, '<htm
     throw new RuntimeException('The additional catalog batch must render only the reusable product cards.');
 }
 
+ob_start();
+$renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
+    'products' => [$product], 'homepageSelectionActive' => true, 'homepageConfigured' => true]);
+$selectedHome = ob_get_clean();
+if (!str_contains($selectedHome, 'Vybráno na cestu') ||
+    !str_contains($selectedHome, '?all=1#produkty') ||
+    str_contains($selectedHome, 'id="homepage-editor"') || str_contains($selectedHome, 'id="sort"')) {
+    throw new RuntimeException('Public homepage must show the chosen products without management controls.');
+}
+ob_start();
+$renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
+    'products' => [$product], 'homepageEditing' => true, 'homepageReady' => true,
+    'homepageSelectionActive' => true, 'homepageConfigured' => true,
+    'homepageKeys' => [$product['product_key']],
+    'homepageSelected' => [$product + ['published' => 1]],
+    'homepageCandidates' => [$product], 'adminCsrf' => 'home-csrf',
+    'canManageCatalog' => true]);
+$editableHome = ob_get_clean();
+if (!str_contains($editableHome, 'name="action" value="homepage-product"') ||
+    !str_contains($editableHome, 'name="csrf" value="home-csrf"') ||
+    !str_contains($editableHome, 'Vrátit automatický výpis katalogu')) {
+    throw new RuntimeException('Homepage administration needs working server-side selection controls.');
+}
+
 $display = new \SimpleStore\Pricing\BitcoinPriceDisplay([
     'rate' => 2000000.0, 'updated_at' => '2026-10-01 12:00:00',
 ]);

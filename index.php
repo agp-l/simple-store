@@ -26,6 +26,7 @@ use SimpleStore\Navigation\StorefrontMenus;
 use SimpleStore\Navigation\UrlManager;
 use SimpleStore\Product\ProductRepository;
 use SimpleStore\Product\ProductStockRepository;
+use SimpleStore\Product\HomepageProductSelection;
 use SimpleStore\Rendering\PageRenderer;
 use SimpleStore\Accounting\TaxEvidenceRepository;
 use SimpleStore\Accounting\OrderMailQueue;
@@ -202,6 +203,11 @@ try {
             $renderer->render('not-found', $shared, 400);
             exit;
         }
+        $homepageEditing = $route['name'] === 'catalog' && ($_GET['homepage_edit'] ?? '') === '1';
+        if ($homepageEditing && (!$canEdit || $managingCatalog)) {
+            $renderer->render('not-found', $shared, 404);
+            exit;
+        }
         $path = $route['path'] ?? null;
         $selected = $path === null ? null : $categories->find($url->getLanguage(), $path);
         if ($path !== null && $selected === null) {
@@ -237,10 +243,42 @@ try {
             $sort = 'default';
         }
         $repository = new ProductRepository($db, $site['languages'], null, 50, $productStock);
+        $homepage = $route['name'] === 'catalog' ? new HomepageProductSelection($db, $site['languages']) : null;
+        $homepageKeys = $homepage?->keys($url->getLanguage());
+        $homepageSelectionActive = $homepageKeys !== null && !$managingCatalog &&
+            $search === '' && $sort === 'default' && $offset === 0 && ($_GET['all'] ?? '') !== '1';
         $batch = !$hasProducts ? ['items' => [], 'nextOffset' => null] :
-            ($managingCatalog
-                ? $repository->managementPage($url->getLanguage(), $path, $search, $visibility, $offset)
-                : $repository->publishedPage($url->getLanguage(), $path, $search, $sort, $offset));
+            ($homepageSelectionActive
+                ? ['items' => $homepage->products($url->getLanguage(), $homepageKeys, $productStock), 'nextOffset' => null]
+                : ($managingCatalog
+                    ? $repository->managementPage($url->getLanguage(), $path, $search, $visibility, $offset)
+                    : $repository->publishedPage($url->getLanguage(), $path, $search, $sort, $offset)));
+        if ($homepageEditing) {
+            $pick = $_GET['pick'] ?? '';
+            $pickOffset = filter_var($_GET['pick_offset'] ?? 0, FILTER_VALIDATE_INT,
+                ['options' => ['min_range' => 0, 'max_range' => 100000]]);
+            if (!is_string($pick) || strlen($pick) > 200 || $pickOffset === false) {
+                $renderer->render('not-found', $shared, 400);
+                exit;
+            }
+            $pick = trim($pick);
+            $candidates = $hasProducts ? $repository->publishedPage($url->getLanguage(), null, $pick, 'name', $pickOffset) :
+                ['items' => [], 'nextOffset' => null];
+            $shared['homepageEditing'] = true;
+            $shared['homepageReady'] = $homepage->installed();
+            $shared['homepageKeys'] = $homepageKeys ?? [];
+            $shared['homepageSelected'] = $homepageKeys === null ? [] :
+                $homepage->products($url->getLanguage(), $homepageKeys, null, true);
+            $shared['homepageCandidates'] = $candidates['items'];
+            $shared['homepagePick'] = $pick;
+            $shared['homepageCandidateNext'] = $candidates['nextOffset'] === null ? '' :
+                $url->path() . '?' . http_build_query(['homepage_edit' => '1', 'pick' => $pick,
+                    'pick_offset' => $candidates['nextOffset']]);
+            $shared['adminCsrf'] = $auth->token();
+            $shared['privatePage'] = true;
+        }
+        $shared['homepageSelectionActive'] = $homepageSelectionActive;
+        $shared['homepageConfigured'] = $homepageKeys !== null;
         $shared['products'] = $batch['items'];
         $shared['managingCatalog'] = $managingCatalog;
         $shared['catalogVisibility'] = $visibility;
@@ -273,6 +311,8 @@ try {
         }
         if ($managingCatalog) {
             $shared['title'] = 'Správa produktů — dobrodruzi.cz';
+        } elseif ($homepageEditing) {
+            $shared['title'] = 'Výběr produktů na úvodní stránce — dobrodruzi.cz';
         } elseif ($selected !== null) {
             $shared['title'] = $selected['title'] . ' — dobrodruzi.cz';
         }

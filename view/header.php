@@ -52,6 +52,7 @@
         <form method="post" action="<?= $siteRoot ?>admin.php"><input type="hidden" name="csrf" value="<?= htmlspecialchars($adminCreate['csrf'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><input type="hidden" name="language" value="<?= htmlspecialchars($adminCreate['language'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><input type="hidden" name="type" value="page"><button type="submit" name="action" value="create-content">＋ Stránka</button></form>
         <form method="post" action="<?= $siteRoot ?>admin.php"><input type="hidden" name="csrf" value="<?= htmlspecialchars($adminCreate['csrf'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><input type="hidden" name="language" value="<?= htmlspecialchars($adminCreate['language'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><input type="hidden" name="type" value="post"><button type="submit" name="action" value="create-content">＋ Článek</button></form>
         <a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>?manage=1">Produkty a koncepty</a>
+        <a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>?homepage_edit=1#homepage-editor">Výběr na úvodní stránku</a>
         <a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/blog?manage=1">Blog</a>
         <a href="<?= $siteRoot ?>admin.php">Další obsah a nastavení</a>
       </div>

@@ -25,11 +25,13 @@ if ($manualCategoryMenu) {
       <?php endforeach; ?>
       <?php if ($categoryTrail === []): ?><span aria-hidden="true">/</span><span>Vybavení do přírody</span><?php endif; ?>
     </nav>
+    <?php if ($homepageEditing): ?><?php require __DIR__ . '/homepage-editor.php'; ?><?php endif; ?>
     <div class="section-heading">
       <div>
-        <h2 id="section-title"><?= $managingCatalog ? 'Správa produktů' : $escape($currentCategory['title'] ?? 'Objevte vybavení') ?></h2>
-        <p id="section-description"><?= $managingCatalog ? 'Prohlížej zveřejněné i skryté produkty v jejich skutečných kategoriích. Otevři kartu a uprav produkt přímo na jeho stránce.' : ($currentCategory === null ? 'Poctivý výběr pro pohodlí na stezce i mimo ni.' : 'Vybavení na každou cestu. Vyberte si z nabídky níže.') ?></p>
-        <?php if ($canManageCatalog): ?><p class="catalog-admin-links"><a href="<?= $escape($searchAction . '?manage=1') ?>">Všechny produkty včetně konceptů</a><a href="<?= $escape($searchAction) ?>">Veřejný katalog</a><a href="<?= $escape($categoryAdminUrl) ?>">Upravit kategorie</a><?php if ($newSubcategoryUrl !== ''): ?><a href="<?= $escape($newSubcategoryUrl) ?>">＋ Přidat podkategorii</a><?php endif; ?><a href="<?= $escape($menuAdminUrl) ?>">Upravit menu</a></p><?php endif; ?>
+        <h2 id="section-title"><?= $managingCatalog ? 'Správa produktů' : ($homepageSelectionActive ? 'Vybráno na cestu' : $escape($currentCategory['title'] ?? 'Objevte vybavení')) ?></h2>
+        <p id="section-description"><?= $managingCatalog ? 'Prohlížej zveřejněné i skryté produkty v jejich skutečných kategoriích. Otevři kartu a uprav produkt přímo na jeho stránce.' : ($homepageSelectionActive ? 'Vybavení, které jsme vybrali pro vaši další cestu.' : ($currentCategory === null ? 'Poctivý výběr pro pohodlí na stezce i mimo ni.' : 'Vybavení na každou cestu. Vyberte si z nabídky níže.')) ?></p>
+        <?php if ($canManageCatalog): ?><p class="catalog-admin-links"><a href="<?= $escape($searchAction . '?manage=1') ?>">Všechny produkty včetně konceptů</a><?php if ($currentCategory === null): ?><a href="<?= $escape($siteRoot . $language . '?homepage_edit=1#homepage-editor') ?>">Vybrat produkty na úvodní stránku</a><?php endif; ?><a href="<?= $escape($searchAction . '?all=1') ?>">Veřejný katalog</a><a href="<?= $escape($categoryAdminUrl) ?>">Upravit kategorie</a><?php if ($newSubcategoryUrl !== ''): ?><a href="<?= $escape($newSubcategoryUrl) ?>">＋ Přidat podkategorii</a><?php endif; ?><a href="<?= $escape($menuAdminUrl) ?>">Upravit menu</a></p><?php endif; ?>
+        <?php if ($currentCategory === null && $homepageConfigured && !$managingCatalog && !$homepageEditing): ?><p class="catalog-public-links"><?php if ($homepageSelectionActive): ?><a href="<?= $escape($siteRoot . $language . '?all=1#produkty') ?>">Prohlédnout veškeré vybavení →</a><?php else: ?><a href="<?= $escape($siteRoot . $language . '#produkty') ?>">Zpět na výběr pro úvodní stránku →</a><?php endif; ?></p><?php endif; ?>
       </div><span class="result-count" id="result-count" aria-live="polite">Načteno <?= $productCount . ' ' . $productWord ?></span>
     </div>
     <?php if ($managingCatalog): ?>
@@ -59,7 +61,7 @@ if ($manualCategoryMenu) {
           <?php endforeach; ?>
         </nav>
       <?php endif; ?>
-      <?php if (!$managingCatalog): ?><label class="sort-wrap">Řadit podle
+      <?php if (!$managingCatalog && !$homepageSelectionActive): ?><label class="sort-wrap">Řadit podle
         <select id="sort" aria-label="Řadit produkty">
           <option value="default" <?= $sortChoice === 'default' ? 'selected' : '' ?>>Nejnovější</option>
           <option value="price-asc" <?= $sortChoice === 'price-asc' ? 'selected' : '' ?>>Od nejlevnějšího</option>
@@ -72,7 +74,7 @@ if ($manualCategoryMenu) {
         <?php foreach ($products as $product): require __DIR__ . '/product-card.php'; endforeach; ?>
       <?php endif; ?>
     </section>
-    <div class="empty" id="empty" <?= $products !== [] ? 'hidden' : '' ?>><?= $searchTerm !== '' ? 'Pro zadaný výraz jsme nic nenašli.' : ($managingCatalog ? 'V tomto výběru zatím nejsou žádné produkty.' : 'Zatím tu nejsou zveřejněné produkty. Nabídku připravujeme.') ?></div>
+    <div class="empty" id="empty" <?= $products !== [] ? 'hidden' : '' ?>><?= $searchTerm !== '' ? 'Pro zadaný výraz jsme nic nenašli.' : ($managingCatalog ? 'V tomto výběru zatím nejsou žádné produkty.' : ($homepageSelectionActive ? 'Vybrané produkty zatím nejsou zveřejněné. Prohlédněte si celé vybavení v kategoriích.' : 'Zatím tu nejsou zveřejněné produkty. Nabídku připravujeme.')) ?></div>
     <?php if ($nextUrl !== ''): ?><div class="load-more-wrap"><a class="load-more" data-load-more data-target="catalog" href="<?= $escape($nextUrl) ?>">Načíst další produkty</a></div><?php endif; ?>
     <?php if (!$managingCatalog): ?><section class="category-panel" id="kategorie" aria-labelledby="category-title">
       <div class="category-panel-copy">

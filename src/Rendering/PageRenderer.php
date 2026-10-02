@@ -43,6 +43,15 @@ final class PageRenderer
         $managingCatalog = (bool) ($data['managingCatalog'] ?? false);
         $catalogVisibility = (string) ($data['catalogVisibility'] ?? 'all');
         $managementCategories = $data['managementCategories'] ?? [];
+        $homepageEditing = (bool) ($data['homepageEditing'] ?? false);
+        $homepageReady = (bool) ($data['homepageReady'] ?? false);
+        $homepageSelectionActive = (bool) ($data['homepageSelectionActive'] ?? false);
+        $homepageConfigured = (bool) ($data['homepageConfigured'] ?? false);
+        $homepageKeys = $data['homepageKeys'] ?? [];
+        $homepageSelected = $data['homepageSelected'] ?? [];
+        $homepageCandidates = $data['homepageCandidates'] ?? [];
+        $homepagePick = (string) ($data['homepagePick'] ?? '');
+        $homepageCandidateNext = (string) ($data['homepageCandidateNext'] ?? '');
         $productDeleted = (bool) ($data['productDeleted'] ?? false);
         $adminCreate = $data['adminCreate'] ?? null;
         $privatePage = (bool) ($data['privatePage'] ?? false);
