@@ -1332,6 +1332,8 @@
 .inline-block-types[hidden], .inline-choices[hidden] { display:none; }
 .is-editing .product-content-block { margin:18px 0 22px; }
 .is-editing .product-content-block h3 { margin-top:9px; }
+.is-editing .product-content-block .inline-block-text > :first-child { margin-top:0; }
+.is-editing .product-content-block .inline-block-text > :last-child { margin-bottom:0; }
 .is-editing .product-specs .inline-small { margin-top:14px; }
 .is-editing [data-edit-operation] { min-width:1.5em; border-radius:4px; outline:1px dashed transparent; outline-offset:3px; cursor:text; }
 .is-editing [data-edit-operation]:hover { outline-color:#9dc899; background:rgba(189,225,141,.15); }
