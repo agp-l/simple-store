@@ -78,8 +78,14 @@ foreach (['page', 'post'] as $type) {
         'editToken' => 'test-token',
     ]);
     $editor = ob_get_clean();
+    $editableSectionCount = count(array_filter(ContentBody::decode($snapshot['body']),
+        static fn (array $section): bool => $section['type'] !== 'image'));
+    $compactEditableBodies = preg_match_all('/<div class="cms-block-text"[^>]*><(?:p>|ul\b|div\b)/', $editor) ===
+        $editableSectionCount && preg_match('/<div class="cms-block-text"[^>]*>(<p>.*?)<\/div>/s',
+        $editor, $firstBody) === 1 && str_ends_with($firstBody[1], '</p>');
     if (str_contains($public, 'content-editor-config') || str_contains($public, 'test-token') ||
         str_contains($public, 'data-content-action') ||
+        !$compactEditableBodies ||
         !str_contains($editor, 'data-edit-field="section_body"') ||
         !str_contains($editor, 'data-content-action="section-add"') ||
         !str_contains($editor, 'data-content-action="restore"') ||

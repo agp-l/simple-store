@@ -64,10 +64,16 @@ $renderer->render('product-record', $data + [
     'editorCategories' => [['path' => 'boty', 'title' => 'Boty']],
 ]);
 $editor = ob_get_clean();
+$editableSectionCount = count(array_filter($snapshot['sections'],
+    static fn (array $section): bool => $section['type'] !== 'image'));
+$compactEditableBodies = preg_match_all('/<div class="inline-block-text"[^>]*><(?:p>|ul\b|div\b)/', $editor) ===
+    $editableSectionCount && preg_match('/<div class="inline-block-text"[^>]*>(<p>.*?)<\/div>/s',
+    $editor, $firstBody) === 1 && str_ends_with($firstBody[1], '</p>');
 $checks = [
     'no_public_editor_config' => !str_contains($public, 'inline-editor-config'),
     'no_public_token' => !str_contains($public, 'test-token'),
     'edit_body' => str_contains($editor, 'data-edit-field="section_body"'),
+    'compact_edit_body' => $compactEditableBodies,
     'add_section' => str_contains($editor, 'data-editor-action="section-add"'),
     'media_link' => str_contains($editor, 'section=media&amp;type=product&amp;key=' . str_repeat('a', 32)),
     'delete_product' => str_contains($editor, 'value="delete-product"'),

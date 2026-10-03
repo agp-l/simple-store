@@ -71,11 +71,23 @@ $editable = static function (string $field, string $value, ?int $index = null, s
               <figure class="cms-block-image"><img src="<?= $escape($cardImage) ?>" <?= MediaPath::isManaged($section['body']) ? 'srcset="' . $escape($cardImage) . ' 960w, ' . $escape($fullImage) . ' 1800w" sizes="(max-width: 760px) 100vw, 850px"' : '' ?> alt="<?= $escape($section['heading'] ?: $content['title']) ?>" loading="lazy"></figure>
               <?php if ($editing): ?><button type="button" class="inline-small" data-content-action="section-image" data-index="<?= $i ?>" data-value="<?= $escape($section['body']) ?>">✎ Změnit fotografii</button><?php endif; ?>
             <?php else: ?>
-              <div class="cms-block-text"<?= $editable('section_body', $section['body'], $i, 'section.set') ?>>
-                <?php if ($section['type'] === 'list'): ?><ul class="feature-list"><?php foreach (preg_split('/\R/u', $section['body']) ?: [] as $line): ?><?php if (trim($line) !== ''): ?><li><?= ProductText::inline(trim($line)) ?></li><?php endif; ?><?php endforeach; ?></ul>
-                <?php elseif ($section['type'] === 'table'): ?><div class="table-scroll"><table class="spec-table"><tbody><?php foreach (preg_split('/\R/u', $section['body']) ?: [] as $line): ?><?php if (trim($line) !== ''): ?><?php [$label, $value] = array_pad(array_map('trim', explode('|', $line, 2)), 2, ''); ?><tr><th scope="row"><?= $escape($label) ?></th><td><?= ProductText::inline($value) ?></td></tr><?php endif; ?><?php endforeach; ?></tbody></table></div>
-                <?php else: ?><?php foreach (preg_split('/\R\s*\R/u', $section['body']) ?: [] as $paragraph): ?><?php if (trim($paragraph) !== ''): ?><p><?= nl2br(ProductText::inline(trim($paragraph))) ?></p><?php endif; ?><?php endforeach; ?><?php endif; ?>
-              </div>
+              <div class="cms-block-text"<?= $editable('section_body', $section['body'], $i, 'section.set') ?>><?php
+                if ($section['type'] === 'list'): ?><ul class="feature-list"><?php
+                  foreach (preg_split('/\R/u', $section['body']) ?: [] as $line):
+                    if (trim($line) !== ''): ?><li><?= ProductText::inline(trim($line)) ?></li><?php endif;
+                  endforeach; ?></ul><?php
+                elseif ($section['type'] === 'table'): ?><div class="table-scroll"><table class="spec-table"><tbody><?php
+                  foreach (preg_split('/\R/u', $section['body']) ?: [] as $line):
+                    if (trim($line) !== ''):
+                      [$label, $value] = array_pad(array_map('trim', explode('|', $line, 2)), 2, '');
+                      ?><tr><th scope="row"><?= $escape($label) ?></th><td><?= ProductText::inline($value) ?></td></tr><?php
+                    endif;
+                  endforeach; ?></tbody></table></div><?php
+                else:
+                  foreach (preg_split('/\R\s*\R/u', $section['body']) ?: [] as $paragraph):
+                    if (trim($paragraph) !== ''): ?><p><?= nl2br(ProductText::inline(trim($paragraph))) ?></p><?php endif;
+                  endforeach;
+                endif; ?></div>
             <?php endif; ?>
           </section>
           <?php if ($editing): ?><div class="inline-insert"><button type="button" class="inline-small" data-content-action="choose-block">＋ Přidat blok</button><span class="inline-block-types" hidden><?php foreach (ContentBody::TYPES as $type => $label): ?><button type="button" class="inline-tiny" data-content-action="section-add" data-value="<?= $type ?>" data-index="<?= $i ?>"><?= $label ?></button><?php endforeach; ?></span></div><?php endif; ?>

@@ -176,15 +176,21 @@ $editable = static function (string $field, string $value, ?int $index = null, s
               <?php if ($section['type'] === 'image'): ?>
                 <figure class="product-story-image"><img src="<?= $escape($imageUrl(MediaPath::variant($section['body'], 'card'))) ?>" <?= MediaPath::isManaged($section['body']) ? 'srcset="' . $escape($imageUrl(MediaPath::variant($section['body'], 'card'))) . ' 960w, ' . $escape($imageUrl($section['body'])) . ' 1800w" sizes="(max-width: 760px) 100vw, 800px"' : '' ?> alt="<?= $escape($section['heading'] !== '' ? $section['heading'] : $product['name']) ?>" loading="lazy"></figure>
                 <?php if ($editing): ?><button type="button" class="inline-small" data-editor-action="section-image" data-editor-index="<?= $i ?>" data-editor-value="<?= $escape($section['body']) ?>">✎ Změnit fotografii v bloku</button><?php endif; ?>
-              <?php else: ?><div class="inline-block-text"<?= $editable('section_body', $section['body'], $i, 'section.set') ?>>
-                <?php if ($section['type'] === 'list'): ?><ul class="feature-list">
-                  <?php foreach (preg_split('/\R/u', $section['body']) ?: [] as $line): ?><?php if (trim($line) !== ''): ?><li><?= ProductText::inline(trim($line)) ?></li><?php endif; ?><?php endforeach; ?>
-                </ul>
-                <?php elseif ($section['type'] === 'table'): ?><div class="table-scroll"><table class="spec-table"><tbody>
-                  <?php foreach (preg_split('/\R/u', $section['body']) ?: [] as $line): ?><?php if (trim($line) !== ''): ?><?php [$label, $value] = array_pad(array_map('trim', explode('|', $line, 2)), 2, ''); ?><tr><th scope="row"><?= $escape($label) ?></th><td><?= ProductText::inline($value) ?></td></tr><?php endif; ?><?php endforeach; ?>
-                </tbody></table></div>
-                <?php else: ?><?php foreach (preg_split('/\R\s*\R/u', $section['body']) ?: [] as $paragraph): ?><p><?= nl2br(ProductText::inline(trim($paragraph))) ?></p><?php endforeach; ?><?php endif; ?>
-              </div><?php endif; ?>
+              <?php else: ?><div class="inline-block-text"<?= $editable('section_body', $section['body'], $i, 'section.set') ?>><?php
+                if ($section['type'] === 'list'): ?><ul class="feature-list"><?php
+                  foreach (preg_split('/\R/u', $section['body']) ?: [] as $line):
+                    if (trim($line) !== ''): ?><li><?= ProductText::inline(trim($line)) ?></li><?php endif;
+                  endforeach; ?></ul><?php
+                elseif ($section['type'] === 'table'): ?><div class="table-scroll"><table class="spec-table"><tbody><?php
+                  foreach (preg_split('/\R/u', $section['body']) ?: [] as $line):
+                    if (trim($line) !== ''):
+                      [$label, $value] = array_pad(array_map('trim', explode('|', $line, 2)), 2, '');
+                      ?><tr><th scope="row"><?= $escape($label) ?></th><td><?= ProductText::inline($value) ?></td></tr><?php
+                    endif;
+                  endforeach; ?></tbody></table></div><?php
+                else:
+                  foreach (preg_split('/\R\s*\R/u', $section['body']) ?: [] as $paragraph): ?><p><?= nl2br(ProductText::inline(trim($paragraph))) ?></p><?php endforeach;
+                endif; ?></div><?php endif; ?>
             </section>
             <?php if ($editing): ?><div class="inline-insert"><button type="button" class="inline-small" data-editor-action="choose-block">＋ Přidat blok</button><span class="inline-block-types" hidden><?php foreach (['text' => 'Text', 'list' => 'Seznam', 'table' => 'Tabulka', 'image' => 'Fotografie'] as $type => $title): ?><button type="button" class="inline-tiny" data-editor-action="section-add" data-editor-value="<?= $type ?>" data-editor-index="<?= $i ?>"><?= $title ?></button><?php endforeach; ?></span></div><?php endif; ?>
           <?php endforeach; ?>
