@@ -100,7 +100,9 @@ foreach (['page', 'post'] as $type) {
         !str_contains($editor, 'name="action" value="delete-content"') ||
         !str_contains($editor, 'Smazat ' . ($type === 'post' ? 'článek' : 'stránku')) ||
         str_contains($public, 'name="action" value="delete-content"') ||
-        ($type === 'post' && !str_contains($editor, 'data-edit-maxlength="180"')) ||
+        ($type === 'post' && (!str_contains($editor, '<textarea class="cms-lead inline-summary-editor" data-content-input="summary" maxlength="180"') ||
+            !str_contains($editor, '<output data-summary-counter></output>') ||
+            str_contains($editor, 'data-edit-field="summary"'))) ||
         !str_contains($editor, 'test-token') ||
         !str_contains($editor, 'noindex, nofollow') ||
         ($type === 'post' && (!str_contains($editor, '/shop/cs/blog/moje-adresa') ||

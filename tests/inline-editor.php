@@ -94,7 +94,9 @@ $checks = [
         str_contains($editor, 'Nastavení produktu') && str_contains($editor, 'Volné: 12 ks') &&
         str_contains($editor, 'data-editor-input="slug"') &&
         str_contains($editor, '<details class="inline-delete-product"'),
-    'summary_limit' => str_contains($editor, 'data-edit-maxlength="180"') &&
+    'summary_limit' => str_contains($editor, '<textarea class="detail-lead inline-summary-editor" data-editor-input="summary" maxlength="180"') &&
+        str_contains($editor, '<output data-summary-counter></output>') &&
+        !str_contains($editor, 'data-edit-field="summary"') &&
         str_contains($editor, 'Perex na kartě'),
     'single_create_product' => substr_count($editor, 'value="create-product"') === 1,
     'compact_edit_body' => $compactEditableBodies,

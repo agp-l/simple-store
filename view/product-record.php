@@ -94,8 +94,9 @@ $editable = static function (string $field, string $value, ?int $index = null, s
       <div class="detail-info">
         <p class="product-brand"><span<?= $editable('brand', $product['brand']) ?>><?= $escape($product['brand']) ?></span> · <?= $escape($categoryLabel) ?></p>
         <h1<?= $editable('name', $product['name']) ?>><?= $escape($product['name']) ?></h1>
-        <?php if ($editing || $product['summary'] !== ''): ?><p class="detail-lead"<?= $editable('summary', $product['summary'] ?? '') ?><?= $editing ? ' data-edit-maxlength="' . CardSummary::MAX_CHARACTERS . '" aria-describedby="product-summary-hint"' : '' ?>><?= $escape($product['summary'] ?: 'Krátký popis produktu…') ?></p><?php endif; ?>
-        <?php if ($editing): ?><small class="inline-summary-hint" id="product-summary-hint">Perex na kartě: nejvýše <?= CardSummary::MAX_CHARACTERS ?> znaků; v katalogu se zobrazí maximálně tři řádky.</small><?php endif; ?>
+        <?php if ($editing): ?><textarea class="detail-lead inline-summary-editor" data-editor-input="summary" maxlength="<?= CardSummary::MAX_CHARACTERS ?>" rows="3" aria-label="Perex produktu" aria-describedby="product-summary-hint" placeholder="Krátký popis produktu…"><?= $escape($product['summary'] ?? '') ?></textarea>
+          <small class="inline-summary-hint" id="product-summary-hint">Perex na kartě: nejvýše <?= CardSummary::MAX_CHARACTERS ?> znaků; v katalogu se zobrazí maximálně tři řádky. <output data-summary-counter></output></small>
+        <?php elseif ($product['summary'] !== ''): ?><p class="detail-lead"><?= $escape($product['summary']) ?></p><?php endif; ?>
         <form method="post" action="<?= $escape($cartUrl) ?>" class="product-purchase">
           <input type="hidden" name="action" value="add"><input type="hidden" name="csrf" value="<?= $escape($cartToken) ?>">
           <input type="hidden" name="product_key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">

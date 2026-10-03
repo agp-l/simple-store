@@ -14,6 +14,13 @@
   let refreshTimer;
   let nextUrl = location.href;
   let addedSection = null;
+  const summary = document.querySelector('textarea[data-content-input="summary"]');
+  const summaryCounter = document.querySelector('[data-summary-counter]');
+  const updateSummaryCounter = () => {
+    if (summary && summaryCounter) summaryCounter.textContent = `${summary.value.length} / ${summary.maxLength}`;
+  };
+  summary?.addEventListener('input', updateSummaryCounter);
+  updateSummaryCounter();
 
   try {
     const oldScroll = sessionStorage.getItem(scrollKey);
@@ -113,11 +120,6 @@
     const target = event.target.closest('[data-edit-operation]');
     if (!target || failed) return;
     clearTimeout(refreshTimer);
-    if (target.dataset.editInvalid === '1') {
-      delete target.dataset.editInvalid;
-      target.classList.remove('inline-invalid');
-      return;
-    }
     previousHtml.set(target, target.innerHTML);
     target.textContent = target.dataset.editValue;
     target.classList.add('inline-focused');
@@ -134,13 +136,6 @@
     const value = (target.innerText || target.textContent || '').replace(/\r/g, '').trim();
     if (value === target.dataset.editValue || failed) {
       target.innerHTML = previousHtml.get(target);
-      return;
-    }
-    const max = Number(target.dataset.editMaxlength || 0);
-    if (max && Array.from(value).length > max) {
-      target.dataset.editInvalid = '1';
-      status.textContent = `Perex může mít nejvýše ${max} znaků. Zkrať text a znovu klikni mimo pole.`;
-      target.classList.add('inline-invalid');
       return;
     }
     save(target.dataset.editOperation, target.dataset.editField, value,
@@ -164,7 +159,7 @@
     if (event.target.dataset.contentSelect) {
       save('set', event.target.dataset.contentSelect, event.target.value);
     } else if (event.target.dataset.contentInput) {
-      save('set', event.target.dataset.contentInput, event.target.value);
+      if (event.target.reportValidity()) save('set', event.target.dataset.contentInput, event.target.value);
     } else if (event.target.hasAttribute('data-content-type')) {
       if (!confirm('Změna typu nahradí text bloku ukázkovým obsahem. Pokračovat?')) {
         event.target.value = event.target.querySelector('option[selected]')?.value || 'text';

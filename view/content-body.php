@@ -63,10 +63,12 @@ $editable = static function (string $field, string $value, ?int $index = null, s
     <article class="cms-article">
       <p class="cms-eyebrow"><?= $page === 'post' ? 'Z blogu' : 'Stránka' ?></p>
       <h1<?= $editable('title', $content['title']) ?>><?= $escape($content['title']) ?></h1>
-      <?php if ($editing || ($content['summary'] ?? '') !== ''): ?>
-        <p class="cms-lead"<?= $editable('summary', $content['summary'] ?? '') ?><?= $editing && $page === 'post' ? ' data-edit-maxlength="' . CardSummary::MAX_CHARACTERS . '" aria-describedby="post-summary-hint"' : '' ?>><?= $escape($content['summary'] ?: 'Krátký úvod…') ?></p>
+      <?php if ($editing && $page === 'post'): ?>
+        <textarea class="cms-lead inline-summary-editor" data-content-input="summary" maxlength="<?= CardSummary::MAX_CHARACTERS ?>" rows="3" aria-label="Perex článku" aria-describedby="post-summary-hint" placeholder="Krátký úvod…"><?= $escape($content['summary'] ?? '') ?></textarea>
+        <small class="inline-summary-hint" id="post-summary-hint">Perex článku: nejvýše <?= CardSummary::MAX_CHARACTERS ?> znaků; v přehledu maximálně tři řádky. <output data-summary-counter></output></small>
+      <?php elseif ($editing || ($content['summary'] ?? '') !== ''): ?>
+        <p class="cms-lead"<?= $editable('summary', $content['summary'] ?? '') ?>><?= $escape($content['summary'] ?: 'Krátký úvod…') ?></p>
       <?php endif; ?>
-      <?php if ($editing && $page === 'post'): ?><small class="inline-summary-hint" id="post-summary-hint">Perex článku: nejvýše <?= CardSummary::MAX_CHARACTERS ?> znaků; v přehledu maximálně tři řádky.</small><?php endif; ?>
       <div class="cms-text cms-blocks">
         <?php if ($editing): ?><div class="inline-insert"><button type="button" class="inline-small" data-content-action="choose-block">＋ Přidat blok</button><span class="inline-block-types" hidden><?php foreach (ContentBody::TYPES as $type => $label): ?><button type="button" class="inline-tiny" data-content-action="section-add" data-value="<?= $type ?>" data-index="-1"><?= $label ?></button><?php endforeach; ?></span></div><?php endif; ?>
         <?php foreach ($sections as $i => $section): ?>
