@@ -72,6 +72,8 @@ final class PageRenderer
         $stockReady = (bool) ($data['stockReady'] ?? false);
         $canEditProduct = (bool) ($data['canEditProduct'] ?? false);
         $editMode = (bool) ($data['editMode'] ?? false);
+        $supplierLinks = $data['supplierLinks'] ?? [];
+        $supplierLinksReady = (bool) ($data['supplierLinksReady'] ?? false);
         $contentEditMode = (bool) ($data['contentEditMode'] ?? false);
         $canEditContent = (bool) ($data['canEditContent'] ?? false);
         $canManageContent = (bool) ($data['canManageContent'] ?? false);

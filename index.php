@@ -26,6 +26,7 @@ use SimpleStore\Navigation\StorefrontMenus;
 use SimpleStore\Navigation\UrlManager;
 use SimpleStore\Product\ProductRepository;
 use SimpleStore\Product\ProductStockRepository;
+use SimpleStore\Product\ProductSupplierLinkRepository;
 use SimpleStore\Product\HomepageProductSelection;
 use SimpleStore\Rendering\PageRenderer;
 use SimpleStore\Accounting\TaxEvidenceRepository;
@@ -323,6 +324,15 @@ try {
             ? $repository->findCurrentBySlug($route['slug'], $url->getLanguage())
             : $repository->findPublished($route['slug'], $url->getLanguage());
         $editMode = $editRequested && $canEdit && $item !== null;
+        $supplierLinks = [];
+        $supplierLinksReady = false;
+        if ($canEdit && $item !== null) {
+            $supplierRepository = new ProductSupplierLinkRepository($db);
+            $supplierLinksReady = $supplierRepository->installed();
+            if ($supplierLinksReady) $supplierLinks = $supplierRepository->forProduct($item['product_key']);
+            $shared['editToken'] = $auth->token();
+            $shared['privatePage'] = true;
+        }
         if ($editMode) {
             $rows = [];
             $addCategories = static function (array $nodes, int $depth) use (&$addCategories, &$rows): void {
@@ -340,6 +350,7 @@ try {
             'title' => $item === null ? 'Produkt nenalezen — dobrodruzi.cz' : $item['name'] . ' — dobrodruzi.cz',
             'description' => $item['summary'] ?? '', 'product' => $item,
             'canEditProduct' => $canEdit, 'editMode' => $editMode, 'stockReady' => $stockReady,
+            'supplierLinks' => $supplierLinks, 'supplierLinksReady' => $supplierLinksReady,
             'categoryTrail' => $item === null ? [] : $categories->trail(
                 $url->getLanguage(), CategoryPath::fromProduct($item)
             ),

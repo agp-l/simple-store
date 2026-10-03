@@ -249,6 +249,9 @@
 .panel-order-product-image { display: grid; flex: none; width: 64px; height: 64px; place-items: center; overflow: hidden; border: 1px solid var(--line); border-radius: 5px; background: #f6f8f5; color: var(--muted); text-decoration: none; }
 .panel-order-product-image img { display: block; width: 100%; height: 100%; object-fit: contain; }
 .panel-order-product-name { font-size: 13px; overflow-wrap: anywhere; }
+.panel-order-suppliers { display: flex; flex-wrap: wrap; gap: 5px 9px; font-size: 12px; }
+.panel-order-suppliers span { color: var(--muted); }
+.panel-order-suppliers a { color: #27692c; font-weight: 700; overflow-wrap: anywhere; }
 .panel-order-lines-title { margin: 20px 0 -10px; font-size: 15px; }
 .panel-order-copy { min-height: 34px; padding: 6px 9px; border: 1px solid #c8d9c3; border-radius: 5px; background: #f8fbf6; color: #31612f; font-size: 12px; font-weight: 700; }
 .panel-order-copy:hover:not(:disabled) { background: #eaf4e6; }

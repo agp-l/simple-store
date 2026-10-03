@@ -20,6 +20,7 @@ use SimpleStore\Admin\OrderControlRepository;
 use SimpleStore\Admin\OrderShippingRepository;
 use SimpleStore\Admin\OrderProductLinks;
 use SimpleStore\Product\ProductStockRepository;
+use SimpleStore\Product\ProductSupplierLinkRepository;
 use SimpleStore\Accounting\InvoiceRepository;
 use SimpleStore\Accounting\TaxEvidenceRepository;
 use SimpleStore\Accounting\OrderMailQueue;
@@ -67,6 +68,7 @@ $btcpayConfigured = (string) ($btcpaySettings['server_url'] ?? '') !== '' &&
 $orderError = '';
 $order = null;
 $orderProductLinks = [];
+$orderSupplierLinks = [];
 $packetaShipment = null;
 $carrierShipment = null;
 $carrierAction = '';
@@ -507,6 +509,8 @@ if ($rawId !== null) {
     }
     if ($order !== null) {
         $orderProductLinks = (new OrderProductLinks($db))->forItems($order['items'] ?? [], $basePath);
+        $suppliers = new ProductSupplierLinkRepository($db);
+        if ($suppliers->installed()) $orderSupplierLinks = $suppliers->forOrderItems($order['items'] ?? []);
     }
     if ($order !== null && $packetaReady) {
         $packetaShipment = $packetaShipments->find($id);

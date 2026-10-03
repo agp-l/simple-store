@@ -109,7 +109,7 @@ try {
             exit;
         } elseif (!in_array($action, array_merge(['create-content', 'create-translation', 'inline-content', 'create-product',
             'inline-product', 'set-product-stock', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
-            'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product', 'homepage-product',
+            'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product', 'homepage-product', 'product-supplier-link',
             'save-checkout-settings', 'save-mail-settings', 'mail-test', 'customer-create', 'customer-update', 'customer-active',
             'customer-password', 'schema-apply'], $orderActions, $taxActions), true) ||
             !$auth->signedIn()) {
@@ -153,6 +153,10 @@ try {
     }
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'homepage-product') {
         require __DIR__ . '/src/Admin/homepage-products.php';
+        exit;
+    }
+    if ($method === 'POST' && ($_POST['action'] ?? '') === 'product-supplier-link') {
+        require __DIR__ . '/src/Admin/product-suppliers.php';
         exit;
     }
     if (($method === 'POST' && in_array($_POST['action'] ?? '', ['media-upload', 'media-attach'], true)) ||

@@ -731,6 +731,16 @@ CREATE TABLE IF NOT EXISTS product_revisions (
   KEY products_for_catalog (language, published, active_product_key, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Supplier links are private administration data, shared across translations and revisions.
+CREATE TABLE IF NOT EXISTS shop_product_supplier_links (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  label VARCHAR(120) NOT NULL,
+  url VARCHAR(1000) NOT NULL,
+  PRIMARY KEY (id),
+  KEY supplier_product (product_key, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- A row is created when the administrator makes the first explicit homepage selection.
 -- Until then the homepage continues to display the regular catalog.
 CREATE TABLE IF NOT EXISTS shop_homepage_selections (

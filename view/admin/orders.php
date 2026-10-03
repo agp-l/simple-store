@@ -174,7 +174,15 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
                 <small><?= (int) ($item['quantity'] ?? 0) ?> ks × <?= $orderMoney($item['unit_price_czk'] ?? 0) ?>
                 <?php foreach (($item['options'] ?? []) as $option => $value): ?>
                   <?php if (is_scalar($value)): ?> · <?= $escape($option) ?>: <?= $escape($value) ?><?php endif; ?>
-                <?php endforeach; ?></small></div>
+                <?php endforeach; ?></small>
+                <?php if (!empty($orderSupplierLinks[$item['product_key'] ?? ''])): ?>
+                  <div class="panel-order-suppliers"><span>Dodavatelé:</span>
+                    <?php foreach ($orderSupplierLinks[$item['product_key']] as $supplier): ?>
+                      <a href="<?= $escape($supplier['url']) ?>" target="_blank" rel="noopener noreferrer" title="<?= $escape($supplier['url']) ?>"><?= $escape($supplier['label']) ?> ↗</a>
+                    <?php endforeach; ?>
+                  </div>
+                <?php endif; ?>
+              </div>
               <strong><?= $orderMoney((int) ($item['quantity'] ?? 0) * (int) ($item['unit_price_czk'] ?? 0)) ?></strong>
             </div>
           <?php endforeach; ?>

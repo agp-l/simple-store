@@ -21,7 +21,8 @@ if (!str_contains($html, 'Načteno 0 produktů') ||
 
 $product = ['slug' => 'bota', 'product_key' => str_repeat('b', 32),
     'name' => 'Lehká bota', 'brand' => 'Topo',
-    'summary' => 'Na hory', 'details_json' => null, 'category' => 'boty',
+    'summary' => 'Na hory', 'description' => '', 'published' => 1,
+    'details_json' => null, 'category' => 'boty',
     'subcategory' => '', 'price_czk' => 3990, 'image_path' => 'images/batoh.webp',
     'sizes' => '', 'stock_status' => 'in_stock'];
 ob_start();
@@ -46,6 +47,28 @@ $cards = $renderer->cards('product', [$product], [
 ]);
 if (!str_contains($cards, '/shop/cs/produkt/bota') || str_contains($cards, '<html')) {
     throw new RuntimeException('The additional catalog batch must render only the reusable product cards.');
+}
+
+$privateSupplier = [['id' => 7, 'label' => 'Sklad bot',
+    'url' => 'https://supplier.example.test/bota?size=42&source=store']];
+$detailData = ['basePath' => '/shop/', 'language' => 'cs', 'product' => $product,
+    'categoryLabels' => ['boty' => 'Boty'], 'supplierLinks' => $privateSupplier,
+    'supplierLinksReady' => true, 'editToken' => 'private-token'];
+ob_start();
+$renderer->render('product-record', $detailData);
+$publicDetail = ob_get_clean();
+if (str_contains($publicDetail, 'supplier.example.test') || str_contains($publicDetail, 'supplier-links') ||
+    str_contains($publicDetail, 'private-token')) {
+    throw new RuntimeException('Supplier links or their edit token leaked to a public product page.');
+}
+ob_start();
+$renderer->render('product-record', $detailData + ['canEditProduct' => true]);
+$privateDetail = ob_get_clean();
+if (!str_contains($privateDetail, 'supplier.example.test/bota?size=42&amp;source=store') ||
+    !str_contains($privateDetail, 'name="action" value="product-supplier-link"') ||
+    !str_contains($privateDetail, 'name="csrf" value="private-token"') ||
+    !str_contains($privateDetail, 'Jen pro správce')) {
+    throw new RuntimeException('Administrators must see and edit the private supplier links on product pages.');
 }
 
 ob_start();
