@@ -46,8 +46,8 @@ ob_start();
 $renderer->render('cart', $bitcoinData);
 $bitcoinCart = ob_get_clean();
 if (!str_contains($bitcoinCart, '1 000 Kč (≈ 0.00050000 BTC)') ||
-    !str_contains($bitcoinCart, 'Data poskytuje <a href="https://www.coingecko.com/en/api"')) {
-    throw new RuntimeException('The cart must show CZK and indicative BTC with feed attribution.');
+    str_contains($bitcoinCart, 'Data poskytuje')) {
+    throw new RuntimeException('The cart must show CZK and BTC without exchange-rate text in the footer.');
 }
 
 ob_start();
