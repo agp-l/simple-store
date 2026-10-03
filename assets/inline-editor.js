@@ -7,6 +7,7 @@
   const cancelled = new WeakSet();
   const scrollKey = `dobrodruzi-editor-scroll-${config.key}`;
   const blockKey = `dobrodruzi-editor-block-${config.key}`;
+  const settingsKey = `dobrodruzi-editor-settings-${config.key}`;
   const statusKey = `dobrodruzi-editor-status-${config.key}`;
   let queue = Promise.resolve();
   let pending = 0;
@@ -14,6 +15,14 @@
   let refreshTimer;
   let nextUrl = location.href;
   let addedSection = null;
+  const settings = document.getElementById('product-settings');
+
+  try {
+    if (settings && sessionStorage.getItem(settingsKey) === '1') settings.open = true;
+  } catch {}
+  settings?.addEventListener('toggle', () => {
+    try { sessionStorage.setItem(settingsKey, settings.open ? '1' : '0'); } catch {}
+  });
 
   try {
     const oldScroll = sessionStorage.getItem(scrollKey);

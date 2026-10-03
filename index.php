@@ -279,12 +279,14 @@ try {
             $shared['privatePage'] = true;
         }
         $shared['homepageSelectionActive'] = $homepageSelectionActive;
+        $shared['productAdminMode'] = $managingCatalog ? 'manage' : ($homepageEditing ? 'selection' :
+            ($path === null && ($_GET['all'] ?? '') !== '1' ? 'home' : 'catalog'));
         $shared['homepageConfigured'] = $homepageKeys !== null;
         $shared['products'] = $batch['items'];
         $shared['managingCatalog'] = $managingCatalog;
         $shared['catalogVisibility'] = $visibility;
         $shared['managementCategories'] = $managingCatalog ? $categories->all($url->getLanguage()) : [];
-        $shared['privatePage'] = $managingCatalog;
+        $shared['privatePage'] = $managingCatalog || $homepageEditing;
         $shared['productDeleted'] = $managingCatalog && ($_GET['deleted'] ?? '') === '1';
         $shared['searchTerm'] = $search;
         $shared['sortChoice'] = $sort;
@@ -350,6 +352,11 @@ try {
             'title' => $item === null ? 'Produkt nenalezen — dobrodruzi.cz' : $item['name'] . ' — dobrodruzi.cz',
             'description' => $item['summary'] ?? '', 'product' => $item,
             'canEditProduct' => $canEdit, 'editMode' => $editMode, 'stockReady' => $stockReady,
+            'productAdminMode' => 'product',
+            'categoryAdminUrl' => $item === null ? '' : $url->getBasePath() . 'admin.php?' . http_build_query([
+                'section' => 'categories', 'language' => $url->getLanguage(),
+                'edit' => CategoryPath::fromProduct($item),
+            ]),
             'supplierLinks' => $supplierLinks, 'supplierLinksReady' => $supplierLinksReady,
             'categoryTrail' => $item === null ? [] : $categories->trail(
                 $url->getLanguage(), CategoryPath::fromProduct($item)

@@ -26,20 +26,23 @@ $editable = static function (string $field, string $value, ?int $index = null, s
 };
 ?>
   <main class="wrap detail-page<?= $editing ? ' is-editing' : '' ?>" id="produkty">
+    <?php if ($canEdit): ?><?php require __DIR__ . '/product-admin-nav.php'; ?><?php endif; ?>
     <?php if ($canEdit && !$editing): ?>
-      <p class="inline-entry"><a href="<?= $escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1') ?>">✎ Upravit tento produkt přímo na stránce</a></p>
+      <div class="product-admin-read"><span>Produkt prohlížíš bez úprav.</span><a href="<?= $escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1') ?>">✎ Upravit produkt</a></div>
     <?php endif; ?>
     <?php if ($editing): ?>
-      <div class="inline-toolbar" id="inline-toolbar">
-        <div><strong>Upravuješ <?= !empty($product['published']) ? 'veřejný produkt' : 'neveřejný koncept' ?></strong><p>Klikni do textu; úprava se uloží při opuštění pole.</p></div>
+      <div class="inline-toolbar product-edit-toolbar" id="inline-toolbar">
+        <div><strong>Úprava produktu <span class="product-edit-state<?= !empty($product['published']) ? ' is-public' : '' ?>"><?= !empty($product['published']) ? 'Zveřejněný' : 'Skrytý koncept' ?></span></strong><p>Klikni do textu; úprava se uloží při opuštění pole.</p></div>
         <span class="inline-status" id="inline-status" role="status" aria-live="polite">Revize <?= (int) $product['revision_number'] ?></span>
-        <button type="button" class="inline-small" data-editor-action="publish" data-value="<?= $product['published'] ? '0' : '1' ?>"><?= $product['published'] ? 'Skrýt produkt' : 'Publikovat produkt' ?></button>
-        <button type="button" class="inline-small" data-editor-action="media-library">▧ Fotografie</button>
-        <a href="<?= $escape($mediaLibraryUrl) ?>">Knihovna tohoto produktu ↗</a>
-        <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>" class="inline-create-product"><input type="hidden" name="action" value="create-product"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>"><button type="submit" class="inline-small">＋ Nový produkt</button></form>
-        <?php if ($product['published']): ?><a href="<?= $escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug'])) ?>">Zobrazit jako návštěvník ↗</a><?php endif; ?>
-        <a href="<?= $escape($siteRoot . $language . '?manage=1') ?>">Všechny produkty včetně skrytých</a>
+        <div class="product-edit-toolbar-actions">
+          <button type="button" class="inline-small" data-editor-action="publish" data-value="<?= $product['published'] ? '0' : '1' ?>"><?= $product['published'] ? 'Skrýt produkt' : 'Publikovat produkt' ?></button>
+          <button type="button" class="inline-small" data-editor-action="media-library">▧ Fotografie</button>
+          <a href="<?= $escape($mediaLibraryUrl) ?>">Knihovna fotografií ↗</a>
+          <?php if ($product['published']): ?><a href="<?= $escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug'])) ?>">Zobrazit bez úprav ↗</a><?php endif; ?>
+        </div>
       </div>
+      <?php if (($_GET['stock_saved'] ?? '') === '1'): ?><p class="inline-stock-notice" role="status">Počet kusů skladem byl uložen.</p><?php endif; ?>
+      <details class="product-admin-settings" id="product-settings"><summary><strong>Nastavení produktu</strong><span><?= $escape($categoryLabel) ?> · <?= $escape($stockText[$product['stock_status']] ?? '') ?><?= ($stockReady ?? false) ? ' · Volné: ' . (int) ($product['stock_quantity'] ?? 0) . ' ks' : '' ?></span></summary>
       <div class="inline-settings" aria-label="Nastavení produktu">
         <label>Kategorie <select data-editor-select="category_path">
           <?php foreach ($editorCategories as $option): ?><option value="<?= $escape($option['path']) ?>" <?= $categoryPath === $option['path'] ? 'selected' : '' ?>><?= $escape($option['title']) ?></option><?php endforeach; ?>
@@ -58,8 +61,8 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         <?php else: ?><a href="<?= $escape($siteRoot . 'admin.php?section=database') ?>">Pro počet kusů aktualizuj SQL tabulky ↗</a><?php endif; ?>
         <span>Adresa: <span class="inline-slug"<?= $editable('slug', $product['slug']) ?>><?= $escape($product['slug']) ?></span></span>
       </div>
-      <?php if (($_GET['stock_saved'] ?? '') === '1'): ?><p class="inline-stock-notice" role="status">Počet kusů skladem byl uložen.</p><?php endif; ?>
       <p class="inline-stock-note">Počet je společný pro všechny varianty a jazyky. Zákazníci vidí jen dostupnost. „Na objednávku“ umožňuje objednání i bez kusů skladem.</p>
+      </details>
       <details class="inline-delete-product"><summary>Odstranit produkt</summary>
         <p>Smazání odstraní produkt a všechny jeho revize v tomto jazyce. Nahrané obrázky zůstanou na disku, protože mohou mít zkopírované odkazy.</p>
         <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>">

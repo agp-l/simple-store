@@ -40,6 +40,7 @@ final class PageRenderer
         $categoryMenuRoot = $data['categoryMenuRoot'] ?? null;
         $currentCategory = $data['currentCategory'] ?? null;
         $canManageCatalog = (bool) ($data['canManageCatalog'] ?? false);
+        $productAdminMode = (string) ($data['productAdminMode'] ?? ($page === 'product-record' ? 'product' : 'catalog'));
         $managingCatalog = (bool) ($data['managingCatalog'] ?? false);
         $catalogVisibility = (string) ($data['catalogVisibility'] ?? 'all');
         $managementCategories = $data['managementCategories'] ?? [];

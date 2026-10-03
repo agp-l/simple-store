@@ -27,7 +27,7 @@
             <?php if ($manualUtilityMenu && $link['children'] !== []): ?><?php require __DIR__ . '/nav-dropdown.php'; ?>
             <?php else: ?><a href="<?= htmlspecialchars($link['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" <?= $link['active'] ? 'aria-current="page"' : '' ?>><?= htmlspecialchars($link['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a><?php endif; ?>
           <?php endforeach; ?>
-          <?php if ($canManageMenu): ?><a class="menu-admin-shortcut" href="<?= htmlspecialchars($menuAdminUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">✎ Upravit menu</a><?php endif; ?>
+          <?php if ($canManageMenu && !($canManageCatalog ?? false) && !($canEditProduct ?? false)): ?><a class="menu-admin-shortcut" href="<?= htmlspecialchars($menuAdminUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">✎ Upravit menu</a><?php endif; ?>
         </nav>
       </div>
       <?php require __DIR__ . '/menu.php'; ?>
@@ -48,11 +48,11 @@
   <?php if ($adminCreate !== null): ?>
     <nav class="site-admin-bar" aria-label="Správa webu">
       <div class="wrap site-admin-inner"><strong>Správa webu</strong>
-        <form method="post" action="<?= $siteRoot ?>admin.php"><input type="hidden" name="csrf" value="<?= htmlspecialchars($adminCreate['csrf'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><input type="hidden" name="language" value="<?= htmlspecialchars($adminCreate['language'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><button type="submit" name="action" value="create-product">＋ Produkt</button></form>
+        <?php if (!in_array($page, ['catalog', 'product-record'], true)): ?><form method="post" action="<?= $siteRoot ?>admin.php"><input type="hidden" name="csrf" value="<?= htmlspecialchars($adminCreate['csrf'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><input type="hidden" name="language" value="<?= htmlspecialchars($adminCreate['language'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><button type="submit" name="action" value="create-product">＋ Produkt</button></form><?php endif; ?>
         <form method="post" action="<?= $siteRoot ?>admin.php"><input type="hidden" name="csrf" value="<?= htmlspecialchars($adminCreate['csrf'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><input type="hidden" name="language" value="<?= htmlspecialchars($adminCreate['language'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><input type="hidden" name="type" value="page"><button type="submit" name="action" value="create-content">＋ Stránka</button></form>
         <form method="post" action="<?= $siteRoot ?>admin.php"><input type="hidden" name="csrf" value="<?= htmlspecialchars($adminCreate['csrf'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><input type="hidden" name="language" value="<?= htmlspecialchars($adminCreate['language'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><input type="hidden" name="type" value="post"><button type="submit" name="action" value="create-content">＋ Článek</button></form>
-        <a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>?manage=1">Produkty a koncepty</a>
-        <a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>?homepage_edit=1#homepage-editor">Výběr na úvodní stránku</a>
+        <?php if (!in_array($page, ['catalog', 'product-record'], true)): ?><a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>?manage=1">Produkty a koncepty</a>
+        <a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>?homepage_edit=1#homepage-editor">Výběr na úvodní stránku</a><?php endif; ?>
         <a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/blog?manage=1">Blog</a>
         <a href="<?= $siteRoot ?>admin.php">Další obsah a nastavení</a>
       </div>

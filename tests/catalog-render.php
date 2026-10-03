@@ -13,7 +13,7 @@ $html = ob_get_clean();
 if (!str_contains($html, 'Načteno 0 produktů') ||
     !str_contains($html, 'Zatím tu nejsou zveřejněné produkty') ||
     !str_contains($html, 'href="/shop/cs"') ||
-    str_contains($html, 'menu-admin-shortcut') ||
+    str_contains($html, 'menu-admin-shortcut') || str_contains($html, 'product-admin-nav') ||
     str_contains($html, 'produkt-topo-terraventure.php') ||
     str_contains($html, 'data-add')) {
     throw new RuntimeException('The empty catalog must not display old sample products or leave the language.');
@@ -65,6 +65,9 @@ ob_start();
 $renderer->render('product-record', $detailData + ['canEditProduct' => true]);
 $privateDetail = ob_get_clean();
 if (!str_contains($privateDetail, 'supplier.example.test/bota?size=42&amp;source=store') ||
+    !str_contains($privateDetail, 'aria-label="Správa produktů"') ||
+    !str_contains($privateDetail, 'href="/shop/cs?manage=1#produkty"') ||
+    !str_contains($privateDetail, '✎ Upravit produkt') ||
     !str_contains($privateDetail, 'name="action" value="product-supplier-link"') ||
     !str_contains($privateDetail, 'name="csrf" value="private-token"') ||
     !str_contains($privateDetail, 'Jen pro správce')) {
@@ -83,6 +86,7 @@ if (!str_contains($selectedHome, 'Vybráno na cestu') ||
 ob_start();
 $renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
     'products' => [$product], 'homepageEditing' => true, 'homepageReady' => true,
+    'productAdminMode' => 'selection',
     'homepageSelectionActive' => true, 'homepageConfigured' => true,
     'homepageKeys' => [$product['product_key']],
     'homepageSelected' => [$product + ['published' => 1]],
@@ -90,6 +94,8 @@ $renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
     'canManageCatalog' => true]);
 $editableHome = ob_get_clean();
 if (!str_contains($editableHome, 'name="action" value="homepage-product"') ||
+    !str_contains($editableHome, 'href="/shop/cs?homepage_edit=1#homepage-editor" aria-current="page"') ||
+    !str_contains($editableHome, 'href="/shop/cs#produkty"') ||
     !str_contains($editableHome, 'name="csrf" value="home-csrf"') ||
     !str_contains($editableHome, 'Vrátit automatický výpis katalogu')) {
     throw new RuntimeException('Homepage administration needs working server-side selection controls.');
@@ -112,10 +118,15 @@ $draft = array_replace($product, ['published' => 0, 'product_key' => str_repeat(
 ob_start();
 $renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
     'products' => [$draft], 'managingCatalog' => true, 'canManageCatalog' => true,
+    'productAdminMode' => 'manage', 'adminCreate' => ['csrf' => 'catalog-token', 'language' => 'cs'],
     'privatePage' => true, 'catalogVisibility' => 'draft',
     'searchAction' => '/shop/cs', 'nextUrl' => '/shop/cs?manage=1&offset=12']);
 $management = ob_get_clean();
 if (!str_contains($management, '/shop/cs/produkt/bota?edit=1') ||
+    !str_contains($management, 'href="/shop/cs?manage=1#produkty" aria-current="page"') ||
+    !str_contains($management, 'name="action" value="create-product"') ||
+    !str_contains($management, 'href="/shop/admin.php?section=categories&amp;language=cs"') ||
+    !str_contains($management, 'href="/shop/admin.php?section=menus&amp;language=cs&amp;slot=primary"') ||
     !str_contains($management, 'Skrytý koncept') ||
     !str_contains($management, 'name="robots" content="noindex, nofollow"') ||
     str_contains($management, 'name="action" value="add"') || str_contains($management, 'id="sort"')) {

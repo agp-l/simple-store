@@ -73,6 +73,11 @@ $checks = [
     'no_public_editor_config' => !str_contains($public, 'inline-editor-config'),
     'no_public_token' => !str_contains($public, 'test-token'),
     'edit_body' => str_contains($editor, 'data-edit-field="section_body"'),
+    'admin_navigation' => str_contains($editor, 'aria-label="Pohledy na produkty"') &&
+        str_contains($editor, 'href="/shop/cs?homepage_edit=1#homepage-editor"'),
+    'product_settings' => str_contains($editor, '<details class="product-admin-settings"') &&
+        str_contains($editor, 'Nastavení produktu') && str_contains($editor, 'Volné: 12 ks'),
+    'single_create_product' => substr_count($editor, 'value="create-product"') === 1,
     'compact_edit_body' => $compactEditableBodies,
     'add_section' => str_contains($editor, 'data-editor-action="section-add"'),
     'media_link' => str_contains($editor, 'section=media&amp;type=product&amp;key=' . str_repeat('a', 32)),

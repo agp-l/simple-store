@@ -8,7 +8,7 @@ $editUrl = $homeUrl . '?homepage_edit=1#homepage-editor';
   <div class="homepage-editor-heading"><div><p class="panel-eyebrow">Správa úvodní stránky</p>
     <h2 id="homepage-editor-title">Vybrané produkty</h2>
     <p>Vyber konkrétní zveřejněné zboží a seřaď ho. Změny se ukládají hned. Kategorie a hledání dál zobrazují celý katalog.</p>
-  </div><a href="<?= $escape($homeUrl . '#produkty') ?>">Zobrazit úvodní stránku ↗</a></div>
+  </div></div>
   <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="homepage-editor-notice" role="status">Výběr na úvodní stránce byl uložen.</p><?php endif; ?>
   <?php if (is_string($_GET['homepage_error'] ?? null)): ?><p class="homepage-editor-error" role="alert"><?= $escape($_GET['homepage_error']) ?></p><?php endif; ?>
   <?php if (!$homepageReady): ?>
