@@ -87,4 +87,13 @@ try {
 }
 expectBTCPayClient($malformedRejected, 'Malformed invoice JSON was accepted.');
 
+$body = '[{"id":"Abc123"}]';
+$listRejected = false;
+try {
+    $client->status('Abc123');
+} catch (RuntimeException $expected) {
+    $listRejected = true;
+}
+expectBTCPayClient($listRejected, 'An invoice list was accepted in place of one invoice object.');
+
 echo "BTCPay API client passed.\n";

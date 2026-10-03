@@ -116,7 +116,9 @@ final class HomepageProductSelection
     private static function decode(string $json): array
     {
         $keys = json_decode($json, true);
-        if (!is_array($keys) || !array_is_list($keys)) throw new RuntimeException('Výběr produktů na úvodní stránce je poškozený.');
+        if (!is_array($keys) || array_values($keys) !== $keys) {
+            throw new RuntimeException('Výběr produktů na úvodní stránce je poškozený.');
+        }
         return self::validateKeys($keys);
     }
 

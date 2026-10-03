@@ -86,7 +86,7 @@ final class BTCPayApiClient
             throw new RuntimeException($message);
         }
         $decoded = json_decode($response['body'], true);
-        if (!is_array($decoded) || array_is_list($decoded)) {
+        if (!is_array($decoded) || array_values($decoded) === $decoded) {
             throw new RuntimeException('BTCPay Server nevrátil platnou fakturu.');
         }
         return $decoded;
