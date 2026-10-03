@@ -82,8 +82,12 @@ $_GET['step'] = 'shipping';
 ob_start();
 $withoutKey->handle(['name' => 'checkout']);
 $html = ob_get_clean();
-if (str_contains($html, 'value="zasilkovna_pickup"') || !str_contains($html, 'value="ppl_pickup"')) {
-    throw new RuntimeException('Packeta may not be offered before the public widget key is configured.');
+if (!str_contains($html, 'value="zasilkovna_pickup"') ||
+    !str_contains($html, 'href="https://mapa.zasilkovna.cz/pobocky"') ||
+    str_contains($html, 'data-packeta-open') ||
+    str_contains($html, 'name="packeta_point_id"') ||
+    !str_contains($html, 'value="ppl_pickup"')) {
+    throw new RuntimeException('Without a key Packeta must offer the public map and manual address fields.');
 }
 $withKey = new CheckoutController($url, $renderer,
     ['basePath' => '/simple-store/', 'language' => 'cs'], $cart,
@@ -118,10 +122,22 @@ if ($delivery['pickup_point'] !== 'Praha Hl. nádraží' ||
     $delivery['pickup_code'] !== '123456') {
     throw new RuntimeException('Checkout trusted a spoofed pickup label instead of verified Packeta data.');
 }
-try {
-    $saveDelivery->invoke($withoutKey);
-    throw new RuntimeException('Checkout accepted Packeta without a widget key.');
-} catch (InvalidArgumentException $expected) {
+$_POST['pickup_point'] = 'Zásilkovna Praha 1';
+$_POST['pickup_address'] = 'Na Příkopě 1, Praha, 110 00';
+$_POST['pickup_code'] = '';
+$saveDelivery->invoke($withoutKey);
+$delivery = $cart->state()['delivery'];
+if ($delivery['method'] !== 'zasilkovna_pickup' || $delivery['pickup_point'] !== 'Zásilkovna Praha 1' ||
+    $delivery['pickup_address'] !== 'Na Příkopě 1, Praha, 110 00' || $delivery['pickup_code'] !== '') {
+    throw new RuntimeException('Manual Packeta selection was not preserved without a key.');
+}
+$_GET['step'] = 'shipping';
+ob_start();
+$withoutKey->handle(['name' => 'checkout']);
+$manualHtml = ob_get_clean();
+if (!str_contains($manualHtml, 'name="pickup_point" value="Zásilkovna Praha 1"') ||
+    !str_contains($manualHtml, 'name="pickup_address" value="Na Příkopě 1, Praha, 110 00"')) {
+    throw new RuntimeException('Saved manual Packeta address disappeared from the delivery form.');
 }
 $ppl = new \SimpleStore\Checkout\PplPickupPoint('public-ppl-key-123');
 $_POST = ['method' => 'ppl_pickup', 'name' => 'Eva Nová',

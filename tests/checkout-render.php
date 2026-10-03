@@ -68,6 +68,20 @@ if (str_contains($shipping, 'data-ppl-widget') ||
     !str_contains($shipping, 'name="pickup_address"')) {
     throw new RuntimeException('PPL without a widget key must retain manual pickup entry.');
 }
+$withoutPacketaKey = $data;
+$withoutPacketaKey['packetaApiKey'] = '';
+$withoutPacketaKey['delivery'] = ['method' => 'zasilkovna_pickup',
+    'pickup_point' => 'Zásilkovna Brno', 'pickup_address' => 'Nádražní 1, Brno, 602 00'];
+ob_start();
+$renderer->render('shipping', $withoutPacketaKey);
+$manualPacketa = ob_get_clean();
+if (!str_contains($manualPacketa, 'href="https://mapa.zasilkovna.cz/pobocky"') ||
+    !str_contains($manualPacketa, 'name="pickup_point" value="Zásilkovna Brno"') ||
+    !str_contains($manualPacketa, 'name="pickup_address" value="Nádražní 1, Brno, 602 00"') ||
+    str_contains($manualPacketa, 'data-packeta-open') ||
+    str_contains($manualPacketa, 'checkout-has-packeta-widget')) {
+    throw new RuntimeException('Packeta without a public widget key must show a map link and retain manual fields.');
+}
 if (!str_contains($shipping, 'data-gls-open') ||
     !str_contains($shipping, 'name="gls_point_id"') ||
     !str_contains($shipping, 'data-gls-map') ||

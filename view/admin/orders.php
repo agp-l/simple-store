@@ -339,7 +339,7 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
               <?php if (($order['fulfillment_source'] ?? 'own') !== 'external' && ($shipping['method'] ?? '') === 'zasilkovna_pickup' &&
                   (($shipping['pickup_verified'] ?? false) !== true ||
                   preg_match('/^[0-9]{1,12}$/D', (string) ($shipping['pickup_code'] ?? '')) !== 1)): ?>
-                <p class="panel-help">U této starší objednávky nebylo výdejní místo ověřeno. Zadej správné ID; před podáním ho server ověří přes Zásilkovnu.</p>
+                <p class="panel-help">Výdejní místo nebylo při objednávce ověřeno přes widget. Při ručním odeslání zkontroluj název a adresu; pro podání přes API zadej správné ID, které server před podáním ověří.</p>
               <?php endif; ?>
               <?php if ($packetaReady && $packetaConfigured && $paid && !$gatewayDispatchBlocked && ($order['fulfillment_source'] ?? 'own') !== 'external' && !in_array($order['status'], ['shipped', 'cancelled', 'completed', 'test'], true)): ?>
                 <?php

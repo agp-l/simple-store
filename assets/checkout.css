@@ -77,8 +77,8 @@
 .checkout-ppl-fields { display: none; }
 .checkout-gls-fields { display: none; }
 .checkout-balikovna-fields { display: none; }
-.checkout-form:has(input[name="method"][value="zasilkovna_pickup"]:checked) .checkout-packeta-fields { display: block; }
-.checkout-form:has(input[name="method"][value="zasilkovna_pickup"]:checked) .checkout-manual-pickup { display: none; }
+.checkout-has-packeta-widget:has(input[name="method"][value="zasilkovna_pickup"]:checked) .checkout-packeta-fields { display: block; }
+.checkout-has-packeta-widget:has(input[name="method"][value="zasilkovna_pickup"]:checked) .checkout-manual-pickup { display: none; }
 .checkout-has-ppl-widget:has(input[name="method"][value="ppl_pickup"]:checked) .checkout-ppl-fields { display: block; }
 .checkout-has-ppl-widget:has(input[name="method"][value="ppl_pickup"]:checked) .checkout-manual-pickup { display: none; }
 .checkout-has-gls-map:has(input[name="method"][value="gls_pickup"]:checked) .checkout-gls-fields { display: block; }

@@ -454,10 +454,13 @@ final class OrderRepository
             }
             $shipping = json_decode((string) ($row['dispatch_shipping_json'] ?? $row['shipping_json'] ?? ''), true);
             if (in_array($shipping['method'] ?? '', ['zasilkovna_pickup', 'zasilkovna_home'], true)) {
+                $manualPickup = ($shipping['method'] ?? '') === 'zasilkovna_pickup' &&
+                    ($shipping['pickup_source'] ?? '') === 'manual' &&
+                    ($shipping['pickup_verified'] ?? false) !== true;
                 if ((int) $this->db->queryFirstField(
                     'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
                     'shop_packeta_shipments') === 0) {
-                    if ($source === 'own' && in_array($status, ['ready_to_ship', 'shipped'], true)) {
+                    if ($source === 'own' && in_array($status, ['ready_to_ship', 'shipped'], true) && !$manualPickup) {
                         throw new InvalidArgumentException('Aktualizuj SQL tabulky v sekci Databáze.');
                     }
                     $shipment = null;
@@ -466,7 +469,8 @@ final class OrderRepository
                         'SELECT status FROM shop_packeta_shipments WHERE order_id=%i LIMIT 1', $id);
                 }
                 if ($source === 'own' && in_array($status, ['ready_to_ship', 'shipped'], true) &&
-                    ($shipment === null || $shipment['status'] !== 'created')) {
+                    ($shipment === null || $shipment['status'] !== 'created') &&
+                    !($manualPickup && $shipment === null)) {
                     throw new InvalidArgumentException('Nejdřív vytvoř aktivní zásilku u Zásilkovny. Storno či nejasný výsledek nelze označit jako připravené nebo odeslané.');
                 }
                 if ($source === 'external' && $shipment !== null &&

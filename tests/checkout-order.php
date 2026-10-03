@@ -345,4 +345,15 @@ try {
 } catch (InvalidArgumentException $expected) {}
 $repository->setFulfillmentStatus((int) $externalOrder['id'], 'completed',
     'external', 'Dodavatel A');
+$manualPacketaShipping = array_replace($packetaShipping, [
+    'pickup_verified' => false, 'pickup_source' => 'manual', 'pickup_code' => '',
+]);
+$manualPacketaOrder = $repository->create(null, 'manual@example.org', $items,
+    $manualPacketaShipping, 90, str_repeat('3', 64));
+$repository->markPaid((int) $manualPacketaOrder['id'], 4);
+$repository->setFulfillmentStatus((int) $manualPacketaOrder['id'], 'ready_to_ship');
+$repository->setFulfillmentStatus((int) $manualPacketaOrder['id'], 'shipped');
+if ($db->rows[(int) $manualPacketaOrder['id'] - 1]['status'] !== 'shipped') {
+    throw new RuntimeException('Manual Packeta order could not be handed to a carrier without an API parcel.');
+}
 echo "Checkout order and bank transfer tests passed.\n";

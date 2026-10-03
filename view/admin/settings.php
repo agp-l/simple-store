@@ -34,7 +34,7 @@ $btcpayWebhookSecretConfigured ??= false;
   </section>
   <section class="panel-panel panel-settings-block" id="settings-delivery">
   <h2>Doprava</h2><h3>Výdejní místa a boxy</h3>
-  <p class="panel-help">U Zásilkovny, GLS a Balíkovny zákazník vybere místo přímo v mapě; u PPL po nastavení klíče widgetu. Mapa Balíkovny ani GLS nevyžaduje klíč.</p>
+  <p class="panel-help">U Zásilkovny a PPL zákazník vybere místo přímo v mapě po nastavení klíče widgetu. Bez klíče otevře veřejnou mapu a adresu opíše. Mapa Balíkovny ani GLS klíč nevyžaduje.</p>
   <?php foreach ($shippingCatalog as $code => $definition): ?>
     <?php if (str_ends_with($code, '_home') && $code === 'gls_home'): ?><h3>Na adresu</h3><?php endif; ?>
     <div class="panel-shipping-row"><strong><?= $escape($definition['label']) ?></strong><label>Cena v Kč<input type="number" name="shipping_price[<?= $escape($code) ?>]" value="<?= $escape($form['shipping_price'][$code]) ?>" min="0" max="100000" required></label><label class="panel-check"><input type="checkbox" name="shipping_enabled[<?= $escape($code) ?>]" value="1" <?= $form['shipping_enabled'][$code] === '1' ? 'checked' : '' ?>> Nabízet</label></div>
@@ -43,7 +43,7 @@ $btcpayWebhookSecretConfigured ??= false;
   <section class="panel-panel panel-settings-block" id="settings-carriers">
   <h2>Napojení dopravců</h2><h3>Zásilkovna – mapa výdejních míst</h3>
   <label>Veřejný API klíč widgetu<input name="packeta_api_key" value="<?= $escape($form['packeta_api_key'] ?? '') ?>" maxlength="16" pattern="[A-Za-z0-9]{16}" autocomplete="off" placeholder="16 znaků z klientské sekce"></label>
-  <p class="panel-help">Klíč pro mapu získáš v klientské sekci Zásilkovny. Je určený pro webový widget; <strong>nevkládej sem API heslo</strong>. Bez klíče se doprava Zásilkovnou v pokladně nenabídne, i když je nahoře zapnutá.</p>
+  <p class="panel-help">Klíč pro automatický výběr získáš v klientské sekci Zásilkovny. Je určený pro webový widget; <strong>nevkládej sem API heslo</strong>. Bez klíče zůstane doprava dostupná, pokud je nahoře zapnutá: zákazník otevře veřejnou mapu a název a adresu místa opíše ručně.</p>
   <h3>PPL – mapa výdejních míst</h3>
   <label>API klíč PPL Widget 2.0<input name="ppl_widget_key" value="<?= $escape($form['ppl_widget_key'] ?? '') ?>" maxlength="512" autocomplete="off" placeholder="Klíč z administrace PPL"></label>
   <p class="panel-help">Klíč vytvoř a aktivuj v <a href="https://klient.ppl.cz/widgetadmin" target="_blank" rel="noopener noreferrer">administraci widgetu PPL</a> a povol doménu obchodu. Pro místní zkoušení musí být povolená i doména localhost, pokud ji PPL přijme. Bez klíče zůstane dosavadní ruční vyplnění místa PPL. Klíč je veřejný a načítá se na stránce pokladny.</p>

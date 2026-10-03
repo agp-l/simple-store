@@ -275,6 +275,13 @@ expectInvalid(static fn () => $controls->correctFulfillment(9, 'ready_to_ship', 
     'Uncertain Packeta cancellation was treated as an active parcel.');
 $db->shipments[9] = ['status' => 'created'];
 $controls->correctFulfillment(9, 'ready_to_ship', 3, $reason, 'not_handed');
+$db->orders[90] = orderRow(90, 'shipped');
+$db->orders[90]['shipping_json'] = json_encode(['method' => 'zasilkovna_pickup',
+    'pickup_source' => 'manual', 'pickup_verified' => false], JSON_THROW_ON_ERROR);
+$controls->correctFulfillment(90, 'ready_to_ship', 3, $reason, 'not_handed');
+if ($db->orders[90]['status'] !== 'ready_to_ship') {
+    throw new RuntimeException('Manual Packeta order could not be corrected without an API parcel.');
+}
 
 $db->orders[10] = orderRow(10, 'cancelled', 'bank_transfer', 'pending');
 $controls->correctFulfillment(10, 'new', 3, 'Neplacená objednávka byla zrušena omylem.', 'reopen');

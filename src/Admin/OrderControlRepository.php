@@ -358,9 +358,12 @@ final class OrderControlRepository
             throw new InvalidArgumentException('Dopravu objednávky nelze ověřit.');
         }
         if (!in_array($shipping['method'], ['zasilkovna_pickup', 'zasilkovna_home'], true)) return;
+        $manualPickup = $shipping['method'] === 'zasilkovna_pickup' &&
+            ($shipping['pickup_source'] ?? '') === 'manual' &&
+            ($shipping['pickup_verified'] ?? false) !== true;
         if (!$this->tableExists('shop_packeta_shipments')) {
             if (($order['fulfillment_source'] ?? 'own') === 'own' &&
-                in_array($target, ['ready_to_ship', 'shipped'], true)) {
+                in_array($target, ['ready_to_ship', 'shipped'], true) && !$manualPickup) {
                 throw new InvalidArgumentException('Nejdřív aktualizuj SQL tabulky v sekci Databáze.');
             }
             return;
@@ -377,7 +380,7 @@ final class OrderControlRepository
         }
         if (($order['fulfillment_source'] ?? 'own') === 'own' &&
             in_array($target, ['ready_to_ship', 'shipped'], true) &&
-            ($shipment['status'] ?? '') !== 'created') {
+            ($shipment['status'] ?? '') !== 'created' && !($manualPickup && $shipment === null)) {
             throw new InvalidArgumentException('Pro tento stav musí být aktivní zásilka Zásilkovny.');
         }
         if (($order['fulfillment_source'] ?? 'own') === 'external' && $active) {

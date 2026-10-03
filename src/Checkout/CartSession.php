@@ -209,7 +209,6 @@ final class CartSession
                 $result['postal_code'] === '')) ||
             (ShippingPolicy::isPickup($result['method']) &&
                 ($result['pickup_point'] === '' || $result['pickup_address'] === '')) ||
-            ($result['method'] === 'zasilkovna_pickup' && $result['pickup_code'] === '') ||
             ($result['method'] === 'balikovna_pickup' && $result['pickup_postal_code'] === '')) {
             throw new InvalidArgumentException('Doplň kontakt a adresu nebo výdejní místo v České republice.');
         }

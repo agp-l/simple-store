@@ -53,8 +53,7 @@ final class CheckoutController
         $this->ppl = $ppl ?? new PplPickupPoint();
         $this->gls = $gls ?? new GlsPickupPoint();
         $this->balikovna = $balikovna ?? new BalikovnaPickupPoint();
-        $this->shippingOptions = array_values(array_filter($shipping->options(),
-            fn (array $option): bool => $option['code'] !== 'zasilkovna_pickup' || $this->packeta->isConfigured()));
+        $this->shippingOptions = $shipping->options();
         $termsUrl = trim($termsUrl);
         $this->termsUrl = str_starts_with($termsUrl, $url->getBasePath()) &&
             preg_match('~^/(?:[a-z0-9]+(?:-[a-z0-9]+)*)(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*/?$~D', $termsUrl) === 1
@@ -257,9 +256,6 @@ final class CheckoutController
         if ($this->shipping->method($method) === null) {
             throw new InvalidArgumentException('Vybraný způsob dopravy není dostupný.');
         }
-        if ($method === 'zasilkovna_pickup' && !$this->packeta->isConfigured()) {
-            throw new InvalidArgumentException('Zásilkovna není nastavená. Vyber jinou dopravu.');
-        }
         $fields = [];
         foreach (['method', 'name', 'email', 'phone', 'street', 'city', 'postal_code', 'country',
             'pickup_point', 'pickup_address', 'pickup_code', 'pickup_postal_code'] as $field) {
@@ -269,7 +265,7 @@ final class CheckoutController
         if (ShippingPolicy::isPickup($method)) {
             $fields['street'] = $fields['city'] = $fields['postal_code'] = '';
             if ($method !== 'balikovna_pickup') $fields['pickup_postal_code'] = '';
-            if ($method === 'zasilkovna_pickup') {
+            if ($method === 'zasilkovna_pickup' && $this->packeta->isConfigured()) {
                 $fields = array_replace($fields, $this->packeta->verify(self::field('packeta_point_id')));
             } elseif ($method === 'ppl_pickup' && $this->ppl->isConfigured()) {
                 $fields = array_replace($fields, $this->ppl->selection(
@@ -351,7 +347,7 @@ final class CheckoutController
             !$this->orders->installed()) {
             throw new InvalidArgumentException('Objednávku nyní nelze dokončit. Zkontrolujte košík, doručení a nastavení obchodu.');
         }
-        if ($methodCode === 'zasilkovna_pickup') {
+        if ($methodCode === 'zasilkovna_pickup' && $this->packeta->isConfigured()) {
             $delivery = array_replace($delivery, $this->packeta->verify((string) ($delivery['pickup_code'] ?? '')));
         } elseif ($methodCode === 'ppl_pickup' && $this->ppl->isConfigured()) {
             $delivery = array_replace($delivery, $this->ppl->selection(
@@ -380,7 +376,10 @@ final class CheckoutController
         $shipping = $delivery;
         $shipping['label'] = $label;
         $shipping['recipient'] = $delivery['name'];
-        if ($methodCode === 'zasilkovna_pickup') $shipping['pickup_verified'] = true;
+        if ($methodCode === 'zasilkovna_pickup') {
+            $shipping['pickup_verified'] = $this->packeta->isConfigured();
+            $shipping['pickup_source'] = $this->packeta->isConfigured() ? 'packeta_widget' : 'manual';
+        }
         if ($methodCode === 'ppl_pickup' && $this->ppl->isConfigured()) $shipping['pickup_source'] = 'ppl_widget';
         if ($methodCode === 'gls_pickup') $shipping['pickup_source'] = 'gls_map';
         if ($methodCode === 'balikovna_pickup') $shipping['pickup_source'] = 'balikovna_map';
