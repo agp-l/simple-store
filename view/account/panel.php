@@ -107,6 +107,23 @@ $checkoutReturn = $checkoutReturn ?? $accountUrl;
     <main class="panel-wrap panel-auth-main" id="obsah"><section class="panel-panel panel-centered">
       <?php if ($screen === 'setup'): ?><p class="panel-eyebrow">Příprava účtu</p><h1>Klientská zóna zatím není připravená</h1><p>Importuj aktuální <code>database/schema.sql</code> do databáze obchodu.</p>
       <?php elseif ($screen === 'error'): ?><p class="panel-eyebrow">Účet</p><h1>Stránku se nepodařilo načíst</h1><p class="panel-error" role="alert"><?= $escape($error) ?></p>
+      <?php elseif ($screen === 'reset-request'): ?>
+        <h1>Obnovit heslo</h1>
+        <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
+        <?php if (($_GET['sent'] ?? '') === '1'): ?><p class="panel-notice" role="status">Pokud u nás máš účet s touto adresou, poslali jsme odkaz pro obnovu.</p><?php endif; ?>
+        <form class="panel-form" method="post" action="<?= $escape($accountUrl . '?mode=forgot') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="reset-request">
+          <label>E-mail účtu<input type="email" name="email" maxlength="254" autocomplete="email" required autofocus></label>
+          <button class="panel-button" type="submit">Poslat odkaz</button></form>
+        <p><a href="<?= $escape($accountUrl) ?>">Zpět na přihlášení</a></p>
+      <?php elseif ($screen === 'reset-complete'): ?>
+        <h1>Nastavit nové heslo</h1>
+        <?php if (($_GET['done'] ?? '') === '1'): ?><p class="panel-notice" role="status">Heslo bylo změněno. Přihlas se novým heslem.</p><?php else: ?>
+          <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
+          <?php if ($resetToken !== ''): ?><form class="panel-form" method="post" action="<?= $escape($accountUrl . '?mode=reset') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="reset-complete"><input type="hidden" name="token" value="<?= $escape($resetToken) ?>">
+            <label>Nové heslo<input type="password" name="password" minlength="12" maxlength="72" autocomplete="new-password" required></label>
+            <label>Potvrdit nové heslo<input type="password" name="password_confirm" minlength="12" maxlength="72" autocomplete="new-password" required></label>
+            <button class="panel-button" type="submit">Změnit heslo</button></form><?php endif; ?>
+        <?php endif; ?><p><a href="<?= $escape($accountUrl) ?>">Přihlásit se</a></p>
       <?php else: ?>
         <p class="panel-eyebrow">Dobrodruzi / účet</p><h1><?= $screen === 'register' ? 'Vytvořit účet' : 'Přihlášení' ?></h1>
         <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
@@ -117,6 +134,7 @@ $checkoutReturn = $checkoutReturn ?? $accountUrl;
           <?php if ($screen === 'register'): ?><label>Potvrdit heslo <input type="password" name="password_confirm" minlength="12" autocomplete="new-password" required></label><?php endif; ?>
           <button class="panel-button" type="submit"><?= $screen === 'register' ? 'Zaregistrovat se' : 'Přihlásit se' ?></button>
         </form>
+        <?php if ($screen === 'login'): ?><p><a href="<?= $escape($accountUrl . '?mode=forgot') ?>">Zapomenuté heslo?</a></p><?php endif; ?>
         <?php if ($screen === 'register' || $registrationAllowed): ?><p class="panel-auth-switch"><?= $screen === 'register' ? 'Už máš účet?' : 'Ještě nemáš účet?' ?> <?php if ($screen === 'register'): ?><a href="<?= $escape($accountUrl . ($checkoutReturn !== $accountUrl ? '?checkout=1' : '')) ?>">Přihlásit se</a><?php else: ?><a href="<?= $escape($accountUrl . '?mode=register' . ($checkoutReturn !== $accountUrl ? '&checkout=1' : '')) ?>">Vytvořit účet</a><?php endif; ?></p><?php endif; ?>
       <?php endif; ?>
     </section></main>

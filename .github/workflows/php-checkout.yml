@@ -119,6 +119,7 @@ jobs:
           php tests/shipping-database.php
           php tests/homepage-database.php
           php tests/supplier-links-database.php
+          php tests/password-reset-database.php
 
   database-mariadb:
     runs-on: ubuntu-latest

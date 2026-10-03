@@ -50,7 +50,9 @@ final class MailSettingsRepository
             $legacySender = (string) ((new TaxEvidenceRepository($this->db))->settings()['mail_from'] ?? '');
         }
         $settings = ['from_email' => $legacySender, 'from_name' => 'dobrodruzi.cz',
-            'reply_to' => '', 'public_base_url' => '', 'automatic_enabled' => true];
+            'reply_to' => '', 'public_base_url' => '', 'automatic_enabled' => true,
+            'admin_recovery_email' => '', 'smtp_host' => '', 'smtp_port' => 587,
+            'smtp_security' => 'starttls', 'smtp_username' => '', 'smtp_password_encrypted' => ''];
         $templates = [];
         foreach (self::EVENTS as $event => $default) {
             $templates[$event] = ['enabled' => true, 'subject' => $default['subject'],
@@ -78,8 +80,25 @@ final class MailSettingsRepository
         $reply = self::field($input, 'reply_to', 254);
         $name = self::field($input, 'from_name', 100);
         $baseUrl = rtrim(self::field($input, 'public_base_url', 500), '/');
+        $previous = $this->load()['settings'];
+        $recovery = self::field($input + $previous, 'admin_recovery_email', 254);
+        $host = self::field($input + $previous, 'smtp_host', 253);
+        $port = $input['smtp_port'] ?? $previous['smtp_port'];
+        $security = $input['smtp_security'] ?? $previous['smtp_security'];
+        $username = self::field($input + $previous, 'smtp_username', 254);
+        $password = $input['smtp_password'] ?? '';
+        if (!is_string($password) || strlen($password) > 512 || preg_match('/[\x00-\x1f\x7f]/', $password) === 1 ||
+            !is_string($port) && !is_int($port) || !is_string($security) ||
+            ($host !== '' && (filter_var($host, FILTER_VALIDATE_IP) === false &&
+                preg_match('/^(?=.{1,253}$)[a-z0-9]+(?:[a-z0-9.-]*[a-z0-9])?$/iD', $host) !== 1 || str_contains($host, '..'))) ||
+            filter_var($port, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 65535]]) === false ||
+            !in_array($security, ['starttls', 'tls'], true) ||
+            ($host !== '' && ($username === '' || ($password === '' && ($input['smtp_clear_password'] ?? '') === '1')))) {
+            throw new InvalidArgumentException('Zkontroluj server SMTP, port, zabezpečení, uživatele a heslo.');
+        }
         if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false ||
             $reply !== '' && filter_var($reply, FILTER_VALIDATE_EMAIL) === false ||
+            $recovery !== '' && filter_var($recovery, FILTER_VALIDATE_EMAIL) === false ||
             $name === '' || preg_match('/[\r\n]/', $name) ||
             $baseUrl !== '' && (!filter_var($baseUrl, FILTER_VALIDATE_URL) ||
                 parse_url($baseUrl, PHP_URL_SCHEME) !== 'https' ||
@@ -88,8 +107,16 @@ final class MailSettingsRepository
                 parse_url($baseUrl, PHP_URL_USER) !== null)) {
             throw new InvalidArgumentException('Zkontroluj jméno odesílatele, e-mailové adresy a veřejnou HTTPS adresu obchodu.');
         }
+        $encrypted = ($input['smtp_clear_password'] ?? '') === '1' ? '' : (string) $previous['smtp_password_encrypted'];
+        if ($password !== '') $encrypted = MailCredential::encrypt($password);
+        if ($host !== '' && $encrypted === '') {
+            throw new InvalidArgumentException('Pro SMTP vyplň heslo ke schránce.');
+        }
         $settings = ['from_email' => $email, 'from_name' => $name, 'reply_to' => $reply,
-            'public_base_url' => $baseUrl, 'automatic_enabled' => ($input['automatic_enabled'] ?? null) === '1'];
+            'public_base_url' => $baseUrl, 'automatic_enabled' => ($input['automatic_enabled'] ?? null) === '1',
+            'admin_recovery_email' => $recovery, 'smtp_host' => $host,
+            'smtp_port' => (int) $port, 'smtp_security' => $security,
+            'smtp_username' => $username, 'smtp_password_encrypted' => $encrypted];
         $inputTemplates = $input['templates'] ?? null;
         if (!is_array($inputTemplates)) throw new InvalidArgumentException('Šablony e-mailů chybí.');
         $templates = [];

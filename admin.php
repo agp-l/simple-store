@@ -10,6 +10,7 @@ use SimpleStore\Checkout\CheckoutSettingsRepository;
 use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Navigation\StorefrontMenus;
 use SimpleStore\Navigation\UrlManager;
+use SimpleStore\Auth\PasswordResetService;
 
 $site = require __DIR__ . '/src/bootstrap.php';
 // PHP notices must not be printed into JSON returned to the editor or media manager.
@@ -21,6 +22,7 @@ if (str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json')) 
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
+header('Referrer-Policy: no-referrer');
 
 $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/admin.php'), '/') . '/';
 $adminUrl = $basePath . 'admin.php';
@@ -28,6 +30,7 @@ $screen = 'login';
 $error = '';
 $documents = [];
 $csrf = '';
+$resetToken = '';
 $chrome = [];
 $cartCount = 0;
 
@@ -103,6 +106,27 @@ try {
                 header('Location: ' . $adminUrl, true, 303);
                 exit;
             }
+        } elseif ($action === 'reset-request' && !$auth->signedIn()) {
+            try {
+                $recoveryEmail = $_POST['email'] ?? null;
+                if (!is_string($recoveryEmail) || strlen($recoveryEmail) > 254) throw new InvalidArgumentException('Zadej platný e-mail.');
+                (new PasswordResetService($db))->request('admin', $recoveryEmail, 'admin.php');
+                header('Location: ' . $adminUrl . '?mode=forgot&sent=1', true, 303);
+                exit;
+            } catch (InvalidArgumentException | RuntimeException $exception) {
+                $error = $exception->getMessage();
+            }
+        } elseif ($action === 'reset-complete' && !$auth->signedIn()) {
+            try {
+                (new PasswordResetService($db))->complete('admin',
+                    is_string($_POST['token'] ?? null) ? $_POST['token'] : '',
+                    is_string($_POST['password'] ?? null) ? $_POST['password'] : '',
+                    is_string($_POST['password_confirm'] ?? null) ? $_POST['password_confirm'] : '');
+                header('Location: ' . $adminUrl . '?mode=reset&done=1', true, 303);
+                exit;
+            } catch (InvalidArgumentException $exception) {
+                $error = $exception->getMessage();
+            }
         } elseif ($action === 'logout' && $auth->signedIn()) {
             $auth->signOut();
             header('Location: ' . $adminUrl, true, 303);
@@ -128,6 +152,17 @@ try {
     }
 
     if (!$auth->signedIn()) {
+        $resetMode = $_GET['mode'] ?? '';
+        if ($resetMode === 'forgot') $screen = 'reset-request';
+        if ($resetMode === 'reset') {
+            $screen = 'reset-complete';
+            $resetToken = is_string($_POST['token'] ?? null) && $method === 'POST'
+                ? $_POST['token'] : (is_string($_GET['token'] ?? null) ? $_GET['token'] : '');
+            if (($_GET['done'] ?? '') !== '1' && !(new PasswordResetService($db))->valid('admin', $resetToken)) {
+                $error = 'Odkaz pro obnovu vypršel nebo už byl použit.';
+                $resetToken = '';
+            }
+        }
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }

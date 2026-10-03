@@ -20,6 +20,18 @@ CREATE TABLE IF NOT EXISTS users (
   UNIQUE KEY users_customer_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- One-time recovery links. Only SHA-256 digests are persisted, never the emailed token.
+CREATE TABLE IF NOT EXISTS shop_password_resets (
+  token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+  user_id BIGINT UNSIGNED NOT NULL,
+  password_hash_at_issue CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  role VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  expires_at DATETIME NOT NULL,
+  KEY reset_rate (user_id, created_at),
+  CONSTRAINT password_reset_user_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Add customer fields to installations created before customer accounts existed.
 SET @customer_email_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='email');

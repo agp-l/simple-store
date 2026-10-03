@@ -98,7 +98,8 @@ if ($method === 'POST') {
         http_response_code(422);
         $settingsError = $exception->getMessage();
         if ($settingsTab === 'mail') {
-            foreach (['from_email', 'from_name', 'reply_to', 'public_base_url'] as $key) {
+            foreach (['from_email', 'from_name', 'reply_to', 'public_base_url', 'admin_recovery_email',
+                'smtp_host', 'smtp_port', 'smtp_security', 'smtp_username'] as $key) {
                 if (is_string($_POST[$key] ?? null)) $mailConfiguration['settings'][$key] = $_POST[$key];
             }
             $mailConfiguration['settings']['automatic_enabled'] = ($_POST['automatic_enabled'] ?? null) === '1';

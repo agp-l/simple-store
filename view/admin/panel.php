@@ -49,7 +49,28 @@ $inside = in_array($screen, ['editor', 'categories', 'menus', 'media', 'orders',
           <label>Heslo<input type="password" name="password" autocomplete="current-password" required></label>
           <button class="panel-button" name="action" value="login">Přihlásit se</button>
         </form>
-        <p>Zapomenuté heslo? Na serveru spusť <code>/opt/lampp/bin/php tools/admin.php --reset</code>.</p>
+        <p><a href="<?= $escape($adminUrl . '?mode=forgot') ?>">Zapomenuté heslo?</a></p>
+      </section>
+    <?php elseif ($screen === 'reset-request'): ?>
+      <section class="panel-panel panel-centered"><h1>Obnovit heslo správce</h1>
+        <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
+        <?php if (($_GET['sent'] ?? '') === '1'): ?><p class="panel-notice" role="status">Pokud je adresa nastavená pro správce, poslali jsme na ni odkaz pro obnovu.</p><?php endif; ?>
+        <form method="post" action="<?= $escape($adminUrl . '?mode=forgot') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="reset-request">
+          <label>E-mail správce<input type="email" name="email" maxlength="254" autocomplete="email" required autofocus></label>
+          <button class="panel-button" type="submit">Poslat odkaz</button></form>
+        <p><a href="<?= $escape($adminUrl) ?>">Zpět na přihlášení</a></p>
+        <p>Pokud nemáš přístup k e-mailu, na serveru lze spustit <code>php tools/admin.php --reset</code>.</p>
+      </section>
+    <?php elseif ($screen === 'reset-complete'): ?>
+      <section class="panel-panel panel-centered"><h1>Nastavit nové heslo správce</h1>
+        <?php if (($_GET['done'] ?? '') === '1'): ?><p class="panel-notice" role="status">Heslo bylo změněno. Přihlas se novým heslem.</p>
+        <?php else: ?>
+          <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
+          <?php if ($resetToken !== ''): ?><form method="post" action="<?= $escape($adminUrl . '?mode=reset') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="reset-complete"><input type="hidden" name="token" value="<?= $escape($resetToken) ?>">
+            <label>Nové heslo<input type="password" name="password" minlength="12" maxlength="72" autocomplete="new-password" required></label>
+            <label>Potvrdit nové heslo<input type="password" name="password_confirm" minlength="12" maxlength="72" autocomplete="new-password" required></label>
+            <button class="panel-button" type="submit">Změnit heslo</button></form><?php endif; ?>
+        <?php endif; ?><p><a href="<?= $escape($adminUrl) ?>">Přihlásit se</a></p>
       </section>
     <?php elseif ($screen === 'categories'): ?>
       <?php require __DIR__ . '/categories.php'; ?>

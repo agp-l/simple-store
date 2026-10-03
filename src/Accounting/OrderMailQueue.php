@@ -9,7 +9,7 @@ use SimpleStore\Checkout\OrderRepository;
 use SimpleStore\Checkout\OrderTrackingRepository;
 use Throwable;
 
-/** Durable, idempotent notifications; a failed mail() never rolls back an order. */
+/** Durable, idempotent notifications; a failed transport never rolls back an order. */
 final class OrderMailQueue
 {
     private $transport;
@@ -18,8 +18,7 @@ final class OrderMailQueue
     public function __construct(private MeekroDB $db, ?callable $transport = null)
     {
         $this->settings = new MailSettingsRepository($db);
-        $this->transport = $transport ?? static fn (string $to, string $subject,
-            string $body, string $headers): bool => @mail($to, $subject, $body, $headers);
+        $this->transport = $transport;
     }
 
     public function installed(): bool
@@ -169,14 +168,18 @@ final class OrderMailQueue
                 "Content-Transfer-Encoding: base64\r\n\r\n" .
                 chunk_split(base64_encode((string) ($row['body_html'] ?? self::simpleHtml((string) $row['body_text']))), 76, "\r\n") .
                 "\r\n--{$boundary}--\r\n";
-            $sent = (bool) ($this->transport)($row['recipient_email'], $subject, $body, $headers);
+            $sent = $this->transport !== null
+                ? (bool) ($this->transport)($row['recipient_email'], $subject, $body, $headers)
+                : (new MailTransport($config))->send($row['recipient_email'], $subject, $body, $headers);
+            $failure = 'Poštovní server zprávu nepřijal.';
         } catch (Throwable $error) {
             error_log('Store mail transport failed: ' . $error->getMessage());
+            $failure = substr($error->getMessage(), 0, 250);
             $sent = false;
         }
         $this->db->query('UPDATE shop_mail_outbox SET state=%s, last_error=%s,
             sent_at=IF(%i=1, UTC_TIMESTAMP(), NULL) WHERE id=%i AND state=%s',
-            $sent ? 'sent' : 'failed', $sent ? null : 'Poštovní server zprávu nepřijal.',
+            $sent ? 'sent' : 'failed', $sent ? null : $failure,
             $sent ? 1 : 0, $id, 'sending');
         if ($sent && str_starts_with($row['event_key'], 'invoice:')) {
             $this->db->query('UPDATE shop_invoices SET emailed_at=UTC_TIMESTAMP()

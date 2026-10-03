@@ -17,13 +17,23 @@ $mailSettingsUrl = $adminUrl . '?section=settings&tab=mail';
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="save-mail-settings">
   <section class="panel-panel panel-settings-block">
     <h2>Odesílání zpráv</h2>
-    <p class="panel-help">Zprávy jdou přes PHP mail() hostingu. Nepotřebuješ API klíč; hosting však musí mít funkční odchozí poštu pro doménu. Chybné doručení lze zopakovat v <a href="<?= $escape($adminUrl . '?section=accounting&tab=mail') ?>">e-mailové frontě</a>.</p>
+    <p class="panel-help">Vyplň SMTP údaje své schránky, aby se zprávy posílaly jejím serverem. Bez SMTP se použije PHP mail() hostingu. Chybné doručení lze zopakovat v <a href="<?= $escape($adminUrl . '?section=accounting&tab=mail') ?>">e-mailové frontě</a>.</p>
     <label class="panel-check"><input type="checkbox" name="automatic_enabled" value="1" <?= $mailForm['automatic_enabled'] ? 'checked' : '' ?>> Automaticky připravovat zprávy po událostech</label>
     <div class="panel-fields-two"><label>E-mail odesílatele<input type="email" name="from_email" value="<?= $escape($mailForm['from_email']) ?>" maxlength="254" placeholder="objednavky@dobrodruzi.cz"></label>
     <label>Jméno odesílatele<input name="from_name" value="<?= $escape($mailForm['from_name']) ?>" maxlength="100" required></label></div>
     <label>Adresa pro odpovědi (nepovinná)<input type="email" name="reply_to" value="<?= $escape($mailForm['reply_to']) ?>" maxlength="254" placeholder="podpora@dobrodruzi.cz"></label>
     <label>Veřejná HTTPS adresa obchodu<input type="url" name="public_base_url" value="<?= $escape($mailForm['public_base_url']) ?>" maxlength="500" placeholder="https://dobrodruzi.cz"></label>
     <p class="panel-help">Z této adresy se vytvoří soukromý odkaz na objednávku. Vyplň kořen instalace bez /cs. Ukládá se do databáze stejně jako ostatní hodnoty níže.</p>
+    <label>E-mail pro obnovu hesla správce<input type="email" name="admin_recovery_email" value="<?= $escape($mailForm['admin_recovery_email']) ?>" maxlength="254" autocomplete="email" placeholder="spravce@dobrodruzi.cz"></label>
+    <p class="panel-help">Odkaz pro obnovu administrace se pošle jen na tuto adresu. Záložní obnova na serveru zůstává: <code>php tools/admin.php --reset</code>.</p>
+    <h3>SMTP server schránky</h3>
+    <div class="panel-fields-two"><label>Server SMTP<input name="smtp_host" value="<?= $escape($mailForm['smtp_host']) ?>" maxlength="253" placeholder="smtp.example.cz" autocomplete="off"></label>
+    <label>Port<input type="number" name="smtp_port" value="<?= (int) $mailForm['smtp_port'] ?>" min="1" max="65535" required></label></div>
+    <div class="panel-fields-two"><label>Zabezpečení<select name="smtp_security"><option value="starttls" <?= $mailForm['smtp_security'] === 'starttls' ? 'selected' : '' ?>>STARTTLS (obvykle 587)</option><option value="tls" <?= $mailForm['smtp_security'] === 'tls' ? 'selected' : '' ?>>TLS od začátku (obvykle 465)</option></select></label>
+    <label>Uživatelské jméno schránky<input name="smtp_username" value="<?= $escape($mailForm['smtp_username']) ?>" maxlength="254" autocomplete="off" placeholder="objednavky@dobrodruzi.cz"></label></div>
+    <label>Heslo schránky<input type="password" name="smtp_password" maxlength="512" autocomplete="new-password" placeholder="<?= $mailForm['smtp_password_encrypted'] !== '' ? 'Heslo je uloženo; pro změnu napiš nové' : 'Heslo ke schránce' ?>"></label>
+    <label class="panel-check"><input type="checkbox" name="smtp_clear_password" value="1"> Smazat uložené SMTP heslo</label>
+    <p class="panel-help">Heslo se do stránky nikdy nevrací; v databázi je šifrované. Spolu s databází zálohuj také <code>config/.smtp-key</code>. Použij údaje pro odchozí poštu a nastav adresu odesílatele podle své schránky.</p>
   </section>
   <section class="panel-panel panel-settings-block">
     <h2>Obsah zpráv podle stavu</h2>

@@ -12,11 +12,13 @@ use SimpleStore\Navigation\StorefrontMenus;
 use SimpleStore\Navigation\UrlManager;
 use SimpleStore\Checkout\CheckoutSettingsRepository;
 use SimpleStore\Pricing\BitcoinPriceDisplay;
+use SimpleStore\Auth\PasswordResetService;
 
 $site = require __DIR__ . '/src/bootstrap.php';
 header('Cache-Control: private, no-store');
 header('X-Content-Type-Options: nosniff');
 header('X-Frame-Options: DENY');
+header('Referrer-Policy: no-referrer');
 
 $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/account.php'), '/') . '/';
 $accountUrl = $basePath . 'account.php';
@@ -27,6 +29,7 @@ $error = '';
 $chrome = [];
 $cartCount = 0;
 $csrf = '';
+$resetToken = '';
 $user = null;
 $addresses = [];
 $orders = [];
@@ -45,7 +48,7 @@ if (!is_string($section) || !in_array($section, ['overview', 'orders', 'addresse
     $section = 'overview';
 }
 $mode = $_GET['mode'] ?? 'login';
-if (!is_string($mode) || !in_array($mode, ['login', 'register'], true)) $mode = 'login';
+if (!is_string($mode) || !in_array($mode, ['login', 'register', 'forgot', 'reset'], true)) $mode = 'login';
 
 if (!is_file(__DIR__ . '/config/database.php') || !is_file(__DIR__ . '/vendor/autoload.php')) {
     http_response_code(503);
@@ -98,6 +101,15 @@ try {
         }
         $action = $input('action');
         try {
+            if ($action === 'reset-request' && $user === null) {
+                (new PasswordResetService($db))->request('customer', $input('email'), 'account.php');
+                $redirect($accountUrl . '?mode=forgot&sent=1');
+            }
+            if ($action === 'reset-complete' && $user === null) {
+                (new PasswordResetService($db))->complete('customer', $input('token'),
+                    $input('password'), $input('password_confirm'));
+                $redirect($accountUrl . '?mode=reset&done=1');
+            }
             if ($action === 'register' && $user === null && $registrationAllowed) {
                 $password = $input('password');
                 if ($password !== $input('password_confirm')) {
@@ -172,7 +184,7 @@ try {
             }
             http_response_code(400);
             throw new InvalidArgumentException('Neznámá akce účtu.');
-        } catch (InvalidArgumentException $exception) {
+        } catch (InvalidArgumentException | RuntimeException $exception) {
             $error = $exception->getMessage();
         }
     }
@@ -212,7 +224,20 @@ try {
             if ($editId !== false) $editAddress = $customers->address((int) $user['id'], $editId);
         }
     } else {
-        $screen = $mode === 'register' && $registrationAllowed ? 'register' : 'login';
+        $screen = match ($mode) {
+            'register' => $registrationAllowed ? 'register' : 'login',
+            'forgot' => 'reset-request',
+            'reset' => 'reset-complete',
+            default => 'login',
+        };
+        if ($screen === 'reset-complete') {
+            $resetToken = ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST' && is_string($_POST['token'] ?? null)
+                ? $_POST['token'] : (is_string($_GET['token'] ?? null) ? $_GET['token'] : '');
+            if (($_GET['done'] ?? '') !== '1' && !(new PasswordResetService($db))->valid('customer', $resetToken)) {
+                $error = 'Odkaz pro obnovu vypršel nebo už byl použit.';
+                $resetToken = '';
+            }
+        }
     }
 } catch (Throwable $exception) {
     error_log((string) $exception);
