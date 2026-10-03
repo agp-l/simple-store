@@ -109,7 +109,7 @@ try {
             exit;
         } elseif (!in_array($action, array_merge(['create-content', 'create-translation', 'inline-content', 'create-product',
             'inline-product', 'set-product-stock', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
-            'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product', 'homepage-product', 'product-supplier-link',
+            'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product', 'delete-content', 'homepage-product', 'product-supplier-link',
             'save-checkout-settings', 'save-mail-settings', 'mail-test', 'customer-create', 'customer-update', 'customer-active',
             'customer-password', 'schema-apply'], $orderActions, $taxActions), true) ||
             !$auth->signedIn()) {
@@ -149,6 +149,10 @@ try {
     }
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'delete-product') {
         require __DIR__ . '/src/Admin/delete-product.php';
+        exit;
+    }
+    if ($method === 'POST' && ($_POST['action'] ?? '') === 'delete-content') {
+        require __DIR__ . '/src/Admin/delete-content.php';
         exit;
     }
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'homepage-product') {
@@ -229,8 +233,9 @@ try {
         exit;
     }
     $deletingProduct = $method === 'POST' && ($_POST['action'] ?? '') === 'delete-product';
+    $deletingContent = $method === 'POST' && ($_POST['action'] ?? '') === 'delete-content';
     $changingStock = $method === 'POST' && ($_POST['action'] ?? '') === 'set-product-stock';
-    $knownDeleteError = $deletingProduct && ($exception instanceof InvalidArgumentException ||
+    $knownDeleteError = ($deletingProduct || $deletingContent) && ($exception instanceof InvalidArgumentException ||
         ($exception instanceof RuntimeException && str_contains($exception->getMessage(), 'mezi')));
     $knownStockError = $changingStock && ($exception instanceof InvalidArgumentException ||
         ($exception instanceof RuntimeException && str_contains($exception->getMessage(), 'mezi')));

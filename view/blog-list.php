@@ -1,4 +1,5 @@
   <main class="wrap cms-content" id="produkty">
+    <?php if ($canManageContent && ($_GET['deleted'] ?? '') === '1'): ?><p class="catalog-manage-notice" role="status">Článek byl odstraněn.</p><?php endif; ?>
     <nav class="breadcrumbs" aria-label="Drobečková navigace"><a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">Úvod</a><span aria-hidden="true">/</span><span>Blog</span></nav>
     <div class="cms-article">
       <p class="cms-eyebrow">Příběhy na cestu</p>

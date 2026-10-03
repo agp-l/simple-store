@@ -7,6 +7,7 @@
         </div>
       </div>
       <section class="panel-panel panel-list" aria-labelledby="panel-list-title">
+        <?php if (($_GET['deleted'] ?? '') === '1'): ?><p role="status">Stránka byla odstraněna.</p><?php endif; ?>
         <h2 id="panel-list-title">Najít stránku nebo článek</h2>
         <form class="panel-form" method="get" action="<?= $escape($adminUrl) ?>">
           <input type="hidden" name="section" value="contents">

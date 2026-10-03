@@ -243,6 +243,38 @@ final class ContentRepository
         );
     }
 
+    /** Remove one language and its revisions; other translations stay available. */
+    public function deleteDocument(string $key, string $language, string $type, int $expectedRevision): void
+    {
+        if (preg_match('/^[a-f0-9]{32}$/D', $key) !== 1 ||
+            !in_array($language, $this->languages, true) ||
+            !in_array($type, ['page', 'post'], true) || $expectedRevision < 1) {
+            throw new InvalidArgumentException('Neplatný dokument nebo číslo revize.');
+        }
+
+        $this->db->startTransaction();
+        try {
+            $current = $this->db->queryFirstRow(
+                'SELECT type, revision_number FROM content_revisions
+                 WHERE document_key=%s AND language=%s AND active_document_key IS NOT NULL
+                 LIMIT 1 FOR UPDATE', $key, $language
+            );
+            if ($current === null || $current['type'] !== $type) {
+                throw new InvalidArgumentException('Stránka nebo článek už neexistuje.');
+            }
+            if ((int) $current['revision_number'] !== $expectedRevision) {
+                throw new RuntimeException('Obsah se mezitím změnil. Obnov stránku a zkus to znovu.');
+            }
+            $this->db->query(
+                'DELETE FROM content_revisions WHERE document_key=%s AND language=%s', $key, $language
+            );
+            $this->db->commit();
+        } catch (Throwable $error) {
+            $this->db->rollback();
+            throw $error;
+        }
+    }
+
     /** Insert a snapshot and retain the configured number of revisions. */
     public function saveRevision(array $fields, ?string $documentKey = null, ?int $expectedRevision = null): array
     {

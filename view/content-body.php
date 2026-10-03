@@ -41,6 +41,16 @@ $editable = static function (string $field, string $value, ?int $index = null, s
           <label>Pořadí v menu <input type="number" min="0" max="65535" value="<?= (int) $content['menu_order'] ?>" data-content-input="menu_order"></label>
         <?php endif; ?>
       </div>
+      <details class="inline-delete-product"><summary>Odstranit <?= $page === 'post' ? 'článek' : 'stránku' ?></summary>
+        <p>Smazání odstraní <?= $page === 'post' ? 'článek' : 'stránku' ?> a všechny revize v tomto jazyce. Ostatní překlady a nahrané fotografie zůstanou zachované.</p>
+        <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>">
+          <input type="hidden" name="action" value="delete-content"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>">
+          <input type="hidden" name="key" value="<?= $escape($content['document_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
+          <input type="hidden" name="type" value="<?= $escape($page) ?>"><input type="hidden" name="revision" value="<?= (int) $content['revision_number'] ?>">
+          <label><input type="checkbox" name="confirm" value="1" required> Rozumím, že tento obsah a jeho revize už nepůjdou obnovit.</label>
+          <button type="submit" class="inline-small">Smazat <?= $page === 'post' ? 'článek' : 'stránku' ?></button>
+        </form>
+      </details>
     <?php endif; ?>
     <nav class="breadcrumbs" aria-label="Drobečková navigace">
       <a href="<?= $siteRoot . $escape($language) ?>">Úvod</a><span aria-hidden="true">/</span>

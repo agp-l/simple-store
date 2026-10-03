@@ -64,6 +64,8 @@ jobs:
           php tests/admin-render.php
           php tests/admin-auth.php
           php tests/inline-editor.php
+          php tests/content-editor.php
+          php tests/content-deletion.php
       - name: Test cart cookie across HTTP requests
         run: bash tests/cart-http.sh
       - name: Test admin cookie across HTTP requests

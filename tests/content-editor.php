@@ -89,6 +89,9 @@ foreach (['page', 'post'] as $type) {
         !str_contains($editor, 'data-edit-field="section_body"') ||
         !str_contains($editor, 'data-content-action="section-add"') ||
         !str_contains($editor, 'data-content-action="restore"') ||
+        !str_contains($editor, 'name="action" value="delete-content"') ||
+        !str_contains($editor, 'Smazat ' . ($type === 'post' ? 'článek' : 'stránku')) ||
+        str_contains($public, 'name="action" value="delete-content"') ||
         !str_contains($editor, 'test-token') ||
         !str_contains($editor, 'noindex, nofollow') ||
         ($type === 'post' && (!str_contains($editor, '/shop/cs/blog/moje-adresa') ||
