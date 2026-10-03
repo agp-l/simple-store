@@ -3,7 +3,7 @@
 /config/checkout.php
 /config/admin.php
 /config/.admin-*
-/config/.smtp-key
+/config/.smtp-key.php
 /.env
 /.env.*
 /composer.phar

@@ -33,7 +33,7 @@ $mailSettingsUrl = $adminUrl . '?section=settings&tab=mail';
     <label>Uživatelské jméno schránky<input name="smtp_username" value="<?= $escape($mailForm['smtp_username']) ?>" maxlength="254" autocomplete="off" placeholder="objednavky@dobrodruzi.cz"></label></div>
     <label>Heslo schránky<input type="password" name="smtp_password" maxlength="512" autocomplete="new-password" placeholder="<?= $mailForm['smtp_password_encrypted'] !== '' ? 'Heslo je uloženo; pro změnu napiš nové' : 'Heslo ke schránce' ?>"></label>
     <label class="panel-check"><input type="checkbox" name="smtp_clear_password" value="1"> Smazat uložené SMTP heslo</label>
-    <p class="panel-help">Heslo se do stránky nikdy nevrací; v databázi je šifrované. Spolu s databází zálohuj také <code>config/.smtp-key</code>. Použij údaje pro odchozí poštu a nastav adresu odesílatele podle své schránky.</p>
+    <p class="panel-help">Heslo se do stránky nikdy nevrací; v databázi je šifrované. Spolu s databází zálohuj také <code>config/.smtp-key.php</code>. Použij údaje pro odchozí poštu a nastav adresu odesílatele podle své schránky.</p>
   </section>
   <section class="panel-panel panel-settings-block">
     <h2>Obsah zpráv podle stavu</h2>

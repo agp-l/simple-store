@@ -184,8 +184,11 @@ try {
             }
             http_response_code(400);
             throw new InvalidArgumentException('Neznámá akce účtu.');
-        } catch (InvalidArgumentException | RuntimeException $exception) {
+        } catch (InvalidArgumentException $exception) {
             $error = $exception->getMessage();
+        } catch (RuntimeException $exception) {
+            error_log('Customer account action failed: ' . $exception->getMessage());
+            $error = 'Odeslání nyní není dostupné. Zkus to prosím později.';
         }
     }
 

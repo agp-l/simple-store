@@ -30,6 +30,7 @@ final class PasswordResetService
     public function request(string $role, string $identifier, string $path): void
     {
         self::role($role);
+        if (!in_array($path, ['admin.php', 'account.php'], true)) throw new InvalidArgumentException('Neplatná adresa obnovy.');
         if (!$this->available()) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky.');
         $settings = (new MailSettingsRepository($this->db))->load()['settings'];
         if ($settings['from_email'] === '' || $settings['public_base_url'] === '') {
@@ -47,7 +48,6 @@ final class PasswordResetService
                     $email, 'customer') : null;
         }
         if ($user === null) {
-            hash('sha256', $identifier);
             return;
         }
         $id = (int) $user['id'];
@@ -58,7 +58,6 @@ final class PasswordResetService
         $this->db->query('INSERT INTO shop_password_resets (token_hash, user_id, password_hash_at_issue, role, created_at, expires_at)
             VALUES (%s, %i, %s, %s, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 30 MINUTE))',
             $hash, $id, hash('sha256', (string) $user['password_hash']), $role);
-        if (!in_array($path, ['admin.php', 'account.php'], true)) throw new InvalidArgumentException('Neplatná adresa obnovy.');
         $url = rtrim($settings['public_base_url'], '/') . '/' . $path . '?mode=reset&token=' . $token;
         $subject = '=?UTF-8?B?' . base64_encode('Obnova hesla · dobrodruzi.cz') . '?=';
         $from = (string) $settings['from_email'];

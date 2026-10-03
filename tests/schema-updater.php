@@ -63,7 +63,8 @@ $source = file_get_contents(dirname(__DIR__) . '/database/schema.sql');
 if (!is_string($source)) throw new RuntimeException('Schema file is missing.');
 $parsed = SqlStatementParser::split($source);
 if (count($parsed) < 100 || !str_starts_with($parsed[2], 'CREATE TABLE IF NOT EXISTS users') ||
-    !str_contains($parsed[4], "'ALTER TABLE users")) {
+    !str_contains(implode("\n", $parsed), "'ALTER TABLE users") ||
+    !str_contains(implode("\n", $parsed), 'CREATE TABLE IF NOT EXISTS shop_password_resets')) {
     throw new RuntimeException('The current schema did not parse into statements.');
 }
 $quoted = SqlStatementParser::split("-- ignored;\nSET @a='hello;''world'; /* ignored; */ SELECT `a;b` FROM t;\n");
