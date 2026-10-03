@@ -1392,7 +1392,11 @@
 .cms-block-text .spec-table { width:100%; }
 .cms-block-image { margin: 0; }
 .cms-block-image img { display:block; width:100%; height:auto; max-height:490px; object-fit:contain; object-position:left center; border-radius:8px; }
-.cms-content.is-editing .cms-block { margin:18px 0 24px; }
+.cms-content.is-editing .cms-block { margin:0; }
+.cms-content.is-editing .cms-block .inline-block-controls { margin:0 0 5px; }
+.cms-content.is-editing .cms-block-title { margin-bottom:6px; }
+.cms-content.is-editing .cms-block-text .feature-list { margin-bottom:0; }
+.cms-content.is-editing .cms-blocks > .inline-insert { margin:8px 0 14px; }
 .cms-content.is-editing .cms-block-text { min-height:2em; }
 .cms-content.is-editing .cms-lead:empty, .cms-content.is-editing .cms-block-title:empty { min-height:1.5em; }
 .cms-content.is-editing .inline-history { max-width:850px; }

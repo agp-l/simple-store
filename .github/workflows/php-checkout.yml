@@ -76,6 +76,8 @@ jobs:
         run: node --test tests/gls-checkout.mjs
       - name: Test Balíkovna pickup selection
         run: node --test tests/balikovna-checkout.mjs
+      - name: Test inline block navigation
+        run: node --test tests/editor-block-navigation.mjs
 
   database:
     runs-on: ubuntu-latest

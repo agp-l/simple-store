@@ -6,17 +6,27 @@
   const previousHtml = new WeakMap();
   const cancelled = new WeakSet();
   const scrollKey = `dobrodruzi-editor-scroll-${config.key}`;
+  const blockKey = `dobrodruzi-editor-block-${config.key}`;
   const statusKey = `dobrodruzi-editor-status-${config.key}`;
   let queue = Promise.resolve();
   let pending = 0;
   let failed = false;
   let refreshTimer;
   let nextUrl = location.href;
+  let addedSection = null;
 
   try {
     const oldScroll = sessionStorage.getItem(scrollKey);
-    if (oldScroll !== null) {
-      sessionStorage.removeItem(scrollKey);
+    const newBlock = sessionStorage.getItem(blockKey);
+    sessionStorage.removeItem(scrollKey);
+    sessionStorage.removeItem(blockKey);
+    if (newBlock !== null && /^\d+$/.test(newBlock)) {
+      requestAnimationFrame(() => {
+        const body = document.querySelector(`.product-content-block[data-section="${newBlock}"] [data-edit-field="section_body"]`);
+        body?.focus({ preventScroll: true });
+        body?.scrollIntoView({ block: 'center' });
+      });
+    } else if (oldScroll !== null) {
       requestAnimationFrame(() => window.scrollTo(0, Number(oldScroll)));
     }
     const saved = sessionStorage.getItem(statusKey);
@@ -34,8 +44,14 @@
       try {
         sessionStorage.setItem(scrollKey, String(window.scrollY));
         sessionStorage.setItem(statusKey, `Uloženo · revize ${config.revision}`);
+        if (addedSection !== null) sessionStorage.setItem(blockKey, String(addedSection));
       } catch {}
-      location.assign(nextUrl + (location.hash || ''));
+      const destination = new URL(nextUrl, location.href);
+      if (destination.pathname === location.pathname && destination.search === location.search) {
+        location.reload();
+      } else {
+        location.assign(nextUrl + (location.hash || ''));
+      }
     }, 380);
   }
 
@@ -74,6 +90,9 @@
       }
       config.revision = result.revision;
       nextUrl = result.url;
+      if (operation === 'section.add') {
+        addedSection = index === null ? document.querySelectorAll('.product-content-block').length : index + 1;
+      }
       pending--;
       status.textContent = `Uloženo · revize ${config.revision}`;
       if (pending === 0) refreshWhenReady();
