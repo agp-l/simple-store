@@ -4,6 +4,7 @@ declare(strict_types=1);
 namespace SimpleStore\Content;
 
 use InvalidArgumentException;
+use SimpleStore\Editing\CardSummary;
 use SimpleStore\Navigation\Slugger;
 use SimpleStore\Product\ProductDetails;
 
@@ -78,6 +79,7 @@ final class ContentInlineEditor
                 }
                 $form[$field] = (int) $value;
             } else {
+                if ($field === 'summary' && $form['type'] === 'post') CardSummary::validate(trim($value));
                 $form[$field] = trim($value);
                 if ($field === 'slug' && $form[$field] === '') {
                     $form[$field] = Slugger::fromTitle($form['title']);

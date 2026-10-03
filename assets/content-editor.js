@@ -113,6 +113,11 @@
     const target = event.target.closest('[data-edit-operation]');
     if (!target || failed) return;
     clearTimeout(refreshTimer);
+    if (target.dataset.editInvalid === '1') {
+      delete target.dataset.editInvalid;
+      target.classList.remove('inline-invalid');
+      return;
+    }
     previousHtml.set(target, target.innerHTML);
     target.textContent = target.dataset.editValue;
     target.classList.add('inline-focused');
@@ -129,6 +134,13 @@
     const value = (target.innerText || target.textContent || '').replace(/\r/g, '').trim();
     if (value === target.dataset.editValue || failed) {
       target.innerHTML = previousHtml.get(target);
+      return;
+    }
+    const max = Number(target.dataset.editMaxlength || 0);
+    if (max && Array.from(value).length > max) {
+      target.dataset.editInvalid = '1';
+      status.textContent = `Perex může mít nejvýše ${max} znaků. Zkrať text a znovu klikni mimo pole.`;
+      target.classList.add('inline-invalid');
       return;
     }
     save(target.dataset.editOperation, target.dataset.editField, value,

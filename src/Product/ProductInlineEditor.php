@@ -5,6 +5,8 @@ namespace SimpleStore\Product;
 
 use InvalidArgumentException;
 use SimpleStore\Category\CategoryPath;
+use SimpleStore\Editing\CardSummary;
+use SimpleStore\Navigation\Slugger;
 
 /** Turn one small on-page change into a complete, validated product snapshot. */
 final class ProductInlineEditor
@@ -77,7 +79,15 @@ final class ProductInlineEditor
             if ($field === 'published' && !in_array($value, ['0', '1'], true)) {
                 throw new InvalidArgumentException('Neplatný stav publikování.');
             }
+            if ($field === 'summary') CardSummary::validate(trim($value));
             $form[$field] = $field === 'published' ? $value === '1' : trim($value);
+            if ($field === 'slug' && $form['slug'] === '') {
+                $form['slug'] = Slugger::fromTitle($form['name']);
+            }
+            if ($field === 'name' && preg_match('/^novy-produkt-[a-f0-9]{10}$/D', $form['slug']) === 1 &&
+                $form['name'] !== 'Nový produkt') {
+                $form['slug'] = Slugger::fromTitle($form['name']);
+            }
             return $form;
         }
         if ($operation === 'gallery.add' || $operation === 'gallery.set' || $operation === 'gallery.remove') {

@@ -3,6 +3,7 @@ use SimpleStore\Product\ProductDetails;
 use SimpleStore\Category\CategoryPath;
 use SimpleStore\Product\ProductText;
 use SimpleStore\Media\MediaPath;
+use SimpleStore\Editing\CardSummary;
 
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $editing = (bool) ($editMode ?? false);
@@ -42,7 +43,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         </div>
       </div>
       <?php if (($_GET['stock_saved'] ?? '') === '1'): ?><p class="inline-stock-notice" role="status">Počet kusů skladem byl uložen.</p><?php endif; ?>
-      <details class="product-admin-settings" id="product-settings"><summary><strong>Nastavení produktu</strong><span><?= $escape($categoryLabel) ?> · <?= $escape($stockText[$product['stock_status']] ?? '') ?><?= ($stockReady ?? false) ? ' · Volné: ' . (int) ($product['stock_quantity'] ?? 0) . ' ks' : '' ?></span></summary>
+      <section class="product-admin-settings" aria-labelledby="product-settings-title"><div class="product-admin-settings-heading"><strong id="product-settings-title">Nastavení produktu</strong><span><?= $escape($categoryLabel) ?> · <?= $escape($stockText[$product['stock_status']] ?? '') ?><?= ($stockReady ?? false) ? ' · Volné: ' . (int) ($product['stock_quantity'] ?? 0) . ' ks' : '' ?></span></div>
       <div class="inline-settings" aria-label="Nastavení produktu">
         <label>Kategorie <select data-editor-select="category_path">
           <?php foreach ($editorCategories as $option): ?><option value="<?= $escape($option['path']) ?>" <?= $categoryPath === $option['path'] ? 'selected' : '' ?>><?= $escape($option['title']) ?></option><?php endforeach; ?>
@@ -59,10 +60,11 @@ $editable = static function (string $field, string $value, ?int $index = null, s
             <button type="submit" class="inline-small">Uložit sklad</button>
           </form>
         <?php else: ?><a href="<?= $escape($siteRoot . 'admin.php?section=database') ?>">Pro počet kusů aktualizuj SQL tabulky ↗</a><?php endif; ?>
-        <span>Adresa: <span class="inline-slug"<?= $editable('slug', $product['slug']) ?>><?= $escape($product['slug']) ?></span></span>
+        <label>Adresa produktu <span class="inline-address-prefix">/<?= $escape($language) ?>/produkt/</span><input type="text" data-editor-input="slug" value="<?= $escape($product['slug']) ?>" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="190" required spellcheck="false" autocomplete="off"></label>
       </div>
       <p class="inline-stock-note">Počet je společný pro všechny varianty a jazyky. Zákazníci vidí jen dostupnost. „Na objednávku“ umožňuje objednání i bez kusů skladem.</p>
-      </details>
+      <p class="inline-stock-note">Při prvním přejmenování nového produktu se adresa vytvoří podle názvu. U zveřejněného produktu změna adresy zneplatní dosavadní odkaz.</p>
+      </section>
       <details class="inline-delete-product"><summary>Odstranit produkt</summary>
         <p>Smazání odstraní produkt a všechny jeho revize v tomto jazyce. Nahrané obrázky zůstanou na disku, protože mohou mít zkopírované odkazy.</p>
         <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>">
@@ -92,7 +94,8 @@ $editable = static function (string $field, string $value, ?int $index = null, s
       <div class="detail-info">
         <p class="product-brand"><span<?= $editable('brand', $product['brand']) ?>><?= $escape($product['brand']) ?></span> · <?= $escape($categoryLabel) ?></p>
         <h1<?= $editable('name', $product['name']) ?>><?= $escape($product['name']) ?></h1>
-        <?php if ($editing || $product['summary'] !== ''): ?><p class="detail-lead"<?= $editable('summary', $product['summary'] ?? '') ?>><?= $escape($product['summary'] ?: 'Krátký popis produktu…') ?></p><?php endif; ?>
+        <?php if ($editing || $product['summary'] !== ''): ?><p class="detail-lead"<?= $editable('summary', $product['summary'] ?? '') ?><?= $editing ? ' data-edit-maxlength="' . CardSummary::MAX_CHARACTERS . '" aria-describedby="product-summary-hint"' : '' ?>><?= $escape($product['summary'] ?: 'Krátký popis produktu…') ?></p><?php endif; ?>
+        <?php if ($editing): ?><small class="inline-summary-hint" id="product-summary-hint">Perex na kartě: nejvýše <?= CardSummary::MAX_CHARACTERS ?> znaků; v katalogu se zobrazí maximálně tři řádky.</small><?php endif; ?>
         <form method="post" action="<?= $escape($cartUrl) ?>" class="product-purchase">
           <input type="hidden" name="action" value="add"><input type="hidden" name="csrf" value="<?= $escape($cartToken) ?>">
           <input type="hidden" name="product_key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">

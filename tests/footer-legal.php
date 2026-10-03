@@ -30,4 +30,15 @@ if (!str_contains($published, 'aria-label="Odkazy v patičce"') ||
     throw new RuntimeException('The footer must link only to published CMS pages.');
 }
 
+ob_start();
+$renderer->render('catalog', $data + ['priceDisplay' => new \SimpleStore\Pricing\BitcoinPriceDisplay([
+    'rate' => 2000000.0, 'updated_at' => '2026-10-03 07:20:20',
+])]);
+$bitcoinFooter = ob_get_clean();
+if (str_contains($bitcoinFooter, 'BTC přepočet je orientační') ||
+    str_contains($bitcoinFooter, 'Data poskytuje') ||
+    !str_contains($bitcoinFooter, 'Na další cestu připraveni.')) {
+    throw new RuntimeException('The public footer must not show the exchange rate notice.');
+}
+
 echo "Footer legal links passed.\n";

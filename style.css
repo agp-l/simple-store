@@ -628,6 +628,7 @@
 
     .media-label {
       position: absolute;
+      z-index: 1;
       left: 12px;
       top: 12px;
       display: inline-flex;
@@ -639,7 +640,10 @@
       color: #345c32;
       font-size: 11px;
       font-weight: 700;
+      text-decoration: none;
     }
+
+    .media-label:hover, .media-label:focus-visible { background: #dcefd4; color: #234d29; }
 
     .media-label::before {
       content: "";
@@ -671,6 +675,16 @@
       font-weight: 700;
       line-height: 1.35;
       letter-spacing: -.005em;
+    }
+
+    .product-summary, .cms-post-summary {
+      display: -webkit-box;
+      -webkit-box-orient: vertical;
+      -webkit-line-clamp: 3;
+      max-height: 4.95em;
+      overflow: hidden;
+      overflow-wrap: anywhere;
+      line-height: 1.65;
     }
 
     .product-meta {
@@ -735,12 +749,15 @@
       color: #ffffff;
       font-size: 12px;
       font-weight: 800;
+      text-decoration: none;
       white-space: nowrap;
       transition: background .15s;
     }
 
     .add-button:hover {
       background: var(--lime);
+      color: var(--ink);
+      text-decoration: none;
     }
 
     .add-button svg {
@@ -982,7 +999,7 @@
       object-fit: contain;
     }
 
-    .product-media > a {
+    .product-media > a:not(.media-label) {
       display: block;
       width: 100%;
       height: 100%;
@@ -1306,20 +1323,21 @@
 .inline-toolbar a { color:var(--forest-dark); font-size:13px; font-weight:700; }
 .product-admin-read { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin:0 0 18px; padding:12px 15px; border:1px solid #c7dcc2; border-radius:5px; color:var(--muted); font-size:13px; }
 .product-admin-read a { display:inline-flex; padding:7px 10px; border:1px solid #b4d4ad; border-radius:4px; color:#28642f; font-weight:700; text-decoration:none; }
-.product-edit-toolbar { gap:10px 18px; border-radius:5px; }
+.product-edit-toolbar { gap:10px 18px; border-color:#c7dcc2; border-radius:5px; background:#f7faf5; }
 .product-edit-toolbar > div:first-child { flex:1 1 360px; }
 .product-edit-state { display:inline-block; margin-left:6px; padding:3px 7px; border-radius:4px; background:#7a5636; color:#fff; font-size:11px; vertical-align:middle; }
 .product-edit-state.is-public { background:#346b3d; }
 .product-edit-toolbar-actions { display:flex; flex:1 1 100%; flex-wrap:wrap; align-items:center; gap:8px 15px; padding-top:10px; border-top:1px solid #c6dbc0; }
-.product-admin-settings { margin:0 0 18px; padding:12px 15px; border:1px solid var(--line); border-radius:5px; background:#fff; }
-.product-admin-settings summary { display:flex; align-items:center; flex-wrap:wrap; gap:4px 12px; cursor:pointer; list-style:none; }
-.product-admin-settings summary::-webkit-details-marker { display:none; }
-.product-admin-settings summary::before { content:'▸'; color:#28642f; }
-.product-admin-settings[open] summary::before { content:'▾'; }
-.product-admin-settings summary strong { color:var(--ink); font-size:14px; }
-.product-admin-settings summary span { color:var(--muted); font-size:12px; }
+.product-admin-settings { margin:0 0 18px; padding:14px 17px; border:1px solid #c7dcc2; border-radius:5px; background:#f7faf5; }
+.product-admin-settings-heading { display:flex; align-items:center; flex-wrap:wrap; gap:4px 12px; padding-bottom:10px; border-bottom:1px solid #d6e4d2; }
+.product-admin-settings-heading strong { color:var(--ink); font-size:16px; }
+.product-admin-settings-heading span { color:var(--muted); font-size:12px; }
 .product-admin-settings .inline-settings { padding:15px 0 0; }
 .product-admin-settings .inline-stock-note { margin:10px 0 0; }
+.inline-address-prefix { font-size:12px; white-space:nowrap; }
+.inline-settings input[type="text"] { width:min(100%, 320px); min-width:160px; padding:8px; border:1px solid var(--line); border-radius:5px; background:white; color:var(--ink); font:inherit; }
+.inline-summary-hint { display:block; margin:-19px 0 22px; color:var(--muted); font-size:12px; }
+.inline-invalid { outline:2px solid #a42b24; outline-offset:3px; }
 .inline-status { color:var(--forest-dark); font-size:13px; font-weight:700; }
 .inline-status.inline-error { color:#a42b24; }
 .inline-settings { display:flex; align-items:center; flex-wrap:wrap; gap:10px 18px; padding:0 0 22px; font-size:13px; }

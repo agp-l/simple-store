@@ -2,6 +2,7 @@
 use SimpleStore\Content\ContentBody;
 use SimpleStore\Product\ProductText;
 use SimpleStore\Media\MediaPath;
+use SimpleStore\Editing\CardSummary;
 
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $editing = $contentEditMode;
@@ -63,8 +64,9 @@ $editable = static function (string $field, string $value, ?int $index = null, s
       <p class="cms-eyebrow"><?= $page === 'post' ? 'Z blogu' : 'Stránka' ?></p>
       <h1<?= $editable('title', $content['title']) ?>><?= $escape($content['title']) ?></h1>
       <?php if ($editing || ($content['summary'] ?? '') !== ''): ?>
-        <p class="cms-lead"<?= $editable('summary', $content['summary'] ?? '') ?>><?= $escape($content['summary'] ?: 'Krátký úvod…') ?></p>
+        <p class="cms-lead"<?= $editable('summary', $content['summary'] ?? '') ?><?= $editing && $page === 'post' ? ' data-edit-maxlength="' . CardSummary::MAX_CHARACTERS . '" aria-describedby="post-summary-hint"' : '' ?>><?= $escape($content['summary'] ?: 'Krátký úvod…') ?></p>
       <?php endif; ?>
+      <?php if ($editing && $page === 'post'): ?><small class="inline-summary-hint" id="post-summary-hint">Perex článku: nejvýše <?= CardSummary::MAX_CHARACTERS ?> znaků; v přehledu maximálně tři řádky.</small><?php endif; ?>
       <div class="cms-text cms-blocks">
         <?php if ($editing): ?><div class="inline-insert"><button type="button" class="inline-small" data-content-action="choose-block">＋ Přidat blok</button><span class="inline-block-types" hidden><?php foreach (ContentBody::TYPES as $type => $label): ?><button type="button" class="inline-tiny" data-content-action="section-add" data-value="<?= $type ?>" data-index="-1"><?= $label ?></button><?php endforeach; ?></span></div><?php endif; ?>
         <?php foreach ($sections as $i => $section): ?>

@@ -23,6 +23,14 @@ foreach (['page', 'post'] as $type) {
     if ($form['slug'] !== 'moje-adresa') {
         throw new RuntimeException('Changing the title overwrote a custom slug.');
     }
+    if ($type === 'post') {
+        $form = ContentInlineEditor::change($form, 'set', 'summary', str_repeat('č', 180));
+        try {
+            ContentInlineEditor::change($form, 'set', 'summary', str_repeat('č', 181));
+            throw new RuntimeException('An oversized blog card summary was accepted.');
+        } catch (InvalidArgumentException $expected) {
+        }
+    }
     $form = ContentInlineEditor::change($form, 'section.add', '', 'list', 0);
     $form = ContentInlineEditor::change($form, 'section.set', 'section_body', "Pěšky\nNa kole", 1);
     $form = ContentInlineEditor::change($form, 'section.move', '', 'down', 1);
@@ -92,6 +100,7 @@ foreach (['page', 'post'] as $type) {
         !str_contains($editor, 'name="action" value="delete-content"') ||
         !str_contains($editor, 'Smazat ' . ($type === 'post' ? 'článek' : 'stránku')) ||
         str_contains($public, 'name="action" value="delete-content"') ||
+        ($type === 'post' && !str_contains($editor, 'data-edit-maxlength="180"')) ||
         !str_contains($editor, 'test-token') ||
         !str_contains($editor, 'noindex, nofollow') ||
         ($type === 'post' && (!str_contains($editor, '/shop/cs/blog/moje-adresa') ||

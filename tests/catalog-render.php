@@ -32,6 +32,8 @@ $renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
     'nextUrl' => '/shop/cs?offset=12']);
 $html = ob_get_clean();
 if (!str_contains($html, '/shop/cs/produkt/bota') ||
+    !str_contains($html, 'href="/shop/cs/kategorie-produktu/boty" aria-label="Prohlédnout kategorii Boty"') ||
+    !str_contains($html, 'class="product-summary"') ||
     !str_contains($html, 'data-name="Lehká bota"') ||
     !str_contains($html, 'action="/shop/cs/kosik"') ||
     !str_contains($html, 'name="product_key" value="' . str_repeat('b', 32) . '"') ||
@@ -47,6 +49,26 @@ $cards = $renderer->cards('product', [$product], [
 ]);
 if (!str_contains($cards, '/shop/cs/produkt/bota') || str_contains($cards, '<html')) {
     throw new RuntimeException('The additional catalog batch must render only the reusable product cards.');
+}
+
+$nestedCategory = $renderer->cards('product', [array_replace($product, [
+    'category' => 'vybaveni', 'subcategory' => 'powerbanky',
+])], ['basePath' => '/shop/', 'language' => 'cs',
+    'categoryLabels' => ['vybaveni/powerbanky' => 'Powerbanky']]);
+if (!str_contains($nestedCategory, 'href="/shop/cs/kategorie-produktu/vybaveni/powerbanky"') ||
+    !str_contains($nestedCategory, 'Prohlédnout kategorii Powerbanky')) {
+    throw new RuntimeException('A product label must lead to its exact nested category.');
+}
+
+$withOptions = array_replace($product, ['details_json' => json_encode([
+    'options' => [['name' => 'Velikost', 'values' => ['42', '43']]],
+    'specifications' => [], 'sections' => [], 'gallery' => [],
+], JSON_THROW_ON_ERROR)]);
+$optionCards = $renderer->cards('product', [$withOptions], [
+    'basePath' => '/shop/', 'language' => 'cs', 'categoryLabels' => ['boty' => 'Boty'],
+]);
+if (!str_contains($optionCards, '>Přejít na detail</a>') || str_contains($optionCards, 'Vybrat možnosti')) {
+    throw new RuntimeException('Option products need a clear link to their detail.');
 }
 
 $privateSupplier = [['id' => 7, 'label' => 'Sklad bot',

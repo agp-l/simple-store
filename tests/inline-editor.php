@@ -8,7 +8,22 @@ use SimpleStore\Rendering\PageRenderer;
 require dirname(__DIR__) . '/src/bootstrap.php';
 
 $form = ProductInlineEditor::starter('cs', 'boty');
+$form = ProductInlineEditor::change($form, 'set', 'name', 'Pánské trailové boty');
+if ($form['slug'] !== 'panske-trailove-boty') {
+    throw new RuntimeException('The first product name edit must replace the starter URL.');
+}
+$form = ProductInlineEditor::change($form, 'set', 'slug', 'vlastni-adresa');
+$form = ProductInlineEditor::change($form, 'set', 'name', 'Druhé jméno');
+if ($form['slug'] !== 'vlastni-adresa') {
+    throw new RuntimeException('Changing the product name overwrote a custom URL.');
+}
 $form = ProductInlineEditor::change($form, 'set', 'name', 'Lehká bota');
+$form = ProductInlineEditor::change($form, 'set', 'summary', str_repeat('a', 180));
+try {
+    ProductInlineEditor::change($form, 'set', 'summary', str_repeat('č', 181));
+    throw new RuntimeException('An oversized product card summary was accepted.');
+} catch (InvalidArgumentException $expected) {
+}
 $form = ProductInlineEditor::change($form, 'section.add', '', 'list', 0);
 if ($form['section_type'][1] !== 'list' || count($form['section_type']) !== 5) {
     throw new RuntimeException('A new block was not inserted after the selected block.');
@@ -75,8 +90,12 @@ $checks = [
     'edit_body' => str_contains($editor, 'data-edit-field="section_body"'),
     'admin_navigation' => str_contains($editor, 'aria-label="Pohledy na produkty"') &&
         str_contains($editor, 'href="/shop/cs?homepage_edit=1#homepage-editor"'),
-    'product_settings' => str_contains($editor, '<details class="product-admin-settings"') &&
-        str_contains($editor, 'Nastavení produktu') && str_contains($editor, 'Volné: 12 ks'),
+    'product_settings' => str_contains($editor, '<section class="product-admin-settings"') &&
+        str_contains($editor, 'Nastavení produktu') && str_contains($editor, 'Volné: 12 ks') &&
+        str_contains($editor, 'data-editor-input="slug"') &&
+        str_contains($editor, '<details class="inline-delete-product"'),
+    'summary_limit' => str_contains($editor, 'data-edit-maxlength="180"') &&
+        str_contains($editor, 'Perex na kartě'),
     'single_create_product' => substr_count($editor, 'value="create-product"') === 1,
     'compact_edit_body' => $compactEditableBodies,
     'add_section' => str_contains($editor, 'data-editor-action="section-add"'),
