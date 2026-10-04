@@ -879,6 +879,7 @@
       overflow: hidden;
       background: var(--night);
       color: #eef2e9;
+      margin-top: 80px;
     }
 
     .footer-routes {
