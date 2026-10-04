@@ -6,6 +6,7 @@ use SimpleStore\Accounting\TaxEvidenceRepository;
 use SimpleStore\Accounting\InvoiceRepository;
 use SimpleStore\Accounting\OrderMailQueue;
 use SimpleStore\Accounting\EvidenceBookRepository;
+use SimpleStore\Product\ProductStockRepository;
 
 // admin.php authenticates this route. Downloads and HTML both use the same bounded filter.
 $screen = 'accounting';
@@ -206,6 +207,8 @@ try {
         }
         if ($accountingTab === 'stock') {
             $taxProducts = $tax->products(is_string($_GET['search'] ?? null) ? $_GET['search'] : '');
+            $liveStock = new ProductStockRepository($db);
+            if ($liveStock->installed()) $taxProducts = $liveStock->decorate($taxProducts);
             $saleLines = $tax->saleLines($taxYear);
             $stockMovements = $tax->stockMovements();
         }

@@ -196,6 +196,7 @@ if (!str_contains($html, 'Evidence podnikání') || !str_contains($html, 'Stáhn
 }
 
 require dirname(__DIR__) . '/src/Accounting/TaxEvidenceRepository.php';
+require dirname(__DIR__) . '/src/Accounting/EvidenceBookRowPresenter.php';
 $accountingTab = 'overview';
 $taxYear = 2026;
 $taxReady = $invoicesReady = $mailReady = true;
@@ -208,11 +209,13 @@ $evidencePreviousUrl = '';
 $evidenceNextUrl = '';
 $evidencePage = ['items' => [[
     'kind' => 'order', 'activity_date' => '2026-09-29', 'order_id' => 1,
-    'order_number' => 'DB-1', 'variable_symbol' => '1234567890',
+    'order_number' => 'DB-1', 'order_status' => 'shipped',
+    'variable_symbol' => '1234567890',
     'invoice_id' => 8, 'invoice_number' => 'F2026-000008',
     'customer_email' => '<script>alert(1)</script>', 'payment_status' => 'paid',
     'payment_method' => 'bank_transfer', 'payment_paid_at' => '2026-09-29 09:00:00',
-    'receipt_id' => null, 'receipt_date' => null, 'entry_direction' => null,
+    'receipt_id' => null, 'receipt_date' => null, 'receipt_amount_czk' => null,
+    'entry_direction' => null,
     'amount_czk' => 200, 'counterparty' => '', 'description' => '',
     'entry_reference' => '', 'entry_id' => null, 'entry_tax_kind' => null,
 ]], 'nextOffset' => null];
@@ -224,10 +227,21 @@ require dirname(__DIR__) . '/view/admin/accounting.php';
 $html = ob_get_clean();
 if (!str_contains($html, 'Kniha dokladů a plateb') ||
     !str_contains($html, 'F2026-000008') ||
-    !str_contains($html, 'Prověřit příjem') ||
+    !str_contains($html, 'Zapsat příjem z výpisu') ||
     !str_contains($html, '&lt;script&gt;alert(1)&lt;/script&gt;') ||
     str_contains($html, '<script>alert(1)</script>')) {
     throw new RuntimeException('The evidence book lost document links, next steps or escaping.');
+}
+$baseRow = $evidencePage['items'][0];
+$present = static fn (array $changes): ?array =>
+    (new \SimpleStore\Accounting\EvidenceBookRowPresenter(
+        array_replace($baseRow, $changes), $adminUrl, 2026))->nextStep();
+if ($present(['order_status' => 'cancelled'])['label'] !== 'Prověřit storno a vratku' ||
+    $present(['payment_status' => 'pending', 'receipt_id' => 3])['label'] !== 'Prověřit opravu platby' ||
+    $present(['payment_method' => 'gopay'])['label'] !== 'Prověřit vyúčtování / vratky' ||
+    $present(['receipt_id' => 3, 'receipt_amount_czk' => 150])['label'] !== 'Prověřit rozdílnou částku' ||
+    $present(['receipt_id' => 3, 'receipt_amount_czk' => 200]) !== null) {
+    throw new RuntimeException('Evidence next steps must distinguish refunds, gateway payouts and actual receipts.');
 }
 $accountingTab = 'guide';
 ob_start();
