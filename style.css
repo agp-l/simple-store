@@ -262,8 +262,8 @@ header {
   position: relative;
   z-index: 1;
   isolation: isolate;
-  background-color: var(--night);
-  background-image: radial-gradient(ellipse at 79% 100%, rgba(109, 172, 104, .17), transparent 43%), var(--header-photo);
+  background-color: #2f322f;
+  background-image: radial-gradient(ellipse at 79% 100%, #c5c3bb6b, transparent 43%), var(--header-photo);
   background-size: cover;
   background-position: center;
 }
@@ -416,15 +416,8 @@ header {
 }
 
 .hero-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  margin: 0 0 14px;
   color: var(--lime);
-  font-size: 10px;
-  font-weight: 100;
-  margin-bottom: 10px;
-  letter-spacing: .14em;
+
 }
 
 .hero-tag::before {
@@ -1597,7 +1590,7 @@ main {
   }
 
   .utility p {
-    font-size: 11px
+    font-size: 11px;
   }
 
   .nav-inner {

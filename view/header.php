@@ -12,7 +12,7 @@
             <path d="m15.5 15.5 5 5" />
           </svg><input type="search" id="search-input" name="search" value="<?= htmlspecialchars($searchTerm, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="Hledat produkty" placeholder="Co hledáte do výbavy?"
             autocomplete="off"><button type="submit">Hledat</button></form>
-        <div class="header-actions"><a class="account" href="<?= $siteRoot ?>account.php" aria-label="Přihlásit se nebo otevřít můj účet"><span class="account-desktop">Přihlášení / účet</span><span class="account-mobile" aria-hidden="true">Účet</span></a><a class="account account-register" href="<?= $siteRoot ?>account.php?mode=register">Registrace</a><a class="cart-button"
+        <div class="header-actions"><a class="account" href="<?= $siteRoot ?>account.php" aria-label="Přihlásit se nebo otevřít můj účet"><span class="account-desktop">Přihlášení</span><span class="account-mobile" aria-hidden="true">Účet</span></a><a class="account account-register" href="<?= $siteRoot ?>account.php?mode=register">Registrace</a><a class="cart-button"
             href="<?= htmlspecialchars($cartUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="Otevřít košík"><svg viewBox="0 0 24 24"
               aria-hidden="true">
               <path d="M3 4h2l2 11h11l3-8H6M9 20h.01M18 20h.01" />
@@ -21,8 +21,8 @@
     </div>
     <div class="masthead">
       <div class="wrap utility">
-        <p class="hero-tag">Paralelní společnost</p>
-        <nav class="utility-right" aria-label="Stránky a blog">
+        <p></p>
+        <nav class="utility-right hero-tag" aria-label="Stránky a blog">
           <?php foreach ($utilityMenu as $link): ?>
             <?php if ($manualUtilityMenu && $link['children'] !== []): ?><?php require __DIR__ . '/nav-dropdown.php'; ?>
             <?php else: ?><a href="<?= htmlspecialchars($link['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" <?= $link['active'] ? 'aria-current="page"' : '' ?>><?= htmlspecialchars($link['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a><?php endif; ?>
