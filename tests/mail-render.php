@@ -5,6 +5,7 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 
 use SimpleStore\Accounting\MailSettingsRepository;
 use SimpleStore\Accounting\OrderEmailComposer;
+use SimpleStore\Accounting\OrderMailMime;
 
 $order = ['order_number' => 'DB-26-1234567890', 'order_token' => str_repeat('a', 64),
     'customer_email' => 'eva@example.test',
@@ -17,8 +18,7 @@ $order = ['order_number' => 'DB-26-1234567890', 'order_token' => str_repeat('a',
         'options' => ['Velikost' => '<L>']]]];
 $confirmation = OrderEmailComposer::compose('order', $order, MailSettingsRepository::EVENTS['order'], [],
     'https://shop.example/simple-store/cs/objednavka/abc', 'https://shop.example/simple-store',
-    ['obchodni-podminky', 'reklamacni-rad', 'vymena-a-vraceni-zbozi'],
-    'Znění uzavřené smlouvy <z původní revize>.');
+    ['obchodni-podminky', 'reklamacni-rad', 'vymena-a-vraceni-zbozi']);
 if (!str_contains($confirmation['text'], 'Číslo účtu: 123/4567') ||
     !str_contains($confirmation['text'], 'Variabilní symbol: 1234567890') ||
     !str_contains($confirmation['text'], 'Výdejní místo / box: Box <Centrum>') ||
@@ -28,8 +28,8 @@ if (!str_contains($confirmation['text'], 'Číslo účtu: 123/4567') ||
     !str_contains($confirmation['text'], 'https://shop.example/simple-store/cs/obchodni-podminky') ||
     !str_contains($confirmation['text'], 'https://shop.example/simple-store/support.php?order=' . str_repeat('a', 64)) ||
     !str_contains($confirmation['html'], 'Reklamace a vrácení') ||
-    !str_contains($confirmation['text'], 'Znění uzavřené smlouvy <z původní revize>.') ||
-    !str_contains($confirmation['html'], 'Znění uzavřené smlouvy &lt;z původní revize&gt;.') ||
+    str_contains($confirmation['text'], 'OBCHODNÍ PODMÍNKY PLATNÉ PŘI OBJEDNÁNÍ') ||
+    str_contains($confirmation['html'], 'Obchodní podmínky platné při objednání</h2>') ||
     !str_contains($confirmation['html'], 'Výprava &lt;s.r.o.&gt;') ||
     !str_contains($confirmation['html'], 'Box &lt;Centrum&gt;') ||
     !str_contains($confirmation['html'], '&lt;Batoh&gt;') ||
@@ -66,10 +66,24 @@ if (str_contains($insecureBase['html'], 'support.php?order=')) {
     throw new RuntimeException('Private order token was linked through plain HTTP.');
 }
 $paid = OrderEmailComposer::compose('paid', $order, MailSettingsRepository::EVENTS['paid'], [], '',
-    'https://shop.example/simple-store', ['obchodni-podminky'], 'Neměnné podmínky.');
-if (!str_contains($paid['text'], 'Neměnné podmínky.') ||
+    'https://shop.example/simple-store', ['obchodni-podminky']);
+if (!str_contains($paid['text'], 'https://shop.example/simple-store/cs/obchodni-podminky') ||
     !str_contains($paid['text'], 'Platba byla potvrzena.')) {
-    throw new RuntimeException('Paid mail must carry the terms even if the first confirmation was suppressed.');
+    throw new RuntimeException('Paid mail must link the terms without expanding them in the body.');
+}
+$mime = OrderMailMime::compose('Přehled objednávky', '<p>Přehled objednávky</p>',
+    'Znění pro tohoto zákazníka.');
+if (!str_contains($mime['headers'], 'Content-Type: multipart/mixed;') ||
+    !str_contains($mime['body'], 'Content-Type: multipart/alternative;') ||
+    !str_contains($mime['body'], 'Content-Disposition: attachment; filename="obchodni-podminky.txt"') ||
+    !str_contains($mime['body'], base64_encode('Znění pro tohoto zákazníka.')) ||
+    str_contains($mime['body'], 'Znění pro tohoto zákazníka.')) {
+    throw new RuntimeException('Terms must arrive as a separate UTF-8 attachment.');
+}
+$noAttachment = OrderMailMime::compose('Běžná zpráva', '<p>Běžná zpráva</p>');
+if (!str_contains($noAttachment['headers'], 'Content-Type: multipart/alternative;') ||
+    str_contains($noAttachment['body'], 'Content-Disposition: attachment')) {
+    throw new RuntimeException('Unrelated stage mail unexpectedly gained an attachment.');
 }
 $corrected = $order;
 $corrected['shipping_ordered'] = ['label' => 'GLS na adresu', 'recipient' => 'Eva',

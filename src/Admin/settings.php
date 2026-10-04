@@ -32,9 +32,14 @@ if ($settingsTab === 'mail') {
     if (!(new \SimpleStore\Accounting\OrderLegalDocuments($db))->installed()) {
         $mailLegalWarnings[] = 'Aktualizuj SQL tabulky, aby se u každé objednávky uložilo znění obchodních podmínek platné při objednání.';
     }
+    if ((int) $db->queryFirstField(
+        'SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME=%s',
+        'shop_mail_outbox', 'terms_attachment') === 0) {
+        $mailLegalWarnings[] = 'Aktualizuj SQL tabulky pro přiložení podmínek k potvrzení objednávky.';
+    }
     $termsPage = (new \SimpleStore\Content\ContentRepository($db))->findPublished('page', 'obchodni-podminky', 'cs');
     if ($termsPage === null) {
-        $mailLegalWarnings[] = 'České obchodní podmínky nejsou publikované. Potvrzovací e-mail proto nemůže obsahovat jejich znění ani odkaz.';
+        $mailLegalWarnings[] = 'České obchodní podmínky nejsou publikované. Potvrzovací e-mail proto nemůže obsahovat jejich odkaz ani přílohu.';
     } else {
         try {
             $termsText = \SimpleStore\Accounting\OrderLegalDocuments::bodyText((string) $termsPage['body']);
@@ -61,8 +66,7 @@ if ($settingsTab === 'mail' && is_string($previewCode) && isset(MailSettingsRepo
         $previewOrder, $mailConfiguration['templates'][$previewCode],
         ['number' => 'GLS123456789', 'url' => 'https://example.com/sledovani'],
         '', (string) $mailConfiguration['settings']['public_base_url'],
-        $termsPage === null ? [] : ['obchodni-podminky'],
-        in_array($previewCode, ['order', 'paid'], true) && isset($termsText) ? $termsText : '');
+        $termsPage === null ? [] : ['obchodni-podminky']);
 }
 $shippingCatalog = ShippingPolicy::defaults();
 $form = [

@@ -474,6 +474,7 @@ CREATE TABLE IF NOT EXISTS shop_mail_outbox (
   subject VARCHAR(190) NOT NULL,
   body_text LONGTEXT NOT NULL,
   body_html LONGTEXT NULL,
+  terms_attachment LONGTEXT NULL,
   state VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'queued',
   attempts INT UNSIGNED NOT NULL DEFAULT 0,
   last_error VARCHAR(255) NULL,
@@ -493,6 +494,14 @@ SET @mail_html_upgrade = IF(@mail_html_exists=0,
 PREPARE mail_html_statement FROM @mail_html_upgrade;
 EXECUTE mail_html_statement;
 DEALLOCATE PREPARE mail_html_statement;
+
+SET @mail_terms_attachment_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_mail_outbox' AND COLUMN_NAME='terms_attachment');
+SET @mail_terms_attachment_upgrade = IF(@mail_terms_attachment_exists=0,
+  'ALTER TABLE shop_mail_outbox ADD COLUMN terms_attachment LONGTEXT NULL AFTER body_html', 'SELECT 1');
+PREPARE mail_terms_attachment_statement FROM @mail_terms_attachment_upgrade;
+EXECUTE mail_terms_attachment_statement;
+DEALLOCATE PREPARE mail_terms_attachment_statement;
 
 SET @mail_attempted_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
   WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_mail_outbox' AND COLUMN_NAME='attempted_at');

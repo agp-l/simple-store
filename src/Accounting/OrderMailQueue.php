@@ -52,7 +52,7 @@ final class OrderMailQueue
             (string) $config['settings']['public_base_url'] !== '');
         $message = OrderEmailComposer::compose('order', $order, $config['templates']['order'], [],
             $this->orderUrl($order, $config['settings'], $orderUrl),
-            (string) $config['settings']['public_base_url'], $legal['slugs'], $legal['terms'], $legal['language']);
+            (string) $config['settings']['public_base_url'], $legal['slugs'], $legal['language']);
         $orderId = (int) ($order['id'] ?? 0);
         if ($orderId < 1) throw new InvalidArgumentException('Neplatná objednávka pro potvrzení e-mailem.');
         // Checkout and cancellation both lock the order before its outbox row. A delayed
@@ -68,7 +68,8 @@ final class OrderMailQueue
                 return null;
             }
             $id = $this->enqueue('order:' . $orderId, $orderId,
-                (string) $order['customer_email'], $message['subject'], $message['text'], $message['html']);
+                (string) $order['customer_email'], $message['subject'], $message['text'], $message['html'],
+                $legal['terms']);
             $this->db->commit();
             return $id;
         } catch (Throwable $error) {
@@ -94,10 +95,10 @@ final class OrderMailQueue
             : ['slugs' => [], 'terms' => '', 'language' => 'cs'];
         $message = OrderEmailComposer::compose($stage, $order, $config['templates'][$stage], $tracking,
             $this->orderUrl($order, $config['settings']), (string) $config['settings']['public_base_url'],
-            $legal['slugs'], $legal['terms'], $legal['language']);
+            $legal['slugs'], $legal['language']);
         $key = $eventKey !== '' ? $eventKey : $stage . ':' . (int) $order['id'];
         return $this->enqueue($key, (int) $order['id'], (string) $order['customer_email'],
-            $message['subject'], $message['text'], $message['html']);
+            $message['subject'], $message['text'], $message['html'], $legal['terms']);
     }
 
     public function notifyStage(int $orderId, string $stage, string $legacySender = '', string $key = ''): void
@@ -239,15 +240,11 @@ final class OrderMailQueue
             $headers = 'From: ' . ($name === '' ? '' : '=?UTF-8?B?' . base64_encode($name) . '?= ') .
                 '<' . $sender . ">\r\n";
             if ($config['reply_to'] !== '') $headers .= 'Reply-To: ' . $config['reply_to'] . "\r\n";
-            $boundary = 'simple-store-' . bin2hex(random_bytes(12));
-            $headers .= "MIME-Version: 1.0\r\nContent-Type: multipart/alternative; boundary=\"" . $boundary . '"';
-            $body = "--{$boundary}\r\nContent-Type: text/plain; charset=UTF-8\r\n" .
-                "Content-Transfer-Encoding: base64\r\n\r\n" .
-                chunk_split(base64_encode((string) $row['body_text']), 76, "\r\n") .
-                "\r\n--{$boundary}\r\nContent-Type: text/html; charset=UTF-8\r\n" .
-                "Content-Transfer-Encoding: base64\r\n\r\n" .
-                chunk_split(base64_encode((string) ($row['body_html'] ?? self::simpleHtml((string) $row['body_text']))), 76, "\r\n") .
-                "\r\n--{$boundary}--\r\n";
+            $mime = OrderMailMime::compose((string) $row['body_text'],
+                (string) ($row['body_html'] ?? self::simpleHtml((string) $row['body_text'])),
+                (string) ($row['terms_attachment'] ?? ''));
+            $headers .= $mime['headers'];
+            $body = $mime['body'];
             $sent = $this->transport !== null
                 ? (bool) ($this->transport)($row['recipient_email'], $subject, $body, $headers)
                 : (new MailTransport($config))->send($row['recipient_email'], $subject, $body, $headers);
@@ -357,14 +354,23 @@ final class OrderMailQueue
     }
 
     private function enqueue(string $key, ?int $orderId, string $email,
-        string $subject, string $body, string $html): int
+        string $subject, string $body, string $html, string $termsAttachment = ''): int
     {
         if (filter_var($email, FILTER_VALIDATE_EMAIL) === false ||
             strlen($subject) > 190 || preg_match('/[\r\n]/', $subject) ||
-            strlen($body) > 250000 || strlen($html) > 1000000) {
+            strlen($body) > 250000 || strlen($html) > 1000000 ||
+            strlen($termsAttachment) > 30000) {
             throw new InvalidArgumentException('E-mailovou zprávu nelze připravit.');
         }
-        if (!$this->htmlInstalled()) {
+        if ($termsAttachment !== '') {
+            if (!$this->termsAttachmentInstalled() || !$this->htmlInstalled() || $orderId === null || $orderId < 1) {
+                throw new RuntimeException('Pro přílohu obchodních podmínek nejdřív aktualizuj SQL tabulky.');
+            }
+            $this->db->query('INSERT IGNORE INTO shop_mail_outbox
+                (event_key, order_id, recipient_email, subject, body_text, body_html, terms_attachment)
+                VALUES (%s, %i, %s, %s, %s, %s, %s)',
+                $key, $orderId, $email, $subject, $body, $html, $termsAttachment);
+        } elseif (!$this->htmlInstalled()) {
             if ($orderId !== null && $orderId > 0) {
                 $this->db->query('INSERT IGNORE INTO shop_mail_outbox
                     (event_key, order_id, recipient_email, subject, body_text) VALUES (%s, %i, %s, %s, %s)',
@@ -393,6 +399,13 @@ final class OrderMailQueue
         return (int) $this->db->queryFirstField(
             'SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME=%s',
             'shop_mail_outbox', 'body_html') > 0;
+    }
+
+    private function termsAttachmentInstalled(): bool
+    {
+        return (int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME=%s',
+            'shop_mail_outbox', 'terms_attachment') > 0;
     }
 
     private function orderUrl(array $order, array $settings, string $provided = ''): string

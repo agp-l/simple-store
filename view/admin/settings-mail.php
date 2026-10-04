@@ -47,7 +47,7 @@ $mailSettingsUrl = $adminUrl . '?section=settings&tab=mail';
 </form>
 <?php if ($mailPreview !== null): ?>
   <section class="panel-panel panel-settings-block" id="mail-preview"><h2>Náhled: <?= $escape($mailTemplates[$previewCode]['label']) ?></h2>
-    <p class="panel-help">Ukázkové údaje; neodesílá se žádný e-mail. Náhled zobrazuje poslední uložený text.</p>
+    <p class="panel-help">Ukázkové údaje; neodesílá se žádný e-mail. Náhled zobrazuje poslední uložený text. Při skutečném potvrzení se původní znění podmínek přiloží zvlášť jako soubor, takže se v tomto náhledu nevypisuje.</p>
     <iframe title="Náhled e-mailu" sandbox srcdoc="<?= $escape($mailPreview['html']) ?>" style="width:100%;min-height:670px;border:1px solid #dde4da"></iframe>
     <a href="<?= $escape($mailSettingsUrl) ?>">Zavřít náhled</a>
   </section>

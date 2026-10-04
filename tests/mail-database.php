@@ -68,13 +68,17 @@ $db->insert('shop_order_legal_snapshots', [
 ]);
 $paidMailId = $queue->enqueueStage((new OrderRepository($db))->findById($id), 'paid',
     'test:paid:legal:' . $id);
-$paidMail = $db->queryFirstRow('SELECT body_text, body_html FROM shop_mail_outbox WHERE id=%i', $paidMailId);
-if ($paidMail === null || !str_contains($paidMail['body_text'], 'Přesné znění podmínek při objednání.') ||
-    !str_contains($paidMail['body_html'], 'Přesné znění podmínek při objednání.')) {
-    throw new RuntimeException('A fast online payment must carry the immutable terms when the first mail was suppressed.');
+$paidMail = $db->queryFirstRow('SELECT body_text, body_html, terms_attachment FROM shop_mail_outbox WHERE id=%i', $paidMailId);
+if ($paidMail === null || $paidMail['terms_attachment'] !== 'Přesné znění podmínek při objednání.' ||
+    str_contains($paidMail['body_text'], 'Přesné znění podmínek při objednání.') ||
+    str_contains($paidMail['body_html'], 'Přesné znění podmínek při objednání.')) {
+    throw new RuntimeException('Payment mail must keep the immutable terms as an attachment, not expand the message body.');
 }
-if (!$queue->dispatch($paidMailId)) {
-    throw new RuntimeException('The paid message with the immutable terms was not sent.');
+if (!$queue->dispatch($paidMailId) || count($sent) !== 3 ||
+    !str_contains($sent[2][3], 'Content-Type: multipart/mixed;') ||
+    !str_contains($sent[2][2], 'Content-Disposition: attachment; filename="obchodni-podminky.txt"') ||
+    !str_contains($sent[2][2], substr(base64_encode('Přesné znění podmínek při objednání.'), 0, 52))) {
+    throw new RuntimeException('The paid email lost its separate durable terms attachment.');
 }
 $templates['paid']['enabled'] = '0';
 $settings->save(['from_email' => 'shop@example.test', 'from_name' => 'Dobrodruzi',

@@ -8,7 +8,7 @@ final class OrderEmailComposer
 {
     public static function compose(string $event, array $order, array $template,
         array $tracking = [], string $orderUrl = '', string $publicBaseUrl = '',
-        array $publishedLegal = [], string $termsText = '', string $legalLanguage = 'cs'): array
+        array $publishedLegal = [], string $legalLanguage = 'cs'): array
     {
         // The confirmation reflects the checkout snapshot. Later notices use the
         // corrected dispatch destination, if an administrator changed it.
@@ -134,11 +134,6 @@ final class OrderEmailComposer
             $lines[] = '';
             foreach ($legalLinks as $title => $url) $lines[] = $title . ': ' . $url;
         }
-        if (in_array($event, ['order', 'paid'], true) && $termsText !== '') {
-            $lines[] = '';
-            $lines[] = 'OBCHODNÍ PODMÍNKY PLATNÉ PŘI OBJEDNÁNÍ';
-            $lines[] = $termsText;
-        }
         $lines[] = '';
         $lines[] = 'Děkujeme, tým dobrodruzi.cz';
         $text = implode("\n", $lines) . "\n";
@@ -182,10 +177,6 @@ final class OrderEmailComposer
             $legalHtml .= '<a href="' . $escape($url) . '" style="display:inline-block;color:#426f40;margin:0 12px 5px 0;text-decoration:underline">' .
                 $escape($title) . '</a>';
         }
-        $termsHtml = in_array($event, ['order', 'paid'], true) && $termsText !== ''
-            ? '<section style="margin-top:28px;padding-top:18px;border-top:1px solid #dfe6dc">' .
-                '<h2 style="font-size:16px;color:#263a2b">Obchodní podmínky platné při objednání</h2>' .
-                '<div style="color:#455248;font-size:12px">' . nl2br($escape($termsText)) . '</div></section>' : '';
         $html = '<!doctype html><html lang="cs"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>' .
             '<body style="margin:0;padding:0;background:#f1f4ef;color:#263129;font:15px/1.55 Arial,Helvetica,sans-serif">' .
             '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;background:#f1f4ef"><tr><td align="center" style="padding:24px 12px">' .
@@ -207,7 +198,7 @@ final class OrderEmailComposer
             '<h2 style="margin:22px 0 8px;font-size:16px;color:#263a2b">Doručení</h2><div style="font-size:14px;line-height:1.65">' . $addressHtml . '</div>' .
             ($trackingNumber === '' || !$showTracking ? '' :
                 '<h2 style="margin:22px 0 8px;font-size:16px;color:#263a2b">Sledování zásilky</h2><p style="margin:0">Číslo zásilky: <strong style="font-size:18px">' . $escape($trackingNumber) . '</strong></p>') .
-            $note . '<div style="margin-top:18px">' . $actions . '</div>' . $termsHtml .
+            $note . '<div style="margin-top:18px">' . $actions . '</div>' .
             '<p style="margin:26px 0 0;color:#617064;font-size:13px">Děkujeme, tým dobrodruzi.cz</p></td></tr>' .
             '<tr><td style="padding:18px 28px;background:#f7f9f5;border-top:1px solid #dfe6dc;color:#617064;font-size:12px">' .
                 'Tato zpráva se týká vaší objednávky. Můžete na ni odpovědět.' .

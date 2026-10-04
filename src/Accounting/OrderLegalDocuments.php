@@ -8,7 +8,7 @@ use MeekroDB;
 use SimpleStore\Content\ContentBody;
 use SimpleStore\Content\ContentRepository;
 
-/** Published legal pages only; the prepared mail preserves their current text in the outbox. */
+/** Published legal pages only; save their purchase-time text for the mail attachment. */
 final class OrderLegalDocuments
 {
     public const TERMS_SLUG = 'obchodni-podminky';
@@ -63,14 +63,14 @@ final class OrderLegalDocuments
         $parts = [];
         foreach (ContentBody::decode($body) as $section) {
             if ($section['type'] === 'image') {
-                throw new InvalidArgumentException('Obchodní podmínky obsahují obrázek, který nelze uložit do textového potvrzení objednávky.');
+                throw new InvalidArgumentException('Obchodní podmínky obsahují obrázek, který nelze uložit do textové přílohy objednávky.');
             }
             if (trim($section['heading']) !== '') $parts[] = trim($section['heading']);
             if (trim($section['body']) !== '') $parts[] = trim($section['body']);
         }
         $terms = implode("\n\n", $parts);
         if (strlen($terms) > self::MAX_TERMS_BYTES) {
-            throw new InvalidArgumentException('Obchodní podmínky jsou příliš dlouhé pro e-mail. Zkrať je v editoru stránky.');
+            throw new InvalidArgumentException('Obchodní podmínky přesahují limit 30 kB pro neměnnou přílohu. Zkrať je v editoru stránky.');
         }
         return $terms;
     }
