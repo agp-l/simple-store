@@ -18,7 +18,7 @@ $accountingFulfillmentLabel = static fn (mixed $status): string => match ($statu
     'cancelled' => 'Zrušeno',
     default => (string) $status,
 };
-$accountingTab ??= 'overview';
+$accountingTab ??= 'orders';
 $taxYear ??= (int) date('Y');
 $accountingTitles = ['overview' => 'Přehled evidence', 'money' => 'Peněžní deník',
     'balances' => 'Majetek a dluhy', 'stock' => 'Sklad a prodeje',

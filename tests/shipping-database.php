@@ -32,7 +32,7 @@ $originalShipping = ['method' => 'gls_home', 'label' => 'GLS – na adresu',
     'city' => 'Praha', 'postal_code' => '110 00', 'country' => 'CZ',
     'phone' => '+420777123456', 'email' => 'eva@example.test'];
 $order = $orderRepository->create(null, 'eva@example.test', [$item], $originalShipping,
-    79, bin2hex(random_bytes(32)), true);
+    79, bin2hex(random_bytes(32)), 'comgate');
 $id = (int) $order['id'];
 $shippingManager->change($id, 1, 'ppl_home', 'gls_home', 'Expedice kurýrem PPL');
 $changed = $orderRepository->findById($id);
@@ -63,7 +63,7 @@ $pickupOriginal = ['method' => 'gls_pickup', 'label' => 'GLS – ParcelShop',
     'pickup_code' => 'P12345', 'pickup_point' => 'Praha box',
     'pickup_address' => 'Nádražní 5, Praha 1'];
 $pickupOrder = $orderRepository->create(null, 'eva@example.test', [$item], $pickupOriginal,
-    59, bin2hex(random_bytes(32)), true);
+    59, bin2hex(random_bytes(32)), 'comgate');
 $pickupId = (int) $pickupOrder['id'];
 $shippingManager->change($pickupId, 1, 'dpd_home', 'gls_pickup',
     'Adresa ověřena se zákazníkem', false,
