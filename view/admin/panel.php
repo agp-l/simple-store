@@ -1,7 +1,7 @@
 <?php
 // This body is framed by the shared storefront shell.
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-$inside = in_array($screen, ['editor', 'categories', 'menus', 'media', 'orders', 'accounting', 'settings', 'users', 'database'], true);
+$inside = in_array($screen, ['editor', 'categories', 'menus', 'media', 'orders', 'returns', 'accounting', 'settings', 'users', 'database'], true);
 ?>
 <div class="panel-area">
   <?php if ($inside): ?>
@@ -16,6 +16,7 @@ $inside = in_array($screen, ['editor', 'categories', 'menus', 'media', 'orders',
         ['key' => 'editor', 'label' => 'Stránky', 'icon' => '▤', 'href' => $adminUrl . '?section=contents'],
         ['key' => 'products', 'label' => 'Produkty', 'icon' => '▦', 'href' => $basePath . $site['default_language'] . '?manage=1#produkty'],
         ['key' => 'orders', 'label' => 'Objednávky', 'icon' => '▣', 'href' => $adminUrl . '?section=orders'],
+        ['key' => 'returns', 'label' => 'Reklamace a vrácení', 'icon' => '↩', 'href' => $adminUrl . '?section=returns'],
         ['key' => 'accounting', 'label' => 'Doklady a platby', 'icon' => '▤', 'href' => $adminUrl . '?section=accounting'],
         ['key' => 'users', 'label' => 'Zákazníci', 'icon' => '♙', 'href' => $adminUrl . '?section=users'],
         ['key' => 'settings', 'label' => 'Nastavení obchodu', 'icon' => '⚙', 'href' => $adminUrl . '?section=settings'],
@@ -80,6 +81,8 @@ $inside = in_array($screen, ['editor', 'categories', 'menus', 'media', 'orders',
       <?php require __DIR__ . '/menus.php'; ?>
     <?php elseif ($screen === 'orders'): ?>
       <?php require __DIR__ . '/orders.php'; ?>
+    <?php elseif ($screen === 'returns'): ?>
+      <?php require __DIR__ . '/returns.php'; ?>
     <?php elseif ($screen === 'accounting'): ?>
       <?php require __DIR__ . '/accounting.php'; ?>
     <?php elseif ($screen === 'users'): ?>

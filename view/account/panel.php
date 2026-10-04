@@ -2,7 +2,7 @@
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $accountMoney = static fn (int $czk): string => $escape($priceDisplay instanceof \SimpleStore\Pricing\BitcoinPriceDisplay
     ? $priceDisplay->format($czk) : number_format($czk, 0, ',', ' ') . ' Kč');
-$sectionNames = ['overview' => 'Přehled', 'orders' => 'Objednávky', 'addresses' => 'Moje adresy',
+$sectionNames = ['overview' => 'Přehled', 'orders' => 'Objednávky', 'returns' => 'Reklamace a vrácení', 'addresses' => 'Moje adresy',
     'payments' => 'Platby', 'settings' => 'Nastavení účtu'];
 $checkoutReturn = $checkoutReturn ?? $accountUrl;
 ?>
@@ -18,6 +18,7 @@ $checkoutReturn = $checkoutReturn ?? $accountUrl;
       $panelLinks = [
           ['key' => 'overview', 'label' => 'Přehled', 'icon' => '⌂', 'href' => $accountUrl],
           ['key' => 'orders', 'label' => 'Objednávky', 'icon' => '▤', 'href' => $accountUrl . '?section=orders'],
+          ['key' => 'returns', 'label' => 'Reklamace a vrácení', 'icon' => '↩', 'href' => $accountUrl . '?section=returns'],
           ['key' => 'addresses', 'label' => 'Moje adresy', 'icon' => '⌖', 'href' => $accountUrl . '?section=addresses'],
           ['key' => 'payments', 'label' => 'Platby', 'icon' => '▣', 'href' => $accountUrl . '?section=payments'],
           ['key' => 'settings', 'label' => 'Nastavení účtu', 'icon' => '⚙', 'href' => $accountUrl . '?section=settings'],
@@ -67,24 +68,41 @@ $checkoutReturn = $checkoutReturn ?? $accountUrl;
             <p>Produkty: <?= $accountMoney((int) $orderDetail['subtotal_czk']) ?> · <?= $escape($orderDetail['shipping']['label'] ?? 'Doprava') ?>: <?= $accountMoney((int) $orderDetail['shipping_czk']) ?></p>
             <p><strong>Celkem <?= $accountMoney((int) $orderDetail['total_czk']) ?></strong></p>
             <?php if (!empty($orderDetail['shipping']['pickup_point'])): ?><p>Výdejní místo: <?= $escape($orderDetail['shipping']['pickup_point']) ?>, <?= $escape($orderDetail['shipping']['pickup_address'] ?? '') ?></p>
-            <?php else: ?><p>Doručení: <?= $escape($orderDetail['shipping']['recipient'] ?? $orderDetail['shipping']['name'] ?? '') ?>, <?= $escape($orderDetail['shipping']['street'] ?? '') ?>, <?= $escape($orderDetail['shipping']['postal_code'] ?? '') ?> <?= $escape($orderDetail['shipping']['city'] ?? '') ?></p><?php endif; ?>
+            <?php else: ?><p>Doručení: <?= $escape($orderDetail['shipping']['recipient'] ?? $orderDetail['shipping']['name'] ?? '') ?><?php if (!empty($orderDetail['shipping']['company'])): ?>, <?= $escape($orderDetail['shipping']['company']) ?><?php endif; ?>, <?= $escape($orderDetail['shipping']['street'] ?? '') ?>, <?= $escape($orderDetail['shipping']['postal_code'] ?? '') ?> <?= $escape($orderDetail['shipping']['city'] ?? '') ?></p><?php endif; ?>
             <?php if ($orderTrackingUrl !== null): ?><p><a class="panel-text-link" href="<?= $escape($orderTrackingUrl) ?>" target="_blank" rel="noopener noreferrer">Sledovat zásilku u Zásilkovny →</a></p><?php endif; ?>
-            <?php if (!empty($orderDetail['order_token'])): ?><a class="panel-text-link" href="<?= $escape($basePath . $language . '/objednavka/' . $orderDetail['order_token']) ?>">Stav objednávky a podrobnosti →</a><?php endif; ?>
+            <?php if (!empty($orderDetail['order_token'])): ?><p><a class="panel-text-link" href="<?= $escape($basePath . $language . '/objednavka/' . $orderDetail['order_token']) ?>">Stav objednávky a podrobnosti →</a></p><p><a class="panel-text-link" href="<?= $escape($basePath . 'support.php?order=' . $orderDetail['order_token']) ?>">Reklamovat nebo vrátit zboží →</a></p><?php endif; ?>
           </section>
           <?php endif; ?>
           <section class="panel-panel"><h2>Přidat starší nákup bez účtu</h2><p>Pokud sis objednal jako host, vlož soukromý odkaz z potvrzovací stránky. E-mail v objednávce musí odpovídat e-mailu tohoto účtu. Pouhé číslo objednávky nestačí.</p>
             <form class="panel-form" method="post" action="<?= $escape($accountUrl . '?section=orders') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="claim-order"><label>Odkaz na objednávku nebo její tajný kód <input name="order_reference" maxlength="1000" required autocomplete="off"></label><button class="panel-button" type="submit">Přiřadit objednávku</button></form>
           </section>
+        <?php elseif ($section === 'returns'): ?>
+          <section class="panel-panel"><h2>Moje podání</h2>
+            <p>Reklamaci nebo vrácení zahájíš v <a href="<?= $escape($accountUrl . '?section=orders') ?>">detailu své objednávky</a>. Každé podání má vlastní potvrzení a časovou osu.</p>
+            <?php if ($customerCases === []): ?><p class="panel-empty">Zatím tu nemáš žádnou reklamaci ani vrácení.</p><?php else: ?><div class="panel-order-list">
+              <?php foreach ($customerCases as $customerRecord): ?><div class="panel-order">
+                <strong><?= $escape($customerRecord['case_number']) ?></strong>
+                <span><?= $escape($customerRecord['order_number']) ?> · <?= $escape($customerRecord['item_name']) ?> · <?= $escape(\SimpleStore\AfterSales\CaseRepository::STATUSES[$customerRecord['status']] ?? $customerRecord['status']) ?></span>
+                <a href="<?= $escape($accountUrl . '?section=returns&id=' . (int) $customerRecord['id']) ?>">Podrobnosti →</a>
+              </div><?php endforeach; ?>
+            </div><?php endif; ?>
+          </section>
+          <?php if ($customerCase !== null): ?><section class="panel-panel"><h2><?= $escape($customerCase['case_number']) ?></h2>
+            <p>Podáno <?= $escape(\SimpleStore\AfterSales\CaseNotice::time((string) $customerCase['submitted_at'])) ?> · <?= $escape(\SimpleStore\AfterSales\CaseRepository::STATUSES[$customerCase['status']] ?? $customerCase['status']) ?></p>
+            <p><?= (int) $customerCase['quantity'] ?> × <?= $escape($customerCase['item_name']) ?> · Objednávka <?= $escape($customerCase['order_number']) ?></p>
+            <p><a class="panel-button" href="<?= $escape($basePath . 'support.php?case=' . $customerCase['case_token']) ?>">Zobrazit a vytisknout potvrzení →</a></p>
+          </section><?php endif; ?>
         <?php elseif ($section === 'addresses'): ?>
           <div class="panel-grid panel-grid-catalog">
             <section class="panel-panel"><h2>Uložené adresy</h2>
               <?php if ($addresses === []): ?><p class="panel-empty">Zatím nemáš uloženou žádnou adresu.</p><?php endif; ?>
-              <?php foreach ($addresses as $address): ?><div class="panel-address-row"><div><strong><?= $escape($address['label']) ?></strong><p><?= $escape($address['recipient']) ?><br><?= $escape($address['street']) ?><br><?= $escape($address['postal_code'] . ' ' . $address['city'] . ', ' . $address['country']) ?></p></div><div class="panel-address-actions"><a href="<?= $escape($accountUrl . '?section=addresses&edit=' . $address['id']) ?>">Upravit</a><form method="post" action="<?= $escape($accountUrl . '?section=addresses') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="address-remove"><input type="hidden" name="id" value="<?= (int) $address['id'] ?>"><button type="submit">Smazat</button></form></div></div><?php endforeach; ?>
+              <?php foreach ($addresses as $address): ?><div class="panel-address-row"><div><strong><?= $escape($address['label']) ?></strong><p><?= $escape($address['recipient']) ?><?php if (!empty($address['company'])): ?><br><?= $escape($address['company']) ?><?php endif; ?><br><?= $escape($address['street']) ?><br><?= $escape($address['postal_code'] . ' ' . $address['city'] . ', ' . $address['country']) ?></p></div><div class="panel-address-actions"><a href="<?= $escape($accountUrl . '?section=addresses&edit=' . $address['id']) ?>">Upravit</a><form method="post" action="<?= $escape($accountUrl . '?section=addresses') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="address-remove"><input type="hidden" name="id" value="<?= (int) $address['id'] ?>"><button type="submit">Smazat</button></form></div></div><?php endforeach; ?>
             </section>
             <section class="panel-panel"><p class="panel-eyebrow">Adresa</p><h2><?= $editAddress === null ? 'Přidat adresu' : 'Upravit adresu' ?></h2>
               <form class="panel-form" method="post" action="<?= $escape($accountUrl . '?section=addresses') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="address-save"><input type="hidden" name="id" value="<?= (int) ($editAddress['id'] ?? 0) ?: '' ?>">
                 <label>Označení <input name="label" maxlength="60" required placeholder="Domů nebo práce" value="<?= $escape($editAddress['label'] ?? '') ?>"></label>
                 <label>Jméno příjemce <input name="recipient" maxlength="120" autocomplete="name" required value="<?= $escape($editAddress['recipient'] ?? $user['display_name']) ?>"></label>
+                <label>Firma (volitelně) <input name="company" maxlength="120" autocomplete="organization" value="<?= $escape($editAddress['company'] ?? '') ?>"></label>
                 <label>Ulice a číslo <input name="street" maxlength="190" autocomplete="street-address" required value="<?= $escape($editAddress['street'] ?? '') ?>"></label>
                 <div class="panel-fields-two"><label>Město <input name="city" maxlength="120" autocomplete="address-level2" required value="<?= $escape($editAddress['city'] ?? '') ?>"></label><label>PSČ <input name="postal_code" maxlength="20" autocomplete="postal-code" required value="<?= $escape($editAddress['postal_code'] ?? '') ?>"></label></div>
                 <div class="panel-fields-two"><label>Země (kód) <input name="country" maxlength="2" autocomplete="country" required value="<?= $escape($editAddress['country'] ?? 'CZ') ?>"></label><label>Telefon (volitelný) <input name="phone" type="tel" maxlength="40" autocomplete="tel" value="<?= $escape($editAddress['phone'] ?? $user['phone']) ?>"></label></div>

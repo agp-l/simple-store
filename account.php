@@ -13,6 +13,7 @@ use SimpleStore\Navigation\UrlManager;
 use SimpleStore\Checkout\CheckoutSettingsRepository;
 use SimpleStore\Pricing\BitcoinPriceDisplay;
 use SimpleStore\Auth\PasswordResetService;
+use SimpleStore\AfterSales\CaseRepository;
 
 $site = require __DIR__ . '/src/bootstrap.php';
 header('Cache-Control: private, no-store');
@@ -35,6 +36,8 @@ $addresses = [];
 $orders = [];
 $orderPage = ['items' => [], 'nextOffset' => null];
 $orderDetail = null;
+$customerCases = [];
+$customerCase = null;
 $priceDisplay = null;
 $orderTrackingUrl = null;
 $orderHistory = ($_GET['history'] ?? '') === '1';
@@ -44,7 +47,7 @@ if ($orderOffset === false) $orderOffset = 0;
 $editAddress = null;
 $registrationAllowed = (bool) ($site['customer_registration'] ?? true);
 $section = $_GET['section'] ?? 'overview';
-if (!is_string($section) || !in_array($section, ['overview', 'orders', 'addresses', 'payments', 'settings'], true)) {
+if (!is_string($section) || !in_array($section, ['overview', 'orders', 'returns', 'addresses', 'payments', 'settings'], true)) {
     $section = 'overview';
 }
 $mode = $_GET['mode'] ?? 'login';
@@ -166,7 +169,7 @@ try {
                     $customers->removeAddress($userId, $id);
                 } else {
                     $fields = [];
-                    foreach (['label', 'recipient', 'street', 'city', 'postal_code', 'country', 'phone'] as $field) {
+                    foreach (['label', 'recipient', 'company', 'street', 'city', 'postal_code', 'country', 'phone'] as $field) {
                         $fields[$field] = $input($field);
                     }
                     $customers->saveAddress($userId, $id, $fields);
@@ -195,6 +198,23 @@ try {
     if ($user !== null) {
         $screen = 'account';
         $user = $auth->user();
+        if ($section === 'returns') {
+            $cases = new CaseRepository($db);
+            if ($cases->installed()) {
+                $customerCases = $cases->forCustomer((int) $user['id']);
+                if (isset($_GET['id'])) {
+                    $caseId = filter_var($_GET['id'], FILTER_VALIDATE_INT,
+                        ['options' => ['min_range' => 1]]);
+                    $customerCase = $caseId === false ? null : $cases->byCustomer((int) $user['id'], $caseId);
+                    if ($customerCase === null) {
+                        http_response_code(404);
+                        $error = 'Případ nebyl nalezen.';
+                    }
+                }
+            } else {
+                $error = 'Nejdřív je třeba aktualizovat databázi obchodu.';
+            }
+        }
         if ($section === 'addresses' || $section === 'overview') {
             $addresses = $customers->addresses((int) $user['id']);
         }

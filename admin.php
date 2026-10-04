@@ -72,6 +72,7 @@ $orderActions = ['mark-order-paid', 'cancel-overdue-bank-order', 'set-order-stat
 $taxActions = ['tax-save-settings', 'tax-save-year-mode', 'tax-add-flat-advance',
     'tax-add-entry', 'tax-add-balance', 'tax-close-balance', 'tax-link-payment', 'invoice-issue',
     'invoice-renumber', 'invoice-email', 'mail-retry', 'mail-reconcile', 'tax-amend-entry', 'tax-void-entry'];
+$returnActions = ['return-update', 'return-refund', 'return-delete'];
 try {
     $csrf = $auth->token();
     if ($method === 'POST' && $_POST === [] && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0 &&
@@ -135,7 +136,7 @@ try {
             'inline-product', 'set-product-stock', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
             'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product', 'delete-content', 'homepage-product', 'product-supplier-link',
             'save-checkout-settings', 'save-mail-settings', 'mail-test', 'customer-create', 'customer-update', 'customer-active',
-            'customer-password', 'schema-apply'], $orderActions, $taxActions), true) ||
+            'customer-password', 'schema-apply'], $orderActions, $taxActions, $returnActions), true) ||
             !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach'], true)) {
                 header('Content-Type: application/json; charset=utf-8');
@@ -232,6 +233,12 @@ try {
     if (in_array($action, $orderActions, true) ||
         ($method !== 'POST' && $section === 'orders')) {
         require __DIR__ . '/src/Admin/orders.php';
+        require __DIR__ . '/view/admin/layout.php';
+        exit;
+    }
+    if (in_array($action, $returnActions, true) ||
+        ($method !== 'POST' && $section === 'returns')) {
+        require __DIR__ . '/src/Admin/returns.php';
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }

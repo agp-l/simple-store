@@ -5,6 +5,10 @@ class MeekroDB
 {
     public array $users = [];
     public array $orders = [];
+    public function startTransaction(): void {}
+    public function commit(): void {}
+    public function rollback(): void {}
+    public function queryFirstField(string $sql, mixed ...$args): int { return 0; }
 
     public function queryFirstRow(string $sql, mixed ...$args): ?array
     {

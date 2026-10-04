@@ -125,6 +125,7 @@ if ($testOrder) {
     <?php if ($trackingNumber !== ''): ?><p>Číslo zásilky: <?= $checkoutEscape($trackingNumber) ?></p><?php endif; ?>
     <?php if ($trackingUrl !== ''): ?><p><a class="checkout-back" href="<?= $checkoutEscape($trackingUrl) ?>" target="_blank" rel="noopener noreferrer">Sledovat zásilku u dopravce →</a></p><?php endif; ?>
     <?php if ($fulfillmentStatus === 'ready_to_ship' && ($trackingNumber !== '' || $trackingUrl !== '')): ?><p class="checkout-fineprint">Pohyb zásilky se může zobrazit až po předání dopravci.</p><?php endif; ?>
+    <?php if (!$testOrder && $orderUrl !== ''): ?><p><a class="checkout-back" href="<?= $checkoutEscape($siteRoot . 'support.php?order=' . rawurlencode((string) ($order['order_token'] ?? ''))) ?>">Reklamace a vrácení zboží →</a></p><?php endif; ?>
   </section>
   <?php if (isset($order['subtotal_czk'], $order['shipping_czk'], $order['total_czk'])): ?>
   <section class="checkout-panel checkout-receipt"><h2>Souhrn nákupu</h2><dl>

@@ -107,7 +107,7 @@ final class CustomerRepository
     public function addresses(int $userId): array
     {
         return $this->db->query(
-            'SELECT id, label, recipient, street, city, postal_code, country, phone
+            'SELECT id, label, recipient, company, street, city, postal_code, country, phone
              FROM customer_addresses WHERE user_id=%i ORDER BY id DESC', $userId
         );
     }
@@ -115,7 +115,7 @@ final class CustomerRepository
     public function address(int $userId, int $id): ?array
     {
         return $this->db->queryFirstRow(
-            'SELECT id, label, recipient, street, city, postal_code, country, phone
+            'SELECT id, label, recipient, company, street, city, postal_code, country, phone
              FROM customer_addresses WHERE user_id=%i AND id=%i LIMIT 1', $userId, $id
         );
     }
@@ -125,6 +125,7 @@ final class CustomerRepository
         $fields = [
             'label' => self::shortText((string) ($input['label'] ?? ''), 60, 'Označení'),
             'recipient' => self::shortText((string) ($input['recipient'] ?? ''), 120, 'Příjemce'),
+            'company' => self::shortText((string) ($input['company'] ?? ''), 120, 'Firma', true),
             'street' => self::shortText((string) ($input['street'] ?? ''), 190, 'Ulice a číslo'),
             'city' => self::shortText((string) ($input['city'] ?? ''), 120, 'Město'),
             'postal_code' => self::shortText((string) ($input['postal_code'] ?? ''), 20, 'PSČ'),
@@ -139,7 +140,7 @@ final class CustomerRepository
                 throw new InvalidArgumentException('Adresa neexistuje.');
             }
             $this->db->query(
-                'UPDATE customer_addresses SET label=%s, recipient=%s, street=%s, city=%s,
+                'UPDATE customer_addresses SET label=%s, recipient=%s, company=%s, street=%s, city=%s,
                  postal_code=%s, country=%s, phone=%s WHERE id=%i AND user_id=%i',
                 ...array_merge(array_values($fields), [$id, $userId])
             );
@@ -214,18 +215,33 @@ final class CustomerRepository
         if (preg_match('/^[a-f0-9]{64}$/D', $token) !== 1) {
             throw new InvalidArgumentException('Zadej platný soukromý odkaz na objednávku.');
         }
-        $user = $this->byId($userId);
-        $row = $this->db->queryFirstRow(
-            'SELECT id, user_id, customer_email FROM shop_orders WHERE order_token=%s LIMIT 1', $token
-        );
-        if ($user === null || $row === null || $row['user_id'] !== null ||
-            strtolower((string) $row['customer_email']) !== $user['email']) {
-            throw new InvalidArgumentException('Objednávku nelze přiřadit. Zkontroluj její odkaz a e-mail.');
+        $this->db->startTransaction();
+        try {
+            $user = $this->byId($userId);
+            $row = $this->db->queryFirstRow(
+                'SELECT id, user_id, customer_email FROM shop_orders WHERE order_token=%s LIMIT 1 FOR UPDATE', $token
+            );
+            if ($user === null || $row === null || $row['user_id'] !== null ||
+                strtolower((string) $row['customer_email']) !== $user['email']) {
+                throw new InvalidArgumentException('Objednávku nelze přiřadit. Zkontroluj její odkaz a e-mail.');
+            }
+            $this->db->query(
+                'UPDATE shop_orders SET user_id=%i WHERE id=%i AND user_id IS NULL AND order_token=%s',
+                $userId, (int) $row['id'], $token
+            );
+            if ((int) $this->db->queryFirstField(
+                'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
+                'shop_after_sales_cases'
+            ) > 0) {
+                $this->db->query('UPDATE shop_after_sales_cases SET user_id=%i
+                    WHERE order_id=%i AND user_id IS NULL AND customer_email=%s',
+                    $userId, (int) $row['id'], $user['email']);
+            }
+            $this->db->commit();
+        } catch (\Throwable $error) {
+            $this->db->rollback();
+            throw $error;
         }
-        $this->db->query(
-            'UPDATE shop_orders SET user_id=%i WHERE id=%i AND user_id IS NULL AND order_token=%s',
-            $userId, (int) $row['id'], $token
-        );
     }
 
     private static function email(string $email): string

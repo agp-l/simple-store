@@ -24,6 +24,7 @@ jobs:
         run: |
           find src view tests -name '*.php' -print0 | xargs -0 -n1 php -l
           php -l account.php
+          php -l support.php
           php -l admin.php
           php -l index.php
           php -l comgate-callback.php
@@ -39,6 +40,7 @@ jobs:
           php tests/checkout-availability.php
           php tests/checkout-settings.php
           php tests/mail-render.php
+          php tests/after-sales-render.php
           php tests/order-legal-snapshot.php
           php tests/mail-worker.php
           php tests/bitcoin-prices.php
@@ -116,6 +118,7 @@ jobs:
           php tests/flat-tax-advances-database.php
           php tests/evidence-book-database.php
           php tests/mail-database.php
+          php tests/after-sales-database.php
           php tests/legacy-order-migration.php
           php tests/comgate-database.php
           php tests/gopay-database.php
@@ -156,6 +159,7 @@ jobs:
         run: |
           php tests/legacy-order-migration.php
           php tests/tax-year-regime-database.php
+          php tests/after-sales-database.php
           php tests/flat-tax-advances-database.php
           php tests/shipping-database.php
           php tests/homepage-database.php

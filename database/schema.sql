@@ -1020,3 +1020,98 @@ SET @invoice_link_upgrade = IF(@invoice_link_nullable=0,
 PREPARE invoice_link_statement FROM @invoice_link_upgrade;
 EXECUTE invoice_link_statement;
 DEALLOCATE PREPARE invoice_link_statement;
+
+-- Consumer after-sales cases retain their order and item snapshot even when an
+-- administrator later removes the shop order. The secret token permits guests
+-- to view their own receipt without creating a customer account.
+CREATE TABLE IF NOT EXISTS shop_after_sales_cases (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  order_id BIGINT UNSIGNED NULL,
+  user_id BIGINT UNSIGNED NULL,
+  case_number VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  case_token CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  request_key CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  order_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  customer_email VARCHAR(254) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  customer_name VARCHAR(120) NOT NULL,
+  customer_phone VARCHAR(40) NOT NULL DEFAULT '',
+  customer_company VARCHAR(120) NOT NULL DEFAULT '',
+  seller_json LONGTEXT NULL,
+  order_total_czk INT UNSIGNED NOT NULL,
+  kind VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  status VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'submitted',
+  item_name VARCHAR(255) NOT NULL,
+  item_options_json LONGTEXT NULL,
+  item_line SMALLINT UNSIGNED NOT NULL,
+  quantity SMALLINT UNSIGNED NOT NULL,
+  unit_price_czk INT UNSIGNED NOT NULL,
+  description TEXT NOT NULL,
+  requested_solution VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  delivered_on DATE NULL,
+  resolution_type VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NULL,
+  resolution_text TEXT NULL,
+  repair_duration VARCHAR(190) NULL,
+  received_at DATETIME NULL,
+  resolved_at DATETIME NULL,
+  refund_amount_czk INT UNSIGNED NULL,
+  refund_reference VARCHAR(120) NULL,
+  refunded_at DATETIME NULL,
+  submitted_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY after_sales_case_number (case_number),
+  UNIQUE KEY after_sales_case_token (case_token),
+  UNIQUE KEY after_sales_request (request_key),
+  KEY after_sales_order (order_id, id),
+  KEY after_sales_order_number (order_number, id),
+  KEY after_sales_customer (user_id, id),
+  KEY after_sales_status (status, submitted_at),
+  CONSTRAINT after_sales_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Every administrator decision remains visible even if a case is reopened.
+CREATE TABLE IF NOT EXISTS shop_after_sales_events (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  case_id BIGINT UNSIGNED NOT NULL,
+  actor VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  actor_id BIGINT UNSIGNED NULL,
+  status VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  message TEXT NOT NULL,
+  visible_to_customer TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY after_sales_events_case (case_id, id),
+  CONSTRAINT after_sales_event_case_fk FOREIGN KEY (case_id) REFERENCES shop_after_sales_cases(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Existing sites may have created the first case table before the detail fields
+-- were added. The admin schema updater can rerun this without losing cases.
+SET @after_sales_seller_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_after_sales_cases' AND COLUMN_NAME='seller_json');
+SET @after_sales_seller_upgrade = IF(@after_sales_seller_exists=0,
+  'ALTER TABLE shop_after_sales_cases ADD COLUMN seller_json LONGTEXT NULL AFTER customer_company', 'SELECT 1');
+PREPARE after_sales_seller_statement FROM @after_sales_seller_upgrade;
+EXECUTE after_sales_seller_statement;
+DEALLOCATE PREPARE after_sales_seller_statement;
+
+SET @after_sales_options_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_after_sales_cases' AND COLUMN_NAME='item_options_json');
+SET @after_sales_options_upgrade = IF(@after_sales_options_exists=0,
+  'ALTER TABLE shop_after_sales_cases ADD COLUMN item_options_json LONGTEXT NULL AFTER item_name', 'SELECT 1');
+PREPARE after_sales_options_statement FROM @after_sales_options_upgrade;
+EXECUTE after_sales_options_statement;
+DEALLOCATE PREPARE after_sales_options_statement;
+
+SET @after_sales_repair_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_after_sales_cases' AND COLUMN_NAME='repair_duration');
+SET @after_sales_repair_upgrade = IF(@after_sales_repair_exists=0,
+  'ALTER TABLE shop_after_sales_cases ADD COLUMN repair_duration VARCHAR(190) NULL AFTER resolution_text', 'SELECT 1');
+PREPARE after_sales_repair_statement FROM @after_sales_repair_upgrade;
+EXECUTE after_sales_repair_statement;
+DEALLOCATE PREPARE after_sales_repair_statement;
+
+SET @after_sales_order_number_index = (SELECT COUNT(*) FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_after_sales_cases' AND INDEX_NAME='after_sales_order_number');
+SET @after_sales_order_number_upgrade = IF(@after_sales_order_number_index=0,
+  'ALTER TABLE shop_after_sales_cases ADD KEY after_sales_order_number (order_number, id)', 'SELECT 1');
+PREPARE after_sales_order_number_statement FROM @after_sales_order_number_upgrade;
+EXECUTE after_sales_order_number_statement;
+DEALLOCATE PREPARE after_sales_order_number_statement;

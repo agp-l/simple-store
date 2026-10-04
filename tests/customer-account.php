@@ -12,7 +12,7 @@ class MeekroDB
 
     public function queryFirstRow(string $sql, mixed ...$args): ?array
     {
-        if (str_contains($sql, 'FROM customer_addresses')) {
+        if (str_contains($sql, 'SELECT id, label, recipient')) {
             foreach ($this->addresses as $address) {
                 if ($address['user_id'] === $args[0] && $address['id'] === $args[1]) return $address;
             }
@@ -45,9 +45,9 @@ class MeekroDB
             $this->users[$args[1]]['password_hash'] = $args[0];
         }
         if (str_contains($sql, 'UPDATE customer_addresses')) {
-            $this->addresses[$args[7]] = ['id' => $args[7], 'user_id' => $args[8]] +
-                array_combine(['label', 'recipient', 'street', 'city', 'postal_code', 'country', 'phone'],
-                    array_slice($args, 0, 7));
+            $this->addresses[$args[8]] = ['id' => $args[8], 'user_id' => $args[9]] +
+                array_combine(['label', 'recipient', 'company', 'street', 'city', 'postal_code', 'country', 'phone'],
+                    array_slice($args, 0, 8));
         }
         if (str_contains($sql, 'DELETE FROM customer_addresses')) unset($this->addresses[$args[0]]);
         return [];
@@ -89,10 +89,21 @@ $customers->register('second@example.org', 'long-password-456', 'Druhý zákazn�
 $second = $customers->byEmail('second@example.org');
 $customers->updateProfile($first['id'], 'Nové jméno', '+420 111 222 333');
 $customers->saveAddress($first['id'], null, [
-    'label' => 'Domů', 'recipient' => 'Nové jméno', 'street' => 'Polní 1',
+    'label' => 'Domů', 'recipient' => 'Nové jméno', 'company' => 'Naše & Cesty s.r.o.', 'street' => 'Polní 1',
     'city' => 'Praha', 'postal_code' => '110 00', 'country' => 'CZ', 'phone' => '',
 ]);
 $id = $customers->addresses($first['id'])[0]['id'];
+if ($customers->address($first['id'], $id)['company'] !== 'Naše & Cesty s.r.o.') {
+    throw new RuntimeException('Saved company was not retained with the customer address.');
+}
+$customers->saveAddress($first['id'], $id, [
+    'label' => 'Domů', 'recipient' => 'Nové jméno', 'company' => 'Nová firma s.r.o.',
+    'street' => 'Polní 1', 'city' => 'Praha', 'postal_code' => '110 00',
+    'country' => 'CZ', 'phone' => '',
+]);
+if ($customers->address($first['id'], $id)['company'] !== 'Nová firma s.r.o.') {
+    throw new RuntimeException('Company changes were not retained on the saved address.');
+}
 if ($customers->addresses($second['id']) !== [] ||
     $customers->address($second['id'], $id) !== null) {
     throw new RuntimeException('An address leaked across customers.');
