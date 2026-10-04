@@ -12,6 +12,60 @@
     ? 'main-image' : 'section-add-image';
   let index = null;
   let busy = false;
+  const maxUploadBytes = 12 * 1024 * 1024;
+
+  function canvasBlob(canvas, type, quality) {
+    return new Promise((resolve, reject) => canvas.toBlob(blob => {
+      if (!blob || blob.type !== type) reject(new Error('Prohlížeč nedokázal převést fotografii WebP.'));
+      else resolve(blob);
+    }, type, quality));
+  }
+
+  async function convertWebp(file) {
+    const url = URL.createObjectURL(file);
+    const image = new Image();
+    try {
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = () => reject(new Error(`Soubor ${file.name} se nepodařilo přečíst jako WebP.`));
+        image.src = url;
+      });
+      const width = image.naturalWidth;
+      const height = image.naturalHeight;
+      if (!width || !height || width * height > 20_000_000) {
+        throw new Error(`Soubor ${file.name} musí mít nejvýše 20 megapixelů.`);
+      }
+      const canvas = document.createElement('canvas');
+      const draw = max => {
+        const scale = Math.min(1, max / Math.max(width, height));
+        canvas.width = Math.max(1, Math.round(width * scale));
+        canvas.height = Math.max(1, Math.round(height * scale));
+        const context = canvas.getContext('2d', {willReadFrequently: true});
+        if (!context) throw new Error('Prohlížeč nedokázal připravit fotografii WebP.');
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        return context;
+      };
+      const context = draw(1800);
+      const pixels = context.getImageData(0, 0, canvas.width, canvas.height).data;
+      let transparent = false;
+      for (let i = 3; i < pixels.length; i += 4) {
+        if (pixels[i] < 255) { transparent = true; break; }
+      }
+      const type = transparent ? 'image/png' : 'image/jpeg';
+      let blob = await canvasBlob(canvas, type, 0.94);
+      if (transparent && blob.size > maxUploadBytes) {
+        draw(1600);
+        blob = await canvasBlob(canvas, type);
+      }
+      if (blob.size > maxUploadBytes) {
+        throw new Error(`Soubor ${file.name} je po převodu příliš velký (nejvýše 12 MB).`);
+      }
+      const name = file.name.replace(/\.webp$/i, '') + (transparent ? '.png' : '.jpg');
+      return {blob, name};
+    } finally {
+      URL.revokeObjectURL(url);
+    }
+  }
 
   async function request(fields) {
     const response = await fetch(context.endpoint, {
@@ -179,20 +233,29 @@
     event.preventDefault();
     if (busy) return;
     const form = event.currentTarget;
-    const files = form.querySelector('[type="file"]').files;
-    if (!files.length || files.length > 12 || [...files].some(file => file.size > 12 * 1024 * 1024)) {
+    const fileInput = form.querySelector('[type="file"]');
+    const files = fileInput.files;
+    if (!files.length || files.length > 12 || [...files].some(file => !file.size || file.size > maxUploadBytes)) {
       status.textContent = 'Vyber 1 až 12 fotografií, každou nejvýše 12 MB.';
       return;
     }
     busy = true;
-    status.textContent = 'Nahrávám a zpracovávám fotografie…';
+    status.textContent = 'Připravuji fotografie…';
     try {
       const revision = await context.getRevision();
       const fields = new FormData(form);
+      fields.delete('photos[]');
+      for (const file of files) {
+        const converted = fileInput.dataset.webpServerRead === '0' &&
+          (file.type === 'image/webp' || /\.webp$/i.test(file.name))
+          ? await convertWebp(file) : {blob: file, name: file.name};
+        fields.append('photos[]', converted.blob, converted.name);
+      }
       for (const [name, value] of Object.entries({action: 'media-upload', csrf: context.csrf,
         key: context.key, type: context.type, language: context.language,
         revision: String(revision), mode})) fields.set(name, value);
       if (index !== null) fields.set('index', String(index));
+      status.textContent = 'Nahrávám a zpracovávám fotografie…';
       const result = await request(fields);
       form.reset();
       dialog.close();
