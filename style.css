@@ -312,7 +312,7 @@
       right: 0;
       height: 1px;
       pointer-events: none;
-      background: repeating-linear-gradient(70deg, rgb(255 255 255 / 68%) 0 15px, transparent 15px 24px);
+      background: repeating-linear-gradient(70deg, rgba(255, 255, 255, 0.312) 0 15px, transparent 15px 24px);
     }
 
     .nav-band::before { top: 4px; }
