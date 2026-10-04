@@ -108,6 +108,15 @@ final class OrderEmailComposer
             $lines[] = '';
             $lines[] = 'Detail a stav objednávky: ' . $orderUrl;
         }
+        $supportUrl = '';
+        $orderToken = (string) ($order['order_token'] ?? '');
+        if (preg_match('/^[a-f0-9]{64}$/D', $orderToken) === 1 &&
+            self::safeHttps($publicBaseUrl) !== '' &&
+            parse_url($publicBaseUrl, PHP_URL_QUERY) === null &&
+            parse_url($publicBaseUrl, PHP_URL_FRAGMENT) === null) {
+            $supportUrl = rtrim($publicBaseUrl, '/') . '/support.php?order=' . $orderToken;
+            $lines[] = 'Reklamace a vrácení zboží: ' . $supportUrl;
+        }
         $legalLinks = [];
         $publicBaseUrl = rtrim($publicBaseUrl, '/');
         if (in_array($event, ['order', 'paid'], true) && in_array($legalLanguage, ['cs', 'en'], true) &&
@@ -160,7 +169,8 @@ final class OrderEmailComposer
         foreach ($address as $line) $addressHtml .= '<div>' . $escape($line) . '</div>';
         $actions = '';
         foreach (['Sledovat zásilku' => $showTracking ? $trackingUrl : '',
-            'Zobrazit objednávku' => $orderUrl] as $label => $url) {
+            'Zobrazit objednávku' => $orderUrl,
+            'Reklamace a vrácení' => $supportUrl] as $label => $url) {
             if ($url !== '') $actions .= '<a href="' . $escape($url) .
                 '" style="display:inline-block;background:#426f40;color:#fff;padding:11px 16px;margin:6px 10px 0 0;text-decoration:none;font-size:14px;font-weight:700">' .
                 $escape($label) . '</a>';

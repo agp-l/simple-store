@@ -6,7 +6,8 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 use SimpleStore\Accounting\MailSettingsRepository;
 use SimpleStore\Accounting\OrderEmailComposer;
 
-$order = ['order_number' => 'DB-26-1234567890', 'customer_email' => 'eva@example.test',
+$order = ['order_number' => 'DB-26-1234567890', 'order_token' => str_repeat('a', 64),
+    'customer_email' => 'eva@example.test',
     'total_czk' => 1079, 'shipping_czk' => 79, 'payment_method' => 'bank_transfer',
     'payment_details' => ['account_display' => '123/4567'], 'variable_symbol' => '1234567890',
     'payment_due_at' => '2026-10-15', 'shipping' => ['label' => 'GLS', 'recipient' => '<Eva>',
@@ -25,6 +26,8 @@ if (!str_contains($confirmation['text'], 'Číslo účtu: 123/4567') ||
     !str_contains($confirmation['text'], 'Výprava <s.r.o.>') ||
     !str_contains($confirmation['text'], 'Velikost: <L>') ||
     !str_contains($confirmation['text'], 'https://shop.example/simple-store/cs/obchodni-podminky') ||
+    !str_contains($confirmation['text'], 'https://shop.example/simple-store/support.php?order=' . str_repeat('a', 64)) ||
+    !str_contains($confirmation['html'], 'Reklamace a vrácení') ||
     !str_contains($confirmation['text'], 'Znění uzavřené smlouvy <z původní revize>.') ||
     !str_contains($confirmation['html'], 'Znění uzavřené smlouvy &lt;z původní revize&gt;.') ||
     !str_contains($confirmation['html'], 'Výprava &lt;s.r.o.&gt;') ||
@@ -56,6 +59,11 @@ $unsafeTracking = OrderEmailComposer::compose('shipped', $order, MailSettingsRep
 if (str_contains($unsafeTracking['html'], 'javascript:') ||
     str_contains($unsafeTracking['text'], 'obchodni-podminky')) {
     throw new RuntimeException('Stage email included an unsafe tracking URL or unnecessary legal links.');
+}
+$insecureBase = OrderEmailComposer::compose('order', $order, MailSettingsRepository::EVENTS['order'],
+    [], '', 'http://localhost/simple-store');
+if (str_contains($insecureBase['html'], 'support.php?order=')) {
+    throw new RuntimeException('Private order token was linked through plain HTTP.');
 }
 $paid = OrderEmailComposer::compose('paid', $order, MailSettingsRepository::EVENTS['paid'], [], '',
     'https://shop.example/simple-store', ['obchodni-podminky'], 'Neměnné podmínky.');
