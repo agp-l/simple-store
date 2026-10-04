@@ -6,6 +6,7 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 use SimpleStore\AfterSales\CaseNotice;
 use SimpleStore\AfterSales\CaseRepository;
 use SimpleStore\Accounting\OrderMailQueue;
+use SimpleStore\Customer\CustomerRepository;
 use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Database\SchemaUpdater;
 
@@ -21,9 +22,10 @@ $repo = new CaseRepository($db);
 expectCase($repo->installed(), 'After-sales migration missing.');
 $orderToken = bin2hex(random_bytes(32));
 $number = 'CASE-TEST-' . bin2hex(random_bytes(5));
+$customerEmail = 'case+' . bin2hex(random_bytes(6)) . '@example.test';
 $db->insert('shop_orders', [
     'order_number' => $number, 'order_token' => $orderToken, 'status' => 'shipped',
-    'customer_email' => 'case@example.test', 'subtotal_czk' => 800,
+    'customer_email' => $customerEmail, 'subtotal_czk' => 800,
     'shipping_czk' => 80, 'total_czk' => 880,
     'items_json' => json_encode([['name' => 'Turistické boty', 'quantity' => 2,
         'unit_price_czk' => 400, 'options' => ['Velikost' => '42']]], JSON_THROW_ON_ERROR),
@@ -51,7 +53,7 @@ expectCase($repo->submit($orderToken, $input)['id'] === $complaint['id'] &&
     'Submitting the same form twice created a duplicate complaint.');
 $receipt = CaseNotice::receipt($complaint);
 expectCase(str_contains($receipt['text'], 'Prasklá podrážka') &&
-    str_contains($receipt['text'], 'case@example.test') &&
+    str_contains($receipt['text'], $customerEmail) &&
     str_contains($receipt['text'], $complaint['case_number']),
     'Complaint receipt omitted required proof of submission.');
 
@@ -61,6 +63,8 @@ $withdraw = $repo->submit($orderToken, ['kind' => 'withdrawal', 'item_line' => '
 expectCase($withdraw['kind'] === 'withdrawal' && $withdraw['requested_solution'] === 'refund' &&
     str_contains(CaseNotice::receipt($withdraw)['text'], 'odstoupil'),
     'Express withdrawal statement was not persisted.');
+expectCase($repo->byCustomer(999999, (int) $withdraw['id']) === null,
+    'Another customer gained access to the private case.');
 try {
     $repo->submit($orderToken, ['kind' => 'withdrawal', 'item_line' => '1', 'quantity' => '2',
         'description' => '', 'delivered_on' => '', 'request_key' => bin2hex(random_bytes(32)),
@@ -85,13 +89,23 @@ try {
 // Custom notices are unrelated to an order's outbox cleanup and stay queued after order deletion.
 $message = CaseNotice::receipt($withdraw);
 $key = 'after-sales:' . $withdraw['id'] . ':submitted';
-$mailId = (new OrderMailQueue($db))->enqueueCustom($key, null, 'case@example.test',
+$mailId = (new OrderMailQueue($db))->enqueueCustom($key, null, $customerEmail,
     $message['subject'], $message['text'], $message['html']);
 expectCase($mailId > 0 && $db->queryFirstField('SELECT order_id FROM shop_mail_outbox WHERE id=%i', $mailId) === null,
     'Withdrawal notice was attached to an order that administrators can delete.');
+$db->insert('users', ['username' => 'after_sales_' . bin2hex(random_bytes(5)),
+    'email' => $customerEmail, 'display_name' => 'Eva', 'phone' => '',
+    'password_hash' => password_hash('integration-secret', PASSWORD_DEFAULT),
+    'role' => 'customer', 'is_active' => 1]);
+$customerId = (int) $db->insertId();
+(new CustomerRepository($db))->claimGuestOrder($customerId, $orderToken);
+expectCase($repo->byCustomer($customerId, (int) $withdraw['id']) !== null &&
+    count($repo->forCustomer($customerId)) >= 2,
+    'Claiming the guest order did not attach its prior complaints to the account.');
 $db->query('DELETE FROM shop_orders WHERE id=%i', $orderId);
 expectCase($repo->byToken($withdraw['case_token'])['order_id'] === null &&
     $repo->byToken($complaint['case_token'])['item_name'] === 'Turistické boty' &&
+    $repo->byCustomer($customerId, (int) $withdraw['id']) !== null &&
     $db->queryFirstField('SELECT state FROM shop_mail_outbox WHERE id=%i', $mailId) === 'queued',
     'Deleting an order erased a legally relevant case or its pending receipt.');
 $repo->delete((int) $withdraw['id'], (string) $withdraw['case_number']);
