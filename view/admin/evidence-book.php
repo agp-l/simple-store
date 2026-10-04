@@ -5,7 +5,7 @@ use SimpleStore\Accounting\EvidenceBookRowPresenter;
 ?>
     <section class="panel-panel">
       <div class="panel-panel-head"><h2>Kniha dokladů a plateb · <?= (int) $taxYear ?></h2></div>
-      <p>Jeden řádek objednávky ukazuje její fakturu a propojený peněžní zápis. Samostatné pohyby jsou další řádky. Objednávka může být vidět ve více letech, pokud platba či doklad vznikly v jiném roce; částky v tabulce se proto nesčítají jako daňové příjmy.</p>
+      <p>Řádek objednávky ukazuje <strong>hodnotu objednávky</strong>, fakturu a případný propojený zápis v deníku. Samostatný peněžní zápis ukazuje <strong>skutečně zapsaný pohyb</strong>. Objednávka může být vidět ve více letech, pokud platba či doklad vznikly v jiném roce. Částky v této tabulce nesčítej jako příjmy ani jako výsledek pro daňové přiznání.</p>
       <form class="panel-search" method="get" action="<?= $escape($adminUrl) ?>">
         <input type="hidden" name="section" value="accounting"><input type="hidden" name="tab" value="overview">
         <label>Rok<input type="number" name="year" min="2000" max="2100" value="<?= (int) $taxYear ?>" required></label>
@@ -15,7 +15,7 @@ use SimpleStore\Accounting\EvidenceBookRowPresenter;
       <?php if (!$accountingReady || !$invoicesReady): ?><p class="panel-error">Pro společnou knihu nejprve <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
       <?php if ($accountingReady && $invoicesReady): ?>
         <?php if ($evidencePage['items'] === []): ?><p class="panel-empty">V tomto roce nejsou odpovídající doklady ani peněžní zápisy.</p><?php endif; ?>
-        <div class="panel-table-wrap"><table class="panel-table panel-evidence-table"><thead><tr><th>Datum · zdroj</th><th>Číslo a vazby</th><th>Osoba / účel</th><th>Stav platby</th><th>Zápis v deníku</th><th>Částka</th><th>Další krok</th></tr></thead><tbody>
+        <div class="panel-table-wrap"><table class="panel-table panel-evidence-table"><thead><tr><th>Datum · zdroj</th><th>Číslo a vazby</th><th>Osoba / účel</th><th>Stav platby</th><th>Zápis v deníku</th><th>Hodnota / pohyb</th><th>Další krok</th></tr></thead><tbody>
         <?php foreach ($evidencePage['items'] as $row): ?>
           <?php $presenter = new EvidenceBookRowPresenter($row, $adminUrl, $taxYear);
           $nextStep = $presenter->nextStep(); ?>
@@ -61,8 +61,8 @@ use SimpleStore\Accounting\EvidenceBookRowPresenter;
                 <small><?= $escape($taxKind[$row['entry_tax_kind']] ?? $row['entry_tax_kind']) ?></small>
               <?php else: ?>—<?php endif; ?>
             </td>
-            <td class="panel-table-money"><?= $row['kind'] === 'entry' ? ($row['entry_direction'] === 'expense' ? '−' : '+') : '' ?><?= $taxMoney($row['amount_czk']) ?></td>
-            <td><?php if ($nextStep !== null): ?><a href="<?= $escape($nextStep['href']) ?>"><?= $escape($nextStep['label']) ?></a><?php else: ?><span class="panel-help">Doklad a úhrada zapsány</span><?php endif; ?></td>
+            <td class="panel-table-money"><?= $row['kind'] === 'entry' ? ($row['entry_direction'] === 'expense' ? '−' : '+') : '' ?><?= $taxMoney($row['amount_czk']) ?><br><small><?= $row['kind'] === 'order' ? 'Hodnota objednávky' : ($row['kind'] === 'invoice' ? 'Hodnota faktury' : 'Zápis v deníku') ?></small></td>
+            <td><?php if ($nextStep !== null): ?><a href="<?= $escape($nextStep['href']) ?>"><?= $escape($nextStep['label']) ?></a><?php else: ?><span class="panel-help"><?= $escape($presenter->completionLabel()) ?></span><?php endif; ?></td>
           </tr>
         <?php endforeach; ?>
         </tbody></table></div>

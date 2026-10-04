@@ -6,9 +6,10 @@ $today = (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->form
 $taxKind = ['taxable'=>'Zdanitelný příjem', 'nontaxable'=>'Nezdanitelný příjem',
     'deductible'=>'Daňový výdaj', 'nondeductible'=>'Nedaňový výdaj'];
 $balanceKind = ['receivable'=>'Pohledávka', 'liability'=>'Dluh', 'asset'=>'Majetek'];
+$selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? 'actual');
 ?>
-<?php if (!$taxReady || !$invoicesReady || !$mailReady): ?>
-  <p class="panel-error" role="alert">Pro daňovou evidenci <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
+<?php if (!$taxReady || !$invoicesReady): ?>
+  <p class="panel-error" role="alert">Pro doklady a deník <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
 <?php endif; ?>
 <?php if ($accountingError !== ''): ?><p class="panel-error" role="alert"><?= $escape($accountingError) ?></p><?php endif; ?>
 <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Změna byla uložena.</p><?php endif; ?>
@@ -23,25 +24,31 @@ $balanceKind = ['receivable'=>'Pohledávka', 'liability'=>'Dluh', 'asset'=>'Maje
   <?php if ($accountingTab === 'overview'): ?>
     <section class="panel-panel">
       <h2>Jak postupovat u objednávky</h2>
-      <p>1. Ověř platbu u objednávky. 2. Na jejím detailu vystav doklad. 3. Zapiš skutečný příjem podle banky či pokladny. U platební brány porovnej také vyúčtování a výplatu na účet. V tabulce níže hned uvidíš, co je hotové a co chybí. <a href="<?= $escape($taxUrl . '&tab=guide') ?>">Podrobný postup pro OSVČ →</a></p>
+      <p>1. Ověř platbu u objednávky. 2. Na jejím detailu vystav doklad. 3. Zapiš skutečný příjem podle banky či pokladny. U platební brány porovnej také vyúčtování a výplatu na účet. V tabulce níže hned uvidíš, co je hotové a co chybí. <a href="<?= $escape($taxUrl . '&tab=guide&year=' . $taxYear) ?>">Podrobný postup pro OSVČ →</a></p>
     </section>
     <section class="panel-panel">
       <h2>Zápisy v peněžním deníku za rok <?= (int) $taxYear ?></h2>
       <dl class="panel-order-facts">
         <div><dt>Zapsané zdanitelné příjmy</dt><dd><?= $taxMoney($taxSummary['income']) ?></dd></div>
-        <?php if (($taxSettings['expense_method'] ?? 'actual') === 'actual'): ?>
+        <?php if ($selectedMethod === 'actual'): ?>
           <div><dt>Zapsané skutečné daňové výdaje</dt><dd><?= $taxMoney($taxSummary['expenses']) ?></dd></div>
           <div><dt>Rozdíl v deníku</dt><dd><strong><?= $taxMoney($taxSummary['income'] - $taxSummary['expenses']) ?></strong></dd></div>
+        <?php elseif ($selectedMethod === 'percentage'): ?>
+          <div><dt>Režim pro vybraný rok</dt><dd>Výdaje procentem z příjmů (<?= (int) ($taxYearMode['expense_percentage'] ?? 60) ?> %)</dd></div>
         <?php else: ?>
-          <div><dt>Aktuální pomocné nastavení</dt><dd>Výdaje procentem z příjmů (<?= (int) ($taxSettings['expense_percentage'] ?? 60) ?> %)</dd></div>
+          <div><dt>Režim pro vybraný rok</dt><dd>Paušální daň · pásmo <?= (int) ($taxYearMode['flat_tax_band'] ?? 1) ?></dd></div>
         <?php endif; ?>
       </dl>
-      <p class="panel-help">Součet zahrnuje jen ručně zapsané pohyby. Aktuální volba výdajů platí jako nápověda pro rozhraní, ne jako historický záznam za tento rok. Není to součet všech uhrazených objednávek, hotové daňové přiznání ani dopočtený výdajový paušál. Chybějící, vrácené a nesprávně zařazené platby ověř podle zdrojových dokladů.</p>
+      <p class="panel-help">Součet zahrnuje jen zapsané peněžní pohyby. Není to součet všech uhrazených objednávek, výpočet daně ani přehled za všechny tvoje činnosti. Chybějící, vrácené a nesprávně zařazené platby ověř podle zdrojových dokladů.<?php if (!($taxYearMode['saved'] ?? false)): ?> Pro tento rok zatím není uložený vlastní režim; zobrazuje se starší obecná volba. <a href="<?= $escape($taxUrl . '&tab=settings&year=' . $taxYear) ?>">Potvrdit režim roku</a>.<?php endif; ?></p>
+      <?php if ($selectedMethod === 'flat_tax' && !($taxYearMode['flat_tax_confirmed'] ?? false)): ?><p class="panel-notice">Paušální režim je zatím jen naplánovaný. Potvrď v <a href="<?= $escape($taxUrl . '&tab=settings&year=' . $taxYear) ?>">nastavení roku</a>, že vstup byl skutečně oznámen finančnímu úřadu. E-shop tvou účast neumí ověřit.</p><?php endif; ?>
       <?php if (!\SimpleStore\Accounting\TaxEvidenceRepository::invoiceReady($taxSettings)): ?><p class="panel-notice">Pro vystavování dokladů doplň <a href="<?= $escape($taxUrl . '&tab=settings') ?>">údaje podnikatele</a>.</p><?php endif; ?>
     </section>
     <?php require __DIR__ . '/evidence-book.php'; ?>
-    <details class="panel-panel panel-accounting-more"><summary>Další podklady a kontroly</summary>
-      <p>Tyto pohledy využij podle své situace. <a href="<?= $escape($taxUrl . '&tab=balances&year=' . $taxYear) ?>">Pohledávky a majetek</a> · <a href="<?= $escape($taxUrl . '&tab=orders&year=' . $taxYear) ?>">Přehled potvrzených plateb objednávek</a> · <a href="<?= $escape($taxUrl . '&tab=stock&year=' . $taxYear) ?>">Starší skladové podklady</a> · <a href="<?= $escape($taxUrl . '&tab=mail') ?>">Fronta e-mailů</a>.</p>
+    <?php if ($selectedMethod === 'flat_tax'): ?>
+      <?php require __DIR__ . '/flat-tax-advances.php'; ?>
+    <?php endif; ?>
+    <details class="panel-panel panel-accounting-more"><summary>Archivní a kontrolní sestavy</summary>
+      <p><a href="<?= $escape($taxUrl . '&tab=orders&year=' . $taxYear) ?>">Kontrola potvrzených plateb a oprav</a> slouží k dohledání zásahů v objednávkách; není součtem peněžních příjmů. <a href="<?= $escape($taxUrl . '&tab=stock&year=' . $taxYear) ?>">Starší skladové podklady a CSV</a> ponecháváme pro dříve uložená data. Aktuální kusy se spravují u produktů; tato sestava nenahrazuje inventuru.</p>
     </details>
   <?php elseif ($accountingTab === 'money'): ?>
     <section class="panel-panel"><h2>Peněžní pohyby podle výpisu</h2>
@@ -54,8 +61,8 @@ $balanceKind = ['receivable'=>'Pohledávka', 'liability'=>'Dluh', 'asset'=>'Maje
             <label>Datum skutečné platby<input type="date" name="entry_date" value="<?= $escape($today) ?>" required></label>
             <label>Kde se peníze pohnuly<select name="account"><option value="bank">Bankovní účet</option><option value="cash">Pokladna</option></select></label>
             <label>Vliv na daň z příjmů<select name="tax_kind">
-              <?php if ($direction === 'expense' && ($taxSettings['expense_method'] ?? 'actual') === 'percentage'): ?>
-                <option value="nondeductible">Nedaňový výdaj – při procentních výdajích</option>
+              <?php if ($direction === 'expense' && $selectedMethod !== 'actual'): ?>
+                <option value="nondeductible">Nedaňový výdaj – <?= $selectedMethod === 'flat_tax' ? 'v paušálním režimu' : 'při procentních výdajích' ?></option>
                 <option value="deductible">Daňový výdaj – jen pro rok se skutečnými výdaji</option>
               <?php else: ?>
                 <option value="<?= $direction === 'income' ? 'taxable' : 'deductible' ?>"><?= $escape($primaryKind) ?></option>
@@ -128,7 +135,8 @@ $balanceKind = ['receivable'=>'Pohledávka', 'liability'=>'Dluh', 'asset'=>'Maje
         <button class="panel-button" type="submit">Přidat záznam</button>
       </form>
     </section>
-    <section class="panel-panel"><h2>Neuhrazené objednávky</h2>
+    <section class="panel-panel"><h2>Objednávky čekající na platbu</h2>
+      <p class="panel-help">Provozní seznam nejnovějších objednávek; neúplný přehled pohledávek za rok. Pro úplnou uzávěrku ověř vlastní podklady, částečné platby a další pohledávky mimo e-shop.</p>
       <?php if ($taxReceivables === []): ?><p class="panel-empty">Žádné neuhrazené objednávky.</p><?php endif; ?>
       <div class="panel-order-list"><?php foreach ($taxReceivables as $receivable): ?>
         <a class="panel-order-row" href="<?= $escape($adminUrl . '?section=orders&id=' . (int) $receivable['id']) ?>"><strong><?= $escape($receivable['order_number']) ?></strong><span><?= $escape($receivable['customer_email']) ?></span><strong><?= $taxMoney($receivable['total_czk']) ?></strong></a>
@@ -197,18 +205,41 @@ $balanceKind = ['receivable'=>'Pohledávka', 'liability'=>'Dluh', 'asset'=>'Maje
       <?php if ($mailRows === []): ?><p class="panel-empty">Fronta je prázdná.</p><?php endif; ?>
     </section>
   <?php elseif ($accountingTab === 'settings'): ?>
-    <section class="panel-panel"><h2>Podnikatel a způsob evidence</h2>
-      <p class="panel-help">Volba režimu přizpůsobí vysvětlivky a přehled. Není oznámením úřadu ani automatickým výpočtem daně. Systém vytváří doklady neplátce DPH; plátce potřebuje odpovídající doklady a evidenci. Vystavené faktury si ponechávají údaje uložené při vydání.</p>
+    <section class="panel-panel"><h2>Údaje prodávajícího</h2>
+      <p class="panel-help">Z těchto údajů vznikají nové faktury; již vystavené si ponechají původní podobu. Systém vytváří doklady neplátce DPH.</p>
       <form class="panel-form" method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="settings"><input type="hidden" name="action" value="tax-save-settings">
+        <input type="hidden" name="year" value="<?= (int) $taxYear ?>">
         <input type="hidden" name="mail_from" value="<?= $escape($taxSettings['mail_from'] ?? '') ?>">
         <label>Právní forma prodávajícího<select name="legal_form"><option value="sole_trader" <?= ($taxSettings['legal_form'] ?? 'sole_trader') === 'sole_trader' ? 'selected' : '' ?>>OSVČ</option><option value="company" <?= ($taxSettings['legal_form'] ?? '') === 'company' ? 'selected' : '' ?>>Společnost (např. s.r.o.)</option></select></label>
-        <label>Jak OSVČ uplatňuje výdaje<select name="expense_method"><option value="actual" <?= ($taxSettings['expense_method'] ?? 'actual') === 'actual' ? 'selected' : '' ?>>Skutečné výdaje – daňová evidence</option><option value="percentage" <?= ($taxSettings['expense_method'] ?? '') === 'percentage' ? 'selected' : '' ?>>Výdaje procentem z příjmů</option></select></label>
-        <label>Procento podle druhu činnosti<select name="expense_percentage"><?php foreach ([60 => '60 % – běžná živnost', 80 => '80 % – řemeslná živnost / zemědělství', 40 => '40 % – jiné samostatné činnosti', 30 => '30 % – nájem majetku v podnikání'] as $rate => $label): ?><option value="<?= $rate ?>" <?= (int) ($taxSettings['expense_percentage'] ?? 60) === $rate ? 'selected' : '' ?>><?= $escape($label) ?></option><?php endforeach; ?></select></label>
-        <p class="panel-help">Procento se volí podle druhu příjmů, není to libovolná sleva. Toto nastavení je aktuální pomůcka, nikoli uložená volba po jednotlivých letech. Při s.r.o. nelze výdaje OSVČ použít; po uložení se volba výdajů resetuje na skutečné a přehled slouží jen jako pomocná kniha, ne jako účetnictví společnosti. <a href="<?= $escape($taxUrl . '&tab=guide') ?>">Vysvětlení režimů</a>.</p>
+        <p class="panel-help">Pro s.r.o. není tato evidence OSVČ účetnictvím společnosti. Údaj změň podle skutečného prodávajícího.</p>
         <?php foreach (['name'=>'Jméno a příjmení podnikatele', 'ico'=>'IČO', 'street'=>'Ulice a číslo sídla', 'city'=>'Město', 'postal_code'=>'PSČ', 'email'=>'Kontaktní e-mail', 'phone'=>'Telefon', 'bank_account'=>'Číslo účtu na faktuře'] as $key=>$label): ?><label><?= $escape($label) ?><input name="<?= $key ?>" value="<?= $escape($taxSettings[$key] ?? '') ?>" maxlength="<?= $key === 'ico' ? 8 : 254 ?>"></label><?php endforeach; ?>
         <p class="panel-help">Odesílání zákaznických zpráv a jejich obsah najdeš v <a href="<?= $escape($adminUrl . '?section=settings&tab=mail') ?>">nastavení obchodu → E-maily</a>.</p>
-        <button class="panel-button" type="submit">Uložit údaje OSVČ</button>
+        <button class="panel-button" type="submit">Uložit údaje prodávajícího</button>
       </form>
+    </section>
+    <section class="panel-panel"><h2>Režim pro rok <?= (int) $taxYear ?></h2>
+      <p>Každý rok má vlastní volbu. Nastavení v e-shopu <strong>není oznámením finančnímu úřadu</strong> ani ověřením splnění podmínek. <a href="<?= $escape($taxUrl . '&tab=guide&year=' . $taxYear) ?>">Jak vybrat režim a pásmo →</a></p>
+      <form class="panel-search" method="get" action="<?= $escape($adminUrl) ?>"><input type="hidden" name="section" value="accounting"><input type="hidden" name="tab" value="settings"><label>Rok<input type="number" name="year" min="2000" max="2100" value="<?= (int) $taxYear ?>" required></label><button class="panel-button" type="submit">Zobrazit rok</button></form>
+      <?php if (!($taxYearRegimeReady ?? false)): ?>
+        <p class="panel-error">Roční volby ještě nemají tabulku. <a href="<?= $escape($adminUrl . '?section=database') ?>">Aktualizuj SQL tabulky</a>; původní nastavení zůstává zachováno.</p>
+      <?php elseif (($taxSettings['legal_form'] ?? 'sole_trader') === 'company'): ?>
+        <p class="panel-error">Paušální daň a výdaje OSVČ nelze použít pro obchodní společnost. Nejprve ověř údaje prodávajícího.</p>
+      <?php else: ?>
+        <?php if (!($taxYearMode['saved'] ?? false)): ?><p class="panel-notice">Pro <?= (int) $taxYear ?> zatím není uložený vlastní režim. Zobrazená volba vychází ze starého obecného nastavení; potvrď ji po kontrole podkladů.</p><?php endif; ?>
+        <form class="panel-form" method="post" action="<?= $escape($taxUrl) ?>">
+          <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="tax-save-year-mode"><input type="hidden" name="year" value="<?= (int) $taxYear ?>">
+          <label>Režim OSVČ pro tento rok<select name="method">
+            <option value="actual" <?= $selectedMethod === 'actual' ? 'selected' : '' ?>>Skutečné výdaje – daňová evidence</option>
+            <option value="percentage" <?= $selectedMethod === 'percentage' ? 'selected' : '' ?>>Výdaje procentem z příjmů</option>
+            <option value="flat_tax" <?= $selectedMethod === 'flat_tax' ? 'selected' : '' ?>>Paušální daň – oznámený paušální režim</option>
+          </select></label>
+          <label>Procento podle druhu činnosti (jen u výdajů procentem)<select name="expense_percentage"><?php foreach ([60 => '60 % – běžná živnost', 80 => '80 % – řemeslná živnost / zemědělství', 40 => '40 % – jiné samostatné činnosti', 30 => '30 % – nájem majetku v podnikání'] as $rate => $label): ?><option value="<?= $rate ?>" <?= (int) ($taxYearMode['expense_percentage'] ?? 60) === $rate ? 'selected' : '' ?>><?= $escape($label) ?></option><?php endforeach; ?></select></label>
+          <label>Pásmo (jen u paušální daně)<select name="flat_tax_band"><?php foreach ([1 => 'I. pásmo', 2 => 'II. pásmo', 3 => 'III. pásmo'] as $band => $label): ?><option value="<?= $band ?>" <?= (int) ($taxYearMode['flat_tax_band'] ?? 1) === $band ? 'selected' : '' ?>><?= $escape($label) ?></option><?php endforeach; ?></select></label>
+          <label class="panel-check"><input type="checkbox" name="flat_tax_confirmed" value="1" <?= ($taxYearMode['flat_tax_confirmed'] ?? false) ? 'checked' : '' ?>> Potvrzuji, že jsem pro tento rok skutečně oznámil vstup do paušálního režimu nebo v něm pokračuji. E-shop to neověřuje.</label>
+          <p class="panel-help">Při paušální dani se procentní výdaje neuplatňují; druh činnosti slouží k posouzení pásma. Systém nevidí ostatní příjmy, zaměstnání ani DPH a nepočítá nárok nebo výslednou daň. Změna režimu v průběhu roku může vyžadovat samostatné posouzení.</p>
+          <button class="panel-button" type="submit">Uložit režim roku <?= (int) $taxYear ?></button>
+        </form>
+      <?php endif; ?>
     </section>
   <?php endif; ?>
 <?php endif; ?>

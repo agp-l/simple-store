@@ -197,6 +197,7 @@ if (!str_contains($html, 'Evidence podnikání') || !str_contains($html, 'Stáhn
 
 require dirname(__DIR__) . '/src/Accounting/TaxEvidenceRepository.php';
 require dirname(__DIR__) . '/src/Accounting/EvidenceBookRowPresenter.php';
+require dirname(__DIR__) . '/src/Accounting/FlatTaxRateSchedule.php';
 $accountingTab = 'overview';
 $taxYear = 2026;
 $taxReady = $invoicesReady = $mailReady = true;
@@ -247,11 +248,41 @@ $accountingTab = 'guide';
 ob_start();
 require dirname(__DIR__) . '/view/admin/accounting.php';
 $html = ob_get_clean();
-restore_error_handler();
 if (!str_contains($html, 'Jak číst') ||
     !str_contains($html, 'financnisprava.gov.cz') ||
     !str_contains($html, 'Skutečné výdaje')) {
     throw new RuntimeException('The OSVC guide is missing its workflow or official references.');
+}
+
+$accountingTab = 'overview';
+$taxYearMode = ['method' => 'flat_tax', 'expense_percentage' => 60,
+    'flat_tax_band' => 1, 'flat_tax_confirmed' => true, 'saved' => true];
+$flatTaxAdvancesReady = $taxYearRegimeReady = true;
+$flatTaxAdvanceRows = [[
+    'tax_month' => 1, 'entry_id' => 9, 'active_entry_id' => 9,
+    'entry_date' => '2026-01-20', 'direction' => 'expense',
+    'tax_kind' => 'nondeductible', 'amount_czk' => 9984,
+    'reference' => '<script>alert(1)</script>',
+]];
+$csrf = 'unit-test';
+ob_start();
+require dirname(__DIR__) . '/view/admin/accounting.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'Paušální zálohy') || !str_contains($html, '9 162 Kč') ||
+    !str_contains($html, '9 984 Kč') || !str_contains($html, 'Zapsat skutečně uhrazenou zálohu') ||
+    !str_contains($html, '&lt;script&gt;alert(1)&lt;/script&gt;') ||
+    str_contains($html, '<script>alert(1)</script>') ||
+    str_contains($html, 'Rozdíl v deníku')) {
+    throw new RuntimeException('Flat-tax overview must show actual advances without treating them as a tax calculation.');
+}
+$accountingTab = 'settings';
+ob_start();
+require dirname(__DIR__) . '/view/admin/accounting.php';
+$html = ob_get_clean();
+restore_error_handler();
+if (!str_contains($html, 'Režim pro rok 2026') ||
+    !str_contains($html, 'Paušální daň') || !str_contains($html, 'tax-save-year-mode')) {
+    throw new RuntimeException('Annual mode settings are missing.');
 }
 
 echo "Accounting tests passed.\n";

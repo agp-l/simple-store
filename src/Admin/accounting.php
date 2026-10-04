@@ -6,6 +6,8 @@ use SimpleStore\Accounting\TaxEvidenceRepository;
 use SimpleStore\Accounting\InvoiceRepository;
 use SimpleStore\Accounting\OrderMailQueue;
 use SimpleStore\Accounting\EvidenceBookRepository;
+use SimpleStore\Accounting\TaxYearRegimeRepository;
+use SimpleStore\Accounting\FlatTaxAdvanceRepository;
 use SimpleStore\Product\ProductStockRepository;
 
 // admin.php authenticates this route. Downloads and HTML both use the same bounded filter.
@@ -18,6 +20,10 @@ $taxReady = $tax->installed();
 $invoicesReady = $invoicesRepository->installed();
 $mailReady = $mailQueue->installed();
 $taxSettings = $tax->settings();
+$yearRegimes = new TaxYearRegimeRepository($db);
+$taxYearRegimeReady = $yearRegimes->installed();
+$flatTaxAdvances = new FlatTaxAdvanceRepository($db);
+$flatTaxAdvancesReady = $flatTaxAdvances->installed();
 $accountingTab = $_POST['tab'] ?? $_GET['tab'] ?? 'overview';
 if (!is_string($accountingTab) || !in_array($accountingTab,
     ['overview', 'money', 'balances', 'stock', 'invoices', 'mail', 'orders', 'settings', 'guide'], true)) {
@@ -34,6 +40,10 @@ $taxReceivables = [];
 $invoiceRows = $mailRows = $invoiceHistory = [];
 $invoicePreviousUrl = $invoiceNextUrl = '';
 $taxSummary = ['income' => 0, 'expenses' => 0];
+$taxYearMode = ['method' => $taxSettings['expense_method'] ?? 'actual',
+    'expense_percentage' => $taxSettings['expense_percentage'] ?? 60,
+    'flat_tax_band' => 1, 'flat_tax_confirmed' => false, 'saved' => false];
+$flatTaxAdvanceRows = [];
 $selectedInvoice = null;
 $accountingReady = $accounting->installed();
 $financialEventsReady = $accounting->financialEventsInstalled();
@@ -54,7 +64,7 @@ $evidenceSearch = '';
 
 if ($method === 'POST') {
     try {
-        if (!$taxReady || !$invoicesReady || !$mailReady) {
+        if (!$taxReady) {
             throw new RuntimeException('Nejdřív aktualizuj SQL tabulky v sekci Databáze.');
         }
         $action = $_POST['action'] ?? '';
@@ -63,9 +73,38 @@ if ($method === 'POST') {
         $admin = $auth->user();
         if ($admin === null) throw new RuntimeException('Přihlášení správce vypršelo.');
         $returnOrder = 0;
+        $returnYear = null;
         switch ($action) {
+            case 'tax-save-year-mode':
+                if (!$taxYearRegimeReady) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky.');
+                $yearInput = $_POST['year'] ?? '';
+                if (!is_string($yearInput) || !ctype_digit($yearInput)) {
+                    throw new InvalidArgumentException('Vyber platný rok.');
+                }
+                $returnYear = (int) $yearInput;
+                $yearRegimes->save($returnYear, $_POST, $taxSettings);
+                $accountingTab = 'settings';
+                break;
+            case 'tax-add-flat-advance':
+                if (!$flatTaxAdvancesReady || !$taxYearRegimeReady) {
+                    throw new RuntimeException('Nejdřív aktualizuj SQL tabulky.');
+                }
+                $yearInput = $_POST['year'] ?? '';
+                if (!is_string($yearInput) || !ctype_digit($yearInput)) {
+                    throw new InvalidArgumentException('Vyber platný rok.');
+                }
+                $returnYear = (int) $yearInput;
+                $flatTaxAdvances->record($returnYear, $_POST,
+                    $yearRegimes->forYear($returnYear, $taxSettings));
+                $accountingTab = 'overview';
+                break;
             case 'tax-save-settings':
                 $tax->saveSettings($_POST);
+                $settingsYear = $_POST['year'] ?? null;
+                if (is_string($settingsYear) && ctype_digit($settingsYear) &&
+                    (int) $settingsYear >= 2000 && (int) $settingsYear <= 2100) {
+                    $returnYear = (int) $settingsYear;
+                }
                 $accountingTab = 'settings';
                 break;
             case 'tax-add-entry':
@@ -91,19 +130,12 @@ if ($method === 'POST') {
                 $tax->closeBalance($id, (string) ($_POST['closed_on'] ?? ''));
                 $accountingTab = 'balances';
                 break;
-            case 'tax-add-stock':
-                $tax->addStock($_POST);
-                $accountingTab = 'stock';
-                break;
-            case 'tax-backfill-sales':
-                $tax->backfillSaleLines();
-                $accountingTab = 'stock';
-                break;
             case 'tax-link-payment':
                 $tax->addOrderReceipt($id, $_POST);
                 $returnOrder = $id;
                 break;
             case 'invoice-issue':
+                if (!$invoicesReady) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky faktur.');
                 $invoice = $invoicesRepository->issue($id, $taxSettings, [
                     'name' => $_POST['buyer_name'] ?? '',
                     'street' => $_POST['buyer_street'] ?? '',
@@ -122,6 +154,7 @@ if ($method === 'POST') {
                 }
                 break;
             case 'invoice-renumber':
+                if (!$invoicesReady) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky faktur.');
                 $invoicesRepository->renumber($id, (string) ($_POST['document_number'] ?? ''),
                     (int) $admin['id'], (string) ($_POST['reason'] ?? ''));
                 $renumbered = $invoicesRepository->byId($id);
@@ -129,6 +162,9 @@ if ($method === 'POST') {
                 $accountingTab = 'invoices';
                 break;
             case 'invoice-email':
+                if (!$invoicesReady || !$mailReady) {
+                    throw new RuntimeException('Nejdřív aktualizuj SQL tabulky faktur a e-mailů.');
+                }
                 $invoice = $invoicesRepository->byId($id);
                 if ($invoice === null) throw new InvalidArgumentException('Faktura nebyla nalezena.');
                 $mailId = $mailQueue->enqueueInvoice($invoice);
@@ -136,6 +172,7 @@ if ($method === 'POST') {
                 $accountingTab = 'mail';
                 break;
             case 'mail-retry':
+                if (!$mailReady) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky e-mailů.');
                 $mailQueue->dispatch($id, $taxSettings['mail_from']);
                 $accountingTab = 'mail';
                 break;
@@ -144,7 +181,8 @@ if ($method === 'POST') {
         }
         header('Location: ' . ($returnOrder > 0 ?
             $adminUrl . '?section=orders&id=' . $returnOrder . '&tax_saved=1' :
-            $accountingBaseUrl . '&tab=' . rawurlencode($accountingTab) . '&saved=1'), true, 303);
+            $accountingBaseUrl . '&tab=' . rawurlencode($accountingTab) .
+                ($returnYear === null ? '' : '&year=' . $returnYear) . '&saved=1'), true, 303);
         exit;
     } catch (InvalidArgumentException $exception) {
         http_response_code(422);
@@ -157,6 +195,10 @@ if ($method === 'POST') {
 
 try {
     TaxEvidenceRepository::year($taxYear);
+    $taxYearMode = $yearRegimes->forYear($taxYear, $taxSettings);
+    if ($taxYearMode['method'] === 'flat_tax') {
+        $flatTaxAdvanceRows = $flatTaxAdvances->forYear($taxYear);
+    }
     $taxDownload = $_GET['download'] ?? '';
     if (($taxDownload === 'ledger' && $accountingTab === 'money') ||
         (in_array($taxDownload, ['sales', 'stock'], true) && $accountingTab === 'stock')) {

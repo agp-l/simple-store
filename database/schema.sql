@@ -306,6 +306,17 @@ CREATE TABLE IF NOT EXISTS shop_tax_settings (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- The selected OSVČ regime belongs to one calendar year. It is an administrator's
+-- declaration, not confirmation of an election filed with the tax authority.
+CREATE TABLE IF NOT EXISTS shop_tax_year_regimes (
+  tax_year SMALLINT UNSIGNED NOT NULL PRIMARY KEY,
+  method VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  expense_percentage TINYINT UNSIGNED NOT NULL DEFAULT 60,
+  flat_tax_band TINYINT UNSIGNED NOT NULL DEFAULT 1,
+  flat_tax_confirmed TINYINT(1) NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS shop_tax_entries (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   entry_date DATE NOT NULL,
@@ -320,6 +331,18 @@ CREATE TABLE IF NOT EXISTS shop_tax_entries (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY tax_entries_date (entry_date, id),
   KEY tax_entries_order (order_id, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Links a manually verified monthly flat-tax advance to its bank/cash movement.
+-- Keep the original journal entry; this link does not calculate or prove a tax status.
+CREATE TABLE IF NOT EXISTS shop_flat_tax_advances (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  tax_year SMALLINT UNSIGNED NOT NULL,
+  tax_month TINYINT UNSIGNED NOT NULL,
+  entry_id BIGINT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY flat_tax_advances_entry (entry_id),
+  KEY flat_tax_advances_year_month (tax_year, tax_month, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS shop_tax_entry_events (

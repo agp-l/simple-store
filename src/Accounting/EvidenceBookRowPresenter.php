@@ -29,6 +29,12 @@ final class EvidenceBookRowPresenter
         };
     }
 
+    /** A linked entry is a recorded amount, not an automatic bank reconciliation. */
+    public function completionLabel(): string
+    {
+        return 'Faktura a příjem jsou zapsány. Porovnej s bankovním výpisem.';
+    }
+
     /** @return array{label: string, href: string}|null */
     public function nextStep(): ?array
     {

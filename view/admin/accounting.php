@@ -20,21 +20,25 @@ $accountingFulfillmentLabel = static fn (mixed $status): string => match ($statu
 };
 $accountingTab ??= 'overview';
 $taxYear ??= (int) date('Y');
-$accountingTitles = ['overview' => 'Doklady a platby', 'money' => 'Peněžní deník',
+$accountingTitles = ['overview' => 'Přehled', 'money' => 'Peněžní deník',
     'balances' => 'Pohledávky a majetek', 'stock' => 'Starší skladové podklady',
-    'invoices' => 'Faktury', 'orders' => 'Platby objednávek',
+    'invoices' => 'Faktury', 'orders' => 'Kontrola plateb objednávek',
     'mail' => 'E-mailová fronta', 'settings' => 'Podnikatel a režim',
     'guide' => 'Jak vést evidenci'];
+$accountingYearMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? 'actual');
 ?>
 <div class="panel-intro">
-  <div><p class="panel-eyebrow">Evidence podnikání · OSVČ</p><h1><?= $escape($accountingTitles[$accountingTab]) ?></h1>
-    <p><?= $accountingTab === 'overview' ? 'Objednávky, vystavené doklady a zapsané peníze pohromadě. U každého řádku vidíš, co ještě potřebuješ vyřešit.' : 'Údaje na této stránce navazují na knihu dokladů a plateb.' ?></p></div>
+  <div><p class="panel-eyebrow">Evidence podnikání · OSVČ</p><h1><?= $escape($accountingTab === 'overview' ? 'Doklady a platby' : $accountingTitles[$accountingTab]) ?></h1>
+    <p><?= $accountingTab === 'overview' ? 'Objednávky, faktury a skutečně zapsané peněžní pohyby pohromadě. Stav „zaplaceno“ ani hodnota objednávky samy o sobě neprokazují příjem na účtu.' : 'Tento pohled navazuje na doklady, objednávky a peněžní deník.' ?></p></div>
 </div>
 <nav class="panel-accounting-nav" aria-label="Evidence podnikání">
   <?php foreach (['overview', 'money', 'invoices', 'guide', 'settings'] as $key): ?>
     <a href="<?= $escape($adminUrl . '?section=accounting&tab=' . $key . '&year=' . $taxYear) ?>" <?= $accountingTab === $key ? 'aria-current="page"' : '' ?>><?= $escape($accountingTitles[$key]) ?></a>
   <?php endforeach; ?>
 </nav>
+<?php if ($accountingTab === 'overview' && in_array($accountingYearMethod, ['actual', 'percentage'], true)): ?>
+  <p class="panel-help">K evidenci za rok <?= (int) $taxYear ?> můžeš doplnit <a href="<?= $escape($adminUrl . '?section=accounting&tab=balances&year=' . $taxYear) ?>">pohledávky, dluhy a majetek</a>. Neuhrazené objednávky zkontroluj s podklady zvlášť.</p>
+<?php endif; ?>
 <?php if (($taxSettings['legal_form'] ?? 'sole_trader') === 'company'): ?>
   <p class="panel-error" role="alert">Je nastavená obchodní společnost. Tato evidence je určena pro OSVČ; pro společnost není účetnictvím ani podkladem k přiznání. <a href="<?= $escape($adminUrl . '?section=accounting&tab=settings') ?>">Zkontrolovat právní formu</a>.</p>
 <?php elseif (preg_match('/s\.?\s*r\.?\s*o\.?/iu', (string) ($taxSettings['name'] ?? '')) === 1): ?>
@@ -53,7 +57,7 @@ $accountingTitles = ['overview' => 'Doklady a platby', 'money' => 'Peněžní de
     <label>Do <input type="date" name="to" value="<?= $escape($accountingTo) ?>" required></label>
     <button class="panel-button" type="submit">Zobrazit</button>
   </form>
-  <p class="panel-help">Vyber nejvýše 366 dní. Testovací objednávky se nezahrnují.</p>
+  <p class="panel-help">Toto je kontrolní přehled stavů objednávek, nikoli peněžní deník. Vyber nejvýše 366 dní. Testovací objednávky se nezahrnují.</p>
 </section>
 <?php if (!$accountingReady): ?>
   <p class="panel-error" role="alert">Nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
@@ -61,7 +65,7 @@ $accountingTitles = ['overview' => 'Doklady a platby', 'money' => 'Peněžní de
 <?php if ($accountingError !== ''): ?><p class="panel-error" role="alert"><?= $escape($accountingError) ?></p><?php endif; ?>
 <?php if ($accountingReady && $accountingError === ''): ?>
   <section class="panel-panel">
-    <div class="panel-panel-head"><h2>Zaplacené objednávky</h2>
+    <div class="panel-panel-head"><h2>Objednávky s potvrzenou platbou</h2>
       <a class="panel-button" href="<?= $escape($accountingExportUrl) ?>">Stáhnout CSV</a></div>
     <dl class="panel-order-facts">
       <div><dt>Počet objednávek</dt><dd><?= (int) $accountingTotals['count'] ?></dd></div>
@@ -72,8 +76,8 @@ $accountingTitles = ['overview' => 'Doklady a platby', 'money' => 'Peněžní de
     <p class="panel-help">Jde o podklady z objednávek, nikoli o faktury, daňové doklady nebo evidenci DPH. Datum je okamžik ručního potvrzení převodu správcem nebo ověření platby u brány; u online plateb se může lišit od dne vyplacení na bankovní účet. Zrušené zaplacené objednávky zůstávají v součtu; vratky systém zatím neeviduje a je potřeba je ověřit ve výpisu účtu a vyúčtování brány.</p>
   </section>
   <section class="panel-panel">
-    <h2>Seznam plateb</h2>
-    <?php if ($accountingPage['items'] === []): ?><p class="panel-empty">Ve vybraném období nejsou potvrzené platby.</p><?php endif; ?>
+    <h2>Seznam potvrzených objednávek</h2>
+    <?php if ($accountingPage['items'] === []): ?><p class="panel-empty">Ve vybraném období nejsou objednávky s potvrzenou platbou.</p><?php endif; ?>
     <div class="panel-order-list">
       <?php foreach ($accountingPage['items'] as $row): ?>
         <a class="panel-order-row" href="<?= $escape($adminUrl . '?section=orders&id=' . (int) $row['id']) ?>">
