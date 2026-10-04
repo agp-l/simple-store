@@ -895,7 +895,7 @@
       position: relative;
       z-index: 1;
       display: grid;
-      grid-template-columns: minmax(230px, 1.5fr) minmax(200px, 1fr);
+      grid-template-columns: minmax(270px, 1fr) minmax(240px, 1fr) minmax(0, 1fr);
       gap: clamp(35px, 6vw, 90px);
       padding: 74px 0 66px;
     }
@@ -1170,6 +1170,7 @@
       }
 
       .footer-main {
+        grid-template-columns: minmax(0, 1fr) minmax(200px, 1fr);
         gap: 30px
       }
     }
