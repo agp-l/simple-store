@@ -216,7 +216,7 @@ $evidencePage = ['items' => [[
     'payment_method' => 'bank_transfer', 'payment_paid_at' => '2026-09-29 09:00:00',
     'receipt_id' => null, 'receipt_date' => null, 'receipt_amount_czk' => null,
     'entry_direction' => null,
-    'amount_czk' => 200, 'counterparty' => '', 'description' => '',
+    'amount_czk' => 200, 'total_czk' => 200, 'counterparty' => '', 'description' => '',
     'entry_reference' => '', 'entry_id' => null, 'entry_tax_kind' => null,
 ]], 'nextOffset' => null];
 set_error_handler(static function (int $severity, string $message): never {
