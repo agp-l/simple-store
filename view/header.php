@@ -40,6 +40,12 @@
     </div>
     <div class="mountain-edge" aria-hidden="true">
       <svg viewBox="0 0 900 220" preserveAspectRatio="xMaxYMax slice" focusable="false">
+        <g class="mountain-sky-ornament">
+          <path class="mountain-sky-route" d="M132 105C186 62 218 72 259 79S334 30 393 62"/>
+          <circle class="mountain-sky-ring" cx="259" cy="79" r="5"/>
+          <circle class="mountain-sky-dot" cx="259" cy="79" r="1.8"/>
+          <path class="mountain-sky-sparks" d="M188 39v10m-5-5h10M350 28v9m-4.5-4.5h9M535 36v6m-3-3h6"/>
+        </g>
         <g class="mountain-constellation">
           <path class="mountain-star-line" d="M612 55 650 43 693 56 733 49 756 20 808 31 795 70 733 49"/>
           <path d="M612 51v8m-4-4h8M733 45v8m-4-4h8M808 27v8m-4-4h8"/>

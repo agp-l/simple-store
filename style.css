@@ -1438,6 +1438,43 @@ main {
   stroke: none;
 }
 
+.mountain-sky-ornament {
+  fill: none;
+  pointer-events: none;
+}
+
+.mountain-sky-route {
+  stroke: var(--lime);
+  stroke-width: 1.2;
+  stroke-dasharray: 5 10;
+  stroke-linecap: round;
+  opacity: .4;
+  vector-effect: non-scaling-stroke;
+}
+
+.mountain-sky-ring {
+  stroke: var(--lime);
+  stroke-width: 1.2;
+  opacity: .48;
+}
+
+.mountain-sky-dot {
+  fill: var(--amber);
+  opacity: .75;
+}
+
+.mountain-sky-sparks {
+  stroke: var(--amber);
+  stroke-width: 1.35;
+  stroke-linecap: round;
+  opacity: .72;
+  vector-effect: non-scaling-stroke;
+}
+
+@media(max-width:960px) {
+  .mountain-sky-ornament { display: none; }
+}
+
 .product-image {
   display: block;
   width: 100%;
