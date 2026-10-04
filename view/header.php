@@ -36,8 +36,7 @@
         <g fill="#e1c01f" opacity=".7">
           <circle cx="263" cy="268" r="2.3"/><circle cx="995" cy="276" r="2.3"/>
         </g>
-        <path d="m1230 77 9 20-9 20-9-20z" fill="none" stroke="#e1c01f"
-              stroke-opacity=".5" stroke-width="1.6" stroke-linejoin="round"/>
+   <path d="m1122 215 12-28 12 28-12-6z" fill="none" stroke="#e1c01f" stroke-opacity=".5" stroke-width="1.6" stroke-linejoin="round"/>
       </svg>
       <div class="wrap utility">
         <p></p>
