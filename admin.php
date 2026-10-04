@@ -85,7 +85,7 @@ try {
     }
     if ($method === 'POST') {
         if (!$auth->validToken($_POST['csrf'] ?? null)) {
-            if (in_array($_POST['action'] ?? null, ['inline-product', 'inline-content', 'media-upload', 'media-attach'], true)) {
+            if (in_array($_POST['action'] ?? null, ['inline-product', 'inline-content', 'media-upload', 'media-attach', 'media-delete'], true)) {
                 header('Content-Type: application/json; charset=utf-8');
                 http_response_code(403);
                 echo json_encode(['error' => 'Platnost přihlášení vypršela. Znovu se přihlas.']);
@@ -149,11 +149,11 @@ try {
             exit;
         } elseif (!in_array($action, array_merge(['create-content', 'create-translation', 'inline-content', 'create-product',
             'inline-product', 'set-product-stock', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
-            'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product', 'delete-content', 'homepage-product', 'product-supplier-link',
+            'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'media-delete', 'delete-product', 'delete-content', 'homepage-product', 'product-supplier-link',
             'save-checkout-settings', 'save-mail-settings', 'mail-test', 'customer-create', 'customer-update', 'customer-active',
             'customer-password', 'schema-apply'], $orderActions, $taxActions, $returnActions), true) ||
             !$auth->signedIn()) {
-            if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach'], true)) {
+            if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach', 'media-delete'], true)) {
                 header('Content-Type: application/json; charset=utf-8');
                 http_response_code(403);
                 echo json_encode(['error' => 'Pro úpravu obsahu se přihlas do administrace.']);
@@ -216,7 +216,7 @@ try {
         require __DIR__ . '/src/Admin/product-suppliers.php';
         exit;
     }
-    if (($method === 'POST' && in_array($_POST['action'] ?? '', ['media-upload', 'media-attach'], true)) ||
+    if (($method === 'POST' && in_array($_POST['action'] ?? '', ['media-upload', 'media-attach', 'media-delete'], true)) ||
         ($method === 'GET' && ($_GET['section'] ?? '') === 'media' && ($_GET['api'] ?? '') === 'list')) {
         require __DIR__ . '/src/Admin/media-api.php';
         exit;
@@ -285,7 +285,7 @@ try {
     require __DIR__ . '/src/Admin/contents.php';
 } catch (Throwable $exception) {
     error_log((string) $exception);
-    if ($method === 'POST' && in_array($_POST['action'] ?? null, ['inline-product', 'inline-content', 'media-upload', 'media-attach'], true)) {
+    if ($method === 'POST' && in_array($_POST['action'] ?? null, ['inline-product', 'inline-content', 'media-upload', 'media-attach', 'media-delete'], true)) {
         header('Content-Type: application/json; charset=utf-8');
         http_response_code(500);
         echo json_encode(['error' => $site['debug'] ? (string) $exception : 'Databázi se nepodařilo načíst.']);

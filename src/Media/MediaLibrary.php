@@ -156,6 +156,39 @@ final class MediaLibrary
         }
     }
 
+    /** Permanently remove one owned original and both generated sizes. */
+    public function deleteManaged(string $type, string $key, string $path): void
+    {
+        $relative = MediaPath::directory($type, $key);
+        if (!MediaPath::isManaged($path) || dirname($path) !== $relative) {
+            throw new InvalidArgumentException('Fotografie nepatří do této knihovny.');
+        }
+        $folder = $this->root;
+        foreach (explode('/', $relative) as $part) {
+            $folder .= '/' . $part;
+            if (is_link($folder)) throw new RuntimeException('Složka fotografií nesmí být symbolický odkaz.');
+        }
+        if (!is_dir($folder) || !is_writable($folder)) {
+            throw new RuntimeException('Složku fotografií nelze upravit. Zkontroluj práva k images/.');
+        }
+        $targets = [$path, MediaPath::variant($path, 'card'), MediaPath::variant($path, 'thumb')];
+        foreach ($targets as $target) {
+            $file = $folder . '/' . basename($target);
+            if (is_link($file) || (file_exists($file) && !is_file($file))) {
+                throw new RuntimeException('Fotografie nesmí být symbolický odkaz ani složka.');
+            }
+        }
+        if (!is_file($folder . '/' . basename($path))) {
+            throw new InvalidArgumentException('Fotografie už v knihovně není. Obnov stránku.');
+        }
+        foreach (array_reverse($targets) as $target) {
+            $file = $folder . '/' . basename($target);
+            if (is_file($file) && !@unlink($file)) {
+                throw new RuntimeException('Fotografii nelze smazat z disku. Zkontroluj práva k images/.');
+            }
+        }
+    }
+
     private function prepareDirectory(string $relative): void
     {
         $folder = $this->root;

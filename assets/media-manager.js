@@ -138,7 +138,34 @@
       const roleLabels = {main: 'Hlavní fotografie', gallery: 'V galerii', section: 'V bloku'};
       uses.textContent = file.uses?.length
         ? file.uses.map(role => roleLabels[role] || role).join(' · ')
-        : 'V aktuální verzi nepoužitá';
+        : file.used_elsewhere ? 'Použitá v jiné aktuální verzi' : 'V aktuální verzi nepoužitá';
+      const usageLine = document.createElement('div');
+      usageLine.className = 'media-item-status';
+      usageLine.append(uses);
+      if (file.can_delete) {
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'media-item-delete';
+        remove.textContent = '×';
+        remove.title = 'Smazat fotografii z disku';
+        remove.setAttribute('aria-label', `Smazat fotografii ${file.label.replaceAll('-', ' ')} z disku`);
+        remove.addEventListener('click', async () => {
+          if (busy || !window.confirm('Smazat fotografii z disku včetně miniatur? Odkazy na ni ve starších revizích a jinde přestanou fungovat.')) return;
+          try {
+            busy = true;
+            status.textContent = 'Mažu fotografii…';
+            await removeFile(file.path);
+            if (await load()) {
+              status.textContent = 'Fotografie a její miniatury byly smazány z disku.';
+              if (pageStatus) pageStatus.textContent = status.textContent;
+            }
+          } catch (error) {
+            status.textContent = error.message;
+            if (pageStatus) pageStatus.textContent = error.message;
+          } finally { busy = false; }
+        });
+        usageLine.append(remove);
+      }
       const buttons = document.createElement('div');
       buttons.className = 'media-item-actions';
       const choose = document.createElement('button');
@@ -180,7 +207,7 @@
         });
         buttons.append(copy);
       }
-      card.append(image, title, uses, buttons);
+      card.append(image, title, usageLine, buttons);
       container.append(card);
     }
   }
@@ -195,9 +222,11 @@
       if (!response.ok || !Array.isArray(data.files)) throw new Error(data.error || 'Fotografie se nepodařilo načíst.');
       render(dialogGrid, data.files);
       render(pageGrid, data.files);
+      return true;
     } catch (error) {
       status.textContent = error.message;
       if (pageStatus) pageStatus.textContent = error.message;
+      return false;
     }
   }
 
@@ -224,6 +253,15 @@
     if (index !== null) fields.set('index', String(index));
     const result = await request(fields);
     context.uploaded(result, 'media-attach');
+  }
+  async function removeFile(path) {
+    const revision = await context.getRevision();
+    const fields = new FormData();
+    for (const [name, value] of Object.entries({action: 'media-delete', csrf: context.csrf,
+      key: context.key, type: context.type, language: context.language,
+      revision: String(revision), path})) fields.set(name, value);
+    const result = await request(fields);
+    if (result.deleted !== path) throw new Error('Server smazání fotografie nepotvrdil. Obnov knihovnu.');
   }
   window.SimpleStoreMedia = {open};
   dialog.querySelector('[data-media-close]').addEventListener('click', () => dialog.close());

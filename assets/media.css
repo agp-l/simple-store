@@ -18,8 +18,11 @@
 .media-item--main { border-color:#489450; }
 .media-item > img { display:block; width:100%; height:145px; object-fit:contain; background:#f4f6f2; }
 .media-item strong { display:block; margin:9px 0; overflow-wrap:anywhere; font-size:13px; }
-.media-item-usage { display:block; min-height:2.5em; margin:-2px 0 10px; color:#536250; font-size:12px; line-height:1.25; }
+.media-item-status { display:flex; align-items:flex-start; gap:6px; min-height:2.5em; margin:-2px 0 10px; }
+.media-item-usage { flex:1; color:#536250; font-size:12px; line-height:1.25; }
 .media-item--main .media-item-usage { color:#267334; font-weight:700; }
+.media-item-delete { flex:none; width:27px; height:27px; padding:0; border:1px solid #e5b9b4; border-radius:4px; background:#fff8f7; color:#9a3028; font:700 19px/1 var(--font-body); cursor:pointer; }
+.media-item-delete:hover, .media-item-delete:focus-visible { border-color:#9a3028; background:#fce8e5; }
 .media-item-actions { display:flex; flex-wrap:wrap; gap:5px; }
 .media-item-actions button { min-height:31px; padding:5px 7px; font-size:11px; }
 .media-item-actions button:first-child { width:100%; background:#e9f5e8; }

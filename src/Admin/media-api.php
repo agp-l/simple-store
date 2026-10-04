@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use SimpleStore\Content\ContentRepository;
 use SimpleStore\Media\MediaAttachment;
+use SimpleStore\Media\MediaDeletion;
 use SimpleStore\Media\MediaLibrary;
 use SimpleStore\Product\ProductDetails;
 use SimpleStore\Product\ProductRepository;
@@ -30,8 +31,10 @@ try {
         throw new InvalidArgumentException('Obsah už neexistuje.');
     }
     $library = new MediaLibrary(__DIR__ . '/../..');
+    $deletion = new MediaDeletion($db, $library);
     if ($method === 'GET') {
-        $files = MediaAttachment::withUsage($current, $type, $library->files($type, $key));
+        $files = $deletion->withDeletionState($type, $key,
+            MediaAttachment::withUsage($current, $type, $library->files($type, $key)));
         $response = json_encode(['files' => $files], JSON_THROW_ON_ERROR);
         ob_end_clean();
         echo $response;
@@ -41,6 +44,15 @@ try {
     $revision = filter_var($_POST['revision'] ?? null, FILTER_VALIDATE_INT);
     if ($revision === false || $revision < 1 || (int) $current['revision_number'] !== $revision) {
         throw new RuntimeException('Obsah se mezitím změnil. Obnov stránku a zkus to znovu.');
+    }
+    if (($_POST['action'] ?? '') === 'media-delete') {
+        $path = $_POST['path'] ?? null;
+        if (!is_string($path)) throw new InvalidArgumentException('Vyber fotografii ke smazání.');
+        $deletion->deleteUnused($type, $key, $path);
+        $response = json_encode(['revision' => $revision, 'deleted' => $path], JSON_THROW_ON_ERROR);
+        ob_end_clean();
+        echo $response;
+        return;
     }
     $mode = $_POST['mode'] ?? ($type === 'product' ? 'main-image' : 'section-add-image');
     $rawIndex = $_POST['index'] ?? null;

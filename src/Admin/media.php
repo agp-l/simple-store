@@ -4,6 +4,7 @@ declare(strict_types=1);
 use SimpleStore\Category\CategoryPath;
 use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Media\MediaAttachment;
+use SimpleStore\Media\MediaDeletion;
 use SimpleStore\Media\MediaLibrary;
 use SimpleStore\Media\MediaPath;
 use SimpleStore\Product\ProductRepository;
@@ -44,8 +45,10 @@ if ($requestedType !== null || $requestedKey !== null || $requestedLanguage !== 
                 'editUrl' => $basePath . $requestedLanguage . $route . '/' .
                     rawurlencode($current['slug']) . '?edit=1',
             ];
-            $mediaFiles = MediaAttachment::withUsage($current, $requestedType,
-                (new MediaLibrary(__DIR__ . '/../..'))->files($requestedType, $requestedKey));
+            $library = new MediaLibrary(__DIR__ . '/../..');
+            $mediaFiles = (new MediaDeletion($db, $library))->withDeletionState($requestedType, $requestedKey,
+                MediaAttachment::withUsage($current, $requestedType,
+                    $library->files($requestedType, $requestedKey)));
         }
     }
 }

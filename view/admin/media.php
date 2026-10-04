@@ -23,7 +23,7 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
     <p class="media-note"><?= $selectedMedia['type'] === 'product'
         ? 'Z této stránky se první nahraný snímek stane hlavní fotografií produktu, další přibudou do galerie. Při nahrávání přímo na produktu se umístění řídí zvoleným tlačítkem.'
         : 'Nahrání vloží snímky jako obrazové bloky do dokumentu.' ?></p>
-    <p class="media-note">Soubory tohoto obsahu jsou v <code><?= $escape($selectedMedia['directory']) ?>/</code>. Složka používá trvalý klíč, proto změna názvu a kategorie neporuší obrázky. Hlavní fotografie produktu je uložená v aktuální revizi produktu; galerie a bloky popisu jsou v jeho detailech. Nepoužité soubory zůstávají dostupné kvůli starším revizím a zkopírovaným odkazům.</p>
+    <p class="media-note">Soubory tohoto obsahu jsou v <code><?= $escape($selectedMedia['directory']) ?>/</code>. Složka používá trvalý klíč, proto změna názvu a kategorie neporuší obrázky. Hlavní fotografie produktu je uložená v aktuální revizi produktu; galerie a bloky popisu jsou v jeho detailech. Nepoužité soubory lze smazat z disku; pak přestanou fungovat také jejich odkazy ve starších revizích a mimo obchod.</p>
     <p class="media-note">Mřížka zobrazuje soubory nahrané do této složky. Starší obrázky a ručně vložené HTTPS odkazy mohou být v obsahu použité, ale v mřížce se nevypisují.</p>
     <p data-media-status role="status" aria-live="polite"></p>
     <div class="media-grid" id="media-page-grid" aria-label="Fotografie vybraného obsahu"></div>
