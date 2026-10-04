@@ -261,13 +261,16 @@ final class BTCPayPaymentService
                 ]);
             }
             $newlyPaid = false;
+            $paidAfterCancellation = false;
             if ($order !== null && $state === 'settled') {
                 if ($order['payment_status'] === 'pending') {
+                    $paidAfterCancellation = $order['status'] === 'cancelled';
                     $this->db->query(
                         'UPDATE shop_orders SET payment_status=%s, payment_paid_at=UTC_TIMESTAMP(),
                          payment_verified_by=NULL, provider_reference=%s WHERE id=%i AND payment_status=%s',
                         'paid', $id, $order['id'], 'pending'
                     );
+                    if ($paidAfterCancellation) $this->recordPaymentAfterCancellation($order, $id);
                     $newlyPaid = true;
                 } elseif ($order['payment_status'] === 'paid' && $order['provider_reference'] !== $id) {
                     throw new RuntimeException('Objednávka již má jinou platbu. Prověř možné dvojí zaplacení.');
@@ -278,7 +281,7 @@ final class BTCPayPaymentService
                 $state, $current['id']
             );
             $this->db->commit();
-            if ($newlyPaid) {
+            if ($newlyPaid && !$paidAfterCancellation) {
                 try { (new OrderMailQueue($this->db))->notifyStage((int) $order['id'], 'paid'); }
                 catch (Throwable $mailError) { error_log('BTCPay payment email: ' . $mailError->getMessage()); }
             }
@@ -295,6 +298,24 @@ final class BTCPayPaymentService
             throw new RuntimeException('Chybí původní údaje faktury BTCPay.');
         }
         return ['order_number' => $attempt['order_number'], 'total_czk' => (int) $attempt['total_czk']];
+    }
+
+    /** Expired invoices may settle late, after cancellation has released inventory. */
+    private function recordPaymentAfterCancellation(array $order, string $invoiceId): void
+    {
+        if ((int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
+            'shop_order_financial_events'
+        ) === 0) return;
+        $this->db->insert('shop_order_financial_events', [
+            'order_id' => (int) $order['id'], 'order_number' => $order['order_number'],
+            'variable_symbol' => $order['variable_symbol'] ?? null,
+            'action' => 'provider_payment_after_cancel', 'payment_status_before' => 'pending',
+            'payment_paid_at' => gmdate('Y-m-d H:i:s'), 'payment_verified_by' => null,
+            'total_czk' => (int) $order['total_czk'],
+            'reason' => 'BTCPay ' . $invoiceId . ': paid after cancellation; reconcile and refund.',
+            'admin_id' => 0,
+        ]);
     }
 
     private function matches(array $invoice, array $order): bool

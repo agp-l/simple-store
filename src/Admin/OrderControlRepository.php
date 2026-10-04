@@ -157,6 +157,12 @@ final class OrderControlRepository
                 !hash_equals((string) $order['order_number'], $typedNumber)) {
                 throw new InvalidArgumentException('Pro smazání opiš přesné číslo objednávky.');
             }
+            if ($this->tableExists('shop_mail_outbox') && $this->db->queryFirstRow(
+                'SELECT id FROM shop_mail_outbox WHERE order_id=%i AND state=%s LIMIT 1 FOR UPDATE',
+                $orderId, 'sending'
+            ) !== null) {
+                throw new InvalidArgumentException('E-mail k objednávce se právě odesílá. Výsledek dořeš v e-mailové frontě a smazání zopakuj.');
+            }
             $test = ($order['payment_method'] ?? '') === 'test' &&
                 ($order['payment_status'] ?? '') === 'test' && ($order['status'] ?? '') === 'test';
             $actualSale = in_array($order['payment_method'] ?? '',
@@ -265,7 +271,7 @@ final class OrderControlRepository
                 }
                 if ($this->tableExists('shop_mail_outbox')) {
                     $this->db->query('DELETE FROM shop_mail_outbox WHERE order_id=%i AND state IN (%s,%s,%s)',
-                        $orderId, 'queued', 'failed', 'sending');
+                        $orderId, 'queued', 'failed', 'suppressed');
                     $this->db->query('UPDATE shop_mail_outbox SET order_id=NULL WHERE order_id=%i', $orderId);
                 }
                 if (in_array($order['status'], ['shipped', 'completed'], true) &&

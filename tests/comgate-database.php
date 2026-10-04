@@ -200,6 +200,50 @@ expectComgate($retryCalls === 2 &&
     $orders->findById((int) $cancelOrder['id'])['provider_reference'] === $retryIds[1],
     'A confirmed cancellation could not be retried with a new transaction.');
 
+// A stale provider response can change after its locally terminal cancellation.
+// Record a late charge once, without reopening the cancelled order or mailing a receipt.
+$lateCancelOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
+    bin2hex(random_bytes(32)), 'comgate');
+$lateCancelId = 'CZ-CANCEL-LATE-' . strtoupper(bin2hex(random_bytes(5)));
+$lateCancelState = 'PENDING';
+$lateCancelClient = new ComgateApiClient($settings['merchant'], $settings['secret'],
+    static function (string $method) use ($lateCancelId, $lateCancelOrder, &$lateCancelState): array {
+        if ($method === 'POST') return ['code' => 0, 'transId' => $lateCancelId,
+            'redirect' => 'https://payments.comgate.cz/payment/' . $lateCancelId];
+        if ($method === 'GET') return ['code' => 0, 'transId' => $lateCancelId,
+            'status' => $lateCancelState, 'test' => true, 'price' => 107900,
+            'curr' => 'CZK', 'refId' => $lateCancelOrder['order_number']];
+        throw new RuntimeException('Unexpected late-cancellation operation.');
+    });
+$lateCancelPayments = new ComgatePaymentService($db, $settings, $lateCancelClient);
+$lateCancelPayments->initiate($lateCancelOrder);
+$activeCancellationRejected = false;
+try {
+    $orders->setFulfillmentStatus((int) $lateCancelOrder['id'], 'cancelled');
+} catch (InvalidArgumentException $expected) {
+    $activeCancellationRejected = true;
+}
+expectComgate($activeCancellationRejected, 'An active Comgate attempt was cancelled and released stock.');
+$lateCancelState = 'CANCELLED';
+$lateCancelPayments->refresh($lateCancelOrder);
+$orders->setFulfillmentStatus((int) $lateCancelOrder['id'], 'cancelled');
+$lateCancelState = 'PAID';
+$lateCancelPayments->notify([
+    'transId' => $lateCancelId, 'merchant' => $settings['merchant'],
+    'secret' => $settings['secret'], 'test' => true,
+    'price' => 107900, 'curr' => 'CZK', 'refId' => $lateCancelOrder['order_number'],
+]);
+$lateCancelPayments->notify([
+    'transId' => $lateCancelId, 'merchant' => $settings['merchant'],
+    'secret' => $settings['secret'], 'test' => true,
+    'price' => 107900, 'curr' => 'CZK', 'refId' => $lateCancelOrder['order_number'],
+]);
+$lateCancelled = $orders->findById((int) $lateCancelOrder['id']);
+expectComgate($lateCancelled['status'] === 'cancelled' && $lateCancelled['payment_status'] === 'paid' &&
+    (int) $db->queryFirstField('SELECT COUNT(*) FROM shop_order_financial_events
+        WHERE order_id=%i AND action=%s', $lateCancelOrder['id'], 'provider_payment_after_cancel') === 1,
+    'Late Comgate settlement after cancellation was lost or recorded twice.');
+
 // Removing an order cannot make a later, authenticated payment disappear.
 $deletedOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
     bin2hex(random_bytes(32)), 'comgate');

@@ -270,7 +270,7 @@ final class OrderRepository
         ?string $paymentMethod = null, string $search = ''): array
     {
         if ($offset < 0 || $offset > 100000 || $limit < 1 || $limit > 100 ||
-            !in_array($filter, [null, 'pending', 'paid', 'test', 'processing', 'ready_to_ship',
+            !in_array($filter, [null, 'pending', 'overdue', 'paid', 'test', 'processing', 'ready_to_ship',
                 'shipped', 'completed', 'cancelled'], true) ||
             !in_array($paymentMethod, [null, 'bank_transfer', 'comgate', 'gopay', 'btcpay', 'test'], true) ||
             strlen($search) > 100 || preg_match('//u', $search) !== 1 ||
@@ -322,7 +322,8 @@ final class OrderRepository
         $shippingField = $hasDispatchShipping
             ? 'COALESCE(dispatch_shipping_json, shipping_json)' : 'shipping_json';
         $fields = 'SELECT id, order_number, status, customer_email, subtotal_czk, shipping_czk,
-                          total_czk, payment_method, payment_status, variable_symbol, created_at,
+                          total_czk, payment_method, payment_status, payment_due_at,
+                          variable_symbol, created_at,
                           ' . $shippingField . ' AS shipping_json,
                           ' . $parcelField . ' AS shipment_status,
                           ' . $carrierField . ' AS carrier_shipment_status,
@@ -335,9 +336,15 @@ final class OrderRepository
         $conditions = [];
         $parameters = [];
         if ($filter !== null) {
-            $conditions[] = in_array($filter, ['pending', 'paid', 'test'], true)
-                ? 'payment_status=%s' : 'status=%s';
-            $parameters[] = $filter;
+            if ($filter === 'overdue') {
+                $conditions[] = 'payment_method=%s AND payment_status=%s AND status=%s
+                    AND payment_due_at < UTC_TIMESTAMP()';
+                array_push($parameters, 'bank_transfer', 'pending', 'new');
+            } else {
+                $conditions[] = in_array($filter, ['pending', 'paid', 'test'], true)
+                    ? 'payment_status=%s' : 'status=%s';
+                $parameters[] = $filter;
+            }
         }
         if ($paymentMethod !== null) {
             $conditions[] = 'payment_method=%s';
@@ -399,8 +406,21 @@ final class OrderRepository
         }
     }
 
+    /** Cancel only an overdue, unpaid bank transfer; the locked order is rechecked at execution time. */
+    public function cancelOverdueBankTransfer(int $id): void
+    {
+        $this->changeFulfillmentStatus($id, 'cancelled', 'own', '', true);
+    }
+
     /** Manual fulfillment state; payment must be verified before shipping. */
     public function setFulfillmentStatus(int $id, string $status, string $source = 'own', string $note = ''): void
+    {
+        $this->changeFulfillmentStatus($id, $status, $source, $note, false);
+    }
+
+    private function changeFulfillmentStatus(
+        int $id, string $status, string $source, string $note, bool $overdueBankOnly
+    ): void
     {
         if ($id < 1 || !in_array($status,
             ['processing', 'ready_to_ship', 'shipped', 'completed', 'cancelled'], true) ||
@@ -419,9 +439,16 @@ final class OrderRepository
         }
         $this->db->startTransaction();
         try {
-            $row = $this->db->queryFirstRow(
+            $row = $overdueBankOnly ? $this->db->queryFirstRow(
+                'SELECT * FROM shop_orders WHERE id=%i AND payment_method=%s
+                 AND payment_status=%s AND status=%s AND payment_due_at < UTC_TIMESTAMP()
+                 LIMIT 1 FOR UPDATE', $id, 'bank_transfer', 'pending', 'new'
+            ) : $this->db->queryFirstRow(
                 'SELECT * FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $id
             );
+            if ($overdueBankOnly && $row === null) {
+                throw new InvalidArgumentException('Objednávka už není po splatnosti nebo mezitím změnila stav platby. Obnov přehled.');
+            }
             $allowed = match ($row['status'] ?? '') {
                 'new' => ['processing', 'ready_to_ship', 'shipped', 'cancelled'],
                 'processing' => ['processing', 'ready_to_ship', 'shipped'],
@@ -434,6 +461,13 @@ final class OrderRepository
                 ($status === 'cancelled' && $row['payment_status'] === 'paid') ||
                 ($status !== 'cancelled' && $row['payment_status'] !== 'paid')) {
                 throw new InvalidArgumentException('Tento přechod stavu není možný. Zaplacenou objednávku před zrušením nejprve vyřeš individuálně.');
+            }
+            if ($status === 'cancelled') {
+                $this->assertOnlineCancellationSafe($id, (string) $row['payment_method']);
+                $this->suppressUnsentOrderMail($id);
+                // Cancelling an order does not change its existing fulfillment owner.
+                $source = (string) ($row['fulfillment_source'] ?? 'own');
+                $note = (string) ($row['fulfillment_note'] ?? '');
             }
             if (in_array($row['status'], ['shipped'], true) &&
                 $source !== ($row['fulfillment_source'] ?? 'own')) {
@@ -490,6 +524,54 @@ final class OrderRepository
         } catch (Throwable $error) {
             $this->db->rollback();
             throw $error;
+        }
+    }
+
+    /** Inspect all provider attempts under the order lock; older attempts may settle after a retry. */
+    private function assertOnlineCancellationSafe(int $id, string $paymentMethod): void
+    {
+        [$table, $terminalUnpaid] = match ($paymentMethod) {
+            'comgate' => ['shop_comgate_payments', ['cancelled', 'rejected']],
+            'gopay' => ['shop_gopay_payments', ['canceled', 'timeouted', 'rejected']],
+            'btcpay' => ['shop_btcpay_payments', ['expired', 'invalid', 'rejected']],
+            default => [null, []],
+        };
+        if ($table === null) return;
+        if ((int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', $table
+        ) !== 1) {
+            throw new InvalidArgumentException('Nejdřív aktualizuj SQL tabulky, aby šlo ověřit platby u brány.');
+        }
+        $attempts = $this->db->query('SELECT status FROM ' . $table .
+            ' WHERE order_id=%i FOR UPDATE', $id);
+        foreach ($attempts as $attempt) {
+            if (!in_array($attempt['status'] ?? null, $terminalUnpaid, true)) {
+                throw new InvalidArgumentException('Platba u brány ještě může být aktivní. Nejdřív ověř aktuální stav všech transakcí v detailu objednávky.');
+            }
+        }
+    }
+
+    /** Do not release stock while the original request to pay may be in flight. */
+    private function suppressUnsentOrderMail(int $id): void
+    {
+        if ((int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.TABLES
+             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', 'shop_mail_outbox'
+        ) !== 1) return;
+        $message = $this->db->queryFirstRow(
+            'SELECT id, state FROM shop_mail_outbox WHERE event_key=%s LIMIT 1 FOR UPDATE',
+            'order:' . $id
+        );
+        if ($message === null) return;
+        if ($message['state'] === 'sending') {
+            throw new InvalidArgumentException('Potvrzení objednávky se právě odesílá. Počkej na výsledek ve frontě e-mailů a storno zopakuj.');
+        }
+        if (in_array($message['state'], ['queued', 'failed'], true)) {
+            $this->db->query('UPDATE shop_mail_outbox SET state=%s,
+                last_error=%s WHERE id=%i AND state=%s',
+                'suppressed', 'Objednávka byla stornována před odesláním.',
+                (int) $message['id'], (string) $message['state']);
         }
     }
 

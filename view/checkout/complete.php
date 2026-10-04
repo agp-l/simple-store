@@ -19,6 +19,30 @@ $onlineOrder = $comgateOrder || $gopayOrder || $btcpayOrder;
 $onlineProvider = $btcpayOrder ? 'BTCPay Server' : ($gopayOrder ? 'GoPay' : 'Comgate');
 $onlineStatus = $btcpayOrder ? $btcpayStatus : ($gopayOrder ? $gopayStatus : $comgateStatus);
 $onlineUncertain = in_array($onlineStatus, ['creating', 'uncertain'], true);
+$fulfillmentStatus = (string) ($order['status'] ?? 'new');
+$orderCancelled = $fulfillmentStatus === 'cancelled';
+$fulfillmentLabel = match ($fulfillmentStatus) {
+    'processing' => 'Připravuje se',
+    'ready_to_ship' => 'Připraveno k odeslání',
+    'shipped' => 'Předáno dopravci',
+    'completed' => 'Dokončeno',
+    'cancelled' => 'Zrušeno',
+    'test' => 'Testovací objednávka',
+    default => 'Přijato',
+};
+$tracking = is_array($order['customer_tracking'] ?? null) ? $order['customer_tracking'] : [];
+$trackingNumber = trim((string) ($tracking['number'] ?? ''));
+$trackingUrl = (string) ($tracking['url'] ?? '');
+if (!in_array($fulfillmentStatus, ['ready_to_ship', 'shipped', 'completed'], true)) {
+    $trackingNumber = $trackingUrl = '';
+}
+if ($trackingUrl !== '' && (strlen($trackingUrl) > 1000 ||
+    filter_var($trackingUrl, FILTER_VALIDATE_URL) === false ||
+    parse_url($trackingUrl, PHP_URL_SCHEME) !== 'https' ||
+    parse_url($trackingUrl, PHP_URL_USER) !== null ||
+    parse_url($trackingUrl, PHP_URL_PASS) !== null)) {
+    $trackingUrl = '';
+}
 $onlineAvailable = $btcpayOrder ? ($btcpayAvailable ?? false) :
     ($gopayOrder ? ($gopayAvailable ?? false) : ($comgateAvailable ?? false));
 $onlineAction = $btcpayOrder ? 'btcpay_pay' : ($gopayOrder ? 'gopay_pay' : 'comgate_pay');
@@ -28,6 +52,8 @@ if ($testOrder) {
     $paymentMessage = 'má u GoPay evidované úplné vrácení platby.';
 } elseif ($gopayRefund === 'partially_refunded') {
     $paymentMessage = 'má u GoPay evidované částečné vrácení platby.';
+} elseif ($orderCancelled) {
+    $paymentMessage = 'byla zrušena. Neplaťte ji.';
 } elseif ($paymentPaid) {
     $paymentMessage = 'je zaplacená. Děkujeme.';
 } elseif ($onlineOrder) {
@@ -39,7 +65,7 @@ if ($testOrder) {
 }
 ?>
 <main class="wrap checkout-page checkout-complete" id="produkty">
-  <div class="checkout-heading"><span class="checkout-eyebrow"><?= $testOrder ? 'Místní test' : ($gopayRefund !== '' ? 'Stav platby' : 'Objednávka přijata') ?></span><h1><?= $testOrder ? 'Testovací objednávka vytvořena' : ($gopayRefund !== '' ? 'Stav objednávky' : 'Děkujeme za objednávku') ?></h1><p>Objednávka<?= $orderNumber !== '' ? ' č. ' . $checkoutEscape($orderNumber) : '' ?> <?= $paymentMessage ?></p></div>
+  <div class="checkout-heading"><span class="checkout-eyebrow"><?= $testOrder ? 'Místní test' : ($gopayRefund !== '' ? 'Stav platby' : ($orderCancelled ? 'Zrušená objednávka' : 'Objednávka přijata')) ?></span><h1><?= $testOrder ? 'Testovací objednávka vytvořena' : ($gopayRefund !== '' ? 'Stav objednávky' : ($orderCancelled ? 'Objednávka zrušena' : 'Děkujeme za objednávku')) ?></h1><p>Objednávka<?= $orderNumber !== '' ? ' č. ' . $checkoutEscape($orderNumber) : '' ?> <?= $paymentMessage ?></p></div>
   <?php if (($paymentNotice ?? '') !== ''): ?><p class="checkout-alert" role="alert"><?= $checkoutEscape($paymentNotice) ?></p><?php endif; ?>
   <div class="checkout-columns<?= $paymentPaid ? ' checkout-columns-paid' : '' ?>">
     <?php if ($testOrder): ?><section class="checkout-panel"><h2>Jen pro testování</h2><p>Objednávku najdete v administraci mezi testovacími objednávkami. K placení ani expedici neslouží.</p><?php if ($orderUrl !== ''): ?><label class="checkout-return-link">Odkaz na objednávku <input type="text" readonly value="<?= $checkoutEscape($orderUrl) ?>"></label><?php endif; ?><a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a></section>
@@ -50,6 +76,8 @@ if ($testOrder) {
       <?php if (($invoiceUrl ?? '') !== ''): ?><p><a class="checkout-back" href="<?= $checkoutEscape($invoiceUrl) ?>">Zobrazit původní fakturu</a></p><?php endif; ?>
       <a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a>
     </section>
+    <?php elseif ($orderCancelled): ?>
+    <section class="checkout-panel"><h2>Objednávka zrušena</h2><p>Tuto objednávku již neplaťte. Pokud jste platbu odeslali, kontaktujte obchod a uveďte číslo objednávky.</p><?php if (($invoiceUrl ?? '') !== ''): ?><p><a class="checkout-back" href="<?= $checkoutEscape($invoiceUrl) ?>">Zobrazit původní fakturu</a></p><?php endif; ?><a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a></section>
     <?php elseif ($gopayOrder && $gopayGatewayUrl !== '' && !$paymentPaid): ?>
     <section class="checkout-panel checkout-bank" aria-labelledby="checkout-gopay-title">
       <h2 id="checkout-gopay-title">Pokračovat k platbě GoPay</h2>
@@ -91,6 +119,13 @@ if ($testOrder) {
     </aside>
     <?php else: ?><section class="checkout-panel"><h2>Platba přijata</h2><p>Za tuto objednávku už neplaťte znovu.</p><?php if (($invoiceUrl ?? '') !== ''): ?><p><a class="checkout-back" href="<?= $checkoutEscape($invoiceUrl) ?>">Zobrazit fakturu a uložit ji jako PDF</a></p><?php endif; ?><a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a></section><?php endif; ?>
   </div>
+  <section class="checkout-panel checkout-order-progress" aria-labelledby="checkout-progress-title">
+    <h2 id="checkout-progress-title">Stav vyřízení</h2>
+    <p><strong><?= $checkoutEscape($fulfillmentLabel) ?></strong></p>
+    <?php if ($trackingNumber !== ''): ?><p>Číslo zásilky: <?= $checkoutEscape($trackingNumber) ?></p><?php endif; ?>
+    <?php if ($trackingUrl !== ''): ?><p><a class="checkout-back" href="<?= $checkoutEscape($trackingUrl) ?>" target="_blank" rel="noopener noreferrer">Sledovat zásilku u dopravce →</a></p><?php endif; ?>
+    <?php if ($fulfillmentStatus === 'ready_to_ship' && ($trackingNumber !== '' || $trackingUrl !== '')): ?><p class="checkout-fineprint">Pohyb zásilky se může zobrazit až po předání dopravci.</p><?php endif; ?>
+  </section>
   <?php if (isset($order['subtotal_czk'], $order['shipping_czk'], $order['total_czk'])): ?>
   <section class="checkout-panel checkout-receipt"><h2>Souhrn nákupu</h2><dl>
     <div><dt>Produkty</dt><dd><?= $checkoutMoney((int) $order['subtotal_czk']) ?></dd></div>

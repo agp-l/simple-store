@@ -9,6 +9,8 @@ class MeekroDB
     public int $commits = 0;
     public int $rollbacks = 0;
     public ?array $shipment = null;
+    public array $gatewayAttempts = [];
+    public array $outbox = [];
     public string $lastManagementSql = '';
     public array $lastManagementParameters = [];
     private array $before = [];
@@ -18,11 +20,11 @@ class MeekroDB
     public function startTransaction(): void
     {
         $this->transactions++;
-        $this->before = [$this->rows, $this->saleLines];
+        $this->before = [$this->rows, $this->saleLines, $this->outbox];
     }
 
     public function commit(): void { $this->commits++; }
-    public function rollback(): void { $this->rollbacks++; [$this->rows, $this->saleLines] = $this->before; }
+    public function rollback(): void { $this->rollbacks++; [$this->rows, $this->saleLines, $this->outbox] = $this->before; }
 
     public function insert(string $table, array $fields): void
     {
@@ -44,8 +46,15 @@ class MeekroDB
 
     public function queryFirstRow(string $sql, mixed ...$values): ?array
     {
+        if (str_contains($sql, 'FROM shop_mail_outbox')) {
+            return $this->outbox[$values[0]] ?? null;
+        }
         if (str_contains($sql, 'FROM shop_packeta_shipments')) return $this->shipment;
         foreach ($this->rows as $row) {
+            if (str_contains($sql, 'payment_due_at < UTC_TIMESTAMP()') &&
+                ($row['payment_method'] !== 'bank_transfer' || $row['payment_status'] !== 'pending' ||
+                    $row['status'] !== 'new' || !is_string($row['payment_due_at']) ||
+                    $row['payment_due_at'] >= gmdate('Y-m-d H:i:s'))) continue;
             if (str_contains($sql, 'idempotency_key=%s') && $row['idempotency_key'] === $values[0] ||
                 str_contains($sql, 'order_token=%s') && $row['order_token'] === $values[0] ||
                 str_contains($sql, 'WHERE id=%i') && $row['id'] === $values[0]) {
@@ -62,6 +71,22 @@ class MeekroDB
 
     public function query(string $sql, mixed ...$values): array
     {
+        if (str_contains($sql, 'UPDATE shop_mail_outbox SET state=')) {
+            foreach ($this->outbox as &$message) {
+                if ($message['id'] === $values[2] && $message['state'] === $values[3]) {
+                    $message['state'] = $values[0];
+                    $message['last_error'] = $values[1];
+                }
+            }
+            unset($message);
+            return [];
+        }
+        foreach (['shop_comgate_payments', 'shop_gopay_payments', 'shop_btcpay_payments'] as $table) {
+            if (str_starts_with(trim($sql), 'SELECT status FROM ' . $table)) {
+                return array_map(static fn (string $status): array => ['status' => $status],
+                    $this->gatewayAttempts[$table][$values[0]] ?? []);
+            }
+        }
         if (str_contains($sql, 'UPDATE shop_orders SET status=')) {
             $withSource = str_contains($sql, 'fulfillment_source=%s');
             foreach ($this->rows as &$row) {
@@ -96,15 +121,24 @@ class MeekroDB
             $this->lastManagementParameters = $values;
             $rows = array_reverse($this->rows);
             $position = 0;
-            if (str_contains($sql, 'payment_status=%s') || str_contains($sql, 'status=%s')) {
+            if (str_contains($sql, 'payment_due_at < UTC_TIMESTAMP()')) {
+                $rows = array_values(array_filter($rows, static fn (array $row): bool =>
+                    $row['payment_method'] === 'bank_transfer' && $row['payment_status'] === 'pending' &&
+                    $row['status'] === 'new' && is_string($row['payment_due_at']) &&
+                    $row['payment_due_at'] < gmdate('Y-m-d H:i:s')));
+                $position = 3;
+            } elseif (str_contains($sql, 'payment_status=%s') || str_contains($sql, 'status=%s')) {
                 $rows = array_values(array_filter($rows,
                     static fn (array $row): bool => $row[str_contains($sql, 'payment_status=%s') ? 'payment_status' : 'status'] === $values[0]));
                 $position++;
             }
             if (str_contains($sql, 'payment_method=%s')) {
-                $rows = array_values(array_filter($rows,
-                    static fn (array $row): bool => $row['payment_method'] === $values[$position]));
-                $position++;
+                if (!str_contains($sql, 'payment_due_at < UTC_TIMESTAMP()') ||
+                    substr_count($sql, 'payment_method=%s') > 1) {
+                    $rows = array_values(array_filter($rows,
+                        static fn (array $row): bool => $row['payment_method'] === $values[$position]));
+                    $position++;
+                }
             }
             if (str_contains($sql, 'order_number LIKE %s')) {
                 $needle = str_replace(['!%', '!_', '!!', '%'], ['%', '_', '!', ''], $values[$position]);
@@ -271,6 +305,7 @@ try {
 if (!$rejected) throw new RuntimeException('A test order was marked paid.');
 $pending = $repository->create(null, 'pending@example.org', $items, $shipping, 100,
     str_repeat('e', 64));
+$db->outbox['order:' . $pending['id']] = ['id' => 900, 'state' => 'failed'];
 try {
     $repository->setFulfillmentStatus((int) $pending['id'], 'shipped');
     throw new RuntimeException('An unpaid order was marked as shipped.');
@@ -279,6 +314,27 @@ try {
 $repository->setFulfillmentStatus((int) $pending['id'], 'cancelled');
 if ($db->rows[(int) $pending['id'] - 1]['status'] !== 'cancelled') {
     throw new RuntimeException('An unpaid order could not be cancelled.');
+}
+if ($db->outbox['order:' . $pending['id']]['state'] !== 'suppressed') {
+    throw new RuntimeException('Cancelled order still has a pending email with payment instructions.');
+}
+$sending = $repository->create(null, 'sending@example.org', $items, $shipping, 100,
+    str_repeat('9', 64));
+$sendingId = (int) $sending['id'];
+$db->outbox['order:' . $sendingId] = ['id' => 901, 'state' => 'sending'];
+try {
+    $repository->setFulfillmentStatus($sendingId, 'cancelled');
+    throw new RuntimeException('An in-flight payment email did not block cancellation.');
+} catch (InvalidArgumentException $expected) {
+    if ($db->rows[$sendingId - 1]['status'] !== 'new' ||
+        $db->outbox['order:' . $sendingId]['state'] !== 'sending') {
+        throw new RuntimeException('Blocked cancellation altered the order or mail.');
+    }
+}
+$db->outbox['order:' . $sendingId]['state'] = 'sent';
+$repository->setFulfillmentStatus($sendingId, 'cancelled');
+if ($db->rows[$sendingId - 1]['status'] !== 'cancelled') {
+    throw new RuntimeException('Order could not be cancelled after mail delivery was resolved.');
 }
 try {
     $repository->markPaid((int) $pending['id'], 4);
@@ -360,5 +416,69 @@ $repository->setFulfillmentStatus((int) $manualPacketaOrder['id'], 'ready_to_shi
 $repository->setFulfillmentStatus((int) $manualPacketaOrder['id'], 'shipped');
 if ($db->rows[(int) $manualPacketaOrder['id'] - 1]['status'] !== 'shipped') {
     throw new RuntimeException('Manual Packeta order could not be handed to a carrier without an API parcel.');
+}
+$overdue = $repository->create(null, 'overdue@example.org', $items, $shipping, 100, str_repeat('4', 64));
+$overdueId = (int) $overdue['id'];
+$db->rows[$overdueId - 1]['payment_due_at'] = gmdate('Y-m-d H:i:s', time() - 86400);
+$future = $repository->create(null, 'future@example.org', $items, $shipping, 100, str_repeat('5', 64));
+$futureId = (int) $future['id'];
+$overduePage = $repository->managementPage(0, 20, 'overdue');
+if (array_column($overduePage['items'], 'id') !== [$overdueId] ||
+    !str_contains($db->lastManagementSql, 'payment_due_at < UTC_TIMESTAMP()') ||
+    $db->lastManagementParameters[0] !== 'bank_transfer' ||
+    $db->lastManagementParameters[1] !== 'pending' ||
+    $db->lastManagementParameters[2] !== 'new' ||
+    $repository->managementPage(0, 20, 'overdue', 'comgate')['items'] !== []) {
+    throw new RuntimeException('Overdue list must include only new, unpaid bank transfers past their due date.');
+}
+try {
+    $repository->cancelOverdueBankTransfer($futureId);
+    throw new RuntimeException('A bank transfer was cancelled before its due date.');
+} catch (InvalidArgumentException $expected) {}
+$repository->markPaid($overdueId, 4);
+try {
+    $repository->cancelOverdueBankTransfer($overdueId);
+    throw new RuntimeException('A paid order was cancelled from a stale overdue list.');
+} catch (InvalidArgumentException $expected) {
+    if ($db->rows[$overdueId - 1]['status'] !== 'new') {
+        throw new RuntimeException('Rejected stale cancellation changed fulfillment.');
+    }
+}
+$db->rows[$overdueId - 1]['payment_status'] = 'pending';
+$repository->cancelOverdueBankTransfer($overdueId);
+if ($db->rows[$overdueId - 1]['status'] !== 'cancelled' ||
+    $repository->managementPage(0, 20, 'overdue')['items'] !== []) {
+    throw new RuntimeException('Overdue cancellation did not remove the order from the overdue list.');
+}
+try {
+    $repository->cancelOverdueBankTransfer($overdueId);
+    throw new RuntimeException('Already cancelled order accepted a second overdue cancellation.');
+} catch (InvalidArgumentException $expected) {}
+foreach ([
+    'comgate' => ['shop_comgate_payments', 'pending', 'cancelled'],
+    'gopay' => ['shop_gopay_payments', 'uncertain', 'canceled'],
+    'btcpay' => ['shop_btcpay_payments', 'processing', 'expired'],
+] as $method => [$table, $active, $terminal]) {
+    $online = $repository->create(null, $method . '@example.org', $items, $shipping, 100,
+        str_repeat(match ($method) {'comgate' => '6', 'gopay' => '7', default => '8'}, 64), $method);
+    $onlineId = (int) $online['id'];
+    try {
+        $repository->cancelOverdueBankTransfer($onlineId);
+        throw new RuntimeException('Online payment accepted overdue bank cancellation.');
+    } catch (InvalidArgumentException $expected) {}
+    $db->gatewayAttempts[$table][$onlineId] = [$active, $terminal];
+    try {
+        $repository->setFulfillmentStatus($onlineId, 'cancelled');
+        throw new RuntimeException('An earlier active provider attempt was ignored for ' . $method . '.');
+    } catch (InvalidArgumentException $expected) {
+        if ($db->rows[$onlineId - 1]['status'] !== 'new') {
+            throw new RuntimeException('Blocked online order changed state.');
+        }
+    }
+    $db->gatewayAttempts[$table][$onlineId] = [$terminal];
+    $repository->setFulfillmentStatus($onlineId, 'cancelled');
+    if ($db->rows[$onlineId - 1]['status'] !== 'cancelled') {
+        throw new RuntimeException('Terminal unpaid provider attempt could not be cancelled.');
+    }
 }
 echo "Checkout order and bank transfer tests passed.\n";

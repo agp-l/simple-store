@@ -73,9 +73,21 @@ try {
 } catch (InvalidArgumentException $error) {
     expectStock(str_contains($error->getMessage(), 'skladem'), 'Unexpected oversell failure.');
 }
-$orders->setFulfillmentStatus((int) $order['id'], 'cancelled');
+try {
+    $orders->cancelOverdueBankTransfer((int) $order['id']);
+    throw new RuntimeException('Order was cancelled before the bank transfer due date.');
+} catch (InvalidArgumentException $expected) {}
+$db->query('UPDATE shop_orders SET payment_due_at=DATE_SUB(UTC_TIMESTAMP(), INTERVAL 1 SECOND)
+    WHERE id=%i', (int) $order['id']);
+$orders->cancelOverdueBankTransfer((int) $order['id']);
 expectStock((int) $db->queryFirstField('SELECT available_quantity FROM shop_product_inventory
     WHERE product_key=%s', $key) === 5, 'Cancelling an order did not release its stock.');
+try {
+    $orders->cancelOverdueBankTransfer((int) $order['id']);
+    throw new RuntimeException('Order was cancelled twice.');
+} catch (InvalidArgumentException $expected) {}
+expectStock((int) $db->queryFirstField('SELECT available_quantity FROM shop_product_inventory
+    WHERE product_key=%s', $key) === 5, 'Duplicate cancellation changed inventory.');
 $controls = new OrderControlRepository($db, $stock);
 $controls->correctFulfillment((int) $order['id'], 'new', 1,
     'Omylem zrušená objednávka', 'reopen');

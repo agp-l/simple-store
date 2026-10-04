@@ -1,6 +1,7 @@
 /vendor/
 /config/database.php
 /config/checkout.php
+/config/mail-cron.php
 /config/admin.php
 /config/.admin-*
 /config/.smtp-key.php

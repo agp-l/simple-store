@@ -92,7 +92,7 @@ $rawOffset = $_GET['offset'] ?? '0';
 $offset = is_string($rawOffset) ? filter_var($rawOffset, FILTER_VALIDATE_INT,
     ['options' => ['min_range' => 0, 'max_range' => 100000]]) : false;
 if (!is_string($statusFilter) || !in_array($statusFilter,
-    ['pending', 'paid', 'processing', 'ready_to_ship', 'shipped', 'completed', 'cancelled', 'test', 'all'], true) ||
+    ['pending', 'overdue', 'paid', 'processing', 'ready_to_ship', 'shipped', 'completed', 'cancelled', 'test', 'all'], true) ||
     !is_string($paymentFilter) || !in_array($paymentFilter,
         ['all', 'bank_transfer', 'comgate', 'gopay', 'btcpay', 'test'], true) ||
     !is_string($orderSearch) || strlen($orderSearch) > 100 ||
@@ -203,6 +203,27 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'btcpay-refresh') {
     } catch (RuntimeException $exception) {
         http_response_code(503);
         $orderError = $exception->getMessage();
+    }
+}
+
+if ($method === 'POST' && ($_POST['action'] ?? '') === 'cancel-overdue-bank-order') {
+    $rawId = $_POST['id'] ?? null;
+    $id = is_string($rawId) && ctype_digit($rawId) ? filter_var($rawId, FILTER_VALIDATE_INT,
+        ['options' => ['min_range' => 1]]) : false;
+    if (!$ordersReady || $id === false || ($_POST['bank_checked'] ?? null) !== '1') {
+        http_response_code(422);
+        $orderError = 'Vyber objednávku a potvrď kontrolu nepřijaté platby ve výpisu banky.';
+    } else {
+        try {
+            $orders->cancelOverdueBankTransfer($id);
+            try { $orderMail->notifyStage($id, 'cancelled', $orderMailSender); }
+            catch (Throwable $mailError) { error_log('Order stage notification: ' . $mailError->getMessage()); }
+            header('Location: ' . $orderListReturnUrl . '&overdue_cancelled=1', true, 303);
+            exit;
+        } catch (InvalidArgumentException $exception) {
+            http_response_code(422);
+            $orderError = $exception->getMessage();
+        }
     }
 }
 

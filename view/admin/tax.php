@@ -200,9 +200,26 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
     <?php endif; ?>
   <?php elseif ($accountingTab === 'mail'): ?>
     <section class="panel-panel"><h2>Oznámení zákazníkům</h2>
-      <p class="panel-help">Potvrzení objednávky, změny stavu a faktury se připravují do fronty. Odesílatele a texty nastavíš v <a href="<?= $escape($adminUrl . '?section=settings&tab=mail') ?>">nastavení e-mailů</a>. Odmítnuté zprávy můžeš zopakovat; přijetí zprávy poštovním serverem samo nezaručuje doručení do schránky.</p>
+      <p class="panel-help">Potvrzení objednávky, změny stavu a faktury se připravují do fronty. Odesílatele a texty nastavíš v <a href="<?= $escape($adminUrl . '?section=settings&tab=mail') ?>">nastavení e-mailů</a>. Plánovač zkouší odmítnuté zprávy nejvýše <?= \SimpleStore\Accounting\OrderMailQueue::MAX_AUTO_ATTEMPTS ?>krát; ruční pokus zůstává dostupný. Přijetí poštovním serverem samo nezaručuje doručení do schránky.</p>
+      <p class="panel-help">Zpráva ve stavu <strong>sending</strong> mohla být při výpadku již přijata serverem. Plánovač ji nikdy sám neopakuje. Po 10 minutách zkontroluj log poštovního serveru podle adresy, předmětu a času pokusu; pokud výsledek nelze zjistit, ponech ji k dalšímu dořešení.</p>
       <?php if (($taxSettings['mail_from'] ?? '') === '' && $mailQueue->sender() === ''): ?><p class="panel-notice">Vyplň adresu odesílatele v <a href="<?= $escape($adminUrl . '?section=settings&tab=mail') ?>">nastavení e-mailů</a>.</p><?php endif; ?>
-      <?php foreach ($mailRows as $row): ?><div class="panel-order-row"><span><strong><?= $escape($row['subject']) ?></strong><small><?= $escape($row['recipient_email']) ?></small></span><span><?= $escape($row['state']) ?> · pokusů <?= (int) $row['attempts'] ?><?php if ($row['last_error'] !== null): ?><br><?= $escape($row['last_error']) ?><?php endif; ?></span><?php if (in_array($row['state'], ['queued','failed'], true)): ?><form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="mail"><input type="hidden" name="action" value="mail-retry"><input type="hidden" name="id" value="<?= (int) $row['id'] ?>"><button class="panel-button" type="submit">Zkusit odeslat</button></form><?php endif; ?></div><?php endforeach; ?>
+      <?php foreach ($mailRows as $row): ?>
+        <div class="panel-order-row">
+          <span><strong><?= $escape($row['subject']) ?></strong><small><?= $escape($row['recipient_email']) ?> · pokus <?= $escape($row['attempted_at'] ?? 'dosud neproběhl') ?> UTC</small></span>
+          <span><?= $escape($row['state']) ?> · pokusů <?= (int) $row['attempts'] ?><?php if ($row['last_error'] !== null): ?><br><?= $escape($row['last_error']) ?><?php endif; ?>
+            <?php if ($row['state'] === 'failed' && (int) $row['attempts'] >= \SimpleStore\Accounting\OrderMailQueue::MAX_AUTO_ATTEMPTS): ?><br>Automatické pokusy vyčerpány.<?php endif; ?>
+            <?php if ($row['state'] === 'failed' && $row['next_attempt_at'] !== null && (int) $row['attempts'] < \SimpleStore\Accounting\OrderMailQueue::MAX_AUTO_ATTEMPTS): ?><br>Další pokus po <?= $escape($row['next_attempt_at']) ?> UTC.<?php endif; ?>
+          </span>
+          <?php if (in_array($row['state'], ['queued', 'failed'], true)): ?>
+            <form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="mail"><input type="hidden" name="action" value="mail-retry"><input type="hidden" name="id" value="<?= (int) $row['id'] ?>"><button class="panel-button" type="submit">Zkusit odeslat</button></form>
+          <?php elseif ($row['state'] === 'sending' && !empty($row['stale_sending'])): ?>
+            <div><p class="panel-error">Výsledek pokusu není jistý. Ověř přijetí v logu poštovního serveru.</p>
+              <form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="mail"><input type="hidden" name="action" value="mail-reconcile"><input type="hidden" name="id" value="<?= (int) $row['id'] ?>"><input type="hidden" name="outcome" value="accepted"><label><input type="checkbox" name="mail_checked" value="1" required> Server zprávu přijal; další odeslání by bylo duplicitní.</label><button class="panel-button" type="submit">Označit jako přijatou</button></form>
+              <form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="mail"><input type="hidden" name="action" value="mail-reconcile"><input type="hidden" name="id" value="<?= (int) $row['id'] ?>"><input type="hidden" name="outcome" value="not_accepted"><label><input type="checkbox" name="mail_checked" value="1" required> Server zprávu nepřijal; opakování je bezpečné.</label><button class="panel-button" type="submit">Povolit nový pokus</button></form>
+            </div>
+          <?php endif; ?>
+        </div>
+      <?php endforeach; ?>
       <?php if ($mailRows === []): ?><p class="panel-empty">Fronta je prázdná.</p><?php endif; ?>
     </section>
   <?php elseif ($accountingTab === 'settings'): ?>

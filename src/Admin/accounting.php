@@ -147,7 +147,7 @@ if ($method === 'POST') {
                 if ($mailReady && $mailQueue->automaticEnabled()) {
                     try {
                         $mailId = $mailQueue->enqueueInvoice($invoice);
-                        if ($mailQueue->sender($taxSettings['mail_from']) !== '') $mailQueue->dispatch($mailId, $taxSettings['mail_from']);
+                        if ($mailQueue->sender($taxSettings['mail_from']) !== '') $mailQueue->dispatch($mailId, $taxSettings['mail_from'], true);
                     } catch (Throwable $mailError) {
                         error_log('Invoice mail queue failed: ' . $mailError->getMessage());
                     }
@@ -174,6 +174,16 @@ if ($method === 'POST') {
             case 'mail-retry':
                 if (!$mailReady) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky e-mailů.');
                 $mailQueue->dispatch($id, $taxSettings['mail_from']);
+                $accountingTab = 'mail';
+                break;
+            case 'mail-reconcile':
+                if (!$mailReady) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky e-mailů.');
+                if (($_POST['mail_checked'] ?? null) !== '1') {
+                    throw new InvalidArgumentException('Nejdřív ověř výsledek v logu poštovního serveru.');
+                }
+                $outcome = $_POST['outcome'] ?? null;
+                if (!is_string($outcome)) throw new InvalidArgumentException('Zadej ověřený výsledek odesílání.');
+                $mailQueue->reconcileSending($id, $outcome);
                 $accountingTab = 'mail';
                 break;
             default:

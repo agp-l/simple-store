@@ -382,6 +382,47 @@ expectGoPay($doubleChargeDetected &&
     $orders->findById((int) $cancelOrder['id'])['provider_reference'] === $retryIds[0],
     'Two paid attempts on the same order were silently reconciled as a single charge.');
 
+// A terminal gateway attempt may report a late charge after its order was cancelled.
+$lateCancelOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
+    bin2hex(random_bytes(32)), 'gopay');
+$lateCancelId = (string) random_int(100000000000, 999999999999);
+$lateCancelState = 'CREATED';
+$lateCancelClient = new GoPayApiClient('8123456789', 'fake-client-id', 'fake-client-secret', true,
+    static function (string $operation, $argument) use (
+        $lateCancelId, $lateCancelOrder, &$lateCancelState
+    ): array {
+        if ($operation === 'create') return ['id' => $lateCancelId,
+            'gw_url' => 'https://gw.sandbox.gopay.com/gw/v3/' . $lateCancelId,
+            'state' => 'CREATED', 'amount' => $argument['amount'],
+            'currency' => $argument['currency'], 'order_number' => $argument['order_number'],
+            'target' => $argument['target']];
+        if ($operation === 'status') return ['id' => $lateCancelId,
+            'state' => $lateCancelState, 'amount' => 107900,
+            'currency' => 'CZK', 'order_number' => $lateCancelOrder['order_number'],
+            'target' => ['type' => 'ACCOUNT', 'goid' => '8123456789']];
+        throw new RuntimeException('Unexpected late-cancellation operation.');
+    });
+$lateCancelPayments = new GoPayPaymentService($db, $settings, $lateCancelClient);
+$lateCancelPayments->initiate($lateCancelOrder);
+$activeCancellationRejected = false;
+try {
+    $orders->setFulfillmentStatus((int) $lateCancelOrder['id'], 'cancelled');
+} catch (InvalidArgumentException $expected) {
+    $activeCancellationRejected = true;
+}
+expectGoPay($activeCancellationRejected, 'An active GoPay attempt was cancelled and released stock.');
+$lateCancelState = 'CANCELED';
+$lateCancelPayments->notify($lateCancelId);
+$orders->setFulfillmentStatus((int) $lateCancelOrder['id'], 'cancelled');
+$lateCancelState = 'PAID';
+$lateCancelPayments->notify($lateCancelId);
+$lateCancelPayments->notify($lateCancelId);
+$lateCancelled = $orders->findById((int) $lateCancelOrder['id']);
+expectGoPay($lateCancelled['status'] === 'cancelled' && $lateCancelled['payment_status'] === 'paid' &&
+    (int) $db->queryFirstField('SELECT COUNT(*) FROM shop_order_financial_events
+        WHERE order_id=%i AND action=%s', $lateCancelOrder['id'], 'provider_payment_after_cancel') === 1,
+    'Late GoPay settlement after cancellation was lost or recorded twice.');
+
 // Provider state remains verifiable after an admin removes the original order.
 $deletedOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
     bin2hex(random_bytes(32)), 'gopay');

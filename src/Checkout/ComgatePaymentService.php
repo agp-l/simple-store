@@ -252,11 +252,16 @@ final class ComgatePaymentService
                 throw new RuntimeException('Ověření platby Comgate nesouhlasí s objednávkou.');
             }
             $newlyPaid = false;
+            $paidAfterCancellation = false;
             if (!$detached && $remote === 'PAID') {
                 if ($currentOrder['payment_status'] === 'pending') {
+                    $paidAfterCancellation = $currentOrder['status'] === 'cancelled';
                     $this->db->query('UPDATE shop_orders SET payment_status=%s, payment_paid_at=UTC_TIMESTAMP(),
                         payment_verified_by=NULL, provider_reference=%s WHERE id=%i AND payment_status=%s',
                         'paid', $attempt['trans_id'], $attempt['order_id'], 'pending');
+                    if ($paidAfterCancellation) {
+                        $this->recordPaymentAfterCancellation($currentOrder, (string) $attempt['trans_id']);
+                    }
                     $newlyPaid = true;
                 } elseif ($currentOrder['payment_status'] === 'paid' &&
                     $currentOrder['provider_reference'] !== $attempt['trans_id']) {
@@ -274,7 +279,7 @@ final class ComgatePaymentService
                     updated_at=UTC_TIMESTAMP() WHERE id=%i', $local, $attempt['id']);
             }
             $this->db->commit();
-            if ($newlyPaid) {
+            if ($newlyPaid && !$paidAfterCancellation) {
                 try { (new OrderMailQueue($this->db))->notifyStage((int) $attempt['order_id'], 'paid'); }
                 catch (Throwable $mailError) { error_log('Comgate payment email: ' . $mailError->getMessage()); }
             }
@@ -307,6 +312,24 @@ final class ComgatePaymentService
             'total_czk' => (int) $attempt['total_czk'],
             'reason' => 'Comgate ' . $attempt['trans_id'] . ': ' . $attempt['status'] .
                 ' -> paid. Ověř částku a vypořádání u brány.',
+            'admin_id' => 0,
+        ]);
+    }
+
+    /** Preserve a late charge even if cancellation already returned the reserved stock. */
+    private function recordPaymentAfterCancellation(array $order, string $reference): void
+    {
+        if ((int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
+            'shop_order_financial_events'
+        ) === 0) return;
+        $this->db->insert('shop_order_financial_events', [
+            'order_id' => (int) $order['id'], 'order_number' => $order['order_number'],
+            'variable_symbol' => $order['variable_symbol'] ?? null,
+            'action' => 'provider_payment_after_cancel', 'payment_status_before' => 'pending',
+            'payment_paid_at' => gmdate('Y-m-d H:i:s'), 'payment_verified_by' => null,
+            'total_czk' => (int) $order['total_czk'],
+            'reason' => 'Comgate ' . $reference . ': paid after cancellation; reconcile and refund.',
             'admin_id' => 0,
         ]);
     }

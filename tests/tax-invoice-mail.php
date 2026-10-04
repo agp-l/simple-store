@@ -129,8 +129,8 @@ class MeekroDB
             $this->outbox[$args[1]]['state'] = $args[0];
             $this->outbox[$args[1]]['attempts']++;
         } elseif (str_contains($sql, 'UPDATE shop_mail_outbox SET state=%s, last_error=')) {
-            $this->outbox[$args[3]]['state'] = $args[0];
-            $this->outbox[$args[3]]['last_error'] = $args[1];
+            $this->outbox[$args[5]]['state'] = $args[0];
+            $this->outbox[$args[5]]['last_error'] = $args[1];
         } elseif (str_contains($sql, 'UPDATE shop_invoices SET emailed_at=')) {
             $this->invoices[$args[0]]['emailed_at'] = '2026-09-30 12:00:00';
         } elseif (str_contains($sql, 'UPDATE shop_tax_entries SET entry_date=')) {
@@ -174,6 +174,13 @@ $seller = ['name' => 'Jan Novák', 'ico' => '12345678', 'street' => 'Hlavní 1',
     'city' => 'Brno', 'postal_code' => '60200', 'bank_account' => 'OLD/0000'];
 $buyer = ['name' => 'Eva Nová', 'street' => '', 'city' => '', 'postal_code' => '', 'ico' => ''];
 $repository = new InvoiceRepository($db);
+$db->orders[11] = array_replace($db->orders[9], [
+    'id' => 11, 'status' => 'cancelled', 'order_number' => 'DB-CANCELLED-11',
+]);
+try {
+    $repository->issue(11, $seller, $buyer);
+    throw new RuntimeException('A late payment on a cancelled order produced a sale invoice.');
+} catch (InvalidArgumentException $expected) {}
 $invoice = $repository->issue(9, $seller, $buyer);
 $invoiceYear = (int) (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format('Y');
 if (!preg_match('/^F[0-9]{4}-000001$/D', $invoice['document_number']) ||
@@ -240,6 +247,16 @@ if (!str_contains($db->outbox[$onlineMail]['body_text'], 'Uhrazeno online přes 
     str_contains($db->outbox[$onlineMail]['body_text'], 'Uhrazeno bankovním převodem')) {
     throw new RuntimeException('Gateway invoice mail misstates the payment method.');
 }
+$savedOnlineOrder = $db->orders[10];
+if ($queue->enqueueOrder($savedOnlineOrder + ['items' => [], 'shipping' => []]) !== null) {
+    throw new RuntimeException('A delayed checkout sent payment instructions after payment.');
+}
+$db->orders[10]['status'] = 'cancelled';
+$db->orders[10]['payment_status'] = 'pending';
+if ($queue->enqueueOrder($savedOnlineOrder + ['items' => [], 'shipping' => []]) !== null) {
+    throw new RuntimeException('A delayed checkout sent payment instructions after cancellation.');
+}
+$db->orders[10]['status'] = 'new';
 $orderMail = $queue->enqueueOrder($db->orders[10] + [
     'items' => [['name' => 'Stan', 'quantity' => 2, 'unit_price_czk' => 450]],
     'shipping' => ['label' => 'Kurýr'],
@@ -248,6 +265,7 @@ if ($orderMail === null || !str_contains($db->outbox[$orderMail]['body_text'], '
     str_contains($db->outbox[$orderMail]['body_text'], 'Číslo účtu:')) {
     throw new RuntimeException('Gateway order email contains bank transfer instructions.');
 }
+$db->orders[10] = $savedOnlineOrder;
 $selectedInvoice = $online;
 ob_start();
 require dirname(__DIR__) . '/view/admin/invoice-print.php';
@@ -286,6 +304,8 @@ $bitcoinHtml = (string) ob_get_clean();
 if (!str_contains($bitcoinHtml, 'přes BTCPay Server') || str_contains($bitcoinHtml, 'Účet:')) {
     throw new RuntimeException('BTCPay accounting invoice print misstates the payment method.');
 }
+$db->orders[11]['status'] = 'new';
+$db->orders[11]['payment_status'] = 'pending';
 $bitcoinOrderMail = $queue->enqueueOrder($db->orders[11] + [
     'items' => [['name' => 'Stan', 'quantity' => 2, 'unit_price_czk' => 450]],
     'shipping' => ['label' => 'Kurýr'],

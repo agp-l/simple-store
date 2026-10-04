@@ -7,11 +7,16 @@ use InvalidArgumentException;
 use MeekroDB;
 use SimpleStore\Checkout\OrderRepository;
 use SimpleStore\Checkout\OrderTrackingRepository;
+use RuntimeException;
 use Throwable;
 
 /** Durable, idempotent notifications; a failed transport never rolls back an order. */
 final class OrderMailQueue
 {
+    public const MAX_AUTO_ATTEMPTS = 5;
+    private const RETRY_BASE_SECONDS = 300;
+    private const STALE_SENDING_MINUTES = 10;
+
     private $transport;
     private MailSettingsRepository $settings;
 
@@ -23,21 +28,50 @@ final class OrderMailQueue
 
     public function installed(): bool
     {
-        return (int) $this->db->queryFirstField(
+        if ((int) $this->db->queryFirstField(
             'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
             'shop_mail_outbox'
-        ) > 0;
+        ) === 0) return false;
+        foreach (['attempted_at', 'next_attempt_at'] as $column) {
+            if ((int) $this->db->queryFirstField(
+                'SELECT COUNT(*) FROM information_schema.COLUMNS
+                 WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME=%s',
+                'shop_mail_outbox', $column
+            ) === 0) return false;
+        }
+        return true;
     }
 
     public function enqueueOrder(array $order, string $orderUrl = ''): ?int
     {
-        if (!$this->installed() || ($order['payment_method'] ?? '') === 'test') return null;
+        if (!$this->installed() || ($order['payment_method'] ?? '') === 'test' ||
+            ($order['status'] ?? '') === 'cancelled') return null;
         $config = $this->settings->load();
         if (!$config['settings']['automatic_enabled'] || !$config['templates']['order']['enabled']) return null;
         $message = OrderEmailComposer::compose('order', $order, $config['templates']['order'], [],
             $this->orderUrl($order, $config['settings'], $orderUrl));
-        return $this->enqueue('order:' . (int) $order['id'], (int) $order['id'],
-            (string) $order['customer_email'], $message['subject'], $message['text'], $message['html']);
+        $orderId = (int) ($order['id'] ?? 0);
+        if ($orderId < 1) throw new InvalidArgumentException('Neplatná objednávka pro potvrzení e-mailem.');
+        // Checkout and cancellation both lock the order before its outbox row. A delayed
+        // checkout must not queue payment instructions after the order was cancelled.
+        $this->db->startTransaction();
+        try {
+            $current = $this->db->queryFirstRow(
+                'SELECT status, payment_status FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId
+            );
+            if ($current === null || $current['status'] !== 'new' ||
+                $current['payment_status'] !== 'pending') {
+                $this->db->commit();
+                return null;
+            }
+            $id = $this->enqueue('order:' . $orderId, $orderId,
+                (string) $order['customer_email'], $message['subject'], $message['text'], $message['html']);
+            $this->db->commit();
+            return $id;
+        } catch (Throwable $error) {
+            $this->db->rollback();
+            throw $error;
+        }
     }
 
     /** Queue a stage once per order; repeated callbacks or clicks cannot send duplicates. */
@@ -65,7 +99,7 @@ final class OrderMailQueue
             $stage !== 'paid' && $stage !== 'tracking' && $order['status'] !== $stage ||
             $stage === 'tracking' && !in_array($order['status'], ['shipped', 'completed'], true)) return;
         $id = $this->enqueueStage($order, $stage, $key);
-        if ($id !== null && $this->sender($legacySender) !== '') $this->dispatch($id, $legacySender);
+        if ($id !== null && $this->sender($legacySender) !== '') $this->dispatch($id, $legacySender, true);
     }
 
     public function sender(string $legacySender = ''): string
@@ -130,23 +164,48 @@ final class OrderMailQueue
         return $id;
     }
 
-    public function dispatch(int $id, string $sender = ''): bool
+    /** Explicit calls may retry immediately, even after the automatic attempt limit. */
+    public function dispatch(int $id, string $sender = '', bool $automatic = false): bool
     {
+        if (!$this->installed()) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky e-mailů.');
         $config = $this->settings->load($sender)['settings'];
         $sender = (string) $config['from_email'];
         if ($id < 1 || filter_var($sender, FILTER_VALIDATE_EMAIL) === false ||
             preg_match('/[\r\n]/', $sender) === 1) {
             throw new InvalidArgumentException('Pro odesílání vyplň e-mail odesílatele v Nastavení obchodu → E-maily.');
         }
+        // Read the immutable event key before locking. For the original confirmation,
+        // lock order first, outbox second, just like cancellation and enqueueOrder.
+        $hint = $this->db->queryFirstRow(
+            'SELECT event_key, order_id FROM shop_mail_outbox WHERE id=%i LIMIT 1', $id
+        );
+        if ($hint === null) return false;
+        $orderId = preg_match('/^order:([1-9][0-9]*)$/D', (string) $hint['event_key'], $matches) === 1
+            ? (int) $matches[1] : null;
         $this->db->startTransaction();
         try {
+            $current = $orderId === null ? null : $this->db->queryFirstRow(
+                'SELECT status, payment_status FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId
+            );
             $row = $this->db->queryFirstRow(
-                'SELECT * FROM shop_mail_outbox WHERE id=%i LIMIT 1 FOR UPDATE', $id);
-            if ($row === null || !in_array($row['state'], ['queued', 'failed'], true)) {
+                'SELECT *, (next_attempt_at IS NULL OR next_attempt_at <= UTC_TIMESTAMP()) AS retry_due
+                 FROM shop_mail_outbox WHERE id=%i LIMIT 1 FOR UPDATE', $id);
+            if ($row === null || !in_array($row['state'], ['queued', 'failed'], true) ||
+                ($automatic && ((int) $row['attempts'] >= self::MAX_AUTO_ATTEMPTS ||
+                    (int) $row['retry_due'] !== 1))) {
                 $this->db->commit();
                 return false;
             }
-            $this->db->query('UPDATE shop_mail_outbox SET state=%s, attempts=attempts+1
+            if ($orderId !== null && ($current === null || $current['status'] !== 'new' ||
+                $current['payment_status'] !== 'pending')) {
+                $this->db->query('UPDATE shop_mail_outbox SET state=%s,
+                    next_attempt_at=NULL, last_error=%s WHERE id=%i AND state=%s',
+                    'suppressed', 'Potvrzení již neodpovídá stavu objednávky.', $id, $row['state']);
+                $this->db->commit();
+                return false;
+            }
+            $this->db->query('UPDATE shop_mail_outbox SET state=%s, attempts=attempts+1,
+                attempted_at=UTC_TIMESTAMP(), next_attempt_at=NULL
                 WHERE id=%i AND state=%s', 'sending', $id, $row['state']);
             $this->db->commit();
         } catch (Throwable $error) {
@@ -172,27 +231,108 @@ final class OrderMailQueue
                 ? (bool) ($this->transport)($row['recipient_email'], $subject, $body, $headers)
                 : (new MailTransport($config))->send($row['recipient_email'], $subject, $body, $headers);
             $failure = 'Poštovní server zprávu nepřijal.';
+        } catch (MailDeliveryUncertainException $error) {
+            error_log('Store mail acceptance uncertain: ' . $error->getMessage());
+            // Do not retry automatically: the remote server may already have the message.
+            return false;
         } catch (Throwable $error) {
             error_log('Store mail transport failed: ' . $error->getMessage());
             $failure = substr($error->getMessage(), 0, 250);
             $sent = false;
         }
-        $this->db->query('UPDATE shop_mail_outbox SET state=%s, last_error=%s,
-            sent_at=IF(%i=1, UTC_TIMESTAMP(), NULL) WHERE id=%i AND state=%s',
-            $sent ? 'sent' : 'failed', $sent ? null : $failure,
-            $sent ? 1 : 0, $id, 'sending');
-        if ($sent && str_starts_with($row['event_key'], 'invoice:')) {
-            $this->db->query('UPDATE shop_invoices SET emailed_at=UTC_TIMESTAMP()
-                WHERE id=%i AND emailed_at IS NULL', (int) substr($row['event_key'], 8));
+        $attempts = (int) $row['attempts'] + 1;
+        $delay = self::RETRY_BASE_SECONDS * (2 ** min($attempts - 1, self::MAX_AUTO_ATTEMPTS - 1));
+        $this->db->startTransaction();
+        try {
+            $this->db->query('UPDATE shop_mail_outbox SET state=%s, last_error=%s,
+                sent_at=IF(%i=1, UTC_TIMESTAMP(), NULL),
+                next_attempt_at=IF(%i=1, NULL, DATE_ADD(UTC_TIMESTAMP(), INTERVAL %i SECOND))
+                WHERE id=%i AND state=%s',
+                $sent ? 'sent' : 'failed', $sent ? null : $failure,
+                $sent ? 1 : 0, $sent || $attempts >= self::MAX_AUTO_ATTEMPTS ? 1 : 0,
+                $delay, $id, 'sending');
+            if ($sent && str_starts_with($row['event_key'], 'invoice:')) {
+                $this->db->query('UPDATE shop_invoices SET emailed_at=UTC_TIMESTAMP()
+                    WHERE id=%i AND emailed_at IS NULL', (int) substr($row['event_key'], 8));
+            }
+            $this->db->commit();
+        } catch (Throwable $error) {
+            $this->db->rollback();
+            // SMTP acceptance is unknown if this transaction fails. Keep `sending` for review.
+            throw $error;
         }
         return $sent;
+    }
+
+    /** One bounded cron pass. Row locks in dispatch protect against overlapping workers. */
+    public function dispatchDue(int $limit = 20, string $sender = ''): array
+    {
+        if ($limit < 1 || $limit > 50) throw new InvalidArgumentException('Limit fronty musí být mezi 1 a 50.');
+        if (!$this->installed()) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky e-mailů.');
+        if (filter_var($this->sender($sender), FILTER_VALIDATE_EMAIL) === false) {
+            throw new RuntimeException('Vyplň platný e-mail odesílatele v Nastavení obchodu → E-maily.');
+        }
+        $rows = $this->db->query('SELECT id FROM shop_mail_outbox
+            WHERE state IN (%s,%s) AND attempts < %i
+              AND (next_attempt_at IS NULL OR next_attempt_at <= UTC_TIMESTAMP())
+            ORDER BY id LIMIT %i', 'queued', 'failed', self::MAX_AUTO_ATTEMPTS, $limit);
+        $result = ['selected' => count($rows), 'sent' => 0, 'failed' => 0, 'skipped' => 0];
+        foreach ($rows as $row) {
+            if ($this->dispatch((int) $row['id'], $sender, true)) $result['sent']++;
+            else {
+                $state = $this->db->queryFirstField('SELECT state FROM shop_mail_outbox WHERE id=%i', (int) $row['id']);
+                $result[$state === 'failed' ? 'failed' : 'skipped']++;
+            }
+        }
+        return $result;
+    }
+
+    /** Resolve an ambiguous crash only after checking the mail server's logs. */
+    public function reconcileSending(int $id, string $outcome): void
+    {
+        if ($id < 1 || !in_array($outcome, ['accepted', 'not_accepted'], true) || !$this->installed()) {
+            throw new InvalidArgumentException('Vyber zprávu a ověřený výsledek na poštovním serveru.');
+        }
+        $this->db->startTransaction();
+        try {
+            $row = $this->db->queryFirstRow('SELECT *,
+                (COALESCE(attempted_at, created_at) <= UTC_TIMESTAMP() - INTERVAL ' .
+                self::STALE_SENDING_MINUTES . ' MINUTE) AS stale_sending
+                FROM shop_mail_outbox WHERE id=%i LIMIT 1 FOR UPDATE', $id);
+            if ($row === null || $row['state'] !== 'sending' || (int) $row['stale_sending'] !== 1) {
+                throw new InvalidArgumentException('Zpráva ještě není ve stavu k ručnímu dořešení.');
+            }
+            if ($outcome === 'accepted') {
+                $this->db->query('UPDATE shop_mail_outbox SET state=%s, sent_at=UTC_TIMESTAMP(),
+                    next_attempt_at=NULL, last_error=NULL WHERE id=%i AND state=%s',
+                    'sent', $id, 'sending');
+                if (str_starts_with($row['event_key'], 'invoice:')) {
+                    $this->db->query('UPDATE shop_invoices SET emailed_at=UTC_TIMESTAMP()
+                        WHERE id=%i AND emailed_at IS NULL', (int) substr($row['event_key'], 8));
+                }
+            } else {
+                $this->db->query('UPDATE shop_mail_outbox SET state=%s,
+                    last_error=%s, next_attempt_at=DATE_ADD(UTC_TIMESTAMP(), INTERVAL %i SECOND)
+                    WHERE id=%i AND state=%s', 'failed',
+                    'Ručně ověřeno: poštovní server zprávu nepřijal.', self::RETRY_BASE_SECONDS,
+                    $id, 'sending');
+            }
+            $this->db->commit();
+        } catch (Throwable $error) {
+            $this->db->rollback();
+            throw $error;
+        }
     }
 
     public function recent(): array
     {
         return $this->db->query('SELECT id, order_id, event_key, recipient_email, subject,
-                state, attempts, last_error, sent_at, created_at
-            FROM shop_mail_outbox ORDER BY id DESC LIMIT %i', 100);
+                state, attempts, last_error, attempted_at, next_attempt_at, sent_at, created_at,
+                (state=%s AND COALESCE(attempted_at, created_at) <= UTC_TIMESTAMP() - INTERVAL ' .
+                self::STALE_SENDING_MINUTES . ' MINUTE) AS stale_sending
+            FROM shop_mail_outbox
+            ORDER BY stale_sending DESC, (state=%s) DESC, id DESC LIMIT %i',
+            'sending', 'failed', 100);
     }
 
     private function enqueue(string $key, ?int $orderId, string $email,

@@ -43,8 +43,8 @@ final class InvoiceRepository
         try {
             $order = $this->db->queryFirstRow('SELECT * FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId);
             if ($order === null || !in_array($order['payment_method'], ['bank_transfer', 'comgate', 'gopay', 'btcpay'], true) ||
-                $order['payment_status'] !== 'paid' || $order['status'] === 'test') {
-                throw new InvalidArgumentException('Fakturu lze vystavit jen k uhrazené skutečné objednávce.');
+                $order['payment_status'] !== 'paid' || in_array($order['status'], ['test', 'cancelled'], true)) {
+                throw new InvalidArgumentException('Fakturu lze vystavit jen k uhrazené nezrušené objednávce.');
             }
             if ($order['payment_method'] === 'gopay') {
                 (new GoPayPaidOrderGuard($this->db))->assertPaid($orderId,

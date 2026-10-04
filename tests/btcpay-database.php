@@ -208,6 +208,46 @@ for ($attempt = 0; $attempt < 2; $attempt++) {
         'Ambiguous invoice creation was repeated and might charge the customer twice.');
 }
 
+// BTCPay can settle a previously expired invoice as PaidLate after cancellation.
+$lateCancelOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
+    bin2hex(random_bytes(32)), 'btcpay');
+$lateCancelId = bin2hex(random_bytes(11));
+$lateCancelState = 'New';
+$lateCancelClient = new BTCPayApiClient($settings['server_url'], $settings['store_id'], $settings['api_key'],
+    static function (string $method, string $url, array $headers, ?string $body) use (
+        $lateCancelId, $lateCancelOrder, &$lateCancelState, $settings
+    ): array {
+        $response = [
+            'id' => $lateCancelId, 'storeId' => $settings['store_id'],
+            'amount' => '1079.00', 'currency' => 'CZK',
+            'status' => $method === 'POST' ? 'New' : $lateCancelState,
+            'additionalStatus' => $lateCancelState === 'Settled' ? 'PaidLate' : 'None',
+            'metadata' => ['orderId' => $lateCancelOrder['order_number']],
+            'checkoutLink' => $settings['server_url'] . '/i/' . $lateCancelId,
+        ];
+        return ['status' => 200, 'body' => json_encode($response, JSON_THROW_ON_ERROR)];
+    });
+$lateCancelPayments = new BTCPayPaymentService($db, $settings, $lateCancelClient);
+$lateCancelPayments->initiate($lateCancelOrder);
+$activeCancellationRejected = false;
+try {
+    $orders->setFulfillmentStatus((int) $lateCancelOrder['id'], 'cancelled');
+} catch (InvalidArgumentException $expected) {
+    $activeCancellationRejected = true;
+}
+expectBTCPay($activeCancellationRejected, 'An active BTCPay invoice was cancelled and released stock.');
+$lateCancelState = 'Expired';
+$lateCancelPayments->notify($lateCancelId);
+$orders->setFulfillmentStatus((int) $lateCancelOrder['id'], 'cancelled');
+$lateCancelState = 'Settled';
+$lateCancelPayments->notify($lateCancelId);
+$lateCancelPayments->notify($lateCancelId);
+$lateCancelled = $orders->findById((int) $lateCancelOrder['id']);
+expectBTCPay($lateCancelled['status'] === 'cancelled' && $lateCancelled['payment_status'] === 'paid' &&
+    (int) $db->queryFirstField('SELECT COUNT(*) FROM shop_order_financial_events
+        WHERE order_id=%i AND action=%s', $lateCancelOrder['id'], 'provider_payment_after_cancel') === 1,
+    'Late BTCPay settlement after cancellation was lost or recorded twice.');
+
 // If an administrator removes an order, a later settlement must remain visible exactly once.
 $detachedOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
     bin2hex(random_bytes(32)), 'btcpay');

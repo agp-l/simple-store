@@ -281,14 +281,17 @@ final class GoPayPaymentService
                 $this->recordDetachedSettlement($currentAttempt, $id, $local);
             }
             $newlyPaid = false;
+            $paidAfterCancellation = false;
             if (!$detached && $remote === 'PAID') {
                 if ($currentOrder['payment_status'] === 'pending' &&
                     !in_array($currentAttempt['status'], ['partially_refunded', 'refunded'], true)) {
+                    $paidAfterCancellation = $currentOrder['status'] === 'cancelled';
                     $this->db->query(
                         'UPDATE shop_orders SET payment_status=%s, payment_paid_at=UTC_TIMESTAMP(),
                          payment_verified_by=NULL, provider_reference=%s WHERE id=%i AND payment_status=%s',
                         'paid', $id, $attempt['order_id'], 'pending'
                     );
+                    if ($paidAfterCancellation) $this->recordPaymentAfterCancellation($currentOrder, $id);
                     $newlyPaid = true;
                 } elseif ($currentOrder['payment_status'] === 'paid' &&
                     (string) $currentOrder['provider_reference'] !== $id) {
@@ -300,7 +303,7 @@ final class GoPayPaymentService
                 $local, $attempt['id']
             );
             $this->db->commit();
-            if ($newlyPaid) {
+            if ($newlyPaid && !$paidAfterCancellation) {
                 try { (new OrderMailQueue($this->db))->notifyStage((int) $attempt['order_id'], 'paid'); }
                 catch (Throwable $mailError) { error_log('GoPay payment email: ' . $mailError->getMessage()); }
             }
@@ -339,6 +342,24 @@ final class GoPayPaymentService
             'total_czk' => (int) $attempt['total_czk'],
             'reason' => 'GoPay ' . $paymentId . ': ' . $attempt['status'] . ' -> ' . $status .
                 '. Ověř částku a vypořádání u brány.',
+            'admin_id' => 0,
+        ]);
+    }
+
+    /** A cancelled order can still receive a verified charge from an older attempt. */
+    private function recordPaymentAfterCancellation(array $order, string $paymentId): void
+    {
+        if ((int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
+            'shop_order_financial_events'
+        ) === 0) return;
+        $this->db->insert('shop_order_financial_events', [
+            'order_id' => (int) $order['id'], 'order_number' => $order['order_number'],
+            'variable_symbol' => $order['variable_symbol'] ?? null,
+            'action' => 'provider_payment_after_cancel', 'payment_status_before' => 'pending',
+            'payment_paid_at' => gmdate('Y-m-d H:i:s'), 'payment_verified_by' => null,
+            'total_czk' => (int) $order['total_czk'],
+            'reason' => 'GoPay ' . $paymentId . ': paid after cancellation; reconcile and refund.',
             'admin_id' => 0,
         ]);
     }

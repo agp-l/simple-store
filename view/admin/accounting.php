@@ -105,11 +105,12 @@ $accountingYearMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'
               'payment_correction' => 'Oprava potvrzení platby',
               'order_deleted' => 'Smazání objednávky',
               'provider_payment_after_delete' => 'Platba potvrzena bránou po smazání',
+              'provider_payment_after_cancel' => 'Platba potvrzena bránou po stornu – prověř vrácení',
               'provider_refund_after_delete' => 'Vrácení platby po smazání',
               'provider_partial_refund_deleted' => 'Částečné vrácení platby po smazání',
               default => 'Změna platby',
           }; ?>
-          <li><strong><?= $escape($change['order_number']) ?></strong> · <?= $escape($financialAction) ?> · <?= (int) $change['admin_id'] === 0 ? 'platební brána' : 'správce #' . (int) $change['admin_id'] ?> · <?= $escape($change['created_at']) ?> UTC<br>
+          <li><strong><?= $escape($change['order_number']) ?></strong> · <?= $escape($financialAction) ?><?php if (($change['action'] ?? '') === 'provider_payment_after_cancel' && (int) ($change['order_id'] ?? 0) > 0): ?> · <a href="<?= $escape($adminUrl . '?section=orders&id=' . (int) $change['order_id']) ?>">Otevřít objednávku</a><?php endif; ?> · <?= (int) $change['admin_id'] === 0 ? 'platební brána' : 'správce #' . (int) $change['admin_id'] ?> · <?= $escape($change['created_at']) ?> UTC<br>
             VS <?= $escape($change['variable_symbol'] ?? '—') ?> · <?= $accountingMoney($change['total_czk']) ?> · původní platba <?= $escape($change['payment_status_before'] === 'paid' ? 'potvrzená' : 'čekající') ?><?php if ($change['payment_paid_at'] !== null): ?> · původně potvrzeno <?= $escape($change['payment_paid_at']) ?> UTC<?php endif; ?><br><?= $escape($change['reason']) ?></li>
         <?php endforeach; ?>
       </ul>

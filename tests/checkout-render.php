@@ -223,4 +223,56 @@ if (!str_contains($gopayComplete, 'id="checkout-gopay-handoff" method="post"') |
     throw new RuntimeException('GoPay must hand off by POST and keep an escaped manual fallback.');
 }
 
+$shippedData = $bankData;
+$shippedData['order'] = [
+    'order_number' => 'DB-26-1234567890', 'payment_method' => 'bank_transfer',
+    'payment_status' => 'paid', 'status' => 'shipped', 'total_czk' => 1099,
+    'customer_tracking' => ['number' => '<unsafe>',
+        'url' => 'https://tracking.example.test/?id=AB&src=order'],
+];
+ob_start();
+$renderer->render('complete', $shippedData);
+$shippedComplete = ob_get_clean();
+if (!str_contains($shippedComplete, 'Stav vyřízení') ||
+    !str_contains($shippedComplete, 'Předáno dopravci') ||
+    !str_contains($shippedComplete, 'Číslo zásilky: &lt;unsafe&gt;') ||
+    !str_contains($shippedComplete, 'href="https://tracking.example.test/?id=AB&amp;src=order"') ||
+    str_contains($shippedComplete, '<unsafe>')) {
+    throw new RuntimeException('Private order page must show fulfillment and escaped tracking.');
+}
+$shippedData['order']['customer_tracking']['url'] = 'javascript:alert(1)';
+ob_start();
+$renderer->render('complete', $shippedData);
+$unsafeTracking = ob_get_clean();
+if (str_contains($unsafeTracking, 'href="javascript:') ||
+    str_contains($unsafeTracking, 'Sledovat zásilku u dopravce')) {
+    throw new RuntimeException('Unsafe tracking URL must not become a customer link.');
+}
+$shippedData['order']['status'] = 'cancelled';
+$shippedData['order']['payment_status'] = 'pending';
+$shippedData['bankPayment'] = ['account_display' => '123/0100', 'variable_symbol' => '1234567890',
+    'amount_czk' => 1099, 'spayd' => 'SPD*1.0*ACC:CZ123*AM:1099'];
+ob_start();
+$renderer->render('complete', $shippedData);
+$cancelledComplete = ob_get_clean();
+if (!str_contains($cancelledComplete, 'Stav vyřízení') ||
+    !str_contains($cancelledComplete, 'Objednávka zrušena') ||
+    str_contains($cancelledComplete, 'Číslo zásilky:') ||
+    str_contains($cancelledComplete, 'Údaje pro platbu') ||
+    str_contains($cancelledComplete, 'Naskenovat QR platbu')) {
+    throw new RuntimeException('Cancelled bank order must hide payment instructions and obsolete tracking.');
+}
+$cancelledOnline = $gopayData;
+$cancelledOnline['order']['status'] = 'cancelled';
+$cancelledOnline['gopayGatewayUrl'] = '';
+$cancelledOnline['gopayAvailable'] = true;
+ob_start();
+$renderer->render('complete', $cancelledOnline);
+$cancelledOnlineHtml = ob_get_clean();
+if (!str_contains($cancelledOnlineHtml, 'Objednávka zrušena') ||
+    str_contains($cancelledOnlineHtml, 'name="action" value="gopay_pay"') ||
+    str_contains($cancelledOnlineHtml, 'Pokračovat k platbě GoPay')) {
+    throw new RuntimeException('Cancelled online order must not offer another payment.');
+}
+
 echo "Checkout rendering tests passed.\n";

@@ -46,9 +46,18 @@ final class SmtpTransport
             $message = "To: <{$to}>\r\nSubject: {$subject}\r\n{$headers}\r\n\r\n{$body}";
             $message = preg_replace('/\r?\n/', "\r\n", $message);
             $message = preg_replace('/^\./m', '..', $message);
-            self::write($socket, $message . (str_ends_with($message, "\r\n") ? '' : "\r\n") . ".\r\n");
-            self::response($socket, [250]);
-            self::command($socket, 'QUIT', [221]);
+            // From this point a disconnect may mean either rejected or accepted mail.
+            try {
+                self::write($socket, $message . (str_ends_with($message, "\r\n") ? '' : "\r\n") . ".\r\n");
+                self::response($socket, [250]);
+            } catch (RuntimeException $error) {
+                // An explicit negative DATA reply proves the server did not accept it.
+                if (str_starts_with($error->getMessage(), 'SMTP server odmítl zprávu (kód ')) throw $error;
+                throw new MailDeliveryUncertainException('SMTP výsledek po předání zprávy není jistý.', 0, $error);
+            }
+            // The 250 after DATA is the acceptance point; a failed QUIT cannot undo it.
+            try { self::command($socket, 'QUIT', [221]); }
+            catch (RuntimeException $ignored) {}
             return true;
         } finally {
             fclose($socket);

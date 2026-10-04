@@ -16,6 +16,8 @@ class MeekroDB
     public array $gopayAttempts = [];
     public array $comgateAttempts = [];
     public array $btcpayAttempts = [];
+    public array $outbox = [];
+    public bool $mailInstalled = false;
     public bool $failEvent = false;
     public bool $failDelete = false;
     public bool $eventsInstalled = true;
@@ -28,7 +30,7 @@ class MeekroDB
         $this->snapshot = [$this->orders, $this->events, $this->financialEvents,
             $this->carriers, $this->archivedSales, $this->shipments, $this->cancelledShipments,
             $this->archivedShipments, $this->invoices, $this->gopayAttempts,
-            $this->comgateAttempts, $this->btcpayAttempts];
+            $this->comgateAttempts, $this->btcpayAttempts, $this->outbox];
     }
 
     public function commit(): void
@@ -42,7 +44,7 @@ class MeekroDB
             [$this->orders, $this->events, $this->financialEvents,
                 $this->carriers, $this->archivedSales, $this->shipments, $this->cancelledShipments,
                 $this->archivedShipments, $this->invoices, $this->gopayAttempts,
-                $this->comgateAttempts, $this->btcpayAttempts] = $this->snapshot;
+                $this->comgateAttempts, $this->btcpayAttempts, $this->outbox] = $this->snapshot;
             $this->snapshot = null;
         }
     }
@@ -59,7 +61,8 @@ class MeekroDB
                 'shop_carrier_shipments' => 1,
                 'shop_sale_lines', 'shop_deleted_sale_lines', 'shop_deleted_shipments',
                 'shop_comgate_payments', 'shop_gopay_payments', 'shop_btcpay_payments' => 1,
-                'shop_tax_entries', 'shop_mail_outbox', 'shop_stock_movements' => 0,
+                'shop_mail_outbox' => $this->mailInstalled ? 1 : 0,
+                'shop_tax_entries', 'shop_stock_movements' => 0,
                 default => throw new RuntimeException('Unknown table check.'),
             };
         }
@@ -87,6 +90,12 @@ class MeekroDB
 
     public function queryFirstRow(string $sql, mixed ...$args): ?array
     {
+        if (str_contains($sql, 'FROM shop_mail_outbox')) {
+            foreach ($this->outbox[$args[0]] ?? [] as $row) {
+                if ($row['state'] === $args[1]) return $row;
+            }
+            return null;
+        }
         if (str_contains($sql, 'FROM shop_orders')) return $this->orders[$args[0]] ?? null;
         if (str_contains($sql, 'FROM shop_packeta_shipments')) return $this->shipments[$args[0]] ?? null;
         if (str_contains($sql, 'FROM shop_carrier_shipments')) return $this->carriers[$args[0]] ?? null;
@@ -158,6 +167,19 @@ class MeekroDB
         }
         if (str_contains($sql, 'DELETE FROM shop_packeta_shipments')) {
             unset($this->shipments[$args[0]]);
+            return [];
+        }
+        if (str_contains($sql, 'DELETE FROM shop_mail_outbox')) {
+            if (count($args) === 1) unset($this->outbox[$args[0]]);
+            else $this->outbox[$args[0]] = array_values(array_filter($this->outbox[$args[0]] ?? [],
+                static fn (array $row): bool => !in_array($row['state'], array_slice($args, 1), true)));
+            return [];
+        }
+        if (str_contains($sql, 'UPDATE shop_mail_outbox SET order_id=NULL')) {
+            if (isset($this->outbox[$args[0]])) {
+                foreach ($this->outbox[$args[0]] as &$row) $row['order_id'] = null;
+                unset($row);
+            }
             return [];
         }
         if (str_contains($sql, 'UPDATE shop_invoices SET order_id=NULL')) {
@@ -319,6 +341,20 @@ $controls->deleteOrder(16, 'DB-20260930-16', 3, 'Duplicitní neplacená objedná
 if ($controls->recentDeletions(1)[0]['order_number'] !== 'DB-20260930-16') {
     throw new RuntimeException('Deleted real order audit is not visible to administrators.');
 }
+$db->mailInstalled = true;
+$db->orders[17] = orderRow(17, 'new', 'bank_transfer', 'pending');
+$db->outbox[17] = [['id' => 900, 'order_id' => 17, 'state' => 'sending']];
+expectInvalid(static fn () => $controls->deleteOrder(17, 'DB-20260930-17', 3,
+    'Duplicitní nákup se zprávou v odesílání.'), 'Deleted an order while its email was in flight.');
+if (!isset($db->orders[17]) || $db->outbox[17][0]['state'] !== 'sending') {
+    throw new RuntimeException('Blocked deletion changed an order or an in-flight email.');
+}
+$db->outbox[17][0]['state'] = 'suppressed';
+$controls->deleteOrder(17, 'DB-20260930-17', 3, 'Duplicitní nákup po vyřešení e-mailu.');
+if (isset($db->orders[17]) || $db->outbox[17] !== []) {
+    throw new RuntimeException('Resolved order or its obsolete email was not deleted.');
+}
+$db->mailInstalled = false;
 
 $db->orders[18] = orderRow(18, 'completed');
 $db->orders[18]['payment_paid_at'] = '2026-09-29 12:00:00';

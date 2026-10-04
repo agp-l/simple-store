@@ -47,6 +47,27 @@ Odkazy **Přihlášení / účet** a **Registrace** v hlavičce vedou na `accoun
 
 V `admin.php?section=users` lze zákazníky vyhledat, zobrazit jejich poslední objednávky, upravit kontakt, zablokovat nebo povolit přihlášení, změnit heslo a založit účet. Zablokování účet ani historii nemaže; změna hesla ukončí dřívější přihlášení.
 
+### Doručování e-mailů z fronty
+
+Odeslání po události se zkouší hned. Pokud poštovní server zprávu odmítne, zůstane ve frontě a plánovač ji může zopakovat. Nejdřív spusť **Administrace → Databáze → Aktualizovat SQL tabulky** (přidá `attempted_at` a `next_attempt_at`), nastav odesílatele v **Nastavení obchodu → E-maily** a ověř testovací e-mail. Plánovač bere nejvýše 20 zpráv v jednom CLI běhu a automaticky zkusí jednu zprávu maximálně pětkrát; po neúspěchu čeká postupně 5, 10, 20 a 40 minut. Vyčerpané zprávy zůstávají viditelné v **Doklady a platby → E-maily** a správce je může zkusit ručně i po pátém pokusu.
+
+Na hostingu s terminálovým cronem lze každých pět minut spustit `php /úplná/cesta/k/obchodu/tools/mail-worker.php --limit=20`. Skript je určen pouze pro CLI; adresář `tools/` je na webu blokován. Limit lze nastavit od 1 do 50. Například záznam v běžném crontabu:
+
+```cron
+*/5 * * * * /usr/bin/php /úplná/cesta/k/obchodu/tools/mail-worker.php --limit=20
+```
+
+[Webglobe CRON](https://www.webglobe.cz/poradna/cron) vyžaduje skript dostupný na doméně. Pro jeho URL plánovač je samostatný `mail-cron.php`, který při jednom volání zpracuje nejvýše tři zprávy. V terminálu vytvoř tajný klíč pomocí `php -r 'echo bin2hex(random_bytes(32)), PHP_EOL;'` a ulož jej pouze na serveru do Git ignorovaného `config/mail-cron.php`:
+
+```php
+<?php
+return ['token' => 'SEM_VLOŽ_64_HEXADECIMÁLNÍCH_ZNAKŮ'];
+```
+
+V plánovači nastav každých pět minut **HTTPS** adresu `https://tvuj-obchod.cz/mail-cron.php?token=TVŮJ_KLÍČ`. Skript ověřuje celý 64znakový klíč; neschvaluje požadavek jen podle IP adresy. Chraň URL v administraci hostingu a přístupových logách; při jejím vyzrazení vytvoř nový klíč a změň URL úlohy. `config/mail-cron.php` neukládej do Gitu. Bez konfigurace nebo s chybným klíčem se e-maily nezpracují.
+
+Pokud proces skončí během odesílání nebo se ztratí konečné potvrzení SMTP po předání obsahu zprávy, řádek zůstane ve stavu `sending` a plánovač jej **automaticky neopakuje**. Po 10 minutách jej otevři v **Doklady a platby → E-maily** a ověř podle adresy, předmětu a času pokusu log poštovního serveru. Teprve podle potvrzeného výsledku označ zprávu jako přijatou, nebo povol nový pokus. Není-li výsledek dohledatelný, nech ji ve stavu `sending` a vyřeš doručení individuálně; bez ověření by další odeslání mohlo vytvořit duplicitu. Stav `sent` znamená přijetí poštovním serverem, nikoli jisté doručení do schránky.
+
 Aktuální `database/schema.sql` doplní do `users` zákaznický e-mail, jméno a telefon, vytvoří `customer_addresses` a rozšíří `shop_orders` o údaje objednávek. Po stažení změn spusť **Databáze → Aktualizovat SQL tabulky** před použitím nové pokladny. Při aktualizaci přes administraci není třeba upravovat název databáze uvnitř SQL. Při ručním importu do jiné databáze než `simple_store` změň první `CREATE DATABASE` a `USE` v lokální kopii SQL. Zákaznické akce kontrolují roli, PHP session a CSRF token; každý dotaz na adresy a historii objednávek účtu je omezen ID přihlášeného zákazníka. Bez MySQL můžeš spustit `/opt/lampp/bin/php tests/customer-account.php` a `/opt/lampp/bin/php tests/account-render.php`.
 
 ### Košík, objednávka a bankovní převod
@@ -98,7 +119,11 @@ Jakmile je vyplněný platný bankovní účet a příjemce, lze odeslat skuteč
 
 Po potvrzení běžné objednávky vznikne řádek v `shop_orders` s kopií položek, cen, dopravy a bankovních údajů platných při objednání. Stránka `/cs/objednavka/<token>` ukáže číslo účtu, IBAN, částku a jedinečný variabilní symbol. QR platba se vytvoří v prohlížeči z údajů připravených PHP; údaje pro ruční převod jsou k dispozici i bez JavaScriptu. **Objednávka hosta nemá přihlašovací účet:** odkaz s tokenem si musí zákazník uložit. Po nastavení odesílatele systém zařadí potvrzení do e-mailové fronty a pokusí se je odeslat. S odkazem zacházej jako se soukromým údajem, protože umožňuje zobrazit platební údaje objednávky. Přihlášený zákazník najde své objednávky také v účtu.
 
+Soukromá stránka objednávky ukazuje aktuální stav vyřízení a po přípravě nebo odeslání také číslo a HTTPS odkaz pro sledování zásilky. Stornovaná objednávka nenabízí platbu. Pokud se potvrzení objednávky nestačilo odeslat před stornem nebo přijetím platby, původní výzva k platbě se ve frontě vyřadí.
+
 V `admin.php?section=orders` správce vidí přijaté objednávky. Po kontrole **částky a variabilního symbolu na bankovním výpisu** ručně označí bankovní převod jako přijatý; stav se z banky nenačítá automaticky. U Comgate, GoPay a BTCPay lze v detailu znovu ověřit stav přímo u poskytovatele. Náhodný klíč v session a unikátní `idempotency_key` brání dvojímu vytvoření téže objednávky při opakovaném odeslání. Pro podrobnosti o bitcoinové platbě viz [nastavení BTCPay](docs/btcpay.md).
+
+Filtr **Po splatnosti** ukáže nové nezaplacené objednávky převodem po datu splatnosti. Po kontrole bankovního výpisu lze každou z nich stornovat přímo ze seznamu; stav platby a splatnost se znovu ověřují pod databázovým zámkem a rezervované kusy se uvolní. Systém nepředpokládá, že platba po splatnosti nikdy nedorazí, a proto bankovní převody nestornuje automaticky. U online bran musí být před stornem vyjasněné všechny platební pokusy. Opožděně potvrzená platba po stornu zůstane jako skutečně přijatá, ale objednávka se znovu neotevře; administrace ji výrazně označí k ověření a vrácení peněz.
 
 ### Opravy, mazání a čísla objednávek
 

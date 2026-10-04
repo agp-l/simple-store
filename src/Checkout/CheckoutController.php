@@ -44,7 +44,8 @@ final class CheckoutController
         private ?InvoiceRepository $invoices = null,
         private ?ComgatePaymentService $comgate = null,
         private ?GoPayPaymentService $gopay = null,
-        private ?BTCPayPaymentService $btcpay = null
+        private ?BTCPayPaymentService $btcpay = null,
+        private ?OrderTrackingRepository $orderTracking = null
     ) {
         $this->cartUrl = $url->path('kosik');
         $this->checkoutUrl = $url->path('pokladna');
@@ -392,7 +393,7 @@ final class CheckoutController
                     ? $gateway->receiptUrl($order, $this->url->getLanguage()) : '';
                 $messageId = $this->mailQueue->enqueueOrder($order, $orderUrl);
                 if ($messageId !== null && $this->mailQueue->sender($this->mailSender) !== '') {
-                    $this->mailQueue->dispatch($messageId, $this->mailSender);
+                    $this->mailQueue->dispatch($messageId, $this->mailSender, true);
                 }
             } catch (Throwable $error) {
                 error_log('Order ' . $order['order_number'] . ' notification failed: ' . $error->getMessage());
@@ -428,6 +429,15 @@ final class CheckoutController
         ?array $invoice = null
     ): void {
         if ($invoice === null) $invoice = $this->invoices?->byOrder((int) $order['id']);
+        $order['customer_tracking'] = ['number' => '', 'url' => ''];
+        if ($this->orderTracking !== null &&
+            in_array($order['status'] ?? '', ['ready_to_ship', 'shipped', 'completed'], true)) {
+            try {
+                $order['customer_tracking'] = $this->orderTracking->forOrder((int) $order['id']);
+            } catch (Throwable $error) {
+                error_log('Order ' . (int) $order['id'] . ' tracking lookup failed: ' . $error->getMessage());
+            }
+        }
         $orderUrl = $this->url->path('objednavka/' . $order['order_token']);
         $this->renderer->render('complete', array_replace($this->shared, [
             'title' => 'Objednávka ' . $order['order_number'] . ' — dobrodruzi.cz',

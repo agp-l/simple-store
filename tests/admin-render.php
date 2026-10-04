@@ -335,12 +335,21 @@ $orderPage = ['items' => [
         'gopay_payment_state' => 'refunded', 'shipment_status' => null,
         'shipping_json' => json_encode(['label' => 'GLS', 'recipient' => 'Jana'], JSON_THROW_ON_ERROR),
         'invoice_id' => null, 'invoice_number' => null]),
+    array_replace($order, ['id' => 15, 'order_number' => 'DB-OVERDUE', 'status' => 'new',
+        'payment_status' => 'pending', 'payment_method' => 'bank_transfer',
+        'payment_due_at' => gmdate('Y-m-d H:i:s', time() - 86400),
+        'shipping_json' => json_encode(['label' => 'PPL', 'recipient' => 'Karel'], JSON_THROW_ON_ERROR)]),
+    array_replace($order, ['id' => 16, 'order_number' => 'DB-PAID-AFTER-CANCEL',
+        'status' => 'cancelled', 'payment_status' => 'paid', 'payment_method' => 'btcpay',
+        'btcpay_payment_state' => 'settled',
+        'shipping_json' => json_encode(['label' => 'GLS', 'recipient' => 'Pavel'], JSON_THROW_ON_ERROR)]),
 ], 'nextOffset' => 25];
 $ordersNextUrl = $orderBaseUrl . '&status=all&offset=25';
 $deletedOrders = [['order_number' => 'TEST-26-A1B2C3D4', 'created_at' => '2026-09-30 09:00:00',
     'admin_id' => 3, 'reason' => 'Test <script>']];
 $paymentFilter = 'bank_transfer';
 $orderSearch = 'eva';
+$orderDetailForLatePayment = $order;
 $order = null;
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
@@ -370,6 +379,35 @@ if ($refundRow === '' || !str_contains($refundRow, 'Platba vrácena') ||
     str_contains($refundRow, 'name="action" value="set-order-status"')) {
     throw new RuntimeException('Refunded GoPay order must not expose a quick dispatch action.');
 }
+$overdueStart = strpos($html, 'DB-OVERDUE');
+$overdueEnd = $overdueStart === false ? false : strpos($html, '</tr>', $overdueStart);
+$overdueRow = $overdueStart === false || $overdueEnd === false ? '' :
+    substr($html, $overdueStart, $overdueEnd - $overdueStart);
+if (!str_contains($html, 'status=overdue') || $overdueRow === '' ||
+    !str_contains($overdueRow, 'Splatnost ') || !str_contains($overdueRow, 'Po splatnosti') ||
+    !str_contains($overdueRow, 'name="action" value="cancel-overdue-bank-order"') ||
+    !str_contains($overdueRow, 'name="bank_checked" value="1"') ||
+    !str_contains($overdueRow, 'name="csrf" value="test-token"')) {
+    throw new RuntimeException('Overdue bank order must expose due date and guarded cancellation.');
+}
+$lateStart = strpos($html, 'DB-PAID-AFTER-CANCEL');
+$lateEnd = $lateStart === false ? false : strpos($html, '</tr>', $lateStart);
+$lateRow = $lateStart === false || $lateEnd === false ? '' :
+    substr($html, $lateStart, $lateEnd - $lateStart);
+if ($lateRow === '' || !str_contains($lateRow, 'Zaplaceno po stornu – prověř vrácení platby') ||
+    str_contains($lateRow, 'name="action" value="cancel-overdue-bank-order"')) {
+    throw new RuntimeException('A late payment on a cancelled order needs a visible warning.');
+}
+$order = array_replace($orderDetailForLatePayment, [
+    'status' => 'cancelled', 'payment_status' => 'paid', 'payment_method' => 'btcpay',
+]);
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'Zaplaceno po stornu – prověř vrácení platby')) {
+    throw new RuntimeException('Order detail omitted its late settlement warning.');
+}
+$order = null;
 
 $screen = 'settings';
 $settingsError = '';

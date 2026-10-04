@@ -69,7 +69,7 @@ $checkoutReturn = $checkoutReturn ?? $accountUrl;
             <?php if (!empty($orderDetail['shipping']['pickup_point'])): ?><p>Výdejní místo: <?= $escape($orderDetail['shipping']['pickup_point']) ?>, <?= $escape($orderDetail['shipping']['pickup_address'] ?? '') ?></p>
             <?php else: ?><p>Doručení: <?= $escape($orderDetail['shipping']['recipient'] ?? $orderDetail['shipping']['name'] ?? '') ?>, <?= $escape($orderDetail['shipping']['street'] ?? '') ?>, <?= $escape($orderDetail['shipping']['postal_code'] ?? '') ?> <?= $escape($orderDetail['shipping']['city'] ?? '') ?></p><?php endif; ?>
             <?php if ($orderTrackingUrl !== null): ?><p><a class="panel-text-link" href="<?= $escape($orderTrackingUrl) ?>" target="_blank" rel="noopener noreferrer">Sledovat zásilku u Zásilkovny →</a></p><?php endif; ?>
-            <?php if (!empty($orderDetail['order_token'])): ?><a class="panel-text-link" href="<?= $escape($basePath . $language . '/objednavka/' . $orderDetail['order_token']) ?>">Zobrazit platební údaje →</a><?php endif; ?>
+            <?php if (!empty($orderDetail['order_token'])): ?><a class="panel-text-link" href="<?= $escape($basePath . $language . '/objednavka/' . $orderDetail['order_token']) ?>">Stav objednávky a podrobnosti →</a><?php endif; ?>
           </section>
           <?php endif; ?>
           <section class="panel-panel"><h2>Přidat starší nákup bez účtu</h2><p>Pokud sis objednal jako host, vlož soukromý odkaz z potvrzovací stránky. E-mail v objednávce musí odpovídat e-mailu tohoto účtu. Pouhé číslo objednávky nestačí.</p>

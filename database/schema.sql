@@ -456,6 +456,8 @@ CREATE TABLE IF NOT EXISTS shop_mail_outbox (
   state VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'queued',
   attempts INT UNSIGNED NOT NULL DEFAULT 0,
   last_error VARCHAR(255) NULL,
+  attempted_at DATETIME NULL,
+  next_attempt_at DATETIME NULL,
   sent_at DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE KEY outbox_event (event_key),
@@ -470,6 +472,22 @@ SET @mail_html_upgrade = IF(@mail_html_exists=0,
 PREPARE mail_html_statement FROM @mail_html_upgrade;
 EXECUTE mail_html_statement;
 DEALLOCATE PREPARE mail_html_statement;
+
+SET @mail_attempted_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_mail_outbox' AND COLUMN_NAME='attempted_at');
+SET @mail_attempted_upgrade = IF(@mail_attempted_exists=0,
+  'ALTER TABLE shop_mail_outbox ADD COLUMN attempted_at DATETIME NULL AFTER last_error', 'SELECT 1');
+PREPARE mail_attempted_statement FROM @mail_attempted_upgrade;
+EXECUTE mail_attempted_statement;
+DEALLOCATE PREPARE mail_attempted_statement;
+
+SET @mail_next_attempt_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_mail_outbox' AND COLUMN_NAME='next_attempt_at');
+SET @mail_next_attempt_upgrade = IF(@mail_next_attempt_exists=0,
+  'ALTER TABLE shop_mail_outbox ADD COLUMN next_attempt_at DATETIME NULL AFTER attempted_at', 'SELECT 1');
+PREPARE mail_next_attempt_statement FROM @mail_next_attempt_upgrade;
+EXECUTE mail_next_attempt_statement;
+DEALLOCATE PREPARE mail_next_attempt_statement;
 
 -- Quantity is a count of physical units; sale snapshots never change with a product edit.
 CREATE TABLE IF NOT EXISTS shop_sale_lines (

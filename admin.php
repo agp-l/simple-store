@@ -66,12 +66,12 @@ try {
     exit;
 }
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-$orderActions = ['mark-order-paid', 'set-order-status', 'save-order-tracking', 'correct-order-status', 'correct-order-payment', 'delete-order', 'packeta-create',
+$orderActions = ['mark-order-paid', 'cancel-overdue-bank-order', 'set-order-status', 'save-order-tracking', 'correct-order-status', 'correct-order-payment', 'delete-order', 'packeta-create',
     'packeta-courier', 'packeta-reconcile', 'packeta-retry', 'packeta-cancel',
     'packeta-cancel-confirmed', 'packeta-cancel-not-done', 'carrier-save', 'carrier-register'];
 $taxActions = ['tax-save-settings', 'tax-save-year-mode', 'tax-add-flat-advance',
     'tax-add-entry', 'tax-add-balance', 'tax-close-balance', 'tax-link-payment', 'invoice-issue',
-    'invoice-renumber', 'invoice-email', 'mail-retry', 'tax-amend-entry', 'tax-void-entry'];
+    'invoice-renumber', 'invoice-email', 'mail-retry', 'mail-reconcile', 'tax-amend-entry', 'tax-void-entry'];
 try {
     $csrf = $auth->token();
     if ($method === 'POST' && $_POST === [] && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0 &&

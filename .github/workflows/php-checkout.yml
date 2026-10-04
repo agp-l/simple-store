@@ -39,6 +39,7 @@ jobs:
           php tests/checkout-availability.php
           php tests/checkout-settings.php
           php tests/mail-render.php
+          php tests/mail-worker.php
           php tests/bitcoin-prices.php
           php tests/btcpay-client.php
           php tests/btcpay-signature.php

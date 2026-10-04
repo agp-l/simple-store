@@ -31,6 +31,7 @@ use SimpleStore\Rendering\PageRenderer;
 use SimpleStore\Accounting\TaxEvidenceRepository;
 use SimpleStore\Accounting\OrderMailQueue;
 use SimpleStore\Accounting\InvoiceRepository;
+use SimpleStore\Checkout\OrderTrackingRepository;
 use SimpleStore\Pricing\BitcoinPriceDisplay;
 
 $site = require __DIR__ . '/src/bootstrap.php';
@@ -164,7 +165,8 @@ try {
             $shipping, $orders, $bank, $customerId, (string) ($checkoutConfig['terms_url'] ?? ''),
             $customerProfile, $customerAddresses, $packeta, $ppl, null, null,
             new OrderMailQueue($db), (string) ($taxSettings['mail_from'] ?? ''),
-            new InvoiceRepository($db), $comgate, $gopay, $btcpay);
+            new InvoiceRepository($db), $comgate, $gopay, $btcpay,
+            new OrderTrackingRepository($db));
         $controller->handle($route);
         exit;
     }

@@ -51,7 +51,7 @@ final class AccountingRepository
         if (!$this->financialEventsInstalled()) return ['items' => [], 'nextOffset' => null];
         [$start, $end] = self::bounds($from, $to);
         $rows = $this->db->query(
-            'SELECT order_number, variable_symbol, action, payment_status_before,
+            'SELECT order_id, order_number, variable_symbol, action, payment_status_before,
                     payment_paid_at, payment_verified_by, total_czk, reason, admin_id, created_at
              FROM shop_order_financial_events
              WHERE created_at >= %s AND created_at < %s ORDER BY id DESC LIMIT %i OFFSET %i',
