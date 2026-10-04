@@ -1416,6 +1416,28 @@ main {
   vector-effect: non-scaling-stroke;
 }
 
+.mountain-constellation {
+  fill: none;
+  stroke: var(--amber);
+  stroke-width: 1.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: .78;
+}
+
+.mountain-constellation path {
+  vector-effect: non-scaling-stroke;
+}
+
+.mountain-star-line {
+  opacity: .5;
+}
+
+.mountain-star-points {
+  fill: var(--amber);
+  stroke: none;
+}
+
 .product-image {
   display: block;
   width: 100%;

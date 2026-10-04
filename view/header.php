@@ -40,8 +40,18 @@
     </div>
     <div class="mountain-edge" aria-hidden="true">
       <svg viewBox="0 0 900 220" preserveAspectRatio="xMaxYMax slice" focusable="false">
-        <path d="M0 220C62 211 117 203 165 192L294 112 338 148 465 16 553 129 682 68 792 164 900 220Z"/>
-        <path class="mountain-ridge" d="M465 16 432 58 465 48 490 80M682 68 653 106 683 96 710 120M294 112 272 142 294 137"/>
+        <g class="mountain-constellation">
+          <path class="mountain-star-line" d="M612 55 650 43 693 56 733 49 756 20 808 31 795 70 733 49"/>
+          <path d="M612 51v8m-4-4h8M733 45v8m-4-4h8M808 27v8m-4-4h8"/>
+          <g class="mountain-star-points">
+            <circle cx="650" cy="43" r="2"/><circle cx="693" cy="56" r="2"/>
+            <circle cx="756" cy="20" r="2"/><circle cx="795" cy="70" r="2"/>
+          </g>
+        </g>
+        <g transform="translate(0 29) scale(1 .87)">
+          <path d="M0 220C62 211 117 203 165 192L294 112 338 148 465 16 553 129 682 68 792 164 900 220Z"/>
+          <path class="mountain-ridge" d="M465 16 432 58 465 48 490 80M682 68 653 106 683 96 710 120M294 112 272 142 294 137"/>
+        </g>
       </svg>
     </div>
   </header>
