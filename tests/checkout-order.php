@@ -235,14 +235,19 @@ $derived = new BankTransferPayment('', '1265098001/5500', 'Obchod');
 if ($derived->snapshot()['iban'] !== 'CZ5855000000001265098001') {
     throw new RuntimeException('Domestic account did not produce the correct Czech IBAN.');
 }
-$preview = (new OrderRepository($db))->create(null, 'test@example.org', $items, $shipping, 100,
-    str_repeat('c', 64), true);
-if ($preview['payment_method'] !== 'test' || $preview['payment_status'] !== 'test' ||
-    $preview['payment_details'] !== [] || $preview['payment_due_at'] !== null ||
-    $preview['variable_symbol'] !== null ||
-    !preg_match('/^TEST-[0-9]{2}-[A-F0-9]{8}$/D', $preview['order_number']) ||
-    $preview['status'] !== 'test' || $repository->managementPage(0, 20, 'test')['items'][0]['id'] !== $preview['id']) {
-    throw new RuntimeException('Test order must be distinguishable and have no payment instructions.');
+// Historical test rows remain readable even though checkout no longer creates them.
+$preview = $repository->create(null, 'test@example.org', $items, $shipping, 100, str_repeat('c', 64));
+$db->rows[(int) $preview['id'] - 1]['order_number'] = 'TEST-26-A1B2C3D4';
+$db->rows[(int) $preview['id'] - 1]['status'] = 'test';
+$db->rows[(int) $preview['id'] - 1]['payment_method'] = 'test';
+$db->rows[(int) $preview['id'] - 1]['payment_status'] = 'test';
+$db->rows[(int) $preview['id'] - 1]['variable_symbol'] = null;
+$db->rows[(int) $preview['id'] - 1]['payment_details_json'] = null;
+$db->rows[(int) $preview['id'] - 1]['payment_due_at'] = null;
+$preview = $repository->findById((int) $preview['id']);
+if ($preview['status'] !== 'test' ||
+    $repository->managementPage(0, 20, 'test')['items'][0]['id'] !== $preview['id']) {
+    throw new RuntimeException('Historical test order is no longer readable.');
 }
 $filtered = $repository->managementPage(0, 1, 'paid', 'bank_transfer', 'eva@example.org');
 if (count($filtered['items']) !== 1 || $filtered['items'][0]['id'] !== 1 ||

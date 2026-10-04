@@ -18,18 +18,23 @@ $accountingFulfillmentLabel = static fn (mixed $status): string => match ($statu
     'cancelled' => 'Zrušeno',
     default => (string) $status,
 };
-$accountingTab ??= 'orders';
+$accountingTab ??= 'overview';
 $taxYear ??= (int) date('Y');
+$accountingTitles = ['overview' => 'Přehled evidence', 'money' => 'Peněžní deník',
+    'balances' => 'Majetek a dluhy', 'stock' => 'Sklad a prodeje',
+    'invoices' => 'Faktury', 'orders' => 'Platby objednávek',
+    'mail' => 'E-mailová fronta', 'settings' => 'Údaje OSVČ'];
 ?>
 <div class="panel-intro">
-  <div><p class="panel-eyebrow">OSVČ</p><h1>Daňová evidence</h1>
-    <p>Příjmy, výdaje, pohledávky, závazky, zásoby, vystavené faktury a e-maily.</p></div>
+  <div><p class="panel-eyebrow">Daňová evidence OSVČ</p><h1><?= $escape($accountingTitles[$accountingTab]) ?></h1>
+    <p><?= $accountingTab === 'overview' ? 'Výchozí přehled příjmů, výdajů a souvisejících agend.' : 'Samostatná agenda evidence. Přepni na další oblast v navigaci.' ?></p></div>
 </div>
-<nav class="panel-quick panel-order-filters" aria-label="Části daňové evidence">
-  <?php foreach (['overview'=>'Přehled', 'money'=>'Peněžní deník', 'balances'=>'Majetek a dluhy',
-      'stock'=>'Sklad a prodeje', 'invoices'=>'Faktury', 'mail'=>'E-maily',
-      'orders'=>'Přehled objednávek', 'settings'=>'Údaje OSVČ'] as $key=>$label): ?>
-    <a href="<?= $escape($adminUrl . '?section=accounting&tab=' . $key . '&year=' . $taxYear) ?>" <?= $accountingTab === $key ? 'aria-current="page"' : '' ?>><?= $escape($label) ?></a>
+<nav class="panel-accounting-nav" aria-label="Části daňové evidence">
+  <?php foreach (['Evidence' => ['overview', 'money', 'balances', 'stock'],
+      'Doklady a provoz' => ['invoices', 'orders', 'mail', 'settings']] as $group => $tabs): ?>
+    <div><strong><?= $escape($group) ?></strong>
+      <?php foreach ($tabs as $key): ?><a href="<?= $escape($adminUrl . '?section=accounting&tab=' . $key . '&year=' . $taxYear) ?>" <?= $accountingTab === $key ? 'aria-current="page"' : '' ?>><?= $escape($accountingTitles[$key]) ?></a><?php endforeach; ?>
+    </div>
   <?php endforeach; ?>
 </nav>
 <?php if ($accountingTab === 'orders'): ?>

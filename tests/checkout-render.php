@@ -208,27 +208,6 @@ if (!str_contains($review, 'Objednat s povinností platby') ||
     throw new RuntimeException('Bank checkout without a terms page must submit as a real order.');
 }
 
-$testData = $data + ['delivery' => ['method' => 'ppl_home', 'name' => 'Eva Nová',
-    'street' => 'Polní 1', 'postal_code' => '11000', 'city' => 'Praha',
-    'email' => 'eva@example.org', 'phone' => '123'], 'selectedShippingPrice' => 99];
-$testData['testCheckout'] = true;
-$testData['checkoutReady'] = true;
-ob_start();
-$renderer->render('review', $testData);
-$review = ob_get_clean();
-if (!str_contains($review, 'Vytvořit testovací objednávku') ||
-    str_contains($review, 'Objednat s povinností platby') ||
-    str_contains($review, 'name="terms"')) {
-    throw new RuntimeException('Local preview must clearly distinguish test orders from payments.');
-}
-ob_start();
-$renderer->render('complete', $testData + ['order' => ['payment_method' => 'test',
-    'order_number' => 'DB-TEST', 'payment_status' => 'test']]);
-$complete = ob_get_clean();
-if (!str_contains($complete, 'Testovací objednávka vytvořena') ||
-    str_contains($complete, 'Naskenovat QR platbu') || str_contains($complete, 'Číslo účtu')) {
-    throw new RuntimeException('Test order confirmation must never suggest a bank payment.');
-}
 $gopayData['order'] = ['payment_method' => 'gopay', 'order_number' => 'DB-26-1234567890',
     'payment_status' => 'pending', 'total_czk' => 1099];
 $gopayData['gopayGatewayUrl'] = 'https://gw.sandbox.gopay.com/gw/v3/123?x=a&y=b';

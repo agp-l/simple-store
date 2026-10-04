@@ -10,7 +10,10 @@ use SimpleStore\Accounting\TaxEvidenceRepository;
 // admin.php has already verified the administrator session and form token.
 $screen = 'settings';
 $settingsError = '';
-$settingsTab = ($_GET['tab'] ?? '') === 'mail' ? 'mail' : 'checkout';
+$settingsTabs = ['overview', 'delivery', 'carriers', 'payment', 'prices', 'mail', 'legal'];
+$requestedTab = $_POST['tab'] ?? $_GET['tab'] ?? 'overview';
+$settingsTab = is_string($requestedTab) && in_array($requestedTab, $settingsTabs, true)
+    ? $requestedTab : 'overview';
 $example = require __DIR__ . '/../../config/checkout.example.php';
 $localFile = __DIR__ . '/../../config/checkout.php';
 $fallback = CheckoutSettingsRepository::withDefaults(
@@ -59,7 +62,6 @@ $form = [
     'btcpay_server_url' => $settings['btcpay']['server_url'] ?? '',
     'btcpay_store_id' => $settings['btcpay']['store_id'] ?? '',
     'btcpay_return_base_url' => $settings['btcpay']['return_base_url'] ?? '',
-    'local_test_checkout' => ($settings['local_test_checkout'] ?? true) === true ? '1' : '0',
 ];
 $packetaPasswordConfigured = ($settings['packeta']['api_password'] ?? '') !== '';
 $comgateSecretConfigured = ($settings['comgate']['secret'] ?? '') !== '';
@@ -91,8 +93,8 @@ if ($method === 'POST') {
         if (($_POST['action'] ?? null) !== 'save-checkout-settings') {
             throw new InvalidArgumentException('Neznámá akce nastavení.');
         }
-        $repository->save($_POST, $basePath, $settings);
-        header('Location: ' . $adminUrl . '?section=settings&saved=1', true, 303);
+        $repository->saveSection($settingsTab, $_POST, $basePath, $settings);
+        header('Location: ' . $adminUrl . '?section=settings&tab=' . $settingsTab . '&saved=1', true, 303);
         exit;
     } catch (InvalidArgumentException $exception) {
         http_response_code(422);
@@ -118,7 +120,6 @@ if ($method === 'POST') {
                 $form[$key] = $_POST[$key];
             }
         }
-        $form['local_test_checkout'] = ($_POST['local_test_checkout'] ?? null) === '1' ? '1' : '0';
         $form['btc_prices_enabled'] = ($_POST['btc_prices_enabled'] ?? null) === '1' ? '1' : '0';
         $form['comgate_enabled'] = ($_POST['comgate_enabled'] ?? null) === '1' ? '1' : '0';
         $form['comgate_test'] = ($_POST['comgate_test'] ?? null) === '1' ? '1' : '0';

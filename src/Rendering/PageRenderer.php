@@ -130,7 +130,6 @@ final class PageRenderer
         $invoiceUrl = (string) ($data['invoiceUrl'] ?? '');
         $qrMarkup = (string) ($data['qrMarkup'] ?? '');
         $checkoutReady = (bool) ($data['checkoutReady'] ?? false);
-        $testCheckout = (bool) ($data['testCheckout'] ?? false);
         $compactHeader = (bool) ($data['compactHeader'] ?? false);
         $skipTarget = (string) ($data['skipTarget'] ?? 'produkty');
         require $this->viewPath . '/layout.php';
@@ -148,6 +147,7 @@ final class PageRenderer
         $priceDisplay = $data['priceDisplay'] ?? null;
         $categoryLabels = $data['categoryLabels'] ?? [];
         $canManageContent = (bool) ($data['canManageContent'] ?? false);
+        $adminCsrf = (string) ($data['adminCsrf'] ?? '');
         $managingCatalog = (bool) ($data['managingCatalog'] ?? false);
         $canManageCatalog = (bool) ($data['canManageCatalog'] ?? false);
         $cartToken = (string) ($data['cartToken'] ?? '');

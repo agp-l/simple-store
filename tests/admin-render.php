@@ -377,17 +377,43 @@ $shippingCatalog = \SimpleStore\Checkout\ShippingPolicy::defaults();
 $form = ['shipping_price' => array_fill_keys(array_keys($shippingCatalog), '120'),
     'shipping_enabled' => array_fill_keys(array_keys($shippingCatalog), '1'),
     'account_display' => '123456/0100', 'iban' => '', 'recipient' => 'Test',
-    'payment_due_days' => '7', 'terms_url' => '', 'local_test_checkout' => '1'];
+    'payment_due_days' => '7', 'terms_url' => ''];
+foreach (['overview', 'delivery', 'carriers', 'payment', 'prices', 'legal'] as $settingsTab) {
+    ob_start();
+    require dirname(__DIR__) . '/view/admin/layout.php';
+    $html = ob_get_clean();
+    if (!str_contains($html, 'Nastavení obchodu') ||
+        !str_contains($html, '?section=settings&amp;tab=' . $settingsTab) ||
+        str_contains($html, 'local_test_checkout') ||
+        ($settingsTab === 'overview' && !str_contains($html, 'panel-settings-overview')) ||
+        ($settingsTab !== 'overview' && !str_contains($html, 'value="save-checkout-settings"'))) {
+        throw new RuntimeException('Separate settings page is missing: ' . $settingsTab);
+    }
+    if ($settingsTab === 'delivery' && !str_contains($html, 'name="shipping_price[gls_pickup]"') ||
+        $settingsTab === 'carriers' && !str_contains($html, 'name="packeta_sender"') ||
+        $settingsTab === 'payment' && !str_contains($html, 'value="123456/0100"') ||
+        $settingsTab === 'prices' && !str_contains($html, 'name="btc_prices_enabled"') ||
+        $settingsTab === 'legal' && !str_contains($html, 'name="terms_url"')) {
+        throw new RuntimeException('Settings fields are on the wrong page: ' . $settingsTab);
+    }
+}
+
+$screen = 'editor';
+$filterSearch = $filterStatus = $filterLanguage = '';
+$documents = [['document_key' => str_repeat('a', 32), 'language' => 'cs',
+    'slug' => 'o-nas', 'title' => 'O nás', 'published' => 1,
+    'visible_in_menu' => 1, 'revision_number' => 3]];
+$translations = [str_repeat('a', 32) => ['cs']];
+$previousUrl = $nextUrl = '';
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
-if (!str_contains($html, 'Nastavení obchodu') ||
-    !str_contains($html, 'value="save-checkout-settings"') ||
-    !str_contains($html, 'value="123456/0100"') ||
-    !str_contains($html, 'Označení odesílatele (hodnota pro API pole eshop)') ||
-    !str_contains($html, 'name="shipping_price[gls_pickup]"') ||
-    !str_contains($html, 'name="csrf" value="test-token"')) {
-    throw new RuntimeException('Authenticated checkout settings form is missing.');
+if (!str_contains($html, '✎ Upravit') || !str_contains($html, '▣ Smazat') ||
+    !str_contains($html, 'name="action" value="delete-content"') ||
+    !str_contains($html, 'name="revision" value="3"') ||
+    !str_contains($html, 'name="type" value="page"') ||
+    str_contains($html, 'Stránky a články')) {
+    throw new RuntimeException('Page administration must expose edit and confirmed deletion without duplicating blog posts.');
 }
 
 $screen = 'users';

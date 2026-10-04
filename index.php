@@ -7,7 +7,6 @@ use SimpleStore\Checkout\CartService;
 use SimpleStore\Checkout\CartSession;
 use SimpleStore\Checkout\CheckoutController;
 use SimpleStore\Checkout\OrderRepository;
-use SimpleStore\Checkout\LocalCheckoutPreview;
 use SimpleStore\Checkout\CheckoutSettingsRepository;
 use SimpleStore\Checkout\ComgatePaymentService;
 use SimpleStore\Checkout\GoPayPaymentService;
@@ -142,8 +141,6 @@ try {
             $candidate = new BTCPayPaymentService($db, $btcpaySettings);
             if ($candidate->installed()) $btcpay = $candidate;
         }
-        $localPreview = LocalCheckoutPreview::available($_SERVER, (bool) $site['debug'],
-            ($checkoutConfig['local_test_checkout'] ?? true) === true);
         $customerId = null;
         $customerProfile = [];
         $customerAddresses = [];
@@ -165,7 +162,7 @@ try {
         $controller = new CheckoutController($url, $renderer, $shared, $cart,
             new CartService(new ProductRepository($db, $site['languages'], null, 50, $productStock), $site['languages']),
             $shipping, $orders, $bank, $customerId, (string) ($checkoutConfig['terms_url'] ?? ''),
-            $localPreview, $customerProfile, $customerAddresses, $packeta, $ppl, null, null,
+            $customerProfile, $customerAddresses, $packeta, $ppl, null, null,
             new OrderMailQueue($db), (string) ($taxSettings['mail_from'] ?? ''),
             new InvoiceRepository($db), $comgate, $gopay, $btcpay);
         $controller->handle($route);
@@ -384,6 +381,7 @@ try {
             'offset' => $batch['nextOffset'],
         ]);
         $shared['canManageContent'] = $canEdit;
+        $shared['adminCsrf'] = $canEdit ? $auth->token() : '';
         if (($_GET['partial'] ?? '') === '1') {
             header('Content-Type: application/json; charset=utf-8');
             echo json_encode([
@@ -395,7 +393,6 @@ try {
         $renderer->render('blog', $shared + [
             'title' => $managingBlog ? 'Správa blogu — dobrodruzi.cz' : 'Blog — dobrodruzi.cz',
             'posts' => $batch['items'], 'nextUrl' => $nextUrl,
-            'canManageContent' => $canEdit, 'adminCsrf' => $canEdit ? $auth->token() : '',
             'draftPosts' => $draftBatch['items'],
             'draftNextUrl' => $draftBatch['nextOffset'] === null ? '' : $url->path('blog') . '?manage=1&draft_offset=' . $draftBatch['nextOffset'],
             'managingBlog' => $managingBlog, 'privatePage' => $managingBlog,

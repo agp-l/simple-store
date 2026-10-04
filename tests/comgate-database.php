@@ -64,7 +64,7 @@ $shipping = [
 ];
 $orders = new OrderRepository($db);
 $order = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
-    bin2hex(random_bytes(32)), false, 'comgate');
+    bin2hex(random_bytes(32)), 'comgate');
 expectComgate((int) $order['total_czk'] === 1079 && $order['payment_method'] === 'comgate' &&
     $order['payment_status'] === 'pending' && $order['payment_details'] === [] &&
     $order['payment_due_at'] === null,
@@ -141,7 +141,7 @@ expectComgate(!$disabled->canInitiate() &&
     'Disabling new payments blocked reconciliation of an existing transaction.');
 
 $uncertainOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
-    bin2hex(random_bytes(32)), false, 'comgate');
+    bin2hex(random_bytes(32)), 'comgate');
 $attempts = 0;
 $brokenClient = new ComgateApiClient($settings['merchant'], $settings['secret'],
     static function () use (&$attempts): array {
@@ -163,7 +163,7 @@ expectComgate($orders->findById((int) $uncertainOrder['id'])['payment_status'] =
     'Ambiguous request changed the order to paid.');
 
 $cancelOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
-    bin2hex(random_bytes(32)), false, 'comgate');
+    bin2hex(random_bytes(32)), 'comgate');
 $retryIds = [
     'CZ-CANCEL-' . strtoupper(bin2hex(random_bytes(5))),
     'CZ-RETRY-' . strtoupper(bin2hex(random_bytes(5))),
@@ -202,7 +202,7 @@ expectComgate($retryCalls === 2 &&
 
 // Removing an order cannot make a later, authenticated payment disappear.
 $deletedOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
-    bin2hex(random_bytes(32)), false, 'comgate');
+    bin2hex(random_bytes(32)), 'comgate');
 $deletedTransId = 'CZ-LATE-' . strtoupper(bin2hex(random_bytes(6)));
 $latePrice = 107900;
 $deletedClient = new ComgateApiClient($settings['merchant'], $settings['secret'],

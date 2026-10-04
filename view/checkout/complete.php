@@ -6,7 +6,7 @@ $paymentAmount = (int) ($bankPayment['amount_czk'] ?? $order['total_czk'] ?? 0);
 $qrPayload = (string) ($bankPayment['spayd'] ?? '');
 $qrReady = str_starts_with($qrPayload, 'SPD*1.0*') && strlen($qrPayload) <= 512 && !preg_match('/[\x00-\x1F\x7F]/', $qrPayload);
 $paymentPaid = ($order['payment_status'] ?? '') === 'paid';
-$testOrder = ($order['payment_method'] ?? '') === 'test';
+$testOrder = ($order['payment_method'] ?? '') === 'test'; // Historical orders only.
 $comgateOrder = ($order['payment_method'] ?? '') === 'comgate';
 $gopayOrder = ($order['payment_method'] ?? '') === 'gopay';
 $btcpayOrder = ($order['payment_method'] ?? '') === 'btcpay';

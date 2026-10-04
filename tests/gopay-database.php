@@ -92,7 +92,7 @@ $shipping = [
 ];
 $orders = new OrderRepository($db);
 $order = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
-    bin2hex(random_bytes(32)), false, 'gopay');
+    bin2hex(random_bytes(32)), 'gopay');
 expectGoPay((int) $order['total_czk'] === 1079 && $order['payment_method'] === 'gopay' &&
     $order['payment_status'] === 'pending' && $order['payment_details'] === [] &&
     $order['payment_due_at'] === null,
@@ -249,7 +249,7 @@ expectGoPay(!$disabled->canInitiate() &&
     'Disabling new GoPay payments blocked reconciliation of existing transactions.');
 
 $invoiceRefundOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
-    bin2hex(random_bytes(32)), false, 'gopay');
+    bin2hex(random_bytes(32)), 'gopay');
 $invoiceRefundId = (string) random_int(100000000000, 999999999999);
 $invoiceRefundState = 'PAID';
 $invoiceRefundClient = new GoPayApiClient('8123456789', 'fake-client-id', 'fake-client-secret', true,
@@ -287,7 +287,7 @@ expectGoPay($invoiceRejected && $invoices->byOrder((int) $invoiceRefundOrder['id
     'A new invoice was issued for a GoPay payment already refunded in full.');
 
 $refundOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
-    bin2hex(random_bytes(32)), false, 'gopay');
+    bin2hex(random_bytes(32)), 'gopay');
 $refundId = (string) random_int(100000000000, 999999999999);
 $refundClient = new GoPayApiClient('8123456789', 'fake-client-id', 'fake-client-secret', true,
     static function (string $operation, $argument) use ($refundId, $refundOrder): array {
@@ -312,7 +312,7 @@ expectGoPay($orders->findById((int) $refundOrder['id'])['payment_status'] === 'p
     'A refund without any verified PAID transition incorrectly settled the order.');
 
 $uncertainOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
-    bin2hex(random_bytes(32)), false, 'gopay');
+    bin2hex(random_bytes(32)), 'gopay');
 $attempts = 0;
 $brokenClient = new GoPayApiClient('8123456789', 'fake-client-id', 'fake-client-secret', true,
     static function () use (&$attempts): array {
@@ -332,7 +332,7 @@ foreach ([1, 2] as $iteration) {
 }
 
 $cancelOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
-    bin2hex(random_bytes(32)), false, 'gopay');
+    bin2hex(random_bytes(32)), 'gopay');
 $firstRetryId = random_int(100000000000, 999999999998);
 $retryIds = [(string) $firstRetryId, (string) ($firstRetryId + 1)];
 $retryStates = [$retryIds[0] => 'CANCELED', $retryIds[1] => 'CREATED'];
@@ -384,7 +384,7 @@ expectGoPay($doubleChargeDetected &&
 
 // Provider state remains verifiable after an admin removes the original order.
 $deletedOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
-    bin2hex(random_bytes(32)), false, 'gopay');
+    bin2hex(random_bytes(32)), 'gopay');
 $deletedPaymentId = (string) random_int(100000000000, 999999999999);
 $lateState = 'PAID';
 $lateAmount = 107900;

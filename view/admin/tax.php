@@ -19,6 +19,19 @@ $balanceKind = ['receivable'=>'Pohledávka', 'liability'=>'Dluh', 'asset'=>'Maje
 </form>
 <?php if ($taxReady): ?>
   <?php if ($accountingTab === 'overview'): ?>
+    <div class="panel-settings-overview panel-accounting-overview">
+      <?php foreach ([
+          ['money', 'Peněžní deník', 'Zapisovat příjmy a výdaje podle bankovního výpisu a pokladny.'],
+          ['balances', 'Majetek a dluhy', 'Pohlídat pohledávky, závazky a majetek.'],
+          ['stock', 'Sklad a prodeje', 'Zásoby, přijaté kusy a přehled prodaného zboží.'],
+          ['invoices', 'Faktury', 'Vystavené doklady a jejich číslování.'],
+          ['orders', 'Platby objednávek', 'Potvrzené platby a export podkladů.'],
+          ['mail', 'E-mailová fronta', 'Zprávy zákazníkům a opakování odeslání.'],
+          ['settings', 'Údaje OSVČ', 'Identifikace podnikatele pro vystavené doklady.'],
+      ] as [$tab, $label, $description]): ?>
+        <a class="panel-settings-card" href="<?= $escape($taxUrl . '&tab=' . $tab . '&year=' . $taxYear) ?>"><strong><?= $escape($label) ?> →</strong><span><?= $escape($description) ?></span></a>
+      <?php endforeach; ?>
+    </div>
     <section class="panel-panel">
       <h2>Souhrn peněžního deníku <?= (int) $taxYear ?></h2>
       <dl class="panel-order-facts">

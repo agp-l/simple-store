@@ -47,7 +47,7 @@ $controller = new CheckoutController($url, $renderer,
     new CartService(new ProductRepository($db), ['cs']),
     new ShippingPolicy(['home' => ['label' => 'Doručení na adresu',
         'price_czk' => 99, 'requires_address' => true]]),
-    new OrderRepository($db, $bank), $bank, null, '', false);
+    new OrderRepository($db, $bank), $bank, null, '');
 $_SERVER['REQUEST_METHOD'] = 'GET';
 $_GET['step'] = 'payment';
 ob_start();
@@ -59,20 +59,6 @@ if (!str_contains($html, 'Bankovní převod') ||
     str_contains($html, 'Bankovní převod není nastavený')) {
     throw new RuntimeException('Real bank transfer must be available when test mode is off and terms are unset.');
 }
-$previewEnabled = new CheckoutController($url, $renderer,
-    ['basePath' => '/simple-store/', 'language' => 'cs'], $cart,
-    new CartService(new ProductRepository($db), ['cs']),
-    new ShippingPolicy(['home' => ['label' => 'Doručení na adresu',
-        'price_czk' => 99, 'requires_address' => true]]),
-    new OrderRepository($db, $bank), $bank, null, '', true);
-ob_start();
-$previewEnabled->handle(['name' => 'checkout']);
-$html = ob_get_clean();
-if (!str_contains($html, 'Zkontrolovat objednávku') ||
-    str_contains($html, 'Testovací objednávka')) {
-    throw new RuntimeException('Local preview must not replace a configured bank transfer.');
-}
-
 $methods = new ShippingPolicy(ShippingPolicy::defaults());
 $withoutKey = new CheckoutController($url, $renderer,
     ['basePath' => '/simple-store/', 'language' => 'cs'], $cart,
@@ -92,7 +78,7 @@ if (!str_contains($html, 'value="zasilkovna_pickup"') ||
 $withKey = new CheckoutController($url, $renderer,
     ['basePath' => '/simple-store/', 'language' => 'cs'], $cart,
     new CartService(new ProductRepository($db), ['cs']),
-    $methods, new OrderRepository($db, $bank), $bank, null, '', false, [], [],
+    $methods, new OrderRepository($db, $bank), $bank, null, '', [], [],
     new PacketaPickupPoint('ABCDEF1234567890'));
 ob_start();
 $withKey->handle(['name' => 'checkout']);
@@ -109,7 +95,7 @@ $_POST = ['method' => 'zasilkovna_pickup', 'name' => 'Eva Nová',
 $verified = new CheckoutController($url, $renderer,
     ['basePath' => '/simple-store/', 'language' => 'cs'], $cart,
     new CartService(new ProductRepository($db), ['cs']),
-    $methods, new OrderRepository($db, $bank), $bank, null, '', false, [], [],
+    $methods, new OrderRepository($db, $bank), $bank, null, '', [], [],
     new PacketaPickupPoint('ABCDEF1234567890', static fn (): array => [
         'status' => 200, 'body' => '{"isValid":true,"point":{"name":"Praha Hl. nádraží","address":{"street":"Wilsonova 1","city":"Praha","zip":"110 00","country":"cz"}}}',
     ]));
@@ -150,7 +136,7 @@ $_POST = ['method' => 'ppl_pickup', 'name' => 'Eva Nová',
 $pplCheckout = new CheckoutController($url, $renderer,
     ['basePath' => '/simple-store/', 'language' => 'cs'], $cart,
     new CartService(new ProductRepository($db), ['cs']),
-    $methods, new OrderRepository($db, $bank), $bank, null, '', false, [], [], null, $ppl);
+    $methods, new OrderRepository($db, $bank), $bank, null, '', [], [], null, $ppl);
 $saveDelivery->invoke($pplCheckout);
 $delivery = $cart->state()['delivery'];
 if ($delivery['pickup_code'] !== 'KM1234567' ||

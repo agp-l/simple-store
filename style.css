@@ -1310,6 +1310,11 @@
 
 /* On-page editing appears only in authenticated previews. */
 .inline-entry a { display:inline-flex; margin-bottom:14px; color:var(--forest-dark); font-weight:700; }
+.inline-entry { display:flex; flex-wrap:wrap; align-items:start; gap:10px 18px; }
+.inline-blog-delete { position:relative; margin-bottom:14px; color:#813e2c; font-size:13px; }
+.inline-blog-delete summary { cursor:pointer; font-weight:700; }
+.inline-blog-delete form { display:grid; gap:10px; margin-top:10px; padding:12px; border:1px solid #e1d3c6; border-radius:5px; background:#fff9f3; }
+.inline-blog-delete label { display:flex; align-items:center; gap:7px; }
 .inline-delete-product { margin:0 0 18px; padding:10px 14px; border:1px solid #e1d3c6; border-radius:5px; background:#fff9f3; color:#56321f; font-size:13px; }
 .inline-delete-product summary { cursor:pointer; font-weight:700; }
 .inline-delete-product p { margin:12px 0; }

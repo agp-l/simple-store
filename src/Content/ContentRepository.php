@@ -44,7 +44,7 @@ final class ContentRepository
             throw new InvalidArgumentException('Invalid blog page.');
         }
         $rows = $this->db->query(
-            'SELECT document_key, language, slug, title, summary, body, saved_at
+            'SELECT document_key, language, slug, title, summary, body, saved_at, revision_number
              FROM content_revisions WHERE type=%s AND language=%s
              AND active_document_key IS NOT NULL AND published=1
              ORDER BY id DESC LIMIT %i OFFSET %i',
@@ -61,7 +61,7 @@ final class ContentRepository
             throw new InvalidArgumentException('Invalid draft page.');
         }
         $rows = $this->db->query(
-            'SELECT document_key, language, slug, title, saved_at
+            'SELECT document_key, language, slug, title, saved_at, revision_number
              FROM content_revisions WHERE type=%s AND language=%s
              AND active_document_key IS NOT NULL AND published=0
              ORDER BY id DESC LIMIT %i OFFSET %i',

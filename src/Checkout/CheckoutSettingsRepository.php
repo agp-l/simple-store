@@ -15,6 +15,7 @@ final class CheckoutSettingsRepository
 
     public static function withDefaults(array $local, array $example): array
     {
+        unset($local['local_test_checkout']);
         $local['btc_prices_enabled'] = is_bool($local['btc_prices_enabled'] ?? null)
             ? $local['btc_prices_enabled'] : ($example['btc_prices_enabled'] ?? true);
         $local['shipping_methods'] = self::normalizedMethods($local['shipping_methods'] ?? [],
@@ -61,10 +62,75 @@ final class CheckoutSettingsRepository
         if (!is_array($saved)) {
             throw new InvalidArgumentException('Uložené nastavení objednávek není platné.');
         }
+        unset($saved['local_test_checkout']);
         $result = array_replace_recursive($fallback, $saved);
         $result['shipping_methods'] = self::normalizedMethods($saved['shipping_methods'] ?? [],
             $fallback['shipping_methods']);
         return $result;
+    }
+
+    /** Save one administration page without resetting values owned by the other pages. */
+    public function saveSection(string $section, array $input, string $basePath, array $current): array
+    {
+        $fields = [
+            'delivery' => ['shipping_price', 'shipping_enabled'],
+            'carriers' => ['packeta_api_key', 'ppl_widget_key', 'packeta_sender',
+                'packeta_api_password', 'packeta_clear_password'],
+            'payment' => ['account_display', 'iban', 'recipient', 'payment_due_days',
+                'comgate_enabled', 'comgate_test', 'comgate_merchant', 'comgate_return_base_url',
+                'comgate_secret', 'comgate_clear_secret', 'gopay_enabled', 'gopay_test',
+                'gopay_goid', 'gopay_client_id', 'gopay_return_base_url', 'gopay_client_secret',
+                'gopay_clear_secret', 'btcpay_enabled', 'btcpay_server_url', 'btcpay_store_id',
+                'btcpay_return_base_url', 'btcpay_api_key', 'btcpay_clear_api_key',
+                'btcpay_webhook_secret', 'btcpay_clear_webhook_secret'],
+            'prices' => ['btc_prices_enabled'],
+            'legal' => ['terms_url'],
+        ];
+        if (!isset($fields[$section])) {
+            throw new InvalidArgumentException('Neznámá část nastavení obchodu.');
+        }
+        $values = [
+            'shipping_price' => [], 'shipping_enabled' => [],
+            'btc_prices_enabled' => !empty($current['btc_prices_enabled']) ? '1' : '0',
+            'account_display' => (string) ($current['bank_transfer']['account_display'] ?? ''),
+            'iban' => (string) ($current['bank_transfer']['iban'] ?? ''),
+            'recipient' => (string) ($current['bank_transfer']['recipient'] ?? ''),
+            'payment_due_days' => (string) ($current['bank_transfer']['payment_due_days'] ?? 7),
+            'terms_url' => (string) ($current['terms_url'] ?? ''),
+            'packeta_api_key' => (string) ($current['packeta']['api_key'] ?? ''),
+            'ppl_widget_key' => (string) ($current['ppl']['widget_key'] ?? ''),
+            'packeta_sender' => (string) ($current['packeta']['sender'] ?? ''),
+            'comgate_enabled' => !empty($current['comgate']['enabled']) ? '1' : '0',
+            'comgate_test' => !empty($current['comgate']['test']) ? '1' : '0',
+            'comgate_merchant' => (string) ($current['comgate']['merchant'] ?? ''),
+            'comgate_return_base_url' => (string) ($current['comgate']['return_base_url'] ?? ''),
+            'gopay_enabled' => !empty($current['gopay']['enabled']) ? '1' : '0',
+            'gopay_test' => !empty($current['gopay']['test']) ? '1' : '0',
+            'gopay_goid' => (string) ($current['gopay']['goid'] ?? ''),
+            'gopay_client_id' => (string) ($current['gopay']['client_id'] ?? ''),
+            'gopay_return_base_url' => (string) ($current['gopay']['return_base_url'] ?? ''),
+            'btcpay_enabled' => !empty($current['btcpay']['enabled']) ? '1' : '0',
+            'btcpay_server_url' => (string) ($current['btcpay']['server_url'] ?? ''),
+            'btcpay_store_id' => (string) ($current['btcpay']['store_id'] ?? ''),
+            'btcpay_return_base_url' => (string) ($current['btcpay']['return_base_url'] ?? ''),
+            'packeta_api_password' => '', 'comgate_secret' => '',
+            'gopay_client_secret' => '', 'btcpay_api_key' => '', 'btcpay_webhook_secret' => '',
+        ];
+        foreach (ShippingPolicy::defaults() as $code => $method) {
+            $values['shipping_price'][$code] = (string) ($current['shipping_methods'][$code]['price_czk'] ?? $method['price_czk']);
+            $values['shipping_enabled'][$code] = !empty($current['shipping_methods'][$code]['enabled']) ? '1' : '0';
+        }
+        foreach ($fields[$section] as $field) {
+            if ($field === 'shipping_enabled' || $field === 'shipping_price') {
+                $values[$field] = $input[$field] ?? [];
+            } elseif (in_array($field, ['btc_prices_enabled', 'comgate_enabled', 'comgate_test',
+                'gopay_enabled', 'gopay_test', 'btcpay_enabled'], true)) {
+                $values[$field] = ($input[$field] ?? null) === '1' ? '1' : '0';
+            } else {
+                $values[$field] = $input[$field] ?? '';
+            }
+        }
+        return $this->save($values, $basePath, $current);
     }
 
     public function save(array $input, string $basePath, array $current = []): array
@@ -221,7 +287,6 @@ final class CheckoutSettingsRepository
                 'return_base_url' => $btcpayReturnBaseUrl,
             ],
             'terms_url' => $termsUrl,
-            'local_test_checkout' => ($input['local_test_checkout'] ?? null) === '1',
         ];
         $this->ensureTable();
         $json = json_encode($settings, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);

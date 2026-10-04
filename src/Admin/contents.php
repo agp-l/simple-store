@@ -54,14 +54,18 @@ if (isset($_GET['key'])) {
     exit;
 }
 
+if (($_GET['type'] ?? '') === 'post') {
+    header('Location: ' . $basePath . $site['default_language'] . '/blog?manage=1', true, 303);
+    exit;
+}
+
 $filterLanguage = $_GET['language'] ?? '';
-$filterType = $_GET['type'] ?? '';
+$filterType = 'page';
 $filterStatus = $_GET['status'] ?? '';
 $filterSearch = $_GET['q'] ?? '';
 $rawOffset = $_GET['offset'] ?? '0';
 $offset = filter_var($rawOffset, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 100000]]);
 if (!is_string($filterLanguage) || ($filterLanguage !== '' && !in_array($filterLanguage, $site['languages'], true)) ||
-    !is_string($filterType) || !in_array($filterType, ['', 'page', 'post'], true) ||
     !is_string($filterStatus) || !in_array($filterStatus, ['', 'draft', 'published'], true) ||
     !is_string($filterSearch) || strlen($filterSearch) > 200 || $offset === false) {
     throw new InvalidArgumentException('Neplatný filtr obsahu.');
@@ -70,7 +74,7 @@ $filterSearch = trim($filterSearch);
 $pageSize = 24;
 $page = $content->managementPage(
     $filterLanguage === '' ? null : $filterLanguage,
-    $filterType === '' ? null : $filterType,
+    'page',
     $filterStatus === '' ? null : $filterStatus === 'published',
     $filterSearch, $offset, $pageSize
 );

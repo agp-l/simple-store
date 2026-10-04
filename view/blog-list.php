@@ -23,6 +23,7 @@
               <div class="inline-revision">
                 <span><?= htmlspecialchars($draft['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span>
                 <a class="inline-small" href="<?= htmlspecialchars($siteRoot . $language . '/blog/' . rawurlencode($draft['slug']) . '?edit=1', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">Upravit koncept</a>
+                <?php $deletablePost = $draft; $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8'); require __DIR__ . '/blog-delete.php'; ?>
               </div>
             <?php endforeach; ?>
             <?php if ($draftNextUrl !== ''): ?><p><a href="<?= htmlspecialchars($draftNextUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">Další koncepty →</a></p><?php endif; ?>

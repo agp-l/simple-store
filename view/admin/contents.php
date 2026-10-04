@@ -1,27 +1,21 @@
       <div class="panel-intro">
-        <div><p class="panel-eyebrow">Obsah webu</p><h1>Stránky a koncepty</h1>
-          <p>Vyhledej obsah a otevři jeho skutečnou stránku k úpravě. Nový obsah zakládej přímo na webu.</p></div>
+        <div><p class="panel-eyebrow">Obsah webu</p><h1>Stránky</h1>
+          <p>Spravuj publikované stránky i koncepty. Články a jejich rozpracované verze najdeš přímo v blogu.</p></div>
         <div class="panel-quick">
+          <form method="post" action="<?= $escape($adminUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="create-content"><input type="hidden" name="type" value="page"><input type="hidden" name="language" value="<?= $escape($site['default_language']) ?>"><button class="panel-button" type="submit">＋ Nová stránka</button></form>
           <a href="<?= $escape($basePath . $site['default_language']) ?>">Na web ↗</a>
           <a href="<?= $escape($basePath . $site['default_language'] . '/blog') ?>">Blog ↗</a>
         </div>
       </div>
       <section class="panel-panel panel-list" aria-labelledby="panel-list-title">
         <?php if (($_GET['deleted'] ?? '') === '1'): ?><p role="status">Stránka byla odstraněna.</p><?php endif; ?>
-        <h2 id="panel-list-title">Najít stránku nebo článek</h2>
+        <h2 id="panel-list-title">Najít stránku</h2>
         <form class="panel-form" method="get" action="<?= $escape($adminUrl) ?>">
           <input type="hidden" name="section" value="contents">
           <label>Hledat podle názvu nebo adresy
             <input name="q" type="search" maxlength="200" value="<?= $escape($filterSearch) ?>" placeholder="Název nebo část adresy">
           </label>
           <div class="panel-fields-two">
-            <label>Typ
-              <select name="type">
-                <option value="" <?= $filterType === '' ? 'selected' : '' ?>>Stránky i články</option>
-                <option value="page" <?= $filterType === 'page' ? 'selected' : '' ?>>Stránky</option>
-                <option value="post" <?= $filterType === 'post' ? 'selected' : '' ?>>Články</option>
-              </select>
-            </label>
             <label>Stav
               <select name="status">
                 <option value="" <?= $filterStatus === '' ? 'selected' : '' ?>>Vše</option>
@@ -42,14 +36,32 @@
             <a href="<?= $escape($adminUrl . '?section=contents') ?>">Zrušit filtry</a></div>
         </form>
         <h2>Výsledky <span><?= count($documents) ?> na stránce</span></h2>
-        <?php if ($documents === []): ?><p class="panel-empty">Žádný obsah neodpovídá filtrům.</p><?php endif; ?>
+        <?php if ($documents === []): ?><p class="panel-empty">Žádná stránka neodpovídá filtrům.</p><?php endif; ?>
         <?php foreach ($documents as $document): ?>
-          <?php $link = $basePath . $document['language'] . ($document['type'] === 'post' ? '/blog' : '') . '/' . rawurlencode($document['slug']) . '?edit=1'; ?>
-          <a class="panel-document" href="<?= $escape($link) ?>">
-            <strong><?= $escape($document['title']) ?> ↗</strong>
-            <span><?= $document['type'] === 'post' ? 'Článek' : 'Stránka' ?> · <?= $escape($document['language']) ?> · <?= $escape($document['slug']) ?></span>
-            <small><?= $document['published'] ? 'Publikováno' : 'Koncept' ?><?= $document['type'] === 'page' && $document['published'] && empty($document['visible_in_menu']) ? ' · mimo menu' : '' ?> · revize <?= (int) $document['revision_number'] ?></small>
-          </a>
+          <?php $link = $basePath . $document['language'] . '/' . rawurlencode($document['slug']) . '?edit=1'; ?>
+          <div class="panel-document-row">
+            <div class="panel-document">
+              <strong><?= $escape($document['title']) ?></strong>
+              <span><?= $escape($document['language']) ?> · /<?= $escape($document['slug']) ?></span>
+              <small><?= $document['published'] ? 'Publikováno' : 'Koncept' ?><?= $document['published'] && empty($document['visible_in_menu']) ? ' · mimo menu' : '' ?> · revize <?= (int) $document['revision_number'] ?></small>
+            </div>
+            <div class="panel-document-actions">
+              <a class="panel-button" href="<?= $escape($link) ?>" aria-label="Upravit <?= $escape($document['title']) ?>">✎ Upravit</a>
+              <details class="panel-document-delete"><summary aria-label="Smazat <?= $escape($document['title']) ?>">▣ Smazat</summary>
+                <form method="post" action="<?= $escape($adminUrl) ?>">
+                  <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
+                  <input type="hidden" name="action" value="delete-content">
+                  <input type="hidden" name="type" value="page">
+                  <input type="hidden" name="key" value="<?= $escape($document['document_key']) ?>">
+                  <input type="hidden" name="language" value="<?= $escape($document['language']) ?>">
+                  <input type="hidden" name="revision" value="<?= (int) $document['revision_number'] ?>">
+                  <p>Odstranit tuto stránku a její aktuální verzi?</p>
+                  <label class="panel-check"><input type="checkbox" name="confirm" value="1" required> Potvrzuji smazání stránky</label>
+                  <button type="submit" class="panel-button">Smazat stránku</button>
+                </form>
+              </details>
+            </div>
+          </div>
           <?php $missingLanguages = array_values(array_diff($site['languages'], $translations[$document['document_key']] ?? [])); ?>
           <?php if ($missingLanguages !== []): ?>
             <form class="panel-translate" method="post" action="<?= $escape($adminUrl) ?>">

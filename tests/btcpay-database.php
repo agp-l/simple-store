@@ -86,7 +86,7 @@ $shipping = [
     'postal_code' => '11000', 'country' => 'CZ',
 ];
 $order = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
-    bin2hex(random_bytes(32)), false, 'btcpay');
+    bin2hex(random_bytes(32)), 'btcpay');
 expectBTCPay((int) $order['total_czk'] === 1079 && $order['payment_status'] === 'pending' &&
     $order['payment_method'] === 'btcpay' && $order['payment_details'] === [] &&
     $order['payment_due_at'] === null,
@@ -189,7 +189,7 @@ expectBTCPay(!$disabled->canInitiate() &&
 
 // A timed-out POST might have created an invoice at BTCPay; never silently retry it.
 $uncertainOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
-    bin2hex(random_bytes(32)), false, 'btcpay');
+    bin2hex(random_bytes(32)), 'btcpay');
 $createCalls = 0;
 $brokenClient = new BTCPayApiClient($settings['server_url'], $settings['store_id'], $settings['api_key'],
     static function () use (&$createCalls): array {
@@ -210,7 +210,7 @@ for ($attempt = 0; $attempt < 2; $attempt++) {
 
 // If an administrator removes an order, a later settlement must remain visible exactly once.
 $detachedOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
-    bin2hex(random_bytes(32)), false, 'btcpay');
+    bin2hex(random_bytes(32)), 'btcpay');
 $detachedInvoiceId = bin2hex(random_bytes(11));
 $detachedReference = $detachedOrder['order_number'];
 $detachedClient = new BTCPayApiClient($settings['server_url'], $settings['store_id'], $settings['api_key'],

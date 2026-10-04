@@ -4,13 +4,6 @@ $mailForm = $mailConfiguration['settings'];
 $mailTemplates = $mailConfiguration['templates'];
 $mailSettingsUrl = $adminUrl . '?section=settings&tab=mail';
 ?>
-<nav class="panel-settings-nav" aria-label="Části nastavení">
-  <a href="<?= $escape($adminUrl . '?section=settings') ?>#settings-delivery">Doprava</a>
-  <a href="<?= $escape($adminUrl . '?section=settings') ?>#settings-payment">Platby</a>
-  <a href="<?= $escape($adminUrl . '?section=settings') ?>#settings-prices">Ceny</a>
-  <a href="<?= $escape($mailSettingsUrl) ?>" aria-current="page">E-maily</a>
-  <a href="<?= $escape($adminUrl . '?section=accounting&tab=mail') ?>">Fronta zpráv</a>
-</nav>
 <?php if (!$mailSettingsReady): ?><p class="panel-notice">Nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>. Původní potvrzení objednávky a faktury nadále používají odesílatele z údajů OSVČ.</p><?php endif; ?>
 <?php if (($_GET['test'] ?? '') === 'sent'): ?><p class="panel-notice" role="status">Poštovní server test přijal. Doručení ověř v cílové schránce.</p><?php elseif (($_GET['test'] ?? '') === 'failed'): ?><p class="panel-error" role="alert">Poštovní server test nepřijal. Zpráva je uložená ve frontě k opakování.</p><?php endif; ?>
 <form class="panel-form panel-settings-form" method="post" action="<?= $escape($mailSettingsUrl) ?>">

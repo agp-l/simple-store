@@ -33,7 +33,6 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 
 use SimpleStore\Checkout\BankTransferPayment;
 use SimpleStore\Checkout\CheckoutSettingsRepository;
-use SimpleStore\Checkout\LocalCheckoutPreview;
 use SimpleStore\Checkout\ShippingPolicy;
 
 $example = require dirname(__DIR__) . '/config/checkout.example.php';
@@ -78,7 +77,7 @@ $input = ['shipping_price' => array_map('strval', array_column(ShippingPolicy::d
     'btcpay_webhook_secret' => 'btcpay-test-webhook-secret',
     'btcpay_return_base_url' => 'https://obchod.example/simple-store/',
     'btc_prices_enabled' => '1',
-    'local_test_checkout' => '1'];
+];
 $input['shipping_price'] = array_combine(array_keys(ShippingPolicy::defaults()),
     array_values($input['shipping_price']));
 $input['shipping_price']['ppl_home'] = '120';
@@ -226,12 +225,34 @@ if (count($migrated['shipping_methods']) !== 9 ||
     $migrated['shipping_methods']['ppl_home']['price_czk'] !== 149) {
     throw new RuntimeException('Older saved courier price was not preserved.');
 }
-$local = ['REMOTE_ADDR' => '127.0.0.1', 'HTTP_HOST' => 'localhost:8080'];
-if (!LocalCheckoutPreview::available($local, true) ||
-    LocalCheckoutPreview::available($local, false) ||
-    LocalCheckoutPreview::available($local, true, false) ||
-    LocalCheckoutPreview::available(['REMOTE_ADDR' => '203.0.113.1', 'HTTP_HOST' => 'localhost'], true) ||
-    LocalCheckoutPreview::available(['REMOTE_ADDR' => '127.0.0.1', 'HTTP_HOST' => 'eshop.example'], true)) {
-    throw new RuntimeException('Local test orders must be limited to development on localhost.');
+// Each settings page updates its own fields while preserving unrelated values and secrets.
+$section = $repo->saveSection('delivery',
+    ['shipping_price' => array_fill_keys(array_keys(ShippingPolicy::defaults()), '81'),
+        'shipping_enabled' => array_fill_keys(array_keys(ShippingPolicy::defaults()), '1')],
+    '/simple-store/', $saved);
+if ($section['shipping_methods']['gls_pickup']['price_czk'] !== 81 ||
+    $section['bank_transfer'] !== $saved['bank_transfer'] ||
+    $section['packeta'] !== $saved['packeta'] ||
+    $section['comgate'] !== $saved['comgate']) {
+    throw new RuntimeException('Delivery settings overwrote unrelated configuration.');
+}
+$payment = $repo->saveSection('payment', ['account_display' => '1265098001/5500',
+    'iban' => '', 'recipient' => 'Test', 'payment_due_days' => '10',
+    'comgate_merchant' => 'test-merchant', 'comgate_return_base_url' => 'https://obchod.example/simple-store/',
+    'gopay_goid' => '1234567890', 'gopay_client_id' => 'sandbox-client',
+    'gopay_return_base_url' => 'https://obchod.example/simple-store/',
+    'btcpay_server_url' => 'https://btcpay.example/pay/',
+    'btcpay_store_id' => 'TestStore123',
+    'btcpay_return_base_url' => 'https://obchod.example/simple-store/'],
+    '/simple-store/', $section);
+if ($payment['comgate']['enabled'] || $payment['gopay']['enabled'] || $payment['btcpay']['enabled'] ||
+    $payment['comgate']['secret'] !== $saved['comgate']['secret'] ||
+    $payment['btcpay']['api_key'] !== $saved['btcpay']['api_key'] ||
+    $payment['shipping_methods']['gls_pickup']['price_czk'] !== 81) {
+    throw new RuntimeException('Payment settings reset unrelated values or lost secrets.');
+}
+$db->json = json_encode(['local_test_checkout' => true], JSON_THROW_ON_ERROR);
+if (isset($repo->load($fallback)['local_test_checkout'])) {
+    throw new RuntimeException('Obsolete local checkout setting was loaded.');
 }
 echo "Checkout settings tests passed.\n";

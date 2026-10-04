@@ -33,7 +33,6 @@ final class CheckoutController
         private ?BankTransferPayment $bank,
         private ?int $customerId,
         string $termsUrl,
-        private bool $allowLocalPreview = false,
         private array $customerProfile = [],
         private array $customerAddresses = [],
         ?PacketaPickupPoint $packeta = null,
@@ -297,7 +296,6 @@ final class CheckoutController
             !is_array($this->cart->state()['delivery'])) {
             throw new InvalidArgumentException('Před výběrem platby zkontrolujte dopravu a košík.');
         }
-        if ($this->testCheckout()) return;
         $method = self::field('payment_method');
         if (!$this->paymentAvailable($method)) {
             throw new InvalidArgumentException('Vybraný způsob platby není dostupný.');
@@ -328,14 +326,13 @@ final class CheckoutController
 
     private function placeOrder(): void
     {
-        $testOrder = $this->testCheckout();
         $paymentMethod = $this->selectedPaymentMethod();
-        if (!$testOrder && $this->termsUrl !== '' && self::field('terms') !== '1') {
+        if ($this->termsUrl !== '' && self::field('terms') !== '1') {
             throw new InvalidArgumentException('Pro odeslání objednávky potvrďte obchodní podmínky.');
         }
         $summary = $this->cartService->summary($this->cart);
         $delivery = $this->cart->state()['delivery'];
-        if (!$testOrder && $paymentMethod === 'gopay' && is_array($delivery) &&
+        if ($paymentMethod === 'gopay' && is_array($delivery) &&
             strlen((string) ($delivery['email'] ?? '')) > 128) {
             throw new InvalidArgumentException('Pro GoPay zkraťte e-mail na nejvýše 128 znaků. Údaj upravíte v dopravě.');
         }
@@ -343,7 +340,7 @@ final class CheckoutController
         $selected = ShippingPolicy::known($methodCode) ? $this->shipping->method($methodCode) : null;
         $price = $selected['price_czk'] ?? null;
         if (!$summary['can_continue'] || !is_array($delivery) || $price === null ||
-            (!$testOrder && !$this->paymentAvailable($paymentMethod)) ||
+            !$this->paymentAvailable($paymentMethod) ||
             !$this->orders->installed()) {
             throw new InvalidArgumentException('Objednávku nyní nelze dokončit. Zkontrolujte košík, doručení a nastavení obchodu.');
         }
@@ -384,8 +381,8 @@ final class CheckoutController
         if ($methodCode === 'gls_pickup') $shipping['pickup_source'] = 'gls_map';
         if ($methodCode === 'balikovna_pickup') $shipping['pickup_source'] = 'balikovna_map';
         $order = $this->orders->create($this->customerId, $delivery['email'], $summary['items'],
-            $shipping, $price, $this->cart->checkoutKey(), $testOrder, $paymentMethod);
-        if ($this->mailQueue !== null && !$testOrder) {
+            $shipping, $price, $this->cart->checkoutKey(), $paymentMethod);
+        if ($this->mailQueue !== null) {
             try {
                 $gateway = match ($paymentMethod) {
                     'comgate' => $this->comgate, 'gopay' => $this->gopay,
@@ -402,7 +399,7 @@ final class CheckoutController
             }
         }
         $this->cart->clear();
-        if (!$testOrder && in_array($paymentMethod, ['comgate', 'gopay', 'btcpay'], true)) {
+        if (in_array($paymentMethod, ['comgate', 'gopay', 'btcpay'], true)) {
             try {
                 $gateway = match ($paymentMethod) {
                     'comgate' => $this->comgate, 'gopay' => $this->gopay,
@@ -533,11 +530,10 @@ final class CheckoutController
         }
         $installed = $this->orders->installed();
         $shippingConfigured = $this->shippingOptions !== [];
-        $testCheckout = $this->testCheckout();
         $paymentMethod = $this->selectedPaymentMethod();
         $baseReady = $summary['can_continue'] && $shippingConfigured && $installed && $price !== null &&
             $summary['subtotal_czk'] + $price <= 9999999;
-        $ready = $baseReady && ($testCheckout || $this->paymentAvailable($paymentMethod));
+        $ready = $baseReady && $this->paymentAvailable($paymentMethod);
         $data = array_merge($this->shared, [
             'title' => match ($step) {
                 'cart' => 'Košík — dobrodruzi.cz',
@@ -561,23 +557,15 @@ final class CheckoutController
             'gopayConfigured' => $this->gopay !== null && $this->gopay->canInitiate(),
             'btcpayConfigured' => $this->btcpay !== null && $this->btcpay->canInitiate(),
             'paymentMethod' => $paymentMethod,
-            'paymentStepReady' => $baseReady && ($testCheckout || $this->bank !== null ||
+            'paymentStepReady' => $baseReady && ($this->bank !== null ||
                 $this->comgate !== null && $this->comgate->canInitiate() ||
                 $this->gopay !== null && $this->gopay->canInitiate() ||
                 $this->btcpay !== null && $this->btcpay->canInitiate()),
-            'checkoutReady' => $ready, 'testCheckout' => $testCheckout, 'termsUrl' => $this->termsUrl,
+            'checkoutReady' => $ready, 'termsUrl' => $this->termsUrl,
             'error' => $error, 'step' => $step,
             'setupNotice' => !$installed ? 'Pro objednávky znovu importuj aktuální database/schema.sql.' : '',
         ]);
         $this->renderer->render($step, $data, $status);
-    }
-
-    private function testCheckout(): bool
-    {
-        return $this->allowLocalPreview && $this->bank === null &&
-            ($this->comgate === null || !$this->comgate->canInitiate()) &&
-            ($this->gopay === null || !$this->gopay->canInitiate()) &&
-            ($this->btcpay === null || !$this->btcpay->canInitiate());
     }
 
     private static function field(string $name): string

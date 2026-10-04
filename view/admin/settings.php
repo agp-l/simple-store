@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-$settingsTab ??= 'checkout';
+$settingsTab ??= 'overview';
 $form += ['btc_prices_enabled' => '1', 'comgate_enabled' => '0', 'comgate_test' => '1', 'comgate_merchant' => '',
     'comgate_return_base_url' => '', 'gopay_enabled' => '0', 'gopay_test' => '1',
     'gopay_goid' => '', 'gopay_client_id' => '', 'gopay_return_base_url' => '',
@@ -12,26 +12,38 @@ $btcpayApiKeyConfigured ??= false;
 $btcpayWebhookSecretConfigured ??= false;
 ?>
 <div class="panel-intro"><div><p class="panel-eyebrow">Správa obchodu</p><h1>Nastavení obchodu</h1>
-  <p>Doprava, platby, zákaznické e-maily a další údaje na jednom místě. Uložení potvrdí zpráva nahoře.</p></div></div>
+  <p>Každá oblast má vlastní stránku a ukládá se samostatně.</p></div></div>
 <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Nastavení bylo uloženo do databáze.</p><?php endif; ?>
 <?php if ($settingsError !== ''): ?><p class="panel-error" role="alert"><?= $escape($settingsError) ?></p><?php endif; ?>
-<?php if ($settingsTab === 'mail'): ?>
+<?php require __DIR__ . '/settings-navigation.php'; ?>
+<?php if ($settingsTab === 'overview'): ?>
+<div class="panel-settings-overview">
+  <?php foreach ([
+      ['delivery', 'Doprava', 'Ceník a dostupnost výdejních míst i doručení na adresu.'],
+      ['carriers', 'Dopravci', 'Widgety výdejních míst a údaje pro podávání zásilek.'],
+      ['payment', 'Platby', 'Bankovní převod a připojené platební brány.'],
+      ['prices', 'Ceny', 'Zobrazení orientační ceny v BTC.'],
+      ['mail', 'E-maily', 'SMTP, potvrzení objednávek a texty zpráv.'],
+      ['legal', 'Obchodní podmínky', 'Odkaz na publikovanou stránku obchodních podmínek.'],
+  ] as [$key, $title, $description]): ?>
+    <a class="panel-settings-card" href="<?= $escape($adminUrl . '?section=settings&tab=' . $key) ?>"><strong><?= $escape($title) ?> →</strong><span><?= $escape($description) ?></span></a>
+  <?php endforeach; ?>
+</div>
+<?php elseif ($settingsTab === 'mail'): ?>
 <?php require __DIR__ . '/settings-mail.php'; ?>
 <?php else: ?>
-<form class="panel-form panel-settings-form" method="post" action="<?= $escape($adminUrl . '?section=settings') ?>">
+<form class="panel-form panel-settings-form" method="post" action="<?= $escape($adminUrl . '?section=settings&tab=' . $settingsTab) ?>">
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
   <input type="hidden" name="action" value="save-checkout-settings">
-  <nav class="panel-settings-nav" aria-label="Části nastavení">
-    <a href="#settings-delivery">Doprava</a><a href="#settings-carriers">Dopravci</a>
-    <a href="#settings-payment">Platby</a><a href="#settings-prices">Ceny</a>
-    <a href="<?= $escape($adminUrl . '?section=settings&tab=mail') ?>">E-maily</a>
-    <a href="#settings-legal">Podmínky a vývoj</a>
-  </nav>
+  <input type="hidden" name="tab" value="<?= $escape($settingsTab) ?>">
+<?php if ($settingsTab === 'prices'): ?>
   <section class="panel-panel panel-settings-block" id="settings-prices">
   <h2>Zobrazení cen</h2>
   <label class="panel-check"><input type="checkbox" name="btc_prices_enabled" value="1" <?= $form['btc_prices_enabled'] === '1' ? 'checked' : '' ?>> Ukazovat orientační cenu v BTC vedle ceny v Kč</label>
   <p class="panel-help">Přepočet používá kurz CoinGecko uložený na 15 minut. Objednávky se dál účtují v Kč; skutečnou částku k platbě bitcoinem určí BTCPay při vytvoření platby. Když kurz není dostupný, zobrazí se jen cena v Kč. Vyžaduje aktualizovanou databázi.</p>
   </section>
+<?php endif; ?>
+<?php if ($settingsTab === 'delivery'): ?>
   <section class="panel-panel panel-settings-block" id="settings-delivery">
   <h2>Doprava</h2><h3>Výdejní místa a boxy</h3>
   <p class="panel-help">U Zásilkovny a PPL zákazník vybere místo přímo v mapě po nastavení klíče widgetu. Bez klíče otevře veřejnou mapu a adresu opíše. Mapa Balíkovny ani GLS klíč nevyžaduje.</p>
@@ -40,6 +52,8 @@ $btcpayWebhookSecretConfigured ??= false;
     <div class="panel-shipping-row"><strong><?= $escape($definition['label']) ?></strong><label>Cena v Kč<input type="number" name="shipping_price[<?= $escape($code) ?>]" value="<?= $escape($form['shipping_price'][$code]) ?>" min="0" max="100000" required></label><label class="panel-check"><input type="checkbox" name="shipping_enabled[<?= $escape($code) ?>]" value="1" <?= $form['shipping_enabled'][$code] === '1' ? 'checked' : '' ?>> Nabízet</label></div>
   <?php endforeach; ?>
   </section>
+<?php endif; ?>
+<?php if ($settingsTab === 'carriers'): ?>
   <section class="panel-panel panel-settings-block" id="settings-carriers">
   <h2>Napojení dopravců</h2><h3>Zásilkovna – mapa výdejních míst</h3>
   <label>Veřejný API klíč widgetu<input name="packeta_api_key" value="<?= $escape($form['packeta_api_key'] ?? '') ?>" maxlength="16" pattern="[A-Za-z0-9]{16}" autocomplete="off" placeholder="16 znaků z klientské sekce"></label>
@@ -54,6 +68,8 @@ $btcpayWebhookSecretConfigured ??= false;
   <p class="panel-help">API heslo je jiné než veřejný klíč widgetu. Prázdné pole ponechá uložené heslo beze změny. Heslo se na veřejných stránkách ani v administraci znovu nevypisuje.</p>
   <?php if (!empty($packetaPasswordConfigured)): ?><label class="panel-check"><input type="checkbox" name="packeta_clear_password" value="1"> Odstranit uložené API heslo</label><?php endif; ?>
   </section>
+<?php endif; ?>
+<?php if ($settingsTab === 'payment'): ?>
   <section class="panel-panel panel-settings-block" id="settings-payment">
   <h2>Platby</h2><h3>Bankovní převod</h3>
   <label>Číslo účtu<input name="account_display" value="<?= $escape($form['account_display']) ?>" placeholder="číslo/kód banky" autocomplete="off"></label>
@@ -97,14 +113,14 @@ $btcpayWebhookSecretConfigured ??= false;
   <p class="panel-help">V BTCPay v nastavení tohoto obchodu založ webhook pro události faktur. Jeho URL nastav na <code><?= $escape(($form['btcpay_return_base_url'] !== '' ? rtrim($form['btcpay_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/')) . '/btcpay-callback.php') ?></code>. Secret webhooku zkopíruj sem. Prázdná pole s klíči ponechají uložené hodnoty beze změny; klíče se na stránce znovu nevypisují.</p>
   </div></details>
   </section>
+<?php endif; ?>
+<?php if ($settingsTab === 'legal'): ?>
   <section class="panel-panel panel-settings-block" id="settings-legal">
-  <h2>Obchodní podmínky a vývoj</h2>
+  <h2>Obchodní podmínky</h2>
   <label>Adresa publikované stránky<input name="terms_url" value="<?= $escape($form['terms_url']) ?>" placeholder="<?= $escape($basePath . 'cs/obchodni-podminky') ?>"></label>
   <p class="panel-help">Můžeš je doplnit později. Až stránku vytvoříš a publikuješ, vlož sem její cestu začínající <?= $escape($basePath) ?>.</p>
-  <h2>Místní vývoj</h2>
-  <label class="panel-check"><input type="checkbox" name="local_test_checkout" value="1" <?= $form['local_test_checkout'] === '1' ? 'checked' : '' ?>> Povolit testovací objednávky na localhostu, pokud chybí bankovní účet</label>
-  <p class="panel-help">Testovací objednávka nemá platební údaje ani QR kód. Mimo localhost je tento režim vypnutý.</p>
   </section>
-  <div class="panel-settings-save"><button class="panel-button" type="submit">Uložit dopravu, platby a ceny</button></div>
+<?php endif; ?>
+  <div class="panel-settings-save"><button class="panel-button" type="submit">Uložit tuto oblast</button></div>
 </form>
 <?php endif; ?>

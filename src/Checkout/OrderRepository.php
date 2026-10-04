@@ -78,13 +78,12 @@ final class OrderRepository
         array $shipping,
         int $shippingCzk,
         string $idempotencyKey,
-        bool $testOrder = false,
         string $paymentMethod = 'bank_transfer'
     ): array {
         if (!in_array($paymentMethod, ['bank_transfer', 'comgate', 'gopay', 'btcpay'], true)) {
             throw new InvalidArgumentException('Neplatný způsob platby.');
         }
-        if (!$testOrder && $paymentMethod === 'bank_transfer' && $this->bank === null) {
+        if ($paymentMethod === 'bank_transfer' && $this->bank === null) {
             throw new RuntimeException('Platba převodem není nastavena.');
         }
         if ($userId !== null && $userId < 1) {
@@ -164,7 +163,7 @@ final class OrderRepository
             'items_json' => $itemsJson,
             'shipping_json' => $shippingJson,
             'shipping_czk' => $shippingCzk,
-            'payment_method' => $testOrder ? 'test' : $paymentMethod,
+            'payment_method' => $paymentMethod,
         ];
 
         $this->db->startTransaction();
@@ -178,15 +177,13 @@ final class OrderRepository
             $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
             // The payment reference stays stable and immediately visible in new order numbers.
             // Existing orders keep their original numbers and payment references.
-            $variableSymbol = $testOrder ? null : (string) random_int(1000000000, 9999999999);
-            $orderNumber = $testOrder
-                ? 'TEST-' . $now->format('y') . '-' . strtoupper(bin2hex(random_bytes(4)))
-                : 'DB-' . $now->format('y') . '-' . $variableSymbol;
+            $variableSymbol = (string) random_int(1000000000, 9999999999);
+            $orderNumber = 'DB-' . $now->format('y') . '-' . $variableSymbol;
             $this->db->insert('shop_orders', [
                 'user_id' => $userId,
                 'order_number' => $orderNumber,
                 'order_token' => bin2hex(random_bytes(32)),
-                'status' => $testOrder ? 'test' : 'new',
+                'status' => 'new',
                 'customer_email' => $email,
                 'subtotal_czk' => $subtotal,
                 'shipping_czk' => $shippingCzk,
@@ -194,10 +191,10 @@ final class OrderRepository
                 'items_json' => $itemsJson,
                 'shipping_json' => $shippingJson,
                 'payment_method' => $request['payment_method'],
-                'payment_status' => $testOrder ? 'test' : 'pending',
-                'payment_details_json' => $testOrder || $paymentMethod !== 'bank_transfer'
+                'payment_status' => 'pending',
+                'payment_details_json' => $paymentMethod !== 'bank_transfer'
                     ? null : self::json($this->bank->snapshot(), 2048),
-                'payment_due_at' => $testOrder || $paymentMethod !== 'bank_transfer' ? null :
+                'payment_due_at' => $paymentMethod !== 'bank_transfer' ? null :
                     $now->modify('+' . $this->dueDays . ' days')->format('Y-m-d H:i:s'),
                 'payment_paid_at' => null,
                 'payment_verified_by' => null,
@@ -209,7 +206,7 @@ final class OrderRepository
             if ($saved === null) {
                 throw new RuntimeException('Uloženou objednávku se nepodařilo načíst.');
             }
-            if (!$testOrder) $this->stock?->reserve((int) $saved['id'], $snapshots);
+            $this->stock?->reserve((int) $saved['id'], $snapshots);
             if ((int) $this->db->queryFirstField(
                 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
                 'shop_sale_lines'

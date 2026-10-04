@@ -33,7 +33,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
           <button type="submit" class="inline-small">＋ <?= $page === 'post' ? 'Nový článek' : 'Nová stránka' ?></button>
         </form>
         <?php if ($content['published']): ?><a href="<?= $escape($siteRoot . $route) ?>">Zobrazit jako návštěvník ↗</a><?php endif; ?>
-        <a href="<?= $escape($siteRoot . 'admin.php') ?>">Všechny stránky a články</a>
+        <a href="<?= $escape($page === 'post' ? $siteRoot . $language . '/blog?manage=1' : $siteRoot . 'admin.php?section=contents') ?>"><?= $page === 'post' ? 'Správa blogu' : 'Všechny stránky' ?></a>
       </div>
       <div class="inline-settings" aria-label="Nastavení dokumentu">
         <span>Adresa: <span class="inline-slug"<?= $editable('slug', $content['slug']) ?>><?= $escape($content['slug']) ?></span></span>

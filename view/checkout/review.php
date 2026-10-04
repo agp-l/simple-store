@@ -17,18 +17,18 @@ require __DIR__ . '/common.php';
         <address><?= $checkoutEscape($delivery['name'] ?? '') ?><br><?php if (($chosenShipping['group'] ?? '') === 'pickup'): ?>Výdejní místo: <?= $checkoutEscape($delivery['pickup_point'] ?? '') ?><br><?= $checkoutEscape($delivery['pickup_address'] ?? '') ?><?php if (!empty($delivery['pickup_code'])): ?><br>Kód místa: <?= $checkoutEscape($delivery['pickup_code']) ?><?php endif; ?><?php else: ?><?= $checkoutEscape($delivery['street'] ?? '') ?><br><?= $checkoutEscape($delivery['postal_code'] ?? '') ?> <?= $checkoutEscape($delivery['city'] ?? '') ?><?php endif; ?><br>Česká republika</address>
         <p><?= $checkoutEscape($delivery['email'] ?? '') ?><br><?= $checkoutEscape($delivery['phone'] ?? '') ?></p>
       </section>
-      <section class="checkout-panel"><div class="checkout-panel-title"><h2>Platba</h2><a href="<?= $checkoutEscape($checkoutUrl . '?step=payment') ?>">Změnit platbu</a></div><p><?= ($testCheckout ?? false) ? 'Místní testovací objednávka. Platba se neprovádí.' : match ($paymentMethod ?? '') { 'comgate' => 'Online platba Comgate. Po potvrzení objednávky budete přesměrováni na platební bránu.', 'gopay' => 'Online platba GoPay. Po potvrzení objednávky budete přesměrováni na platební bránu.', 'btcpay' => 'Platba bitcoinem přes BTCPay Server. Po potvrzení objednávky otevřete platební stránku.', default => 'Bankovní převod. Platební údaje a QR kód se zobrazí po vytvoření objednávky.' } ?></p></section>
+      <section class="checkout-panel"><div class="checkout-panel-title"><h2>Platba</h2><a href="<?= $checkoutEscape($checkoutUrl . '?step=payment') ?>">Změnit platbu</a></div><p><?= match ($paymentMethod ?? '') { 'comgate' => 'Online platba Comgate. Po potvrzení objednávky budete přesměrováni na platební bránu.', 'gopay' => 'Online platba GoPay. Po potvrzení objednávky budete přesměrováni na platební bránu.', 'btcpay' => 'Platba bitcoinem přes BTCPay Server. Po potvrzení objednávky otevřete platební stránku.', default => 'Bankovní převod. Platební údaje a QR kód se zobrazí po vytvoření objednávky.' } ?></p></section>
     </div>
     <div class="checkout-sidebar">
       <?php require __DIR__ . '/summary.php'; ?>
       <?php if ($checkoutCanContinue && ($checkoutReady ?? false) && $summaryShippingPrice !== null): ?>
       <form class="checkout-place" method="post" action="<?= $checkoutEscape($checkoutUrl) ?>">
         <input type="hidden" name="csrf" value="<?= $checkoutEscape($cartToken) ?>"><input type="hidden" name="action" value="place">
-        <?php if (!($testCheckout ?? false) && ($termsUrl ?? '') !== ''): ?><label><input type="checkbox" name="terms" value="1" required> Souhlasím s <a href="<?= $checkoutEscape($termsUrl) ?>" target="_blank" rel="noopener">obchodními podmínkami</a>.</label><?php endif; ?>
-        <button type="submit" class="checkout-primary"><?= ($testCheckout ?? false) ? 'Vytvořit testovací objednávku' : 'Objednat s povinností platby' ?></button>
+        <?php if (($termsUrl ?? '') !== ''): ?><label><input type="checkbox" name="terms" value="1" required> Souhlasím s <a href="<?= $checkoutEscape($termsUrl) ?>" target="_blank" rel="noopener">obchodními podmínkami</a>.</label><?php endif; ?>
+        <button type="submit" class="checkout-primary">Objednat s povinností platby</button>
       </form>
       <?php else: ?><p class="checkout-alert" role="alert">Objednávku nyní nelze vytvořit. Vraťte se do košíku a zkontrolujte údaje.</p><?php endif; ?>
-      <p class="checkout-fineprint"><?= ($testCheckout ?? false) ? 'Testovací objednávku uvidíš v administraci. Neplať ji a nevyřizuj ji jako skutečný nákup.' : match ($paymentMethod ?? '') { 'comgate' => 'Objednávka vznikne po potvrzení. Poté vás přesměrujeme k online platbě Comgate.', 'gopay' => 'Objednávka vznikne po potvrzení. Poté vás přesměrujeme k online platbě GoPay.', 'btcpay' => 'Objednávka vznikne po potvrzení. Poté otevřete BTCPay a zaplatíte bitcoinem.', default => 'Objednávka vznikne po potvrzení. K zaplacení pak použijete údaje na další stránce.' } ?></p>
+      <p class="checkout-fineprint"><?= match ($paymentMethod ?? '') { 'comgate' => 'Objednávka vznikne po potvrzení. Poté vás přesměrujeme k online platbě Comgate.', 'gopay' => 'Objednávka vznikne po potvrzení. Poté vás přesměrujeme k online platbě GoPay.', 'btcpay' => 'Objednávka vznikne po potvrzení. Poté otevřete BTCPay a zaplatíte bitcoinem.', default => 'Objednávka vznikne po potvrzení. K zaplacení pak použijete údaje na další stránce.' } ?></p>
     </div>
   </div>
 </main>
