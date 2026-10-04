@@ -133,7 +133,7 @@ $basePath = '/shop/';
 $adminUrl = '/shop/admin.php';
 $csrf = 'test-token';
 $documents = [['document_key' => str_repeat('a', 32), 'language' => 'cs',
-    'type' => 'post', 'slug' => 'moje-adresa', 'title' => 'Můj článek',
+    'type' => 'page', 'slug' => 'moje-adresa', 'title' => 'Moje stránka',
     'revision_number' => 2, 'published' => 0]];
 $translations = [str_repeat('a', 32) => ['cs']];
 $filterLanguage = '';
@@ -145,14 +145,28 @@ $nextUrl = '/shop/admin.php?section=contents&offset=24';
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $admin = ob_get_clean();
-if (!str_contains($admin, '/shop/cs/blog/moje-adresa?edit=1') ||
+if (!str_contains($admin, '/shop/cs/moje-adresa?edit=1') ||
     !str_contains($admin, 'name="q"') ||
     !str_contains($admin, 'value="draft"') ||
     !str_contains($admin, 'section=contents&amp;offset=24') ||
     !str_contains($admin, 'value="create-translation"') ||
     !str_contains($admin, '<option value="en">en</option>') ||
-    str_contains($admin, 'value="create-content"') ||
+    !str_contains($admin, 'value="create-content"') ||
+    !str_contains($admin, 'value="delete-content"') ||
     str_contains($admin, '<textarea')) {
     throw new RuntimeException('The content index lost search, editor links, pagination or translation creation.');
+}
+$post = ['document_key' => str_repeat('b', 32), 'language' => 'cs',
+    'slug' => 'cesta', 'title' => 'Cesta', 'summary' => 'Náš výlet',
+    'body' => '', 'saved_at' => '2026-10-04 10:00:00', 'revision_number' => 4];
+ob_start();
+$renderer->render('blog', ['basePath' => '/shop/', 'language' => 'cs',
+    'canManageContent' => true, 'adminCsrf' => 'test-token',
+    'posts' => [$post], 'draftPosts' => [array_replace($post, ['title' => 'Koncept'])]]);
+$blog = ob_get_clean();
+if (!str_contains($blog, '/shop/cs/blog/cesta?edit=1') ||
+    substr_count($blog, 'name="action" value="delete-content"') !== 2 ||
+    !str_contains($blog, 'name="revision" value="4"')) {
+    throw new RuntimeException('The blog must offer edit and confirmed deletion for published and draft posts.');
 }
 echo "Inline content editor tests passed.\n";

@@ -5,6 +5,7 @@ declare(strict_types=1);
 require dirname(__DIR__) . '/vendor/autoload.php';
 
 use SimpleStore\Admin\OrderShippingRepository;
+use SimpleStore\Checkout\BankTransferPayment;
 use SimpleStore\Checkout\OrderRepository;
 use SimpleStore\Checkout\ShippingPolicy;
 use SimpleStore\Database\ConnectionFactory;
@@ -23,7 +24,7 @@ $db = ConnectionFactory::create([
 $shippingManager = new OrderShippingRepository($db, new ShippingPolicy(ShippingPolicy::defaults()));
 expectShipping($shippingManager->installed(), 'Dispatch override migration is missing.');
 
-$orderRepository = new OrderRepository($db);
+$orderRepository = new OrderRepository($db, new BankTransferPayment('', '1265098001/5500', 'Testovací obchod'));
 $item = ['product_key' => bin2hex(random_bytes(16)), 'language' => 'cs', 'slug' => 'test-dopravy',
     'name' => 'Test dopravy', 'image_path' => '', 'quantity' => 1, 'unit_price_czk' => 123,
     'options' => []];
@@ -32,7 +33,7 @@ $originalShipping = ['method' => 'gls_home', 'label' => 'GLS – na adresu',
     'city' => 'Praha', 'postal_code' => '110 00', 'country' => 'CZ',
     'phone' => '+420777123456', 'email' => 'eva@example.test'];
 $order = $orderRepository->create(null, 'eva@example.test', [$item], $originalShipping,
-    79, bin2hex(random_bytes(32)), 'comgate');
+    79, bin2hex(random_bytes(32)));
 $id = (int) $order['id'];
 $shippingManager->change($id, 1, 'ppl_home', 'gls_home', 'Expedice kurýrem PPL');
 $changed = $orderRepository->findById($id);
@@ -63,7 +64,7 @@ $pickupOriginal = ['method' => 'gls_pickup', 'label' => 'GLS – ParcelShop',
     'pickup_code' => 'P12345', 'pickup_point' => 'Praha box',
     'pickup_address' => 'Nádražní 5, Praha 1'];
 $pickupOrder = $orderRepository->create(null, 'eva@example.test', [$item], $pickupOriginal,
-    59, bin2hex(random_bytes(32)), 'comgate');
+    59, bin2hex(random_bytes(32)));
 $pickupId = (int) $pickupOrder['id'];
 $shippingManager->change($pickupId, 1, 'dpd_home', 'gls_pickup',
     'Adresa ověřena se zákazníkem', false,
