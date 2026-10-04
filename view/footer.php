@@ -29,7 +29,7 @@ $drawFooterBranch = static function (array $links) use (&$drawFooterBranch, $foo
     <div class="wrap footer-main">
       <div class="footer-intro">
         <a class="logo" href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><svg class="logo-mark" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 20 10 5l3 7 2-4 6 12Z" /></svg>dobrodruzi</a>
-        <p>Batohy, stany a drobnosti pro chvíle, kdy jste nejraději venku. Vybavte se a vyrazte.</p>
+        <p>Výběr nejlepšího turistického vybavení. Lehké. Odolné. Osvědčené.</p>
       </div>
       <?php if ($footerMenu !== []): ?>
       <nav aria-label="Odkazy v patičce">
