@@ -31,7 +31,7 @@ $item = ['product_key' => bin2hex(random_bytes(16)), 'language' => 'cs', 'slug' 
 $originalShipping = ['method' => 'gls_home', 'label' => 'GLS – na adresu',
     'recipient' => 'Eva Nová', 'name' => 'Eva Nová', 'street' => 'Nádražní 1',
     'city' => 'Praha', 'postal_code' => '110 00', 'country' => 'CZ',
-    'phone' => '+420777123456', 'email' => 'eva@example.test'];
+    'phone' => '+420777123456', 'email' => 'eva@example.test', 'company' => ''];
 $order = $orderRepository->create(null, 'eva@example.test', [$item], $originalShipping,
     79, bin2hex(random_bytes(32)));
 $id = (int) $order['id'];
@@ -62,7 +62,7 @@ expectShipping($db->queryFirstField('SELECT dispatch_shipping_json FROM shop_ord
 $pickupOriginal = ['method' => 'gls_pickup', 'label' => 'GLS – ParcelShop',
     'recipient' => 'Eva Nová', 'name' => 'Eva Nová', 'country' => 'CZ',
     'pickup_code' => 'P12345', 'pickup_point' => 'Praha box',
-    'pickup_address' => 'Nádražní 5, Praha 1'];
+    'pickup_address' => 'Nádražní 5, Praha 1', 'company' => ''];
 $pickupOrder = $orderRepository->create(null, 'eva@example.test', [$item], $pickupOriginal,
     59, bin2hex(random_bytes(32)));
 $pickupId = (int) $pickupOrder['id'];

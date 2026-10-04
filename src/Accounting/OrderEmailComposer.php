@@ -24,9 +24,18 @@ final class OrderEmailComposer
             '{total}' => $total, '{carrier}' => $carrier];
         $subject = strtr($template['subject'], $replace);
         $intro = strtr($template['message'], $replace);
+        $paidAfterCancellation = $event === 'paid' && ($order['status'] ?? '') === 'cancelled';
+        if ($paidAfterCancellation) {
+            // Merchant-defined 'paid' copy usually promises shipping. A late verified
+            // settlement must not imply that a cancelled order was reopened.
+            $subject = 'Platba za zrušenou objednávku ' . $number . ' dorazila';
+            $intro = 'Platbu jsme obdrželi až po zrušení objednávky. Objednávka zůstává zrušená. Platbu prověříme a ozveme se ohledně jejího vrácení. Máte-li dotaz, odpovězte na tento e-mail.';
+        }
+        $label = $paidAfterCancellation ? 'Platba po zrušení objednávky' :
+            (MailSettingsRepository::EVENTS[$event]['label'] ?? 'Objednávka');
         $lines = [trim($intro), '', 'Objednávka ' . $number, 'Stav: ' .
-            (MailSettingsRepository::EVENTS[$event]['label'] ?? 'Objednávka')];
-        $facts = ['Stav' => MailSettingsRepository::EVENTS[$event]['label'] ?? 'Objednávka',
+            $label];
+        $facts = ['Stav' => $label,
             'Doprava' => $carrier, 'Celkem' => $total];
         $lines[] = '';
         $lines[] = 'Objednané zboží:';
@@ -65,13 +74,18 @@ final class OrderEmailComposer
                 $lines[] = 'O výsledku platby rozhoduje potvrzení brány.';
                 $facts['Platba'] = 'Online přes ' . $gateway;
             }
+        } elseif ($event === 'cancelled') {
+            $lines[] = '';
+            $lines[] = 'Objednávka byla zrušena. Pokud jste již zaplatili, odpovězte na tento e-mail.';
+            if (($order['payment_status'] ?? '') === 'paid') $facts['Platba'] = 'Přijata; zrušení prověřujeme';
+        } elseif ($paidAfterCancellation) {
+            $lines[] = '';
+            $lines[] = 'Platba dorazila po zrušení objednávky. Zásilku nyní nepřipravujeme.';
+            $facts['Platba'] = 'Přijata po zrušení';
         } elseif ($event === 'paid' || ($order['payment_status'] ?? '') === 'paid') {
             $lines[] = '';
             $lines[] = 'Platba byla potvrzena.';
             $facts['Platba'] = 'Potvrzena';
-        } elseif ($event === 'cancelled') {
-            $lines[] = '';
-            $lines[] = 'Objednávka byla zrušena. Pokud jste již zaplatili, odpovězte na tento e-mail.';
         }
         $trackingNumber = trim((string) ($tracking['number'] ?? ''));
         $trackingUrl = self::safeHttps((string) ($tracking['url'] ?? ''));
@@ -168,7 +182,7 @@ final class OrderEmailComposer
             '<table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:100%;max-width:600px;border-collapse:collapse;background:#fff;border:1px solid #dfe6dc">' .
             '<tr><td style="background:#263a2b;color:#fff;padding:22px 28px;font-size:22px;font-weight:700">dobrodruzi<span style="color:#bde18d">.cz</span></td></tr>' .
             '<tr><td style="padding:26px 28px"><p style="margin:0 0 6px;color:#426f40;font-size:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase">' .
-            $escape(MailSettingsRepository::EVENTS[$event]['label'] ?? 'Objednávka') . '</p>' .
+            $escape($label) . '</p>' .
             '<h1 style="margin:0 0 17px;font-size:24px;line-height:1.3;color:#263a2b">Objednávka ' . $escape($number) . '</h1>' .
             '<p style="margin:0 0 19px">' . nl2br($escape($intro)) . '</p>' .
             '<table role="presentation" width="100%" style="width:100%;border-collapse:collapse;background:#f3f7ef;font-size:14px">' . $factsHtml . '</table>' .
