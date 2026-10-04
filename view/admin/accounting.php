@@ -18,25 +18,31 @@ $accountingFulfillmentLabel = static fn (mixed $status): string => match ($statu
     'cancelled' => 'Zrušeno',
     default => (string) $status,
 };
-$accountingTab ??= 'orders';
+$accountingTab ??= 'overview';
 $taxYear ??= (int) date('Y');
-$accountingTitles = ['overview' => 'Přehled evidence', 'money' => 'Peněžní deník',
-    'balances' => 'Majetek a dluhy', 'stock' => 'Sklad a prodeje',
+$accountingTitles = ['overview' => 'Doklady a platby', 'money' => 'Peněžní deník',
+    'balances' => 'Pohledávky a majetek', 'stock' => 'Starší skladové podklady',
     'invoices' => 'Faktury', 'orders' => 'Platby objednávek',
-    'mail' => 'E-mailová fronta', 'settings' => 'Údaje OSVČ'];
+    'mail' => 'E-mailová fronta', 'settings' => 'Podnikatel a režim',
+    'guide' => 'Jak vést evidenci'];
 ?>
 <div class="panel-intro">
-  <div><p class="panel-eyebrow">Daňová evidence OSVČ</p><h1><?= $escape($accountingTitles[$accountingTab]) ?></h1>
-    <p><?= $accountingTab === 'overview' ? 'Výchozí přehled příjmů, výdajů a souvisejících agend.' : 'Samostatná agenda evidence. Přepni na další oblast v navigaci.' ?></p></div>
+  <div><p class="panel-eyebrow">Evidence podnikání · OSVČ</p><h1><?= $escape($accountingTitles[$accountingTab]) ?></h1>
+    <p><?= $accountingTab === 'overview' ? 'Objednávky, vystavené doklady a zapsané peníze pohromadě. U každého řádku vidíš, co ještě potřebuješ vyřešit.' : 'Údaje na této stránce navazují na knihu dokladů a plateb.' ?></p></div>
 </div>
-<nav class="panel-accounting-nav" aria-label="Části daňové evidence">
-  <?php foreach (['Evidence' => ['overview', 'money', 'balances', 'stock'],
-      'Doklady a provoz' => ['invoices', 'orders', 'mail', 'settings']] as $group => $tabs): ?>
-    <div><strong><?= $escape($group) ?></strong>
-      <?php foreach ($tabs as $key): ?><a href="<?= $escape($adminUrl . '?section=accounting&tab=' . $key . '&year=' . $taxYear) ?>" <?= $accountingTab === $key ? 'aria-current="page"' : '' ?>><?= $escape($accountingTitles[$key]) ?></a><?php endforeach; ?>
-    </div>
+<nav class="panel-accounting-nav" aria-label="Evidence podnikání">
+  <?php foreach (['overview', 'money', 'invoices', 'guide', 'settings'] as $key): ?>
+    <a href="<?= $escape($adminUrl . '?section=accounting&tab=' . $key . '&year=' . $taxYear) ?>" <?= $accountingTab === $key ? 'aria-current="page"' : '' ?>><?= $escape($accountingTitles[$key]) ?></a>
   <?php endforeach; ?>
 </nav>
+<?php if (($taxSettings['legal_form'] ?? 'sole_trader') === 'company'): ?>
+  <p class="panel-error" role="alert">Je nastavená obchodní společnost. Tato evidence je určena pro OSVČ; pro společnost není účetnictvím ani podkladem k přiznání. <a href="<?= $escape($adminUrl . '?section=accounting&tab=settings') ?>">Zkontrolovat právní formu</a>.</p>
+<?php elseif (preg_match('/s\.?\s*r\.?\s*o\.?/iu', (string) ($taxSettings['name'] ?? '')) === 1): ?>
+  <p class="panel-notice" role="status">Údaje prodávajícího obsahují „s.r.o.“, ale právní forma je nastavená na OSVČ. <a href="<?= $escape($adminUrl . '?section=accounting&tab=settings') ?>">Ověř právní formu</a>, než použiješ tento přehled pro daně.</p>
+<?php endif; ?>
+<?php if (in_array($accountingTab, ['balances', 'stock', 'orders', 'mail'], true)): ?>
+  <p class="panel-help"><a href="<?= $escape($adminUrl . '?section=accounting&tab=overview&year=' . $taxYear) ?>">← Zpět ke knize dokladů</a></p>
+<?php endif; ?>
 <?php if ($accountingTab === 'orders'): ?>
 <section class="panel-panel">
   <h2>Období</h2>
@@ -61,7 +67,7 @@ $accountingTitles = ['overview' => 'Přehled evidence', 'money' => 'Peněžní d
       <div><dt>Počet objednávek</dt><dd><?= (int) $accountingTotals['count'] ?></dd></div>
       <div><dt>Zboží</dt><dd><?= $accountingMoney($accountingTotals['subtotal_czk']) ?></dd></div>
       <div><dt>Doprava</dt><dd><?= $accountingMoney($accountingTotals['shipping_czk']) ?></dd></div>
-      <div><dt>Celkem přijato</dt><dd><strong><?= $accountingMoney($accountingTotals['total_czk']) ?></strong></dd></div>
+      <div><dt>Celkem potvrzeno v objednávkách</dt><dd><strong><?= $accountingMoney($accountingTotals['total_czk']) ?></strong></dd></div>
     </dl>
     <p class="panel-help">Jde o podklady z objednávek, nikoli o faktury, daňové doklady nebo evidenci DPH. Datum je okamžik ručního potvrzení převodu správcem nebo ověření platby u brány; u online plateb se může lišit od dne vyplacení na bankovní účet. Zrušené zaplacené objednávky zůstávají v součtu; vratky systém zatím neeviduje a je potřeba je ověřit ve výpisu účtu a vyúčtování brány.</p>
   </section>
@@ -110,6 +116,8 @@ $accountingTitles = ['overview' => 'Přehled evidence', 'money' => 'Peněžní d
     </nav>
   </section>
 <?php endif; ?>
+<?php elseif ($accountingTab === 'guide'): ?>
+  <?php require __DIR__ . '/accounting-guide.php'; ?>
 <?php else: ?>
   <?php require __DIR__ . '/tax.php'; ?>
 <?php endif; ?>

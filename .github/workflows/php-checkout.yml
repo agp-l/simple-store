@@ -110,8 +110,10 @@ jobs:
           MYSQL_TEST_PASSWORD: ci-only-password
         run: |
           php tests/tax-database.php
+          php tests/evidence-book-database.php
           php tests/mail-database.php
           php tests/legacy-order-migration.php
+          php tests/evidence-book-database.php
           php tests/comgate-database.php
           php tests/gopay-database.php
           php tests/btcpay-database.php

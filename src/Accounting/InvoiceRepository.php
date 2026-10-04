@@ -166,6 +166,23 @@ final class InvoiceRepository
             $year . '-01-01', ($year + 1) . '-01-01', 500);
     }
 
+    /** @return array{items: list<array<string, mixed>>, nextOffset: ?int} */
+    public function page(int $year, int $offset, int $limit = 50): array
+    {
+        TaxEvidenceRepository::year($year);
+        if ($offset < 0 || $offset > 1000000 || $limit < 1 || $limit > 100) {
+            throw new InvalidArgumentException('Neplatná stránka faktur.');
+        }
+        $rows = $this->db->query('SELECT id, order_id, order_number, document_number,
+                issue_date, total_czk, emailed_at FROM shop_invoices
+            WHERE issue_date >= %s AND issue_date < %s
+            ORDER BY issue_date DESC, id DESC LIMIT %i OFFSET %i',
+            $year . '-01-01', ($year + 1) . '-01-01', $limit + 1, $offset);
+        $hasMore = count($rows) > $limit;
+        return ['items' => array_slice($rows, 0, $limit),
+            'nextOffset' => $hasMore && $offset + $limit <= 1000000 ? $offset + $limit : null];
+    }
+
     public function numberHistory(int $id): array
     {
         return $this->db->query('SELECT old_number, new_number, reason, admin_id, created_at

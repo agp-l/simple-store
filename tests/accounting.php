@@ -167,6 +167,7 @@ fclose($stream);
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $adminUrl = '/shop/admin.php';
 $accountingBaseUrl = $adminUrl . '?section=accounting';
+$accountingTab = 'orders';
 $accountingReady = true;
 $accountingError = '';
 $accountingFrom = '2026-09-29';
@@ -187,11 +188,56 @@ ob_start();
 require dirname(__DIR__) . '/view/admin/accounting.php';
 $html = ob_get_clean();
 restore_error_handler();
-if (!str_contains($html, 'Daňová evidence') || !str_contains($html, 'Stáhnout CSV') ||
+if (!str_contains($html, 'Evidence podnikání') || !str_contains($html, 'Stáhnout CSV') ||
     !str_contains($html, '1 690 Kč') || !str_contains($html, 'Zrušeno') ||
     !str_contains($html, '=HYPERLINK(&quot;https://example.test&quot;)') ||
     str_contains($html, '=HYPERLINK("https://example.test")')) {
     throw new RuntimeException('Accounting view lost totals, status or HTML escaping.');
+}
+
+require dirname(__DIR__) . '/src/Accounting/TaxEvidenceRepository.php';
+$accountingTab = 'overview';
+$taxYear = 2026;
+$taxReady = $invoicesReady = $mailReady = true;
+$taxSettings = ['legal_form' => 'sole_trader', 'expense_method' => 'actual',
+    'name' => '', 'ico' => ''];
+$taxSummary = ['income' => 200, 'expenses' => 0];
+$taxReceivables = [];
+$evidenceSearch = '';
+$evidencePreviousUrl = '';
+$evidenceNextUrl = '';
+$evidencePage = ['items' => [[
+    'kind' => 'order', 'activity_date' => '2026-09-29', 'order_id' => 1,
+    'order_number' => 'DB-1', 'variable_symbol' => '1234567890',
+    'invoice_id' => 8, 'invoice_number' => 'F2026-000008',
+    'customer_email' => '<script>alert(1)</script>', 'payment_status' => 'paid',
+    'payment_method' => 'bank_transfer', 'payment_paid_at' => '2026-09-29 09:00:00',
+    'receipt_id' => null, 'receipt_date' => null, 'entry_direction' => null,
+    'amount_czk' => 200, 'counterparty' => '', 'description' => '',
+    'entry_reference' => '', 'entry_id' => null, 'entry_tax_kind' => null,
+]], 'nextOffset' => null];
+set_error_handler(static function (int $severity, string $message): never {
+    throw new RuntimeException('Evidence view emitted a warning: ' . $message);
+});
+ob_start();
+require dirname(__DIR__) . '/view/admin/accounting.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'Kniha dokladů a plateb') ||
+    !str_contains($html, 'F2026-000008') ||
+    !str_contains($html, 'Prověřit příjem') ||
+    !str_contains($html, '&lt;script&gt;alert(1)&lt;/script&gt;') ||
+    str_contains($html, '<script>alert(1)</script>')) {
+    throw new RuntimeException('The evidence book lost document links, next steps or escaping.');
+}
+$accountingTab = 'guide';
+ob_start();
+require dirname(__DIR__) . '/view/admin/accounting.php';
+$html = ob_get_clean();
+restore_error_handler();
+if (!str_contains($html, 'Jak číst') ||
+    !str_contains($html, 'financnisprava.gov.cz') ||
+    !str_contains($html, 'Skutečné výdaje')) {
+    throw new RuntimeException('The OSVC guide is missing its workflow or official references.');
 }
 
 echo "Accounting tests passed.\n";

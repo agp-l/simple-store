@@ -5,6 +5,7 @@ use SimpleStore\Accounting\AccountingRepository;
 use SimpleStore\Accounting\TaxEvidenceRepository;
 use SimpleStore\Accounting\InvoiceRepository;
 use SimpleStore\Accounting\OrderMailQueue;
+use SimpleStore\Accounting\EvidenceBookRepository;
 
 // admin.php authenticates this route. Downloads and HTML both use the same bounded filter.
 $screen = 'accounting';
@@ -18,16 +19,19 @@ $mailReady = $mailQueue->installed();
 $taxSettings = $tax->settings();
 $accountingTab = $_POST['tab'] ?? $_GET['tab'] ?? 'overview';
 if (!is_string($accountingTab) || !in_array($accountingTab,
-    ['overview', 'money', 'balances', 'stock', 'invoices', 'mail', 'orders', 'settings'], true)) {
+    ['overview', 'money', 'balances', 'stock', 'invoices', 'mail', 'orders', 'settings', 'guide'], true)) {
     $accountingTab = 'overview';
 }
 $rawYear = $_GET['year'] ?? (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format('Y');
 $taxYear = is_string($rawYear) && ctype_digit($rawYear) ? (int) $rawYear : 0;
 $taxEntries = $taxBalances = $taxProducts = $saleLines = $stockMovements = [];
+$taxEntriesPage = ['items' => [], 'nextOffset' => null];
+$taxEntriesPreviousUrl = $taxEntriesNextUrl = '';
 $taxEntryHistory = [];
 $taxEditEntry = null;
 $taxReceivables = [];
 $invoiceRows = $mailRows = $invoiceHistory = [];
+$invoicePreviousUrl = $invoiceNextUrl = '';
 $taxSummary = ['income' => 0, 'expenses' => 0];
 $selectedInvoice = null;
 $accountingReady = $accounting->installed();
@@ -42,6 +46,9 @@ $accountingTotals = ['count' => 0, 'subtotal_czk' => 0, 'shipping_czk' => 0, 'to
 $accountingPreviousUrl = '';
 $accountingNextUrl = '';
 $accountingExportUrl = '';
+$evidencePage = ['items' => [], 'nextOffset' => null];
+$evidencePreviousUrl = $evidenceNextUrl = '';
+$evidenceSearch = '';
 [$accountingFrom, $accountingTo] = AccountingRepository::period(null, null);
 
 if ($method === 'POST') {
@@ -176,7 +183,17 @@ try {
         $taxSettings = $tax->settings();
         $taxSummary = $tax->summary($taxYear);
         if ($accountingTab === 'money') {
-            $taxEntries = $tax->entries($taxYear);
+            $moneyOffsetRaw = $_GET['offset'] ?? '0';
+            $moneyOffset = is_string($moneyOffsetRaw) ? filter_var($moneyOffsetRaw, FILTER_VALIDATE_INT,
+                ['options' => ['min_range' => 0, 'max_range' => 1000000]]) : false;
+            if ($moneyOffset === false) throw new InvalidArgumentException('Neplatná stránka peněžního deníku.');
+            $taxEntriesPage = $tax->entriesPage($taxYear, $moneyOffset);
+            $taxEntries = $taxEntriesPage['items'];
+            $moneyFilters = ['section' => 'accounting', 'tab' => 'money', 'year' => $taxYear];
+            $taxEntriesPreviousUrl = $moneyOffset > 0 ? $adminUrl . '?' . http_build_query(
+                $moneyFilters + ['offset' => max(0, $moneyOffset - 50)]) : '';
+            $taxEntriesNextUrl = $taxEntriesPage['nextOffset'] === null ? '' : $adminUrl . '?' .
+                http_build_query($moneyFilters + ['offset' => $taxEntriesPage['nextOffset']]);
             $taxEntryHistory = $tax->entryHistory($taxYear);
             $editRaw = $_GET['edit_entry'] ?? null;
             if (is_string($editRaw) && ctype_digit($editRaw)) {
@@ -193,8 +210,36 @@ try {
             $stockMovements = $tax->stockMovements();
         }
     }
+    if ($accountingTab === 'overview' && $taxReady && $invoicesReady && $accountingReady) {
+        $rawSearch = $_GET['q'] ?? '';
+        if (!is_string($rawSearch) || strlen($rawSearch) > 150) {
+            throw new InvalidArgumentException('Hledaný výraz je příliš dlouhý.');
+        }
+        $evidenceSearch = trim($rawSearch);
+        $rawOffset = $_GET['offset'] ?? '0';
+        $evidenceOffset = is_string($rawOffset) ? filter_var($rawOffset, FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 0, 'max_range' => 1000000]]) : false;
+        if ($evidenceOffset === false) throw new InvalidArgumentException('Neplatná stránka knihy dokladů.');
+        $evidencePage = (new EvidenceBookRepository($db))->page($taxYear, $evidenceOffset, $evidenceSearch);
+        $evidenceFilters = ['section' => 'accounting', 'tab' => 'overview',
+            'year' => $taxYear, 'q' => $evidenceSearch];
+        $evidencePreviousUrl = $evidenceOffset > 0 ? $adminUrl . '?' . http_build_query(
+            $evidenceFilters + ['offset' => max(0, $evidenceOffset - 30)]) : '';
+        $evidenceNextUrl = $evidencePage['nextOffset'] === null ? '' : $adminUrl . '?' .
+            http_build_query($evidenceFilters + ['offset' => $evidencePage['nextOffset']]);
+    }
     if ($accountingTab === 'invoices' && $invoicesReady) {
-        $invoiceRows = $invoicesRepository->list($taxYear);
+        $invoiceOffsetRaw = $_GET['offset'] ?? '0';
+        $invoiceOffset = is_string($invoiceOffsetRaw) ? filter_var($invoiceOffsetRaw, FILTER_VALIDATE_INT,
+            ['options' => ['min_range' => 0, 'max_range' => 1000000]]) : false;
+        if ($invoiceOffset === false) throw new InvalidArgumentException('Neplatná stránka faktur.');
+        $invoicePage = $invoicesRepository->page($taxYear, $invoiceOffset);
+        $invoiceRows = $invoicePage['items'];
+        $invoiceFilters = ['section' => 'accounting', 'tab' => 'invoices', 'year' => $taxYear];
+        $invoicePreviousUrl = $invoiceOffset > 0 ? $adminUrl . '?' . http_build_query(
+            $invoiceFilters + ['offset' => max(0, $invoiceOffset - 50)]) : '';
+        $invoiceNextUrl = $invoicePage['nextOffset'] === null ? '' : $adminUrl . '?' .
+            http_build_query($invoiceFilters + ['offset' => $invoicePage['nextOffset']]);
     }
     if ($accountingTab === 'mail' && $mailReady) $mailRows = $mailQueue->recent();
     $rawInvoice = $_GET['invoice_id'] ?? null;

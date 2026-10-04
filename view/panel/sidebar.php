@@ -7,13 +7,6 @@ $escapePanel = static fn (mixed $value): string => htmlspecialchars((string) $va
   <nav aria-label="<?= $escapePanel($panelHeading) ?>">
     <?php foreach ($panelLinks as $item): ?>
       <a href="<?= $escapePanel($item['href']) ?>" <?= $panelCurrent === $item['key'] ? 'aria-current="page"' : '' ?>><span aria-hidden="true"><?= $escapePanel($item['icon']) ?></span> <?= $escapePanel($item['label']) ?></a>
-      <?php if ($panelCurrent === $item['key'] && !empty($item['children'])): ?>
-        <div class="panel-subnav">
-          <?php foreach ($item['children'] as $tab => $label): ?>
-            <a href="<?= $escapePanel($adminUrl . '?section=' . $item['section'] . '&tab=' . $tab) ?>" <?= ($panelSubCurrent ?? '') === $tab ? 'aria-current="page"' : '' ?>><?= $escapePanel($label) ?></a>
-          <?php endforeach; ?>
-        </div>
-      <?php endif; ?>
     <?php endforeach; ?>
   </nav>
   <div class="panel-sidebar-foot"><span class="panel-status-dot"></span> <?= $escapePanel($panelIdentity) ?>

@@ -11,6 +11,8 @@ use RuntimeException;
 /** Cash-basis tax records for a Czech sole trader who is not a VAT payer. */
 final class TaxEvidenceRepository
 {
+    private const EXPENSE_PERCENTAGES = [30, 40, 60, 80];
+
     public function __construct(private MeekroDB $db)
     {
     }
@@ -31,16 +33,32 @@ final class TaxEvidenceRepository
     {
         $defaults = ['name' => '', 'ico' => '', 'street' => '', 'city' => '',
             'postal_code' => '', 'email' => '', 'phone' => '', 'bank_account' => '',
-            'mail_from' => ''];
+            'mail_from' => '', 'legal_form' => 'sole_trader',
+            'expense_method' => 'actual', 'expense_percentage' => 60];
         if (!$this->installed()) return $defaults;
         $row = $this->db->queryFirstRow('SELECT settings_json FROM shop_tax_settings WHERE id=%i', 1);
         if ($row === null) return $defaults;
         $saved = json_decode((string) $row['settings_json'], true, 512, JSON_THROW_ON_ERROR);
-        return is_array($saved) ? array_replace($defaults, array_intersect_key($saved, $defaults)) : $defaults;
+        if (!is_array($saved)) return $defaults;
+        $settings = array_replace($defaults, array_intersect_key($saved, $defaults));
+        if (!in_array($settings['legal_form'], ['sole_trader', 'company'], true)) {
+            $settings['legal_form'] = $defaults['legal_form'];
+        }
+        if (!in_array($settings['expense_method'], ['actual', 'percentage'], true)) {
+            $settings['expense_method'] = $defaults['expense_method'];
+        }
+        if (!in_array($settings['expense_percentage'], self::EXPENSE_PERCENTAGES, true)) {
+            $settings['expense_percentage'] = $defaults['expense_percentage'];
+        }
+        if ($settings['legal_form'] === 'company') {
+            $settings['expense_method'] = 'actual';
+        }
+        return $settings;
     }
 
     public function saveSettings(array $input): void
     {
+        $existing = $this->settings();
         $fields = [];
         foreach (['name' => 120, 'ico' => 8, 'street' => 160, 'city' => 100,
             'postal_code' => 6, 'email' => 254, 'phone' => 40, 'bank_account' => 40,
@@ -53,6 +71,21 @@ final class TaxEvidenceRepository
             ($fields['mail_from'] !== '' && filter_var($fields['mail_from'], FILTER_VALIDATE_EMAIL) === false)) {
             throw new InvalidArgumentException('Zkontroluj IČO, PSČ a e-mailové adresy.');
         }
+        $legalForm = $input['legal_form'] ?? $existing['legal_form'];
+        $expenseMethod = $input['expense_method'] ?? $existing['expense_method'];
+        $percentage = $input['expense_percentage'] ?? $existing['expense_percentage'];
+        $percentage = filter_var($percentage, FILTER_VALIDATE_INT);
+        if ($legalForm === 'company') {
+            $expenseMethod = 'actual';
+        }
+        if (!in_array($legalForm, ['sole_trader', 'company'], true) ||
+            !in_array($expenseMethod, ['actual', 'percentage'], true) ||
+            !in_array($percentage, self::EXPENSE_PERCENTAGES, true)) {
+            throw new InvalidArgumentException('Vyber právní formu, metodu výdajů a platné procento paušálu.');
+        }
+        $fields['legal_form'] = $legalForm;
+        $fields['expense_method'] = $expenseMethod;
+        $fields['expense_percentage'] = $percentage;
         $this->db->query('INSERT INTO shop_tax_settings (id, settings_json) VALUES (%i, %s)
             ON DUPLICATE KEY UPDATE settings_json=VALUES(settings_json), updated_at=CURRENT_TIMESTAMP',
             1, json_encode($fields, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
@@ -215,6 +248,25 @@ final class TaxEvidenceRepository
              ORDER BY entry_date DESC, id DESC LIMIT %i',
             $year . '-01-01', ($year + 1) . '-01-01', 500
         );
+    }
+
+    /** @return array{items: array, nextOffset: ?int} */
+    public function entriesPage(int $year, int $offset, int $limit = 50): array
+    {
+        self::year($year);
+        if ($offset < 0 || $limit < 1 || $limit > 200 || $offset > PHP_INT_MAX - $limit - 1) {
+            throw new InvalidArgumentException('Neplatná stránka peněžního deníku.');
+        }
+        $rows = $this->db->query(
+            'SELECT id, entry_date, direction, account, tax_kind, amount_czk,
+                    description, counterparty, reference, order_id
+             FROM shop_tax_entries WHERE entry_date >= %s AND entry_date < %s
+             ORDER BY entry_date DESC, id DESC LIMIT %i OFFSET %i',
+            $year . '-01-01', ($year + 1) . '-01-01', $limit + 1, $offset
+        );
+        $hasMore = count($rows) > $limit;
+        if ($hasMore) array_pop($rows);
+        return ['items' => $rows, 'nextOffset' => $hasMore ? $offset + $limit : null];
     }
 
     /** Export the complete annual money journal, capped to a reviewable file size. */

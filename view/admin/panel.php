@@ -12,23 +12,13 @@ $inside = in_array($screen, ['editor', 'categories', 'menus', 'media', 'orders',
     $panelIdentity = 'Přihlášený správce';
     $panelLogoutUrl = $adminUrl;
     $panelCurrent = $screen;
-    $panelSubCurrent = $screen === 'accounting' ? ($accountingTab ?? 'overview') :
-        ($screen === 'settings' ? ($settingsTab ?? 'overview') : '');
     $panelLinks = [
         ['key' => 'editor', 'label' => 'Stránky', 'icon' => '▤', 'href' => $adminUrl . '?section=contents'],
         ['key' => 'products', 'label' => 'Produkty', 'icon' => '▦', 'href' => $basePath . $site['default_language'] . '?manage=1#produkty'],
         ['key' => 'orders', 'label' => 'Objednávky', 'icon' => '▣', 'href' => $adminUrl . '?section=orders'],
-        ['key' => 'accounting', 'label' => 'Daňová evidence OSVČ', 'icon' => '▤', 'href' => $adminUrl . '?section=accounting',
-            'children' => ['overview' => 'Přehled', 'money' => 'Peněžní deník',
-                'balances' => 'Majetek a dluhy', 'stock' => 'Sklad a prodeje',
-                'invoices' => 'Faktury', 'orders' => 'Platby objednávek',
-                'mail' => 'Odeslané e-maily', 'settings' => 'Údaje OSVČ'],
-            'section' => 'accounting'],
+        ['key' => 'accounting', 'label' => 'Doklady a platby', 'icon' => '▤', 'href' => $adminUrl . '?section=accounting'],
         ['key' => 'users', 'label' => 'Zákazníci', 'icon' => '♙', 'href' => $adminUrl . '?section=users'],
-        ['key' => 'settings', 'label' => 'Nastavení obchodu', 'icon' => '⚙', 'href' => $adminUrl . '?section=settings',
-            'children' => ['overview' => 'Přehled', 'delivery' => 'Doprava',
-                'carriers' => 'Dopravci', 'payment' => 'Platby', 'prices' => 'Ceny',
-                'mail' => 'E-maily', 'legal' => 'Podmínky'], 'section' => 'settings'],
+        ['key' => 'settings', 'label' => 'Nastavení obchodu', 'icon' => '⚙', 'href' => $adminUrl . '?section=settings'],
         ['key' => 'database', 'label' => 'Databáze', 'icon' => '▤', 'href' => $adminUrl . '?section=database'],
         ['key' => 'media', 'label' => 'Fotografie', 'icon' => '▧', 'href' => $adminUrl . '?section=media'],
         ['key' => 'categories', 'label' => 'Kategorie', 'icon' => '⌁', 'href' => $adminUrl . '?section=categories'],

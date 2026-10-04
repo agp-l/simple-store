@@ -25,6 +25,18 @@ $mail = new OrderMailQueue($db, static fn (): bool => true);
 if (!$tax->installed() || !$invoices->installed() || !$mail->installed()) {
     throw new RuntimeException('OSVC tables were not created.');
 }
+if ($tax->settings()['legal_form'] !== 'sole_trader' ||
+    $tax->settings()['expense_method'] !== 'actual' ||
+    $tax->settings()['expense_percentage'] !== 60) {
+    throw new RuntimeException('Legacy seller settings did not receive safe OSVC defaults.');
+}
+$db->query('INSERT INTO shop_tax_settings (id, settings_json) VALUES (%i, %s)', 1,
+    '{"name":"Existing seller","ico":"12345678"}');
+if ($tax->settings()['name'] !== 'Existing seller' ||
+    $tax->settings()['legal_form'] !== 'sole_trader' ||
+    $tax->settings()['expense_method'] !== 'actual') {
+    throw new RuntimeException('Persisted pre-upgrade seller settings were not preserved.');
+}
 
 $key = str_repeat('a', 32);
 $items = [['product_key' => $key, 'name' => 'Stan', 'quantity' => 2, 'unit_price_czk' => 450]];
@@ -46,6 +58,35 @@ $db->insert('shop_sale_lines', [
 $tax->saveSettings(['name' => 'Test OSVČ', 'ico' => '12345678', 'street' => 'Test 1',
     'city' => 'Praha', 'postal_code' => '11000', 'email' => 'shop@example.test',
     'phone' => '', 'bank_account' => '', 'mail_from' => 'shop@example.test']);
+$seller = $tax->settings();
+// Explicit input must override the saved defaults, while older seller forms may omit the new keys.
+$tax->saveSettings(array_replace($seller, ['legal_form' => 'sole_trader',
+    'expense_method' => 'percentage', 'expense_percentage' => '40']));
+$tax->saveSettings(array_diff_key($tax->settings(), array_flip(
+    ['legal_form', 'expense_method', 'expense_percentage'])));
+$savedMode = $tax->settings();
+if ($savedMode['legal_form'] !== 'sole_trader' || $savedMode['expense_method'] !== 'percentage' ||
+    $savedMode['expense_percentage'] !== 40) {
+    throw new RuntimeException('The legal form or expense method was lost on seller form save.');
+}
+foreach ([['legal_form' => 'unknown'], ['expense_method' => 'unverified'],
+    ['expense_percentage' => '61']] as $invalid) {
+    try {
+        $tax->saveSettings(array_replace($savedMode, $invalid));
+        throw new RuntimeException('Invalid OSVC accounting mode was accepted.');
+    } catch (InvalidArgumentException) {
+        if ($tax->settings() !== $savedMode) {
+            throw new RuntimeException('Invalid OSVC accounting mode changed saved settings.');
+        }
+    }
+}
+$tax->saveSettings(array_replace($savedMode, ['legal_form' => 'company']));
+if ($tax->settings()['legal_form'] !== 'company' ||
+    $tax->settings()['expense_method'] !== 'actual') {
+    throw new RuntimeException('Switching to a company must disable sole trader expense percentage.');
+}
+$tax->saveSettings(array_replace($savedMode, [
+    'expense_method' => 'actual']));
 $today = (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format('Y-m-d');
 $tax->addOrderReceipt($id, ['entry_date' => $today, 'reference' => 'BANK-1']);
 if ($tax->orderReceipt($id)['amount_czk'] != 990) {
@@ -124,6 +165,38 @@ $testId = (int) $db->queryFirstField('SELECT id FROM shop_orders WHERE order_num
 if ((int) $db->queryFirstField('SELECT COUNT(*) FROM shop_orders WHERE id=%i', $testId) !== 0 ||
     (int) $db->queryFirstField('SELECT COUNT(*) FROM shop_order_admin_events WHERE order_id=%i', $testId) !== 0) {
     throw new RuntimeException('Test order left an admin record.');
+}
+
+foreach ([1, 2, 3] as $amount) {
+    $tax->addEntry(['entry_date' => $today, 'direction' => 'income', 'account' => 'bank',
+        'tax_kind' => 'nontaxable', 'amount_czk' => $amount,
+        'description' => 'Test stránkování ' . $amount]);
+}
+$offset = 0;
+$pagedIds = [];
+do {
+    $page = $tax->entriesPage($year, $offset, 2);
+    if (count($page['items']) > 2) {
+        throw new RuntimeException('Money journal pagination exceeded its page size.');
+    }
+    foreach ($page['items'] as $row) $pagedIds[] = (int) $row['id'];
+    $nextOffset = $page['nextOffset'];
+    if ($nextOffset !== null && $nextOffset !== $offset + 2) {
+        throw new RuntimeException('Money journal returned an incorrect next offset.');
+    }
+    $offset = $nextOffset ?? $offset;
+} while ($nextOffset !== null);
+$allIds = array_map(static fn (array $row): int => (int) $row['id'], $tax->entries($year));
+if ($pagedIds !== $allIds || count($pagedIds) < 3 ||
+    $tax->entriesPage($year, count($pagedIds), 2)['items'] !== []) {
+    throw new RuntimeException('Money journal pagination skipped or repeated entries.');
+}
+foreach ([[-1, 2], [0, 0], [0, 201]] as [$invalidOffset, $invalidLimit]) {
+    try {
+        $tax->entriesPage($year, $invalidOffset, $invalidLimit);
+        throw new RuntimeException('Invalid money journal page was accepted.');
+    } catch (InvalidArgumentException) {
+    }
 }
 
 echo "Live tax database integration passed.\n";
