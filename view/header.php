@@ -20,6 +20,25 @@
       </div>
     </div>
     <div class="masthead">
+      <svg class="header-routes" viewBox="0 0 1440 360" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">
+        <g fill="none" stroke="#bde18d" stroke-width="1.4" opacity=".14">
+          <path d="M-70 104C17 82 85 113 107 163S120 274 222 299 310 371 271 423"/>
+          <path d="M-71 130C5 107 63 133 77 176S94 294 188 322 269 382 239 432"/>
+          <path d="M1120-43C1069 37 1115 86 1194 100S1342 102 1322 179 1317 260 1459 294"/>
+          <path d="M1154-43C1107 28 1143 64 1210 77S1366 87 1351 163 1345 244 1480 266"/>
+        </g>
+        <path d="M-55 290C88 319 154 248 263 268S473 346 621 294 874 229 995 276 1224 337 1500 255"
+              fill="none" stroke="#bde18d" stroke-opacity=".32" stroke-width="2"
+              stroke-linecap="round" stroke-dasharray="9 12"/>
+        <g fill="#252927" stroke="#bde18d" stroke-opacity=".42" stroke-width="1.5">
+          <circle cx="263" cy="268" r="8"/><circle cx="995" cy="276" r="8"/>
+        </g>
+        <g fill="#e1c01f" opacity=".7">
+          <circle cx="263" cy="268" r="2.3"/><circle cx="995" cy="276" r="2.3"/>
+        </g>
+        <path d="m1230 77 9 20-9 20-9-20z" fill="none" stroke="#e1c01f"
+              stroke-opacity=".5" stroke-width="1.6" stroke-linejoin="round"/>
+      </svg>
       <div class="wrap utility">
         <p></p>
         <nav class="utility-right hero-tag" aria-label="Stránky a blog">
@@ -37,26 +56,6 @@
           <p><?= htmlspecialchars($heroSubtitle, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
         </div>
       </div>
-    </div>
-    <div class="mountain-edge" aria-hidden="true">
-      <svg viewBox="0 0 900 220" preserveAspectRatio="xMaxYMax slice" focusable="false">
-        <g class="mountain-sky-ornament">
-
-          <path class="mountain-sky-sparks" d="M199 79v10m-5-5h10M350 28v9m-4.5-4.5h9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </g>
-        <g class="mountain-constellation">
-          <path class="mountain-star-line" d="M612 55 650 43 693 56 733 49 756 20 808 31 795 70 733 49"/>
-          <path d="M612 51v8m-4-4h8M733 45v8m-4-4h8M808 27v8m-4-4h8"/>
-          <g class="mountain-star-points">
-            <circle cx="650" cy="43" r="2"/><circle cx="693" cy="56" r="2"/>
-            <circle cx="756" cy="20" r="2"/><circle cx="795" cy="70" r="2"/>
-          </g>
-        </g>
-        <g transform="translate(0 29) scale(1 .87)">
-          <path d="M0 220C62 211 117 203 165 192L294 112 338 148 465 16 553 129 682 68 792 164 900 220Z"/>
-          <path class="mountain-ridge" d="M465 16 432 58 465 48 490 80M682 68 653 106 683 96 710 120M294 112 272 142 294 137"/>
-        </g>
-      </svg>
     </div>
   </header>
   <?php if ($adminCreate !== null): ?>
