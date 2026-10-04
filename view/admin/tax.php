@@ -53,6 +53,7 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
   <?php elseif ($accountingTab === 'money'): ?>
     <section class="panel-panel"><h2>Peněžní pohyby podle výpisu</h2>
       <p>Příjem z objednávky placené převodem zapiš na <a href="<?= $escape($adminUrl . '?section=orders') ?>">jejím detailu</a>, aby se k ní automaticky připojil. Výplaty platebních bran a jejich poplatky zapisuj podle skutečného vyúčtování. U procentních výdajů jednotlivé nákupy nesnižují daňový základ nad rámec procenta.</p>
+      <?php if ($selectedMethod === 'flat_tax'): ?><p class="panel-notice">Paušální zálohy zapisuj v <a href="<?= $escape($taxUrl . '&tab=overview&year=' . $taxYear) ?>">přehledu roku</a>. Odtud se automaticky vloží i do tohoto deníku; stejnou platbu zde znovu nevkládej.</p><?php endif; ?>
       <p class="panel-help"><a href="<?= $escape($taxUrl . '&tab=guide') ?>">Co znamená daňové zařazení? →</a> Doklady a výpisy uschovej; formulář nyní ukládá referenci, nikoli soubor s originálem dokladu.</p>
       <?php foreach (['income' => ['Přidat příjem', 'Zdanitelný příjem', 'Nezdanitelný příjem'], 'expense' => ['Přidat výdaj', 'Daňový výdaj', 'Nedaňový výdaj']] as $direction => [$heading, $primaryKind, $secondaryKind]): ?>
         <details class="panel-entry-add"><summary><?= $escape($heading) ?></summary>
