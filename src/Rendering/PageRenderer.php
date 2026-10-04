@@ -55,6 +55,7 @@ final class PageRenderer
         $homepageCandidateNext = (string) ($data['homepageCandidateNext'] ?? '');
         $productDeleted = (bool) ($data['productDeleted'] ?? false);
         $adminCreate = $data['adminCreate'] ?? null;
+        $adminPreview = $data['adminPreview'] ?? null;
         $privatePage = (bool) ($data['privatePage'] ?? false);
         $canManageMenu = (bool) ($data['canManageMenu'] ?? false);
         $categoryAdminUrl = (string) ($data['categoryAdminUrl'] ?? '');

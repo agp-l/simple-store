@@ -2,6 +2,12 @@
 // This body is framed by the shared storefront shell.
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $inside = in_array($screen, ['editor', 'categories', 'menus', 'media', 'orders', 'returns', 'accounting', 'settings', 'users', 'database'], true);
+$panelPreviewControl = $inside && $csrf !== '' ? [
+    'active' => (bool) ($adminPreviewActive ?? false),
+    'csrf' => $csrf,
+    'return_to' => $basePath . $site['default_language'],
+    'action' => $adminUrl,
+] : null;
 ?>
 <div class="panel-area">
   <?php if ($inside): ?>

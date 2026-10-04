@@ -57,6 +57,14 @@
       </div>
     </div>
   </header>
+  <?php if ($adminPreview !== null && $adminCreate === null): ?>
+    <form class="visitor-preview-toggle" method="post" action="<?= $siteRoot ?>admin.php">
+      <input type="hidden" name="csrf" value="<?= htmlspecialchars($adminPreview['csrf'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+      <input type="hidden" name="enabled" value="<?= $adminPreview['active'] ? '0' : '1' ?>">
+      <input type="hidden" name="return_to" value="<?= htmlspecialchars($adminPreview['return_to'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
+      <button type="submit" name="action" value="visitor-preview"><?= $adminPreview['active'] ? 'Ukončit náhled' : 'Zobrazit jako návštěvník' ?></button>
+    </form>
+  <?php endif; ?>
   <?php if ($adminCreate !== null): ?>
     <nav class="site-admin-bar" aria-label="Správa webu">
       <div class="wrap site-admin-inner"><strong>Správa webu</strong>
@@ -67,6 +75,7 @@
         <a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>?homepage_edit=1#homepage-editor">Výběr na úvodní stránku</a><?php endif; ?>
         <a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>/blog?manage=1">Blog</a>
         <a href="<?= $siteRoot ?>admin.php">Další obsah a nastavení</a>
+        <?php if ($adminPreview !== null): ?><form class="site-admin-preview" method="post" action="<?= $siteRoot ?>admin.php"><input type="hidden" name="csrf" value="<?= htmlspecialchars($adminPreview['csrf'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><input type="hidden" name="enabled" value="1"><input type="hidden" name="return_to" value="<?= htmlspecialchars($adminPreview['return_to'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><button type="submit" name="action" value="visitor-preview">Zobrazit jako návštěvník</button></form><?php endif; ?>
       </div>
     </nav>
   <?php endif; ?>

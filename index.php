@@ -100,7 +100,36 @@ try {
     // Public product HTML includes a session-specific CSRF token and cart count.
     header('Cache-Control: private, no-store');
 
-    if (in_array($route['name'], ['cart', 'checkout', 'order'], true)) {
+    // Visitor preview uses the administrator's session, but reads only published content.
+    $checkoutRoute = in_array($route['name'], ['cart', 'checkout', 'order'], true);
+    $contentRoute = in_array($route['name'], ['product', 'page', 'post', 'blog', 'catalog', 'category'], true);
+    $auth = null;
+    if (isset($_COOKIE['simple_store_admin']) || ($contentRoute && ($_GET['edit'] ?? '') === '1')) {
+        $users = new AdminUserRepository($db);
+        if ($users->installed()) $auth = new AdminAuth($users, $url->getBasePath());
+    }
+    $adminSignedIn = $auth !== null && $auth->signedIn();
+    $visitorPreview = $adminSignedIn && $auth->visitorPreviewEnabled();
+    $canEdit = $adminSignedIn && !$visitorPreview;
+    $editRequested = !$visitorPreview && ($_GET['edit'] ?? '') === '1';
+    if ($adminSignedIn) header('Cache-Control: private, no-store');
+    $shared['adminPreview'] = $adminSignedIn ? [
+        'active' => $visitorPreview, 'csrf' => $auth->token(),
+        'return_to' => (string) ($_SERVER['REQUEST_URI'] ?? $url->path()),
+    ] : null;
+    $shared['canManageMenu'] = $contentRoute && $canEdit;
+    $shared['adminCreate'] = $contentRoute && $canEdit
+        ? ['csrf' => $auth->token(), 'language' => $url->getLanguage()] : null;
+    $shared['menuAdminUrl'] = $url->getBasePath() . 'admin.php?' . http_build_query([
+        'section' => 'menus', 'language' => $url->getLanguage(), 'slot' => 'primary',
+    ]);
+
+    if ($checkoutRoute) {
+        // Checkout may open a separate customer session and cart session.
+        if ($auth !== null) {
+            session_write_close();
+            session_id('');
+        }
         $checkoutFile = __DIR__ . '/config/checkout.php';
         $exampleCheckout = require __DIR__ . '/config/checkout.example.php';
         $checkoutConfig = is_file($checkoutFile) ? require $checkoutFile : $exampleCheckout;
@@ -171,29 +200,8 @@ try {
         exit;
     }
 
-    // An authenticated preview may read drafts; ordinary routes never start an admin session.
-    $editRequested = ($_GET['edit'] ?? '') === '1';
-    $auth = null;
-    if (in_array($route['name'], ['product', 'page', 'post', 'blog', 'catalog', 'category'], true)) {
-        if ($editRequested || isset($_COOKIE['simple_store_admin'])) {
-            $users = new AdminUserRepository($db);
-            if ($users->installed()) {
-                $auth = new AdminAuth($users, $url->getBasePath());
-            }
-        }
-    }
-    $canEdit = $auth !== null && $auth->signedIn();
-    if ($canEdit) {
-        header('Cache-Control: private, no-store');
-    }
-    $shared['canManageMenu'] = $canEdit;
-    $shared['adminCreate'] = $canEdit ? ['csrf' => $auth->token(), 'language' => $url->getLanguage()] : null;
-    $shared['menuAdminUrl'] = $url->getBasePath() . 'admin.php?' . http_build_query([
-        'section' => 'menus', 'language' => $url->getLanguage(), 'slot' => 'primary',
-    ]);
-
     if ($route['name'] === 'catalog' || $route['name'] === 'category') {
-        $managingCatalog = ($_GET['manage'] ?? '') === '1';
+        $managingCatalog = !$visitorPreview && ($_GET['manage'] ?? '') === '1';
         if ($managingCatalog && !$canEdit) {
             $renderer->render('not-found', $shared, 404);
             exit;
@@ -203,7 +211,8 @@ try {
             $renderer->render('not-found', $shared, 400);
             exit;
         }
-        $homepageEditing = $route['name'] === 'catalog' && ($_GET['homepage_edit'] ?? '') === '1';
+        $homepageEditing = !$visitorPreview && $route['name'] === 'catalog' &&
+            ($_GET['homepage_edit'] ?? '') === '1';
         if ($homepageEditing && (!$canEdit || $managingCatalog)) {
             $renderer->render('not-found', $shared, 404);
             exit;
@@ -362,7 +371,7 @@ try {
             ),
         ], $item === null ? 404 : 200);
     } elseif ($route['name'] === 'blog') {
-        $managingBlog = ($_GET['manage'] ?? '') === '1';
+        $managingBlog = !$visitorPreview && ($_GET['manage'] ?? '') === '1';
         if ($managingBlog && !$canEdit) {
             $renderer->render('not-found', $shared, 404);
             exit;

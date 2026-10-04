@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use SimpleStore\Admin\AdminAuth;
 use SimpleStore\Admin\AdminUserRepository;
+use SimpleStore\Admin\StorefrontReturnUrl;
 use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Content\ContentRepository;
 use SimpleStore\Checkout\CartSession;
@@ -132,6 +133,20 @@ try {
             $auth->signOut();
             header('Location: ' . $adminUrl, true, 303);
             exit;
+        } elseif ($action === 'visitor-preview' && $auth->signedIn()) {
+            $enabled = $_POST['enabled'] ?? null;
+            if (!in_array($enabled, ['0', '1'], true)) {
+                http_response_code(400);
+                $screen = 'forbidden';
+                $error = 'Neplatná volba náhledu.';
+                require __DIR__ . '/view/admin/layout.php';
+                exit;
+            }
+            $returnUrl = (new StorefrontReturnUrl($basePath, $site['languages'], $site['default_language']))
+                ->fromRequest($_POST['return_to'] ?? null);
+            $auth->setVisitorPreview($enabled === '1');
+            header('Location: ' . $returnUrl, true, 303);
+            exit;
         } elseif (!in_array($action, array_merge(['create-content', 'create-translation', 'inline-content', 'create-product',
             'inline-product', 'set-product-stock', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
             'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'delete-product', 'delete-content', 'homepage-product', 'product-supplier-link',
@@ -167,6 +182,8 @@ try {
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }
+
+    $adminPreviewActive = $auth->visitorPreviewEnabled();
 
     $content = new ContentRepository($db, $site['languages'], $site['revision_limit']);
     $screen = 'editor';
