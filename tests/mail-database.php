@@ -73,6 +73,9 @@ if ($paidMail === null || !str_contains($paidMail['body_text'], 'Přesné zněn�
     !str_contains($paidMail['body_html'], 'Přesné znění podmínek při objednání.')) {
     throw new RuntimeException('A fast online payment must carry the immutable terms when the first mail was suppressed.');
 }
+if (!$queue->dispatch($paidMailId)) {
+    throw new RuntimeException('The paid message with the immutable terms was not sent.');
+}
 $templates['paid']['enabled'] = '0';
 $settings->save(['from_email' => 'shop@example.test', 'from_name' => 'Dobrodruzi',
     'reply_to' => '', 'public_base_url' => '', 'automatic_enabled' => '1', 'templates' => $templates]);
