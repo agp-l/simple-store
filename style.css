@@ -262,7 +262,7 @@ header {
   position: relative;
   z-index: 1;
   isolation: isolate;
-  background-color: #2f322f;
+  background-color: var(--night);
   background-image: radial-gradient(ellipse at 79% 100%, #d0ac1b12, transparent 43%), var(--header-photo);
   background-size: cover;
   background-position: center;
