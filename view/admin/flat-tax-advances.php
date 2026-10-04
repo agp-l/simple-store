@@ -47,7 +47,7 @@ foreach ($flatTaxAdvanceRows as $advance) $advanceByMonth[(int) $advance['tax_mo
           <label>Úhrada z<select name="account"><option value="bank">Bankovní účet</option><option value="cash">Hotovost</option></select></label>
           <label>Reference z výpisu<input name="reference" maxlength="100"></label>
           <label>Poznámka k platbě nebo přeplatku<input name="note" maxlength="100"></label>
-          <p class="panel-help">Zadej to, co bylo skutečně zaplaceno. Zápočet přeplatku bez nové platby sem nevkládej jako peněžní pohyb; dolož jej záznamem finančního úřadu a ponech poznámku ve svých podkladech.</p>
+          <p class="panel-help">Zadej jen skutečný peněžní pohyb. Pokud jeden převod pokrývá dva měsíce, zapiš ho jednou a další měsíc uveď v poznámce; tabulka sama nerozúčtuje platbu mezi měsíce. Zápočet přeplatku bez nové platby sem nevkládej jako peněžní pohyb a uschovej podklad finančního úřadu.</p>
           <button class="panel-button" type="submit">Zapsat úhradu do deníku</button>
         </form>
       </details>
