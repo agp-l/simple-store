@@ -69,8 +69,8 @@ $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
 $orderActions = ['mark-order-paid', 'set-order-status', 'save-order-tracking', 'correct-order-status', 'correct-order-payment', 'delete-order', 'packeta-create',
     'packeta-courier', 'packeta-reconcile', 'packeta-retry', 'packeta-cancel',
     'packeta-cancel-confirmed', 'packeta-cancel-not-done', 'carrier-save', 'carrier-register'];
-$taxActions = ['tax-save-settings', 'tax-add-entry', 'tax-add-balance', 'tax-close-balance',
-    'tax-add-stock', 'tax-backfill-sales', 'tax-link-payment', 'invoice-issue',
+$taxActions = ['tax-save-settings', 'tax-save-year-mode', 'tax-add-flat-advance',
+    'tax-add-entry', 'tax-add-balance', 'tax-close-balance', 'tax-link-payment', 'invoice-issue',
     'invoice-renumber', 'invoice-email', 'mail-retry', 'tax-amend-entry', 'tax-void-entry'];
 try {
     $csrf = $auth->token();
