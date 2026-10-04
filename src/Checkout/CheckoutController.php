@@ -257,9 +257,9 @@ final class CheckoutController
             throw new InvalidArgumentException('Vybraný způsob dopravy není dostupný.');
         }
         $fields = [];
-        foreach (['method', 'name', 'email', 'phone', 'street', 'city', 'postal_code', 'country',
+        foreach (['method', 'name', 'company', 'email', 'phone', 'street', 'city', 'postal_code', 'country',
             'pickup_point', 'pickup_address', 'pickup_code', 'pickup_postal_code'] as $field) {
-            $fields[$field] = str_starts_with($field, 'pickup_') && !isset($_POST[$field])
+            $fields[$field] = ($field === 'company' || str_starts_with($field, 'pickup_')) && !isset($_POST[$field])
                 ? '' : self::field($field);
         }
         if (ShippingPolicy::isPickup($method)) {
@@ -478,7 +478,8 @@ final class CheckoutController
                     if ((int) ($address['id'] ?? 0) !== (int) $chosen ||
                         ($address['country'] ?? '') !== 'CZ') continue;
                     $delivery = array_merge($delivery, [
-                        'name' => $address['recipient'], 'phone' => $address['phone'] ?: $delivery['phone'],
+                        'name' => $address['recipient'], 'company' => $address['company'] ?? '',
+                        'phone' => $address['phone'] ?: $delivery['phone'],
                         'street' => $address['street'], 'city' => $address['city'],
                         'postal_code' => $address['postal_code'], 'country' => 'CZ',
                     ]);
@@ -488,7 +489,7 @@ final class CheckoutController
         }
         if ($step === 'shipping' && $error !== '' && is_array($_POST)) {
             // Keep submitted contact details visible after a validation error.
-            foreach (['method', 'name', 'email', 'phone', 'street', 'city', 'postal_code', 'country',
+            foreach (['method', 'name', 'company', 'email', 'phone', 'street', 'city', 'postal_code', 'country',
                 'pickup_point', 'pickup_address', 'pickup_code', 'pickup_postal_code'] as $field) {
                 if (is_string($_POST[$field] ?? null)) $delivery[$field] = $_POST[$field];
             }

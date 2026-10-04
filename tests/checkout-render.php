@@ -65,7 +65,8 @@ if (!str_contains($shipping, 'value="ppl_home"') || !str_contains($shipping, '99
 }
 if (str_contains($shipping, 'data-ppl-widget') ||
     !str_contains($shipping, 'value="ppl_pickup"') ||
-    !str_contains($shipping, 'name="pickup_address"')) {
+    !str_contains($shipping, 'name="pickup_address"') ||
+    !str_contains($shipping, 'name="company"')) {
     throw new RuntimeException('PPL without a widget key must retain manual pickup entry.');
 }
 $withoutPacketaKey = $data;
@@ -159,6 +160,7 @@ if (!str_contains($payment, 'Není nastavený žádný způsob platby') ||
 }
 
 $bankData = $data + ['delivery' => ['method' => 'ppl_home', 'name' => 'Eva Nová',
+    'company' => 'Výbava <test> s.r.o.',
     'street' => 'Polní 1', 'postal_code' => '11000', 'city' => 'Praha',
     'email' => 'eva@example.org', 'phone' => '123'], 'selectedShippingPrice' => 99];
 $bankData['bankConfigured'] = true;
@@ -203,6 +205,8 @@ ob_start();
 $renderer->render('review', $bankData);
 $review = ob_get_clean();
 if (!str_contains($review, 'Objednat s povinností platby') ||
+    !str_contains($review, 'Výbava &lt;test&gt; s.r.o.') ||
+    str_contains($review, 'Výbava <test> s.r.o.') ||
     str_contains($review, 'name="terms"') ||
     str_contains($review, 'Vytvořit testovací objednávku')) {
     throw new RuntimeException('Bank checkout without a terms page must submit as a real order.');

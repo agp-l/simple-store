@@ -72,6 +72,7 @@ CREATE TABLE IF NOT EXISTS customer_addresses (
   user_id BIGINT UNSIGNED NOT NULL,
   label VARCHAR(60) NOT NULL,
   recipient VARCHAR(120) NOT NULL,
+  company VARCHAR(120) NOT NULL DEFAULT '',
   street VARCHAR(190) NOT NULL,
   city VARCHAR(120) NOT NULL,
   postal_code VARCHAR(20) NOT NULL,
@@ -81,6 +82,14 @@ CREATE TABLE IF NOT EXISTS customer_addresses (
   PRIMARY KEY (id),
   KEY addresses_for_customer (user_id, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET @customer_address_company_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='customer_addresses' AND COLUMN_NAME='company');
+SET @customer_address_company_upgrade = IF(@customer_address_company_exists=0,
+  'ALTER TABLE customer_addresses ADD COLUMN company VARCHAR(120) NOT NULL DEFAULT '''' AFTER recipient', 'SELECT 1');
+PREPARE customer_address_company_statement FROM @customer_address_company_upgrade;
+EXECUTE customer_address_company_statement;
+DEALLOCATE PREPARE customer_address_company_statement;
 
 -- Checkout keeps immutable prices, recipient, delivery and bank details at the time of purchase.
 -- Existing customer history continues to work; a guest order has no user_id.
@@ -434,6 +443,18 @@ CREATE TABLE IF NOT EXISTS shop_mail_templates (
   subject VARCHAR(190) NOT NULL,
   message_text TEXT NOT NULL,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Exact published terms in force when a new order was saved. Later edits or
+-- unpublishing the page cannot silently rewrite the customer's confirmation.
+CREATE TABLE IF NOT EXISTS shop_order_legal_snapshots (
+  order_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  language CHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  terms_document_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  terms_revision INT UNSIGNED NOT NULL,
+  terms_text LONGTEXT NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  CONSTRAINT order_legal_snapshot_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Optional tracking data for externally fulfilled orders or carriers without an API.

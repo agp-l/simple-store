@@ -48,8 +48,11 @@ final class OrderMailQueue
             ($order['status'] ?? '') === 'cancelled') return null;
         $config = $this->settings->load();
         if (!$config['settings']['automatic_enabled'] || !$config['templates']['order']['enabled']) return null;
+        $legal = (new OrderLegalDocuments($this->db))->forOrder($order,
+            (string) $config['settings']['public_base_url'] !== '');
         $message = OrderEmailComposer::compose('order', $order, $config['templates']['order'], [],
-            $this->orderUrl($order, $config['settings'], $orderUrl));
+            $this->orderUrl($order, $config['settings'], $orderUrl),
+            (string) $config['settings']['public_base_url'], $legal['slugs'], $legal['terms'], $legal['language']);
         $orderId = (int) ($order['id'] ?? 0);
         if ($orderId < 1) throw new InvalidArgumentException('Neplatná objednávka pro potvrzení e-mailem.');
         // Checkout and cancellation both lock the order before its outbox row. A delayed
@@ -81,11 +84,17 @@ final class OrderMailQueue
             !isset(MailSettingsRepository::EVENTS[$stage])) return null;
         $config = $this->settings->load();
         if (!$config['settings']['automatic_enabled'] || !$config['templates'][$stage]['enabled']) return null;
-        $tracking = in_array($stage, ['shipped', 'tracking'], true)
+        $tracking = in_array($stage, ['shipped', 'tracking', 'completed'], true)
             ? (new OrderTrackingRepository($this->db))->forOrder((int) $order['id']) : [];
         if ($stage === 'tracking' && ($tracking['number'] ?? '') === '' && ($tracking['url'] ?? '') === '') return null;
+        // The first mail may have been suppressed after rapid online settlement.
+        // The payment receipt carries the same terms captured with the order.
+        $legal = $stage === 'paid' ? (new OrderLegalDocuments($this->db))->forOrder($order,
+            (string) $config['settings']['public_base_url'] !== '')
+            : ['slugs' => [], 'terms' => '', 'language' => 'cs'];
         $message = OrderEmailComposer::compose($stage, $order, $config['templates'][$stage], $tracking,
-            $this->orderUrl($order, $config['settings']));
+            $this->orderUrl($order, $config['settings']), (string) $config['settings']['public_base_url'],
+            $legal['slugs'], $legal['terms'], $legal['language']);
         $key = $eventKey !== '' ? $eventKey : $stage . ':' . (int) $order['id'];
         return $this->enqueue($key, (int) $order['id'], (string) $order['customer_email'],
             $message['subject'], $message['text'], $message['html']);
@@ -120,6 +129,18 @@ final class OrderMailQueue
         $body = "Test e-mailového nastavení dobrodruzi.cz\n\nPokud tuto zprávu čtete, hosting zprávu přijal k odeslání.\n";
         return $this->enqueue('test:' . bin2hex(random_bytes(12)), 0, $email,
             'Test e-mailu dobrodruzi.cz', $body, self::simpleHtml($body));
+    }
+
+    /** Queue a custom transactional notification once per unique event key. */
+    public function enqueueCustom(string $key, ?int $orderId, string $email,
+        string $subject, string $body, string $html): int
+    {
+        if (!$this->installed()) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky e-mailů.');
+        if ($key === '' || strlen($key) > 100 || preg_match('/[^a-zA-Z0-9:._-]/D', $key)) {
+            throw new InvalidArgumentException('Neplatný identifikátor e-mailové události.');
+        }
+        if ($orderId !== null && $orderId < 1) throw new InvalidArgumentException('Neplatná objednávka.');
+        return $this->enqueue($key, $orderId, $email, $subject, $body, $html);
     }
 
     public function enqueueInvoice(array $invoice): int
@@ -340,7 +361,7 @@ final class OrderMailQueue
     {
         if (filter_var($email, FILTER_VALIDATE_EMAIL) === false ||
             strlen($subject) > 190 || preg_match('/[\r\n]/', $subject) ||
-            strlen($body) > 50000 || strlen($html) > 100000) {
+            strlen($body) > 250000 || strlen($html) > 1000000) {
             throw new InvalidArgumentException('E-mailovou zprávu nelze připravit.');
         }
         if (!$this->htmlInstalled()) {

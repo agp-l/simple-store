@@ -8,6 +8,7 @@ use SimpleStore\Accounting\MailDeliveryUncertainException;
 use SimpleStore\Accounting\OrderMailQueue;
 use SimpleStore\Accounting\TaxEvidenceRepository;
 use SimpleStore\Checkout\OrderTrackingRepository;
+use SimpleStore\Checkout\OrderRepository;
 use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Database\SchemaUpdater;
 
@@ -61,6 +62,17 @@ if ($shipment === null || $shipment['state'] !== 'sent' || (int) $shipment['atte
 }
 $queue->notifyStage($id, 'tracking', '', 'tracking:' . $id . ':one');
 if (count($sent) !== 2) throw new RuntimeException('Tracking update email was not sent.');
+$db->insert('shop_order_legal_snapshots', [
+    'order_id' => $id, 'language' => 'cs', 'terms_document_key' => str_repeat('a', 32),
+    'terms_revision' => 5, 'terms_text' => 'Přesné znění podmínek při objednání.',
+]);
+$paidMailId = $queue->enqueueStage((new OrderRepository($db))->findById($id), 'paid',
+    'test:paid:legal:' . $id);
+$paidMail = $db->queryFirstRow('SELECT body_text, body_html FROM shop_mail_outbox WHERE id=%i', $paidMailId);
+if ($paidMail === null || !str_contains($paidMail['body_text'], 'Přesné znění podmínek při objednání.') ||
+    !str_contains($paidMail['body_html'], 'Přesné znění podmínek při objednání.')) {
+    throw new RuntimeException('A fast online payment must carry the immutable terms when the first mail was suppressed.');
+}
 $templates['paid']['enabled'] = '0';
 $settings->save(['from_email' => 'shop@example.test', 'from_name' => 'Dobrodruzi',
     'reply_to' => '', 'public_base_url' => '', 'automatic_enabled' => '1', 'templates' => $templates]);

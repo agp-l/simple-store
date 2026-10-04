@@ -24,6 +24,31 @@ $mailSettingsStore = new MailSettingsRepository($db);
 $mailSettingsReady = $mailSettingsStore->installed();
 $taxMailFrom = (string) ((new TaxEvidenceRepository($db))->settings()['mail_from'] ?? '');
 $mailConfiguration = $mailSettingsStore->load($taxMailFrom);
+$mailLegalWarnings = [];
+if ($settingsTab === 'mail') {
+    if ((string) $mailConfiguration['settings']['public_base_url'] === '') {
+        $mailLegalWarnings[] = 'Vyplň veřejnou HTTPS adresu obchodu, aby v potvrzení objednávky fungovaly odkazy na právní stránky.';
+    }
+    if (!(new \SimpleStore\Accounting\OrderLegalDocuments($db))->installed()) {
+        $mailLegalWarnings[] = 'Aktualizuj SQL tabulky, aby se u každé objednávky uložilo znění obchodních podmínek platné při objednání.';
+    }
+    $termsPage = (new \SimpleStore\Content\ContentRepository($db))->findPublished('page', 'obchodni-podminky', 'cs');
+    if ($termsPage === null) {
+        $mailLegalWarnings[] = 'České obchodní podmínky nejsou publikované. Potvrzovací e-mail proto nemůže obsahovat jejich znění ani odkaz.';
+    } else {
+        try {
+            $termsText = \SimpleStore\Accounting\OrderLegalDocuments::bodyText((string) $termsPage['body']);
+            if ($termsText === '') {
+                $mailLegalWarnings[] = 'Publikované obchodní podmínky nemají žádný text.';
+            }
+            if (str_contains($termsText, '[DOPLNIT')) {
+                $mailLegalWarnings[] = 'Publikované obchodní podmínky ještě obsahují značku [DOPLNIT]. Oprav skutečné údaje před ostrým prodejem.';
+            }
+        } catch (InvalidArgumentException $error) {
+            $mailLegalWarnings[] = $error->getMessage();
+        }
+    }
+}
 $mailPreview = null;
 $previewCode = $_GET['preview'] ?? null;
 if ($settingsTab === 'mail' && is_string($previewCode) && isset(MailSettingsRepository::EVENTS[$previewCode])) {
@@ -34,7 +59,10 @@ if ($settingsTab === 'mail' && is_string($previewCode) && isset(MailSettingsRepo
         'variable_symbol' => '20260001', 'payment_due_at' => '2026-10-15'];
     $mailPreview = \SimpleStore\Accounting\OrderEmailComposer::compose($previewCode,
         $previewOrder, $mailConfiguration['templates'][$previewCode],
-        ['number' => 'GLS123456789', 'url' => 'https://example.com/sledovani']);
+        ['number' => 'GLS123456789', 'url' => 'https://example.com/sledovani'],
+        '', (string) $mailConfiguration['settings']['public_base_url'],
+        $termsPage === null ? [] : ['obchodni-podminky'],
+        in_array($previewCode, ['order', 'paid'], true) && isset($termsText) ? $termsText : '');
 }
 $shippingCatalog = ShippingPolicy::defaults();
 $form = [

@@ -149,11 +149,16 @@ unset($db->products[$key . ':cs']['stock_quantity']);
 $cart->remove($otherId);
 $invalid(static fn () => $cart->update($id, 100));
 $beforeDeliveryKey = $cart->checkoutKey();
-$cart->setDelivery(['method' => 'home', 'name' => 'A G', 'email' => 'ag@example.com',
+$cart->setDelivery(['method' => 'home', 'name' => 'A G', 'company' => ' Dobrodruzi s.r.o. ',
+    'email' => 'ag@example.com',
     'phone' => '+420 123 456 789', 'street' => 'Ulice 1', 'city' => 'Praha',
     'postal_code' => '11000', 'country' => 'CZ']);
 $check($cart->state()['delivery']['street'] === 'Ulice 1' &&
+    $cart->state()['delivery']['company'] === 'Dobrodruzi s.r.o.' &&
     $cart->checkoutKey() !== $beforeDeliveryKey, 'Delivery details did not rotate submission identity.');
+$invalid(static fn () => $cart->setDelivery(['method' => 'home', 'name' => 'A G',
+    'company' => str_repeat('x', 121), 'email' => 'ag@example.com', 'phone' => '123',
+    'street' => 'Ulice 1', 'city' => 'Praha', 'postal_code' => '11000', 'country' => 'CZ']));
 $invalid(static fn () => $cart->setDelivery(['method' => 'home', 'email' => 'invalid']));
 $check($cart->state()['delivery']['street'] === 'Ulice 1', 'Invalid delivery replaced valid details.');
 $pickup = ['method' => 'gls_pickup', 'name' => 'A G', 'email' => 'ag@example.com',

@@ -5,6 +5,7 @@ $mailTemplates = $mailConfiguration['templates'];
 $mailSettingsUrl = $adminUrl . '?section=settings&tab=mail';
 ?>
 <?php if (!$mailSettingsReady): ?><p class="panel-notice">Nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>. Původní potvrzení objednávky a faktury nadále používají odesílatele z údajů OSVČ.</p><?php endif; ?>
+<?php foreach (($mailLegalWarnings ?? []) as $warning): ?><p class="panel-error" role="alert"><?= $escape($warning) ?></p><?php endforeach; ?>
 <?php if (($_GET['test'] ?? '') === 'sent'): ?><p class="panel-notice" role="status">Poštovní server test přijal. Doručení ověř v cílové schránce.</p><?php elseif (($_GET['test'] ?? '') === 'failed'): ?><p class="panel-error" role="alert">Poštovní server test nepřijal. Zpráva je uložená ve frontě k opakování.</p><?php endif; ?>
 <form class="panel-form panel-settings-form" method="post" action="<?= $escape($mailSettingsUrl) ?>">
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="save-mail-settings">
@@ -16,7 +17,7 @@ $mailSettingsUrl = $adminUrl . '?section=settings&tab=mail';
     <label>Jméno odesílatele<input name="from_name" value="<?= $escape($mailForm['from_name']) ?>" maxlength="100" required></label></div>
     <label>Adresa pro odpovědi (nepovinná)<input type="email" name="reply_to" value="<?= $escape($mailForm['reply_to']) ?>" maxlength="254" placeholder="podpora@dobrodruzi.cz"></label>
     <label>Veřejná HTTPS adresa obchodu<input type="url" name="public_base_url" value="<?= $escape($mailForm['public_base_url']) ?>" maxlength="500" placeholder="https://dobrodruzi.cz"></label>
-    <p class="panel-help">Z této adresy se vytvoří soukromý odkaz na objednávku. Vyplň kořen instalace bez /cs. Ukládá se do databáze stejně jako ostatní hodnoty níže.</p>
+    <p class="panel-help">Z této adresy se vytvoří soukromý odkaz na objednávku a odkazy na publikované obchodní podmínky, vrácení zboží a reklamace. Vyplň kořen instalace bez /cs. Ukládá se do databáze stejně jako ostatní hodnoty níže.</p>
     <label>E-mail pro obnovu hesla správce<input type="email" name="admin_recovery_email" value="<?= $escape($mailForm['admin_recovery_email']) ?>" maxlength="254" autocomplete="email" placeholder="spravce@dobrodruzi.cz"></label>
     <p class="panel-help">Odkaz pro obnovu administrace se pošle jen na tuto adresu. Záložní obnova na serveru zůstává: <code>php tools/admin.php --reset</code>.</p>
     <h3>SMTP server schránky</h3>

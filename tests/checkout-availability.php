@@ -88,6 +88,7 @@ if (!str_contains($html, 'value="zasilkovna_pickup"') ||
     throw new RuntimeException('Configured Packeta widget is missing from delivery.');
 }
 $_POST = ['method' => 'zasilkovna_pickup', 'name' => 'Eva Nová',
+    'company' => 'Dobrodruzi & syn s.r.o.',
     'email' => 'eva@example.org', 'phone' => '123', 'country' => 'CZ',
     'street' => '', 'city' => '', 'postal_code' => '',
     'pickup_point' => 'Podvržená pobočka', 'pickup_address' => 'Podvržená adresa',
@@ -103,7 +104,8 @@ $saveDelivery = new ReflectionMethod(CheckoutController::class, 'saveDelivery');
 $saveDelivery->setAccessible(true); // PHP 8.0 still requires this for private methods.
 $saveDelivery->invoke($verified);
 $delivery = $cart->state()['delivery'];
-if ($delivery['pickup_point'] !== 'Praha Hl. nádraží' ||
+if ($delivery['company'] !== 'Dobrodruzi & syn s.r.o.' ||
+    $delivery['pickup_point'] !== 'Praha Hl. nádraží' ||
     $delivery['pickup_address'] !== 'Wilsonova 1, Praha, 110 00' ||
     $delivery['pickup_code'] !== '123456') {
     throw new RuntimeException('Checkout trusted a spoofed pickup label instead of verified Packeta data.');

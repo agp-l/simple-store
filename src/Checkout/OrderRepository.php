@@ -8,6 +8,7 @@ use DateTimeZone;
 use InvalidArgumentException;
 use MeekroDB;
 use SimpleStore\Accounting\InvoiceRepository;
+use SimpleStore\Accounting\OrderLegalDocuments;
 use SimpleStore\Product\ProductStockRepository;
 use RuntimeException;
 use Throwable;
@@ -110,6 +111,12 @@ final class OrderRepository
         }
         $shipping['label'] = trim($shipping['label']);
         $shipping['recipient'] = trim($recipient);
+        $company = $shipping['company'] ?? '';
+        if (!is_string($company) || strlen(trim($company)) > 120 ||
+            preg_match('/[\x00-\x1f\x7f]/', $company) || preg_match('//u', $company) !== 1) {
+            throw new InvalidArgumentException('Neplatný název firmy.');
+        }
+        $shipping['company'] = trim($company);
         $subtotal = 0;
         $units = 0;
         $snapshots = [];
@@ -206,6 +213,9 @@ final class OrderRepository
             if ($saved === null) {
                 throw new RuntimeException('Uloženou objednávku se nepodařilo načíst.');
             }
+            // Keep the exact published terms with this order, in the same transaction.
+            // A later edit of the public page must not change an earlier contract.
+            (new OrderLegalDocuments($this->db))->capture((int) $saved['id'], $snapshots);
             $this->stock?->reserve((int) $saved['id'], $snapshots);
             if ((int) $this->db->queryFirstField(
                 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',

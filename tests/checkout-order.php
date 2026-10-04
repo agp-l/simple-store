@@ -167,6 +167,7 @@ $items = [[
 ]];
 $shipping = [
     'method' => 'home', 'label' => 'Doručení na adresu', 'name' => 'Eva Nová',
+    'company' => 'Dobrodruzi s.r.o.',
     'street' => 'Polní 1', 'city' => 'Praha', 'postal_code' => '11000', 'country' => 'CZ',
 ];
 $key = str_repeat('b', 64);
@@ -175,6 +176,7 @@ if (count($db->rows) !== 1 || $db->commits !== 1 || $order['total_czk'] !== 1100
     $order['subtotal_czk'] !== 1000 || $order['payment_status'] !== 'pending' ||
     $order['status'] !== 'new' || $order['customer_email'] !== 'eva@example.org' ||
     $order['shipping']['recipient'] !== 'Eva Nová' ||
+    $order['shipping']['company'] !== 'Dobrodruzi s.r.o.' ||
     !preg_match('/^[0-9]{10}$/D', $order['variable_symbol']) ||
     !preg_match('/^DB-[0-9]{2}-[0-9]{10}$/D', $order['order_number']) ||
     !str_ends_with($order['order_number'], $order['variable_symbol']) ||

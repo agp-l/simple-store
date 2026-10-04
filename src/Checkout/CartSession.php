@@ -182,7 +182,7 @@ final class CartSession
 
     private static function normalizeDelivery(array $fields): array
     {
-        $limits = ['method' => 20, 'name' => 120, 'email' => 254, 'phone' => 40,
+        $limits = ['method' => 20, 'name' => 120, 'company' => 120, 'email' => 254, 'phone' => 40,
             'street' => 190, 'city' => 120, 'postal_code' => 20, 'country' => 2,
             'pickup_point' => 190, 'pickup_address' => 190, 'pickup_code' => 80,
             'pickup_postal_code' => 20];

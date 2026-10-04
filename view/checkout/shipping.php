@@ -37,7 +37,8 @@ require __DIR__ . '/common.php';
         <fieldset><legend>3. Kontaktní údaje</legend>
           <div class="checkout-fields"><label>Jméno a příjmení <input type="text" name="name" value="<?= $checkoutEscape($delivery['name'] ?? '') ?>" autocomplete="name" maxlength="120" required></label>
             <label>E-mail <input type="email" name="email" value="<?= $checkoutEscape($delivery['email'] ?? '') ?>" autocomplete="email" maxlength="254" required></label>
-            <label>Telefon <input type="tel" name="phone" value="<?= $checkoutEscape($delivery['phone'] ?? '') ?>" autocomplete="tel" maxlength="40" required></label></div>
+            <label>Telefon <input type="tel" name="phone" value="<?= $checkoutEscape($delivery['phone'] ?? '') ?>" autocomplete="tel" maxlength="40" required></label>
+            <label class="checkout-span">Firma (volitelně) <input type="text" name="company" value="<?= $checkoutEscape($delivery['company'] ?? '') ?>" autocomplete="organization" maxlength="120"></label></div>
         </fieldset>
         <fieldset class="checkout-home-fields"><legend>4. Adresa doručení</legend><p class="checkout-field-help">Vyplňte při doručení na adresu.</p>
           <div class="checkout-fields"><label class="checkout-span">Ulice a číslo domu <input type="text" name="street" value="<?= $checkoutEscape($delivery['street'] ?? '') ?>" autocomplete="street-address" maxlength="190"></label>
