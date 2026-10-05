@@ -100,8 +100,11 @@ ob_start();
 $renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
     'products' => [$product], 'homepageSelectionActive' => true, 'homepageConfigured' => true]);
 $selectedHome = ob_get_clean();
-if (!str_contains($selectedHome, 'Vybráno na cestu') ||
+if (!str_contains($selectedHome, '<h2 id="section-title">Náš výběr vybavení</h2>') ||
+    !str_contains($selectedHome, '/shop/cs/produkt/bota') ||
     !str_contains($selectedHome, '?all=1#produkty') ||
+    str_contains($selectedHome, 'product-admin-nav') ||
+    str_contains($selectedHome, 'name="action" value="homepage-product"') ||
     str_contains($selectedHome, 'id="homepage-editor"') || str_contains($selectedHome, 'id="sort"')) {
     throw new RuntimeException('Public homepage must show the chosen products without management controls.');
 }
