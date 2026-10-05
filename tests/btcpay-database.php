@@ -102,6 +102,7 @@ expectBTCPay(count($requests) === 1 && $requests[0][0] === 'POST' &&
     'Invoice creation did not use the scoped Greenfield endpoint.');
 $sent = json_decode((string) $requests[0][3], true, 512, JSON_THROW_ON_ERROR);
 expectBTCPay(is_array($sent) && ($sent['currency'] ?? null) === 'CZK' &&
+    ($sent['checkout']['expirationMinutes'] ?? null) === 2880 &&
     preg_match('/^1079(?:\.0{1,2})?$/D', (string) ($sent['amount'] ?? '')) === 1 &&
     ($sent['metadata']['orderId'] ?? null) === $order['order_number'] &&
     str_contains(json_encode($requests[0][2]), 'test-api-key'),

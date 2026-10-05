@@ -19,6 +19,8 @@ BTCPay nemá společný vývojářský API klíč. Pro testy lze použít vlastn
 - V Lite vytvoř webhook se stejnou URL `https://tvoje-domena.cz/btcpay-callback.php`. Jeho tajný klíč vlož do nastavení e-shopu. Webhook vytvoř **před** zkušební objednávkou: Lite doručuje události pouze webhookům, které existovaly při vzniku faktury.
 - `server_url` e-shopu musí odpovídat veřejné `app_url` v konfiguraci Lite, včetně podsložky, například `https://platby.obchod.cz/BTCPayLite`. Apache musí zpracovávat `.htaccess`, přepisovat API URL a předávat hlavičku `Authorization` do PHP. Obě veřejné adresy nastav s HTTPS.
 - V Lite musí běžet `payment_worker.php` pro zjištění plateb a `webhook_cron.php` pro jejich doručení. Při příjmu přes XPUB naplánuj také `wallet_receive_sync.php` podle konfigurace Lite. Samotný platební časovač webhooky nedoručuje.
+- Po aktualizaci Lite aplikuj jeho migraci **011_invoice_received_outputs.sql** přes aktualizátor databáze a obnov plánování plateb po 10 minutách. Nový receipt provider rozpozná i přijaté BTC následně utracené mezi kontrolami; vrácené vlastní drobné nepřičítá jako novou úhradu. Výšky potvrzení dál závisejí na vybraném Electrum serveru.
+- Lite kontroluje čekající on-chain faktury po 10 minutách první hodinu, po 30 minutách do stáří 6 hodin a poté jednou za hodinu. Po chybě zopakuje kontrolu nejdříve za 10 minut. Faktura zákazníka upozorňuje na možné zpoždění a pomalé potvrzování sítě. Refresh objednávky v e-shopu pouze přečte uložený stav Lite; tento interval neobchází. Používej DB faktury přes Greenfield API, ne samostatné URL faktury.
 - Faktura se vytváří v `CZK`; Lite proto musí získat platný kurz BTC/CZK a mít funkční zdroj adres i pozorování blockchainu. Pouhé otevření platební stránky nebo odpověď `New` ještě neověřuje skutečný příjem bitcoinů.
 
 ### Místní test se dvěma aplikacemi na stejném počítači
@@ -48,6 +50,25 @@ Nastavení klíčů samo neověřuje spojení; ukládá se při platných adres�
 Spusť zkušební objednávku a úhradu na testnetu; zkontroluj návrat zákazníka, příchod podepsaného webhooku a změnu objednávky ze *čeká na úhradu* na *zaplaceno*. Při přechodu na skutečnou instanci nastav její vlastní URL, Store ID, klíč a secret. Zkontroluj, že hosting může navázat odchozí HTTPS spojení z PHP cURL na BTCPay a že BTCPay dosáhne na veřejnou URL webhooku.
 
 Rozhraní: [BTCPay Greenfield API](https://docs.btcpayserver.org/API/Greenfield/v1/) a [průvodce integrací](https://docs.btcpayserver.org/Development/ecommerce-integration-guide/).
+
+## Výběr Lite nebo plného BTCPay Serveru
+
+E-shop má společného Greenfield klienta a **jeden aktivní server**. Pro obě varianty
+se nastavuje URL instance, Store ID, API klíč a webhook secret. Není třeba měnit
+kód checkoutu ani přenášet peněženku do e-shopu. Žádost o fakturu obsahuje
+`checkout.expirationMinutes = 2880` (48 hodin) a reference objednávky.
+
+Plný BTCPay sleduje on-chain platby přes Bitcoin Core/NBXplorer; jeho intervaly
+se režimem Lite nemění. Plný BTCPay může podle svého nastavení nabídnout i
+Lightning. Společná podmínka e-shopu pro úhradu zůstává ověřený stav `Settled`.
+Samotné `Processing`, podpis webhooku nebo návrat zákazníka objednávku nezaplatí.
+
+Při přechodu nejprve vypni vytváření nových BTC plateb a dořeš čekající faktury
+na původním serveru. Potom v nastavení přepni celou sadu údajů a vytvoř webhook
+na novém serveru před novou objednávkou. Současná tabulka pokusů není určena
+pro souběžné střídání dvou serverů: staré faktury se nesmějí ověřovat na novém
+endpointu. Test `btcpay-database.php` pokrývá klasický odkaz `/i/{id}`,
+`btcpay-lite-integration.php` Lite `/pay?id={id}` a skutečné lokální HTTP mezi projekty.
 
 ## Test propojení s BTC Pay Lite
 

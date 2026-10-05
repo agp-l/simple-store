@@ -260,10 +260,11 @@ try {
 
     $observations = new class implements BlockchainProviderInterface {
         public int $confirmed = 0; public int $mempool = 0;
+        public ?int $receivedConfirmed = null; public ?int $receivedPending = null;
         public function maxObservationDurationSeconds(): int { return 1; }
         public function observeAddress(string $address, int $expectedSatoshis = 0): AddressPaymentObservation {
             return new AddressPaymentObservation($address, $this->confirmed, $this->mempool,
-                $this->confirmed + $this->mempool, time());
+                $this->confirmed + $this->mempool, time(), $this->receivedConfirmed, $this->receivedPending);
         }
     };
     $outbox = new WebhookDeliveryRepository($liteDb);
@@ -278,7 +279,7 @@ try {
         $orders->findById((int) $order['id'])['payment_status'] === 'pending',
         'Simulated mempool payment was not Processing/pending.');
     $observations->confirmed = intdiv($expectedSats, 2); $observations->mempool = 0;
-    $pdo->prepare('UPDATE invoices SET next_check_at=0 WHERE id=?')->execute([$invoiceId]);
+    $pdo->prepare('UPDATE invoices SET next_check_at=0,last_checked_at=NULL WHERE id=?')->execute([$invoiceId]);
     $partial = $worker->run(1);
     liteIntegrationCheck($partial['scanned'] === 1 && $partial['failed'] === 0 &&
         $partial['deliveries_queued'] === 0 && $callback($event)['status'] === 200 &&
@@ -301,7 +302,10 @@ try {
     echo "[PASS] Real worker/outbox/webhook Processing and confirmed partial payment stay unpaid; order/currency/amount/store mismatches rejected\n";
 
     $observations->confirmed = $expectedSats; $observations->mempool = 0;
-    $pdo->prepare('UPDATE invoices SET next_check_at=0 WHERE id=?')->execute([$invoiceId]);
+    // The payment was spent between checks; history still proves the incoming amount.
+    $observations->receivedConfirmed = $expectedSats; $observations->receivedPending = 0;
+    $observations->confirmed = 0;
+    $pdo->prepare('UPDATE invoices SET next_check_at=0,last_checked_at=NULL WHERE id=?')->execute([$invoiceId]);
     liteIntegrationCheck($worker->run(1)['deliveries_queued'] === 1 && $processor->run()['deliveries_delivered'] === 1 &&
         $orders->findById((int) $order['id'])['payment_status'] === 'paid',
         'Confirmed simulated payment did not settle the order through the real webhook endpoint.');
@@ -327,10 +331,15 @@ try {
     catch (InvalidArgumentException) { $duplicateDocumentRejected = true; }
     liteIntegrationCheck($duplicateDocumentRejected && (int) $storeDb->queryFirstField('SELECT COUNT(*) FROM shop_invoices WHERE order_id=%i', $order['id']) === 1,
         'Settled order document guard allowed duplicate issuance.');
-    echo "[PASS] Simulated confirmation -> real Settled/paid, signed webhook replay: one stock reservation, invoice, document and captured mail\n";
+    $storedReceipt = $pdo->prepare('SELECT confirmed_balance_sats,confirmed_output_sats FROM invoices WHERE id=?');
+    $storedReceipt->execute([$invoiceId]); $receipt = $storedReceipt->fetch(PDO::FETCH_ASSOC);
+    liteIntegrationCheck((int) $receipt['confirmed_balance_sats'] === 0 && (int) $receipt['confirmed_output_sats'] === $expectedSats,
+        'Spent incoming payment was confused with the current address balance.');
+    echo "[PASS] Simulated spent-before-scan receipt -> real Settled/paid, signed webhook replay: one stock reservation, invoice, document and captured mail\n";
 
     $late = $orders->create(null, 'late@example.test', $items, $shipping, 79, bin2hex(random_bytes(32)), 'btcpay');
     $payments->initiate($late); $lateId = (string) $payments->state((int) $late['id'])['invoice_id'];
+    $observations->receivedConfirmed = null; $observations->receivedPending = null;
     $observations->confirmed = 0;
     // The expiry fixture is backdated; its webhook must still predate the invoice.
     $pdo->prepare('UPDATE webhooks SET created_at=? WHERE id=?')->execute([time() - 30, $webhook['id']]);
@@ -343,7 +352,7 @@ try {
     catch (InvalidArgumentException) { $pendingDocumentRejected = true; }
     liteIntegrationCheck($pendingDocumentRejected, 'Unpaid expired order allowed document issuance.');
     $observations->confirmed = BitcoinAmount::fromBtc($methods[0]['amount'])->satoshis();
-    $pdo->prepare('UPDATE invoices SET next_check_at=0 WHERE id=?')->execute([$lateId]);
+    $pdo->prepare('UPDATE invoices SET next_check_at=0,last_checked_at=NULL WHERE id=?')->execute([$lateId]);
     liteIntegrationCheck($worker->run(1)['deliveries_queued'] === 1 && $processor->run()['deliveries_delivered'] === 1 &&
         $orders->findById((int) $late['id'])['payment_status'] === 'paid', 'Late confirmation was lost after expiry.');
     echo "[PASS] Expired stays unpaid/document blocked; simulated late confirmation settles through actual HTTP webhook\n";
