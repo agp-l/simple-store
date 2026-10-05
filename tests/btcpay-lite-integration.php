@@ -221,6 +221,8 @@ try {
         'Lite checkout link was not accepted/reused.');
     liteIntegrationCheck((int) $pdo->query('SELECT COUNT(*) FROM invoices')->fetchColumn() === 1,
         'Repeated checkout created a second Lite invoice.');
+    liteIntegrationCheck((int) $pdo->query('SELECT expires_at-created_at FROM invoices')->fetchColumn() === 172800,
+        'Shop invoice does not allow two days for on-chain payment.');
     $auth = ['Authorization: token integration-key'];
     $statusUrl = $liteUrl . '/api/v1/stores/integration/invoices/' . $invoiceId;
     $remote = json_decode(liteIntegrationRequest('GET', $statusUrl, '', $auth)['body'], true, 32, JSON_THROW_ON_ERROR);

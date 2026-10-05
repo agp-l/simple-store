@@ -38,7 +38,7 @@ Nastavení klíčů samo neověřuje spojení; ukládá se při platných adres�
 
 ## Průběh platby
 
-- Po objednávce vznikne jediná uložená faktura pro jeden pokus. Opakované kliknutí otevře stejnou fakturu. Je-li její vytvoření po síťové chybě nejasné, obchod další fakturu automaticky nezakládá; zkontroluj dané číslo objednávky v BTCPay.
+- Po objednávce vznikne jediná uložená faktura pro jeden pokus s platností **48 hodin**. E-shop předává `checkout.expirationMinutes = 2880` i při připojení k běžnému BTCPay Serveru. BTC částka určená při vzniku zůstává po dobu platnosti pevná; existující faktury si ponechají původní expiraci. Opakované kliknutí otevře stejnou fakturu. Je-li její vytvoření po síťové chybě nejasné, obchod další fakturu automaticky nezakládá; zkontroluj dané číslo objednávky v BTCPay.
 - E-shop zatím neposílá hlavičku `Idempotency-Key`, kterou Lite pro vytváření faktur podporuje. Ochranu před opakovaným POST zajišťuje uložený platební pokus; automatické dohledání a bezpečné dokončení nejasného pokusu je další plánované zlepšení.
 - Návrat zákazníka a webhook jsou pouze podnět pro kontrolu. Server se vlastním API klíčem zeptá BTCPay na fakturu a porovná ID obchodu, číslo objednávky, fakturu, měnu a přesnou cenu. Objednávka je zaplacená až při stavu **Settled**. `New` a `Processing` čekají na potvrzení; po `Expired` nebo `Invalid` může zákazník založit další pokus. Podpis webhooku se ověřuje nad původním tělem HTTP požadavku.
 - V detailu objednávky v administraci lze stav faktury také ručně obnovit. Expedice a vystavení faktury za nákup vyžadují ověřený vypořádaný pokus. Při smazání objednávky zůstane záznam externí platby pro případ opožděného potvrzení.

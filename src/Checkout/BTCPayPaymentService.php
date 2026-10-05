@@ -122,7 +122,8 @@ final class BTCPayPaymentService
             'amount' => (string) (int) $order['total_czk'] . '.00',
             'currency' => 'CZK',
             'metadata' => ['orderId' => (string) $order['order_number']],
-            'checkout' => ['redirectURL' => $this->returnBaseUrl . '/btcpay-return.php?token=' . $token,
+            'checkout' => ['expirationMinutes' => 2880,
+                'redirectURL' => $this->returnBaseUrl . '/btcpay-return.php?token=' . $token,
                 'redirectAutomatically' => true],
         ];
         try {
