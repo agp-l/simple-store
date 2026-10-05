@@ -1,0 +1,58 @@
+name: BTCPay Lite integration
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  btcpay-lite-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      mariadb:
+        image: mariadb:10.11
+        env:
+          MARIADB_ROOT_PASSWORD: ci-only-password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+    env:
+      BTCPAY_LITE_PATH: ${{ github.workspace }}/.integration/BTCPayServerLite
+      MYSQL_TEST_HOST: 127.0.0.1
+      MYSQL_TEST_PORT: 3306
+      MYSQL_TEST_USER: root
+      MYSQL_TEST_PASSWORD: ci-only-password
+    steps:
+      - name: Check out simple-store
+        uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+      - name: Check out current BTC Pay Lite
+        uses: actions/checkout@v5
+        with:
+          repository: agp-l/BTCPayServerLite
+          ref: main
+          path: .integration/BTCPayServerLite
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          extensions: curl, mysqli, pdo_mysql, gmp, bcmath
+          tools: composer:v2
+          ini-values: display_errors=stderr, log_errors=On
+          coverage: none
+      - name: Install simple-store dependencies
+        run: composer install --no-interaction --no-dev --prefer-dist --no-progress
+      - name: Install BTC Pay Lite dependencies
+        run: composer install --working-dir=.integration/BTCPayServerLite --no-interaction --no-dev --prefer-dist --no-progress
+      - name: Verify actual HTTP and database integration with simulated Bitcoin
+        run: php tests/btcpay-lite-integration.php

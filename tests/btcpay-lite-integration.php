@@ -1,0 +1,338 @@
+<?php
+declare(strict_types=1);
+
+/**
+ * Cross-project contract test with real HTTP, MariaDB, XPUB derivation and webhook handlers.
+ * Fiat prices and blockchain observations are simulated; no Bitcoin is sent.
+ * A loopback HTTP router instantiates the real Lite controller with test dependencies;
+ * a loopback WebhookTransport replaces production HTTPS/DNS delivery restrictions.
+ * This does not test Apache routing, public TLS, DNS, Electrum or SMTP delivery.
+ * Mail is captured by a temporary sendmail command, never sent to a real recipient.
+ *
+ * BTCPAY_LITE_PATH=/path/to/BTCPayServerLite MYSQL_TEST_HOST=127.0.0.1 \
+ * MYSQL_TEST_PORT=3306 MYSQL_TEST_USER=root MYSQL_TEST_PASSWORD=... \
+ * php tests/btcpay-lite-integration.php
+ *
+ * Needs CREATE/DROP DATABASE permission and installed Composer dependencies in both repos.
+ * Creates randomly named schemas and temporary configuration; existing data/config are untouched.
+ */
+
+use BtcPayLite\{AddressPaymentObservation, BitcoinAmount, BitcoinMarketDataProvider,
+    BlockchainProviderInterface, BtcInvoiceManager, Database, ElectrumRPC, ElectrumWallet,
+    GreenfieldApiController, GreenfieldApiException, GreenfieldApiRepository, GreenfieldApiService,
+    InstallationManager, PaymentWorker, WebhookDeliveryRepository, WebhookProcessor, WebhookTransport};
+use SimpleStore\Accounting\{InvoiceRepository, MailSettingsRepository};
+use SimpleStore\Checkout\{BTCPayPaymentService, OrderRepository};
+use SimpleStore\Database\{ConnectionFactory, SchemaUpdater};
+use SimpleStore\Product\ProductStockRepository;
+
+function liteIntegrationCheck(bool $condition, string $message): void
+{
+    if (!$condition) throw new RuntimeException($message);
+}
+
+function liteIntegrationRequest(string $method, string $url, string $body = '', array $headers = []): array
+{
+    $curl = curl_init($url);
+    $responseHeaders = [];
+    curl_setopt_array($curl, [CURLOPT_CUSTOMREQUEST => $method, CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_CONNECTTIMEOUT => 2, CURLOPT_TIMEOUT => 15, CURLOPT_FOLLOWLOCATION => false,
+        CURLOPT_HTTPHEADER => $headers, CURLOPT_HEADERFUNCTION => static function ($handle, string $line) use (&$responseHeaders): int {
+            $responseHeaders[] = trim($line); return strlen($line);
+        }]);
+    if ($method === 'POST') curl_setopt($curl, CURLOPT_POSTFIELDS, $body);
+    $reply = curl_exec($curl);
+    if (!is_string($reply)) throw new RuntimeException('Local HTTP request failed: ' . curl_error($curl));
+    $code = (int) curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
+    curl_close($curl);
+    return ['status' => $code, 'body' => $reply, 'headers' => $responseHeaders];
+}
+
+// The same test file acts as the temporary Lite server's router. Production routing,
+// authentication, JSON contracts, persistence and XPUB address generation are used.
+if (PHP_SAPI === 'cli-server') {
+    // Match api.php: dependency diagnostics must not corrupt the JSON response.
+    ini_set('display_errors', '0');
+    $fixture = require (string) getenv('SIMPLE_STORE_LITE_FIXTURE');
+    require $fixture['lite_root'] . '/vendor/autoload.php';
+    $db = new Database($fixture['db']['host'], $fixture['lite_schema'], $fixture['db']['user'],
+        $fixture['db']['password'], $fixture['db']['port']);
+    $rpc = new class('127.0.0.1', 1) extends ElectrumRPC {
+        public function call(string $method, array $params = []): mixed {
+            throw new RuntimeException('XPUB contract test unexpectedly called Electrum: ' . $method);
+        }
+    };
+    $wallet = new ElectrumWallet($rpc);
+    $market = new class implements BitcoinMarketDataProvider {
+        public function getRecommendedFees(): array { return ['economy' => 1, 'standard' => 2, 'priority' => 3]; }
+        public function getFiatPrice(string $currency): ?float { return $currency === 'CZK' ? 1_000_000.0 : null; }
+    };
+    $service = new GreenfieldApiService(new GreenfieldApiRepository($db), $db, $wallet,
+        new BtcInvoiceManager($wallet, str_repeat('s', 32), $db), '', $fixture['lite_url'], null, $market);
+    header('Content-Type: application/json');
+    try {
+        $server = array_replace($_SERVER, ['SCRIPT_NAME' => '/greenfield.php']);
+        $result = (new GreenfieldApiController($service))->handleServerRequest($server, (string) file_get_contents('php://input'));
+        http_response_code($result['status_code']);
+        echo json_encode($result['body'], JSON_THROW_ON_ERROR);
+    } catch (GreenfieldApiException $error) {
+        http_response_code($error->getHttpStatus());
+        echo json_encode(['error' => $error->getMessage()], JSON_THROW_ON_ERROR);
+    }
+    return true;
+}
+
+$storeRoot = dirname(__DIR__);
+$liteRoot = realpath((string) (getenv('BTCPAY_LITE_PATH') ?: dirname($storeRoot) . '/BTCPayServerLite'));
+liteIntegrationCheck(is_string($liteRoot) && is_file($liteRoot . '/vendor/autoload.php'),
+    'Set BTCPAY_LITE_PATH to an installed BTCPayServerLite checkout.');
+require $storeRoot . '/vendor/autoload.php';
+require $liteRoot . '/vendor/autoload.php';
+
+$connection = ['host' => getenv('MYSQL_TEST_HOST') ?: '127.0.0.1',
+    'port' => (int) (getenv('MYSQL_TEST_PORT') ?: 3306), 'user' => getenv('MYSQL_TEST_USER') ?: 'root',
+    'password' => (string) getenv('MYSQL_TEST_PASSWORD')];
+$suffix = bin2hex(random_bytes(5));
+$storeSchema = 'simple_store_lite_test_' . $suffix;
+$liteSchema = 'btcpay_store_test_' . $suffix;
+$temporary = sys_get_temp_dir() . '/simple-store-lite-' . $suffix;
+mkdir($temporary, 0700);
+$processes = [];
+$admin = new PDO('mysql:host=' . $connection['host'] . ';port=' . $connection['port'],
+    $connection['user'], $connection['password'], [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+
+function liteIntegrationFreePort(): int
+{
+    $socket = stream_socket_server('tcp://127.0.0.1:0', $errno, $error);
+    liteIntegrationCheck(is_resource($socket), 'Cannot allocate a local HTTP port.');
+    $name = stream_socket_get_name($socket, false); fclose($socket);
+    return (int) substr((string) $name, strrpos((string) $name, ':') + 1);
+}
+
+function liteIntegrationStart(array $command, string $log, array $environment): mixed
+{
+    $process = proc_open($command, [0 => ['file', '/dev/null', 'r'], 1 => ['file', $log, 'a'],
+        2 => ['file', $log, 'a']], $pipes, null, array_replace(getenv(), $environment));
+    liteIntegrationCheck(is_resource($process), 'Cannot start local PHP HTTP server.');
+    return $process;
+}
+
+function liteIntegrationRemove(string $path): void
+{
+    if (is_link($path) || is_file($path)) { unlink($path); return; }
+    foreach (new FilesystemIterator($path) as $entry) liteIntegrationRemove($entry->getPathname());
+    rmdir($path);
+}
+
+try {
+    $admin->exec('CREATE DATABASE `' . $storeSchema . '` CHARACTER SET utf8mb4');
+    $admin->exec('CREATE DATABASE `' . $liteSchema . '` CHARACTER SET utf8mb4');
+    $storeDb = ConnectionFactory::create($connection + ['database' => $storeSchema]);
+    (new SchemaUpdater($storeDb, $storeRoot . '/database/schema.sql'))->apply();
+    $liteDb = new Database($connection['host'], $liteSchema, $connection['user'], $connection['password'], $connection['port']);
+    $pdo = $liteDb->getPdo();
+    foreach (InstallationManager::splitSqlStatements((string) file_get_contents($liteRoot . '/sql.sql')) as $sql) $pdo->exec($sql);
+    // Public, empty BIP32 test-vector XPUB. No seed or funded wallet is used.
+    $xpub = 'xpub661MyMwAqRbcFtXgS5sYJABqqG9YLmC4Q1Rdap9gSE8NqtwybGhePY2gZ29ESFjqJoCu1Rupje8YtGqsefD265TMg7usUDFdp6W1EGMcet8';
+    $insert = $pdo->prepare("INSERT INTO stores (id,name,api_key,address_source,xpub) VALUES (?, ?, ?, 'xpub', ?)");
+    foreach (['integration', 'other'] as $id) $insert->execute([$id, $id, $id . '-key', $xpub]);
+
+    $liteUrl = 'http://127.0.0.1:' . liteIntegrationFreePort();
+    $shopUrl = 'http://127.0.0.1:' . liteIntegrationFreePort();
+    $secret = 'test-only-webhook-secret';
+    $settings = ['enabled' => true, 'server_url' => $liteUrl, 'store_id' => 'integration',
+        'api_key' => 'integration-key', 'webhook_secret' => $secret,
+        'return_base_url' => 'https://shop.example.test'];
+    $fixturePath = $temporary . '/fixture.php';
+    file_put_contents($fixturePath, '<?php return ' . var_export(['lite_root' => $liteRoot,
+        'db' => $connection, 'lite_schema' => $liteSchema, 'lite_url' => $liteUrl], true) . ';');
+    $webRoot = $temporary . '/shop'; mkdir($webRoot); mkdir($webRoot . '/config');
+    symlink($storeRoot . '/src', $webRoot . '/src');
+    symlink($storeRoot . '/vendor', $webRoot . '/vendor');
+    // Run the exact current callback/return code, isolated from the user's config.
+    foreach (['btcpay-callback.php', 'btcpay-return.php'] as $file) copy($storeRoot . '/' . $file, $webRoot . '/' . $file);
+    copy($storeRoot . '/config/checkout.example.php', $webRoot . '/config/checkout.example.php');
+    file_put_contents($webRoot . '/config/database.php', '<?php return ' . var_export($connection + ['database' => $storeSchema], true) . ';');
+    file_put_contents($webRoot . '/config/checkout.php', '<?php return ' . var_export(['btcpay' => $settings], true) . ';');
+    $mailbox = $temporary . '/mailbox';
+    $sendmail = $temporary . '/sendmail';
+    file_put_contents($sendmail, "#!/bin/sh\ncat >> '" . $mailbox . "'\nprintf '\\n--MAIL-END--\\n' >> '" . $mailbox . "'\n");
+    chmod($sendmail, 0700);
+    $processes[] = liteIntegrationStart([PHP_BINARY, '-S', substr($liteUrl, 7), __FILE__],
+        $temporary . '/lite.log', ['SIMPLE_STORE_LITE_FIXTURE' => $fixturePath]);
+    $processes[] = liteIntegrationStart([PHP_BINARY, '-d', 'sendmail_path=' . $sendmail,
+        '-S', substr($shopUrl, 7), '-t', $webRoot], $temporary . '/shop.log', []);
+    foreach ([$liteUrl . '/api/v1/health', $shopUrl . '/btcpay-callback.php'] as $url) {
+        $ready = false;
+        for ($attempt = 0; $attempt < 100; $attempt++) {
+            try { liteIntegrationRequest('GET', $url); $ready = true; break; }
+            catch (Throwable) { usleep(50000); }
+        }
+        liteIntegrationCheck($ready, 'HTTP server did not start: ' . $url);
+    }
+
+    $pdo->prepare('INSERT INTO webhooks (id,store_id,url,secret,created_at) VALUES (?, ?, ?, ?, ?)')
+        ->execute(['wh_integration', 'integration', $shopUrl . '/btcpay-callback.php', $secret, 1]);
+    $templates = [];
+    foreach (MailSettingsRepository::EVENTS as $code => $definition) $templates[$code] = [
+        'enabled' => '1', 'subject' => $definition['subject'], 'message' => $definition['message']];
+    (new MailSettingsRepository($storeDb))->save(['from_email' => 'shop@example.test',
+        'from_name' => 'Integration fixture', 'reply_to' => '', 'public_base_url' => 'https://shop.example.test',
+        'automatic_enabled' => '1', 'templates' => $templates]);
+    $productKey = bin2hex(random_bytes(16));
+    $storeDb->insert('product_revisions', ['product_key' => $productKey, 'active_product_key' => $productKey,
+        'language' => 'cs', 'revision_number' => 1, 'slug' => 'integration-tent', 'active_slug' => 'integration-tent',
+        'name' => 'Stan', 'category' => 'vybaveni', 'price_czk' => 500, 'description' => '',
+        'image_path' => '', 'stock_status' => 'in_stock', 'published' => 1]);
+    $stock = new ProductStockRepository($storeDb); $stock->ensure($productKey); $stock->setAvailable($productKey, 0, 10);
+    $orders = new OrderRepository($storeDb, null, 7, $stock);
+    $payments = new BTCPayPaymentService($storeDb, $settings);
+    $items = [['product_key' => $productKey, 'language' => 'cs', 'slug' => 'integration-tent',
+        'name' => 'Stan', 'quantity' => 2, 'unit_price_czk' => 500, 'image_path' => '', 'options' => []]];
+    $shipping = ['method' => 'gls_home', 'label' => 'GLS', 'name' => 'Test Buyer', 'street' => 'Test 1',
+        'city' => 'Praha', 'postal_code' => '11000', 'country' => 'CZ'];
+    $submission = bin2hex(random_bytes(32));
+    $order = $orders->create(null, 'buyer@example.test', $items, $shipping, 79, $submission, 'btcpay');
+    liteIntegrationCheck($orders->create(null, 'buyer@example.test', $items, $shipping, 79, $submission, 'btcpay')['id'] === $order['id'],
+        'Repeated checkout created a second order.');
+    $checkout = $payments->initiate($order);
+    $state = $payments->state((int) $order['id']); $invoiceId = (string) $state['invoice_id'];
+    liteIntegrationCheck($checkout === $liteUrl . '/pay?id=' . $invoiceId && $payments->initiate($order) === $checkout,
+        'Lite checkout link was not accepted/reused.');
+    liteIntegrationCheck((int) $pdo->query('SELECT COUNT(*) FROM invoices')->fetchColumn() === 1,
+        'Repeated checkout created a second Lite invoice.');
+    $auth = ['Authorization: token integration-key'];
+    $statusUrl = $liteUrl . '/api/v1/stores/integration/invoices/' . $invoiceId;
+    $remote = json_decode(liteIntegrationRequest('GET', $statusUrl, '', $auth)['body'], true, 32, JSON_THROW_ON_ERROR);
+    liteIntegrationCheck(in_array($remote['amount'], ['1079', '1079.00'], true) && $remote['currency'] === 'CZK' &&
+        $remote['metadata']['orderId'] === $order['order_number'] && $remote['status'] === 'New',
+        'Lite did not retain original CZK amount/order metadata.');
+    $methods = json_decode(liteIntegrationRequest('GET', $statusUrl . '/payment-methods', '', $auth)['body'], true, 32, JSON_THROW_ON_ERROR);
+    liteIntegrationCheck($methods[0]['amount'] === '0.00107900' && $methods[0]['paymentMethodId'] === 'BTC-CHAIN' &&
+        str_starts_with($methods[0]['paymentLink'], 'bitcoin:') && $methods[0]['destination'] !== '',
+        'Lite did not expose a usable Bitcoin payment method/BIP21 amount.');
+    liteIntegrationCheck(liteIntegrationRequest('GET', $statusUrl, '', ['Authorization: token wrong-key'])['status'] === 401 &&
+        liteIntegrationRequest('GET', str_replace('/integration/', '/other/', $statusUrl), '', ['Authorization: token other-key'])['status'] === 404,
+        'Lite leaked an invoice across store authentication boundaries.');
+    echo "[PASS] Real HTTP create/read/payment-methods, CZK metadata, XPUB/BIP21, scoped auth, one order/invoice\n";
+
+    $token = (string) $storeDb->queryFirstField('SELECT return_token FROM shop_btcpay_payments WHERE order_id=%i', $order['id']);
+    liteIntegrationCheck(liteIntegrationRequest('GET', $shopUrl . '/btcpay-return.php?token=' . $token)['status'] === 303 &&
+        $orders->findById((int) $order['id'])['payment_status'] === 'pending' &&
+        liteIntegrationRequest('GET', $shopUrl . '/btcpay-return.php?token=' . str_repeat('f', 64))['status'] === 404,
+        'Browser return changed payment state or accepted an unknown token.');
+    $callback = static function (array $event, ?string $signature = null) use ($shopUrl, $secret): array {
+        $body = json_encode($event, JSON_THROW_ON_ERROR);
+        return liteIntegrationRequest('POST', $shopUrl . '/btcpay-callback.php', $body,
+            ['Content-Type: application/json', 'BTCPay-Sig: ' . ($signature ?? 'sha256=' . hash_hmac('sha256', $body, $secret))]);
+    };
+    $event = ['invoiceId' => $invoiceId, 'storeId' => 'integration', 'type' => 'InvoiceSettled'];
+    liteIntegrationCheck($callback($event, 'sha256=' . str_repeat('0', 64))['status'] === 401 &&
+        $callback(array_replace($event, ['storeId' => 'other']))['status'] === 400 &&
+        $callback(array_replace($event, ['invoiceId' => 'unknown_invoice']))['status'] === 503 &&
+        $callback($event)['status'] === 200 && $orders->findById((int) $order['id'])['payment_status'] === 'pending',
+        'Callback accepted a forged signature/store/ID or trusted a signed event instead of the API.');
+    echo "[PASS] Real return/callback endpoints: private token, HMAC rejection, store/unknown ID, signed event is only a hint\n";
+
+    $observations = new class implements BlockchainProviderInterface {
+        public int $confirmed = 0; public int $mempool = 0;
+        public function maxObservationDurationSeconds(): int { return 1; }
+        public function observeAddress(string $address, int $expectedSatoshis = 0): AddressPaymentObservation {
+            return new AddressPaymentObservation($address, $this->confirmed, $this->mempool,
+                $this->confirmed + $this->mempool, time());
+        }
+    };
+    $outbox = new WebhookDeliveryRepository($liteDb);
+    $worker = new PaymentWorker($liteDb, $observations, $outbox);
+    $transport = new class implements WebhookTransport {
+        public array $deliveries = [];
+        public function deliver(string $url, string $payload, string $signature): array {
+            $reply = liteIntegrationRequest('POST', $url, $payload, ['Content-Type: application/json', 'BTCPay-Sig: ' . $signature]);
+            $this->deliveries[] = ['payload' => $payload, 'signature' => $signature, 'status' => $reply['status']];
+            liteIntegrationCheck($reply['status'] === 200, 'Real shop callback rejected the generated Lite webhook: ' . $reply['status']);
+            return ['http_status' => $reply['status'], 'primary_ip' => '127.0.0.1'];
+        }
+    };
+    $processor = new WebhookProcessor($outbox, $transport);
+    $expectedSats = BitcoinAmount::fromBtc($methods[0]['amount'])->satoshis();
+    $observations->mempool = $expectedSats;
+    liteIntegrationCheck($worker->run(1)['deliveries_queued'] === 1 && $processor->run()['deliveries_delivered'] === 1 &&
+        $payments->state((int) $order['id'])['status'] === 'processing' &&
+        $orders->findById((int) $order['id'])['payment_status'] === 'pending',
+        'Simulated mempool payment was not Processing/pending.');
+    $observations->confirmed = intdiv($expectedSats, 2); $observations->mempool = 0;
+    $pdo->prepare('UPDATE invoices SET next_check_at=0 WHERE id=?')->execute([$invoiceId]);
+    $partial = $worker->run(1);
+    liteIntegrationCheck($partial['scanned'] === 1 && $partial['failed'] === 0 &&
+        $partial['deliveries_queued'] === 0 && $callback($event)['status'] === 200 &&
+        $payments->state((int) $order['id'])['status'] === 'processing' &&
+        $orders->findById((int) $order['id'])['payment_status'] === 'pending',
+        'A confirmed partial Bitcoin payment settled the order or repeated its Processing event.');
+    // Authenticated API responses must still match the saved order snapshot.
+    $originalMetadata = (string) $pdo->query('SELECT metadata FROM invoices')->fetchColumn();
+    foreach ([['orderId' => 'OTHER-ORDER'], ['_btcpaylite_original_currency' => 'EUR'],
+        ['_btcpaylite_original_amount' => '1078.00']] as $mismatch) {
+        $metadata = array_replace(json_decode($originalMetadata, true, 32, JSON_THROW_ON_ERROR), $mismatch);
+        $pdo->prepare('UPDATE invoices SET metadata=? WHERE id=?')->execute([json_encode($metadata, JSON_THROW_ON_ERROR), $invoiceId]);
+        liteIntegrationCheck($callback($event)['status'] === 503 && $orders->findById((int) $order['id'])['payment_status'] === 'pending',
+            'Mismatched authenticated invoice data paid an order.');
+    }
+    $pdo->prepare('UPDATE invoices SET metadata=? WHERE id=?')->execute([$originalMetadata, $invoiceId]);
+    $pdo->prepare('UPDATE invoices SET store_id=? WHERE id=?')->execute(['other', $invoiceId]);
+    liteIntegrationCheck($callback($event)['status'] === 503, 'Invoice reassigned to another store was accepted.');
+    $pdo->prepare('UPDATE invoices SET store_id=? WHERE id=?')->execute(['integration', $invoiceId]);
+    echo "[PASS] Real worker/outbox/webhook Processing and confirmed partial payment stay unpaid; order/currency/amount/store mismatches rejected\n";
+
+    $observations->confirmed = $expectedSats; $observations->mempool = 0;
+    $pdo->prepare('UPDATE invoices SET next_check_at=0 WHERE id=?')->execute([$invoiceId]);
+    liteIntegrationCheck($worker->run(1)['deliveries_queued'] === 1 && $processor->run()['deliveries_delivered'] === 1 &&
+        $orders->findById((int) $order['id'])['payment_status'] === 'paid',
+        'Confirmed simulated payment did not settle the order through the real webhook endpoint.');
+    $paidAt = $orders->findById((int) $order['id'])['payment_paid_at'];
+    $settlement = end($transport->deliveries);
+    for ($i = 0; $i < 3; $i++) liteIntegrationCheck(liteIntegrationRequest('POST', $shopUrl . '/btcpay-callback.php',
+        $settlement['payload'], ['BTCPay-Sig: ' . $settlement['signature']])['status'] === 200, 'Settlement replay failed.');
+    liteIntegrationCheck($orders->findById((int) $order['id'])['payment_paid_at'] === $paidAt &&
+        (int) $storeDb->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s', $productKey) === 8 &&
+        (int) $storeDb->queryFirstField('SELECT COUNT(*) FROM shop_btcpay_payments WHERE order_id=%i', $order['id']) === 1 &&
+        (int) $storeDb->queryFirstField('SELECT COUNT(*) FROM shop_mail_outbox WHERE event_key=%s AND state=%s AND attempts=1', 'paid:' . $order['id'], 'sent') === 1 &&
+        substr_count((string) file_get_contents($mailbox), '--MAIL-END--') === 1,
+        'Settlement replay repeated inventory/invoice attempts/mail or changed payment timestamp.');
+    $documents = new InvoiceRepository($storeDb);
+    $seller = ['name' => 'Integration seller', 'ico' => '12345678', 'street' => 'Test 1', 'city' => 'Praha',
+        'postal_code' => '11000', 'bank_account' => ''];
+    $documents->issue((int) $order['id'], $seller, ['name' => 'Test Buyer']);
+    $duplicateDocumentRejected = false;
+    try { $documents->issue((int) $order['id'], $seller, ['name' => 'Test Buyer']); }
+    catch (InvalidArgumentException) { $duplicateDocumentRejected = true; }
+    liteIntegrationCheck($duplicateDocumentRejected && (int) $storeDb->queryFirstField('SELECT COUNT(*) FROM shop_invoices WHERE order_id=%i', $order['id']) === 1,
+        'Settled order document guard allowed duplicate issuance.');
+    echo "[PASS] Simulated confirmation -> real Settled/paid, signed webhook replay: one stock reservation, invoice, document and captured mail\n";
+
+    $late = $orders->create(null, 'late@example.test', $items, $shipping, 79, bin2hex(random_bytes(32)), 'btcpay');
+    $payments->initiate($late); $lateId = (string) $payments->state((int) $late['id'])['invoice_id'];
+    $observations->confirmed = 0;
+    $pdo->prepare('UPDATE invoices SET created_at=?, expires_at=?, next_check_at=0 WHERE id=?')->execute([time() - 20, time() - 1, $lateId]);
+    liteIntegrationCheck($worker->run(1)['expired'] === 1 && $processor->run()['deliveries_delivered'] === 1 &&
+        $payments->state((int) $late['id'])['status'] === 'expired' && $orders->findById((int) $late['id'])['payment_status'] === 'pending',
+        'Expired invoice did not reconcile as expired/pending.');
+    $pendingDocumentRejected = false;
+    try { $documents->issue((int) $late['id'], $seller, ['name' => 'Late Buyer']); }
+    catch (InvalidArgumentException) { $pendingDocumentRejected = true; }
+    liteIntegrationCheck($pendingDocumentRejected, 'Unpaid expired order allowed document issuance.');
+    $observations->confirmed = BitcoinAmount::fromBtc($methods[0]['amount'])->satoshis();
+    $pdo->prepare('UPDATE invoices SET next_check_at=0 WHERE id=?')->execute([$lateId]);
+    liteIntegrationCheck($worker->run(1)['deliveries_queued'] === 1 && $processor->run()['deliveries_delivered'] === 1 &&
+        $orders->findById((int) $late['id'])['payment_status'] === 'paid', 'Late confirmation was lost after expiry.');
+    echo "[PASS] Expired stays unpaid/document blocked; simulated late confirmation settles through actual HTTP webhook\n";
+    echo "Cross-project integration passed. Bitcoin/fiat simulated; HTTP, SQL, XPUB, callbacks, signatures, order/stock/document/mail guards real.\n";
+} catch (Throwable $error) {
+    foreach (['lite.log', 'shop.log'] as $log) if (is_file($temporary . '/' . $log)) {
+        fwrite(STDERR, "\n" . $log . ":\n" . file_get_contents($temporary . '/' . $log));
+    }
+    throw $error;
+} finally {
+    foreach ($processes as $process) { proc_terminate($process); proc_close($process); }
+    foreach ([$storeSchema, $liteSchema] as $schema) $admin->exec('DROP DATABASE IF EXISTS `' . $schema . '`');
+    liteIntegrationRemove($temporary);
+}
