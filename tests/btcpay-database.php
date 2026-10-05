@@ -187,6 +187,76 @@ expectBTCPay(!$disabled->canInitiate() &&
     $disabled->refresh($orders->findById((int) $order['id']))['payment_status'] === 'paid',
     'Disabling new BTCPay payments also disabled reconciliation of existing invoices.');
 
+// Lite may live in a subdirectory and uses /pay?id= for its checkout page.
+$liteSettings = array_replace($settings, ['server_url' => 'https://pay.example.test/lite']);
+$liteOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
+    bin2hex(random_bytes(32)), 'btcpay');
+$liteId = bin2hex(random_bytes(11));
+$liteLink = $liteSettings['server_url'] . '/pay?id=' . $liteId;
+$liteRequests = [];
+$liteClient = new BTCPayApiClient($liteSettings['server_url'], $liteSettings['store_id'],
+    $liteSettings['api_key'], static function (string $method, string $url) use (
+        $liteSettings, $liteOrder, $liteId, $liteLink, &$liteRequests
+    ): array {
+        $liteRequests[] = [$method, $url];
+        return ['status' => 200, 'body' => json_encode([
+            'id' => $liteId, 'storeId' => $liteSettings['store_id'],
+            'amount' => '1079.00', 'currency' => 'CZK',
+            'status' => $method === 'POST' ? 'New' : 'Settled',
+            'additionalStatus' => 'None',
+            'metadata' => ['orderId' => $liteOrder['order_number']],
+            'checkoutLink' => $liteLink,
+        ], JSON_THROW_ON_ERROR)];
+    });
+$litePayments = new BTCPayPaymentService($db, $liteSettings, $liteClient);
+expectBTCPay($litePayments->initiate($liteOrder) === $liteLink &&
+    $litePayments->initiate($liteOrder) === $liteLink && count($liteRequests) === 1,
+    'A Lite checkout link was rejected or repeated creation duplicated its invoice.');
+$litePayments->notify($liteId);
+expectBTCPay($liteRequests[0] === ['POST',
+        'https://pay.example.test/lite/api/v1/stores/test-store/invoices'] &&
+    $liteRequests[1] === ['GET',
+        'https://pay.example.test/lite/api/v1/stores/test-store/invoices/' . $liteId] &&
+    $orders->findById((int) $liteOrder['id'])['payment_status'] === 'paid',
+    'Lite settlement did not use the store-scoped invoice API and pay the linked order.');
+
+foreach ([
+    'https://other.example.test/lite/pay?id=',
+    'https://pay.example.test/pay?id=',
+    'https://pay.example.test/lite/admin?id=',
+    'https://pay.example.test/lite/../pay?id=',
+    'https://pay.example.test/lite/pay?id=other-',
+    'https://pay.example.test/lite/pay?id=other&id=',
+    'https://pay.example.test/lite/pay?id=other&expected=',
+    'https://pay.example.test/lite/pay?id=other#',
+    'https://pay.example.test/lite/i/other?expected=',
+] as $unsafePrefix) {
+    $unsafeOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
+        bin2hex(random_bytes(32)), 'btcpay');
+    $unsafeId = bin2hex(random_bytes(11));
+    $unsafeClient = new BTCPayApiClient($liteSettings['server_url'], $liteSettings['store_id'],
+        $liteSettings['api_key'], static function () use (
+            $liteSettings, $unsafeOrder, $unsafeId, $unsafePrefix
+        ): array {
+            return ['status' => 200, 'body' => json_encode([
+                'id' => $unsafeId, 'storeId' => $liteSettings['store_id'],
+                'amount' => '1079.00', 'currency' => 'CZK', 'status' => 'New',
+                'metadata' => ['orderId' => $unsafeOrder['order_number']],
+                'checkoutLink' => $unsafePrefix . $unsafeId,
+            ], JSON_THROW_ON_ERROR)];
+        });
+    $unsafePayments = new BTCPayPaymentService($db, $liteSettings, $unsafeClient);
+    $unsafeRejected = false;
+    try {
+        $unsafePayments->initiate($unsafeOrder);
+    } catch (RuntimeException $expected) {
+        $unsafeRejected = true;
+    }
+    expectBTCPay($unsafeRejected && $unsafePayments->state((int) $unsafeOrder['id'])['status'] === 'uncertain' &&
+        $orders->findById((int) $unsafeOrder['id'])['payment_status'] === 'pending',
+        'An unsafe or mismatched Lite checkout link was accepted.');
+}
+
 // A timed-out POST might have created an invoice at BTCPay; never silently retry it.
 $uncertainOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
     bin2hex(random_bytes(32)), 'btcpay');
