@@ -6,6 +6,7 @@ use SimpleStore\AfterSales\CaseRepository;
 use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Checkout\CartSession;
 use SimpleStore\Content\ContentRepository;
+use SimpleStore\Content\SiteCopyRepository;
 use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Navigation\StorefrontMenus;
 use SimpleStore\Navigation\UrlManager;
@@ -49,6 +50,7 @@ try {
         throw new RuntimeException('Obchod zatím není připravený. Kontaktujte nás prosím e-mailem.');
     }
     $db = ConnectionFactory::create(require __DIR__ . '/config/database.php');
+    $siteCopy = (new SiteCopyRepository($db))->load($language);
     $repo = new CaseRepository($db);
     if (!$repo->installed()) throw new RuntimeException('Formulář se připravuje. Kontaktujte nás prosím e-mailem.');
     $url = new UrlManager($basePath . $language, $_SERVER['SCRIPT_NAME'] ?? '/support.php',
