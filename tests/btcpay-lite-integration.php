@@ -22,6 +22,7 @@ use BtcPayLite\{AddressPaymentObservation, BitcoinAmount, BitcoinMarketDataProvi
     GreenfieldApiController, GreenfieldApiException, GreenfieldApiRepository, GreenfieldApiService,
     InstallationManager, PaymentWorker, WebhookCronApplication, WebhookDeliveryRepository, WebhookEndpointPolicy};
 use SimpleStore\Accounting\{InvoiceRepository, MailSettingsRepository};
+use SimpleStore\Admin\AdminUserRepository;
 use SimpleStore\Checkout\{BTCPayPaymentService, OrderRepository};
 use SimpleStore\Database\{ConnectionFactory, SchemaUpdater};
 use SimpleStore\Product\ProductStockRepository;
@@ -31,7 +32,7 @@ function liteIntegrationCheck(bool $condition, string $message): void
     if (!$condition) throw new RuntimeException($message);
 }
 
-function liteIntegrationRequest(string $method, string $url, string $body = '', array $headers = []): array
+function liteIntegrationRequest(string $method, string $url, string $body = '', array $headers = [], ?string $cookieJar = null): array
 {
     $curl = curl_init($url);
     $responseHeaders = [];
@@ -41,11 +42,33 @@ function liteIntegrationRequest(string $method, string $url, string $body = '', 
             $responseHeaders[] = trim($line); return strlen($line);
         }]);
     if ($method === 'POST') curl_setopt($curl, CURLOPT_POSTFIELDS, $body);
+    if ($cookieJar !== null) curl_setopt_array($curl, [CURLOPT_COOKIEFILE => $cookieJar, CURLOPT_COOKIEJAR => $cookieJar]);
     $reply = curl_exec($curl);
     if (!is_string($reply)) throw new RuntimeException('Local HTTP request failed: ' . curl_error($curl));
     $code = (int) curl_getinfo($curl, CURLINFO_RESPONSE_CODE);
     curl_close($curl);
     return ['status' => $code, 'body' => $reply, 'headers' => $responseHeaders];
+}
+
+/** Extract the real form rather than guessing its action, CSRF token or order ID. */
+function liteIntegrationForm(string $html, string $action): array
+{
+    $document = new DOMDocument();
+    $previous = libxml_use_internal_errors(true);
+    try { $document->loadHTML('<?xml encoding="UTF-8">' . $html); }
+    finally { libxml_clear_errors(); libxml_use_internal_errors($previous); }
+    foreach ($document->getElementsByTagName('form') as $form) {
+        $fields = [];
+        foreach (['input', 'button'] as $tag) foreach ($form->getElementsByTagName($tag) as $input) {
+            $name = $input->getAttribute('name');
+            if ($name !== '') $fields[$name] = $input->getAttribute('value');
+        }
+        if (($fields['action'] ?? null) === $action) {
+            liteIntegrationCheck(strtolower($form->getAttribute('method')) === 'post', 'Admin form must use POST.');
+            return ['url' => $form->getAttribute('action'), 'fields' => $fields];
+        }
+    }
+    throw new RuntimeException('Missing rendered admin form: ' . $action);
 }
 
 // The same test file acts as the temporary Lite server's router. Production routing,
@@ -156,6 +179,14 @@ try {
     copy($storeRoot . '/config/checkout.example.php', $webRoot . '/config/checkout.example.php');
     file_put_contents($webRoot . '/config/database.php', '<?php return ' . var_export($connection + ['database' => $storeSchema], true) . ';');
     file_put_contents($webRoot . '/config/checkout.php', '<?php return ' . var_export(['btcpay' => $settings], true) . ';');
+    // Exercise the production admin entry point with the user's /simple-store/ cookie/form path.
+    $adminRoot = $webRoot . '/simple-store'; mkdir($adminRoot);
+    foreach (['src', 'vendor', 'config'] as $directory) symlink($webRoot . '/' . $directory, $adminRoot . '/' . $directory);
+    symlink($storeRoot . '/view', $adminRoot . '/view');
+    copy($storeRoot . '/admin.php', $adminRoot . '/admin.php');
+    $storeDb->insert('shop_checkout_settings', ['id' => 1,
+        'settings_json' => json_encode(['btcpay' => $settings], JSON_THROW_ON_ERROR)]);
+    (new AdminUserRepository($storeDb))->createAdmin('integration-admin', password_hash('test-only-password', PASSWORD_DEFAULT));
     $mailbox = $temporary . '/mailbox';
     $sendmail = $temporary . '/sendmail';
     file_put_contents($sendmail, "#!/bin/sh\ncat >> '" . $mailbox . "'\nprintf '\\n--MAIL-END--\\n' >> '" . $mailbox . "'\n");
@@ -238,6 +269,42 @@ try {
         'Lite leaked an invoice across store authentication boundaries.');
     echo "[PASS] Real HTTP create/read/payment-methods, CZK metadata, XPUB/BIP21, scoped auth, one order/invoice\n";
 
+    $adminUrl = $shopUrl . '/simple-store/admin.php';
+    $adminCookies = $temporary . '/admin.cookies'; $anonymousCookies = $temporary . '/anonymous.cookies';
+    $login = liteIntegrationForm(liteIntegrationRequest('GET', $adminUrl, '', [], $adminCookies)['body'], 'login');
+    $loggedIn = liteIntegrationRequest('POST', $shopUrl . $login['url'], http_build_query(array_replace($login['fields'],
+        ['username' => 'integration-admin', 'password' => 'test-only-password'])), [], $adminCookies);
+    liteIntegrationCheck($loggedIn['status'] === 303 && in_array('Location: /simple-store/admin.php', $loggedIn['headers'], true),
+        'Production administrator login did not retain the subdirectory session.');
+    $detailUrl = $adminUrl . '?section=orders&id=' . $order['id'];
+    $detail = liteIntegrationRequest('GET', $detailUrl, '', [], $adminCookies);
+    $refreshForm = liteIntegrationForm($detail['body'], 'btcpay-refresh');
+    liteIntegrationCheck($detail['status'] === 200 && $refreshForm['url'] === '/simple-store/admin.php?section=orders&id=' . $order['id'] &&
+        $refreshForm['fields']['id'] === (string) $order['id'], 'Admin payment form lost its session path or order ID.');
+    $refreshUrl = $shopUrl . $refreshForm['url'];
+    $refresh = static fn (array $overrides = []): array => liteIntegrationRequest('POST', $refreshUrl,
+        http_build_query(array_replace($refreshForm['fields'], $overrides)), [], $adminCookies);
+    $anonymous = liteIntegrationForm(liteIntegrationRequest('GET', $adminUrl, '', [], $anonymousCookies)['body'], 'login');
+    $blocked = liteIntegrationRequest('POST', $refreshUrl, http_build_query(array_replace($refreshForm['fields'],
+        ['csrf' => $anonymous['fields']['csrf']])), [], $anonymousCookies);
+    liteIntegrationCheck($blocked['status'] === 403 && str_contains($blocked['body'], 'přihlášení správce') &&
+        $refresh(['csrf' => 'wrong-token'])['status'] === 403 && $refresh(['action' => 'unknown-admin-action'])['status'] === 403,
+        'Payment refresh bypassed administrator authentication, CSRF or the action allowlist.');
+    $checked = $refresh();
+    liteIntegrationCheck($checked['status'] === 303 && in_array('Location: /simple-store/admin.php?section=orders&id=' . $order['id'] .
+        '&payment_checked=1', $checked['headers'], true) && $orders->findById((int) $order['id'])['payment_status'] === 'pending',
+        'Logged-in administrator cannot refresh the pending BTCPay invoice through the real entry point.');
+    $checkedDetail = liteIntegrationRequest('GET', $detailUrl . '&payment_checked=1', '', [], $adminCookies);
+    liteIntegrationCheck($checkedDetail['status'] === 200 && str_contains($checkedDetail['body'], 'Stav platby byl ověřen přímo u BTCPay Server'),
+        'Admin refresh did not show its successful result.');
+    // The other refresh actions must reach their order validation, without querying unrelated providers.
+    foreach (['comgate-refresh' => 'Comgate', 'gopay-refresh' => 'GoPay'] as $action => $provider) {
+        $invalid = $refresh(['action' => $action]);
+        liteIntegrationCheck($invalid['status'] === 422 && str_contains($invalid['body'], 'transakce ' . $provider),
+            'Authenticated ' . $provider . ' refresh was blocked or accepted an unrelated BTCPay order.');
+    }
+    echo "[PASS] Production admin login/form/BTCPay refresh under /simple-store/; anonymous, invalid CSRF/action and wrong provider rejected\n";
+
     $token = (string) $storeDb->queryFirstField('SELECT return_token FROM shop_btcpay_payments WHERE order_id=%i', $order['id']);
     $return = liteIntegrationRequest('GET', $shopUrl . '/btcpay-return.php?token=' . $token);
     liteIntegrationCheck($return['status'] === 303 &&
@@ -306,7 +373,12 @@ try {
     $observations->receivedConfirmed = $expectedSats; $observations->receivedPending = 0;
     $observations->confirmed = 0;
     $pdo->prepare('UPDATE invoices SET next_check_at=0,last_checked_at=NULL WHERE id=?')->execute([$invoiceId]);
-    liteIntegrationCheck($worker->run(1)['deliveries_queued'] === 1 && $processor->run()['deliveries_delivered'] === 1 &&
+    liteIntegrationCheck($worker->run(1)['deliveries_queued'] === 1 &&
+        $orders->findById((int) $order['id'])['payment_status'] === 'pending',
+        'Settled fixture changed the order before an API refresh or webhook.');
+    liteIntegrationCheck($refresh()['status'] === 303 && $orders->findById((int) $order['id'])['payment_status'] === 'paid',
+        'Administrator refresh did not reconcile a settled invoice through the real BTCPay API.');
+    liteIntegrationCheck($processor->run()['deliveries_delivered'] === 1 &&
         $orders->findById((int) $order['id'])['payment_status'] === 'paid',
         'Confirmed simulated payment did not settle the order through the real webhook endpoint.');
     $paidAt = $orders->findById((int) $order['id'])['payment_paid_at'];
@@ -335,7 +407,7 @@ try {
     $storedReceipt->execute([$invoiceId]); $receipt = $storedReceipt->fetch(PDO::FETCH_ASSOC);
     liteIntegrationCheck((int) $receipt['confirmed_balance_sats'] === 0 && (int) $receipt['confirmed_output_sats'] === $expectedSats,
         'Spent incoming payment was confused with the current address balance.');
-    echo "[PASS] Simulated spent-before-scan receipt -> real Settled/paid, signed webhook replay: one stock reservation, invoice, document and captured mail\n";
+    echo "[PASS] Simulated spent-before-scan receipt -> admin API refresh Settled/paid, signed webhook replay: one stock reservation, invoice, document and captured mail\n";
 
     $late = $orders->create(null, 'late@example.test', $items, $shipping, 79, bin2hex(random_bytes(32)), 'btcpay');
     $payments->initiate($late); $lateId = (string) $payments->state((int) $late['id'])['invoice_id'];
