@@ -100,6 +100,7 @@ $comgateSecretConfigured = ($settings['comgate']['secret'] ?? '') !== '';
 $gopaySecretConfigured = ($settings['gopay']['client_secret'] ?? '') !== '';
 $btcpayApiKeyConfigured = ($settings['btcpay']['api_key'] ?? '') !== '';
 $btcpayWebhookSecretConfigured = ($settings['btcpay']['webhook_secret'] ?? '') !== '';
+$btcpayDraftSecrets = [];
 foreach ($shippingCatalog as $code => $definition) {
     $saved = $settings['shipping_methods'][$code] ?? $definition;
     $form['shipping_price'][$code] = (string) ($saved['price_czk'] ?? $definition['price_czk']);
@@ -167,5 +168,15 @@ if ($method === 'POST') {
     } catch (RuntimeException $exception) {
         http_response_code(503);
         $settingsError = $exception->getMessage();
+    }
+    // Keep unsaved secrets only in this administrator response after a failed submission.
+    // Never put them into a redirect URL, cookie, log, or persistent session.
+    if ($settingsTab === 'payment' && $settingsError !== '' &&
+        ($_POST['action'] ?? null) === 'save-checkout-settings') {
+        foreach (['btcpay_api_key', 'btcpay_webhook_secret'] as $field) {
+            if (is_string($_POST[$field] ?? null) && strlen($_POST[$field]) <= 512) {
+                $btcpayDraftSecrets[$field] = $_POST[$field];
+            }
+        }
     }
 }

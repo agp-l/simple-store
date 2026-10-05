@@ -68,7 +68,7 @@ final class BTCPayPaymentService
         if (!$this->enabled) throw new RuntimeException('Nové platby BTCPay jsou vypnuté.');
         if (!$this->installed()) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky v administraci.');
         if (!$this->validReturnBaseUrl() || $this->webhookSecret === '') {
-            throw new RuntimeException('Nastav veřejnou HTTPS adresu a webhook BTCPay.');
+            throw new RuntimeException('Nastav adresu obchodu a webhook BTCPay.');
         }
         $orderId = (int) $order['id'];
         $this->db->startTransaction();
@@ -356,7 +356,10 @@ final class BTCPayPaymentService
     private function validReturnBaseUrl(): bool
     {
         $parts = parse_url($this->returnBaseUrl);
-        return is_array($parts) && ($parts['scheme'] ?? null) === 'https' &&
+        $local = is_array($parts) && in_array(strtolower((string) ($parts['host'] ?? '')),
+            ['localhost', '127.0.0.1', '[::1]'], true);
+        return is_array($parts) && (($parts['scheme'] ?? null) === 'https' ||
+            (($parts['scheme'] ?? null) === 'http' && $local)) &&
             isset($parts['host']) && !isset($parts['user']) && !isset($parts['pass']) &&
             !isset($parts['query']) && !isset($parts['fragment']);
     }

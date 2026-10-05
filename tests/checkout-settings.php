@@ -32,6 +32,7 @@ class MeekroDB
 require dirname(__DIR__) . '/src/bootstrap.php';
 
 use SimpleStore\Checkout\BankTransferPayment;
+use SimpleStore\Checkout\BTCPayPaymentService;
 use SimpleStore\Checkout\CheckoutSettingsRepository;
 use SimpleStore\Checkout\ShippingPolicy;
 
@@ -169,7 +170,7 @@ foreach ([['shipping_price' => array_replace($input['shipping_price'], ['ppl_hom
     ['gopay_return_base_url' => 'https://obchod.example/simple-store?redirect=evil'],
     ['gopay_return_base_url' => ''],
     ['btcpay_server_url' => 'http://btcpay.example'],
-    ['btcpay_server_url' => 'https://localhost'],
+    ['btcpay_server_url' => 'http://localhost.evil.test'],
     ['btcpay_server_url' => 'https://user@btcpay.example'],
     ['btcpay_server_url' => 'https://btcpay.example/pay/../other'],
     ['btcpay_server_url' => 'https://btcpay.example/pay?redirect=evil'],
@@ -178,7 +179,7 @@ foreach ([['shipping_price' => array_replace($input['shipping_price'], ['ppl_hom
     ['btcpay_api_key' => "bad\nkey"],
     ['btcpay_webhook_secret' => "bad\nsecret"],
     ['btcpay_return_base_url' => 'http://obchod.example/simple-store'],
-    ['btcpay_return_base_url' => 'https://localhost/simple-store'],
+    ['btcpay_return_base_url' => 'http://192.168.1.2/simple-store'],
     ['btcpay_return_base_url' => 'https://obchod.example/another-site'],
     ['btcpay_return_base_url' => ''],
     ['ppl_widget_key' => 'invalid key with spaces']] as $change) {
@@ -190,6 +191,17 @@ foreach ([['shipping_price' => array_replace($input['shipping_price'], ['ppl_hom
             throw new RuntimeException('Invalid settings overwrote the saved configuration.');
         }
     }
+}
+$localBtcpay = $repo->saveSection('payment', array_replace($input, [
+    'btcpay_server_url' => 'http://localhost:8080/BTCPayLite/',
+    'btcpay_return_base_url' => 'http://localhost/simple-store/',
+]), '/simple-store/', $saved);
+if (!$localBtcpay['btcpay']['enabled'] ||
+    $localBtcpay['btcpay']['server_url'] !== 'http://localhost:8080/BTCPayLite' ||
+    $localBtcpay['btcpay']['return_base_url'] !== 'http://localhost/simple-store' ||
+    $localBtcpay['btcpay']['api_key'] !== $saved['btcpay']['api_key'] ||
+    !(new BTCPayPaymentService($db, $localBtcpay['btcpay']))->canInitiate()) {
+    throw new RuntimeException('Local BTCPay configuration or saved secrets were lost.');
 }
 $disabled = $repo->save(array_replace($input, [
     'shipping_enabled' => array_replace($input['shipping_enabled'], ['gls_pickup' => '0']),

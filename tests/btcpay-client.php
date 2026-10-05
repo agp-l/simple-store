@@ -36,6 +36,11 @@ expectBTCPayClient(count($requests) === 2 && $requests[1][0] === 'GET' &&
     $requests[1][1] === 'https://pay.example.test/shop/api/v1/stores/Store_123/invoices/Abc123' &&
     $requests[1][3] === null,
     'BTCPay invoice status did not use the Greenfield invoice endpoint.');
+$local = new BTCPayApiClient('http://localhost:8080/BTCPayLite/', 'Store_123', 'test-api-key', $transport);
+$local->status('Abc123');
+expectBTCPayClient($requests[2][1] ===
+    'http://localhost:8080/BTCPayLite/api/v1/stores/Store_123/invoices/Abc123',
+    'Loopback BTCPay API is unavailable over HTTP.');
 
 $invalidIdRejected = false;
 try {
@@ -43,10 +48,11 @@ try {
 } catch (RuntimeException $expected) {
     $invalidIdRejected = true;
 }
-expectBTCPayClient($invalidIdRejected && count($requests) === 2,
+expectBTCPayClient($invalidIdRejected && count($requests) === 3,
     'An invalid invoice ID reached the HTTP transport.');
 
-foreach (['http://public.example.test', 'https://user@pay.example.test',
+foreach (['http://public.example.test', 'http://localhost.evil.test', 'http://192.168.1.2',
+    'https://user@pay.example.test',
     'https://pay.example.test/path?token=x', 'https://pay.example.test/#fragment'] as $unsafeUrl) {
     $rejected = false;
     try {

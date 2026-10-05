@@ -252,7 +252,7 @@ final class CheckoutSettingsRepository
             'btcpay_clear_webhook_secret', (string) ($current['btcpay']['webhook_secret'] ?? ''),
             'Tajný klíč webhooku BTCPay');
         $btcpayReturnBaseUrl = self::paymentReturnBaseUrl(
-            self::value($input, 'btcpay_return_base_url'), $basePath, 'BTCPay');
+            self::value($input, 'btcpay_return_base_url'), $basePath, 'BTCPay', true);
         if ($btcpayEnabled && ($btcpayServerUrl === '' || $btcpayStoreId === '' || $btcpayApiKey === '' ||
             $btcpayWebhookSecret === '' || $btcpayReturnBaseUrl === '')) {
             throw new InvalidArgumentException('Před zapnutím BTCPay vyplň adresu serveru, ID obchodu, API klíč, tajný klíč webhooku a veřejnou HTTPS adresu obchodu.');
@@ -364,17 +364,20 @@ final class CheckoutSettingsRepository
             FILTER_FLAG_IPV4 | FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) !== false;
         $path = is_array($parts) ? (string) ($parts['path'] ?? '') : '';
         $segments = explode('/', trim($path, '/'));
-        if (!is_array($parts) || strtolower((string) ($parts['scheme'] ?? '')) !== 'https' ||
-            (!$domain && !$publicIpv4) || isset($parts['user']) || isset($parts['pass']) ||
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
+        $local = in_array(strtolower((string) $host), ['localhost', '127.0.0.1', '[::1]'], true);
+        if (!is_array($parts) || !(($scheme === 'https' && ($domain || $publicIpv4 || $local)) ||
+            ($scheme === 'http' && $local)) || isset($parts['user']) || isset($parts['pass']) ||
             isset($parts['query']) || isset($parts['fragment']) ||
             preg_match('#^/(?:[A-Za-z0-9._~-]+/?)*$#D', $path === '' ? '/' : $path) !== 1 ||
             in_array('.', $segments, true) || in_array('..', $segments, true)) {
-            throw new InvalidArgumentException('BTCPay vyžaduje HTTPS adresu serveru, např. https://platby.obchod.cz.');
+            throw new InvalidArgumentException('BTCPay vyžaduje HTTPS adresu; pro místní test lze použít HTTP na localhostu.');
         }
         return rtrim($url, '/');
     }
 
-    private static function paymentReturnBaseUrl(string $url, string $basePath, string $provider): string
+    private static function paymentReturnBaseUrl(string $url, string $basePath, string $provider,
+        bool $allowLocal = false): string
     {
         if ($url === '') return '';
         $parts = parse_url($url);
@@ -384,9 +387,12 @@ final class CheckoutSettingsRepository
         $publicDomain = is_string($host) && strlen($host) <= 253 &&
             preg_match('/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z][a-z0-9-]{1,62}$/iD', $host) === 1 &&
             !preg_match('/(?:^|\.)(?:localhost|local|internal)$/iD', $host);
+        $local = $allowLocal && in_array(strtolower((string) $host),
+            ['localhost', '127.0.0.1', '[::1]'], true);
+        $scheme = strtolower((string) ($parts['scheme'] ?? ''));
         $expectedPath = rtrim($basePath, '/');
-        if (!is_array($parts) || strtolower((string) ($parts['scheme'] ?? '')) !== 'https' ||
-            (!$publicIpv4 && !$publicDomain) || isset($parts['user']) || isset($parts['pass']) ||
+        if (!is_array($parts) || !(($scheme === 'https' && ($publicIpv4 || $publicDomain || $local)) ||
+            ($scheme === 'http' && $local)) || isset($parts['user']) || isset($parts['pass']) ||
             isset($parts['query']) || isset($parts['fragment']) ||
             !in_array($parts['path'] ?? '', [$expectedPath, $expectedPath . '/'], true)) {
             throw new InvalidArgumentException(

@@ -21,7 +21,11 @@ BTCPay nemá společný vývojářský API klíč. Pro testy lze použít vlastn
 - V Lite musí běžet `payment_worker.php` pro zjištění plateb a `webhook_cron.php` pro jejich doručení. Při příjmu přes XPUB naplánuj také `wallet_receive_sync.php` podle konfigurace Lite. Samotný platební časovač webhooky nedoručuje.
 - Faktura se vytváří v `CZK`; Lite proto musí získat platný kurz BTC/CZK a mít funkční zdroj adres i pozorování blockchainu. Pouhé otevření platební stránky nebo odpověď `New` ještě neověřuje skutečný příjem bitcoinů.
 
-Pro zkoušku dvou instalací běžících jen na `http://localhost` nestačí jejich místní dostupnost. Nastavení e-shopu vyžaduje veřejnou HTTPS návratovou adresu a Lite při standardní konfiguraci odmítá soukromou/loopback adresu webhooku. Použij veřejné HTTPS testovací instalace; automatické testy mohou použít izolované transporty a testovací databázi.
+### Místní test se dvěma aplikacemi na stejném počítači
+
+V Simple Store nastav adresu serveru například na `http://localhost/BTCPayLite` a adresu obchodu na `http://localhost/simple-store` (přizpůsob skutečné instalační složky a porty). Propojení přes HTTP je povolené pouze pro `localhost`, `127.0.0.1` a `::1`; pro domény a síťové adresy se dál vyžaduje HTTPS. Ve správě BTCPay Lite nastav `allow_local_webhooks => true` v jeho souboru `config.php` a vytvoř webhook s URL `http://localhost/simple-store/btcpay-callback.php`. Obě aplikace musí být dostupné ze stejného počítače, na kterém běží BTCPay Lite; jeho samostatný worker musí webhook odeslat. Před ostrým provozem nastav veřejné HTTPS adresy a vypni místní webhooky.
+
+Nastavení klíčů samo neověřuje spojení; ukládá se při platných adresách a dalších polích. Pokud formulář odmítne chybný údaj, právě zadané klíče zůstanou v odpovědi formuláře, abys je mohl opravit a znovu uložit. Po úspěšném uložení se skryjí a prázdná pole zachovají uložené hodnoty.
 
 ## Průběh platby
 

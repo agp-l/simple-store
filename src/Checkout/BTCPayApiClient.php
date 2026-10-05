@@ -21,7 +21,7 @@ final class BTCPayApiClient
             !isset($parts['host']) || isset($parts['user']) || isset($parts['pass']) ||
             isset($parts['query']) || isset($parts['fragment']) ||
             (($parts['scheme'] ?? '') === 'http' &&
-                !in_array(strtolower($parts['host']), ['localhost', '127.0.0.1', '::1'], true)) ||
+                !in_array(strtolower($parts['host']), ['localhost', '127.0.0.1', '[::1]'], true)) ||
             preg_match('/^[A-Za-z0-9_-]{1,100}$/D', $storeId) !== 1 ||
             $apiKey === '' || strlen($apiKey) > 512 || preg_match('/[\x00-\x20\x7f]/', $apiKey)) {
             throw new RuntimeException('Přístup k BTCPay Serveru není platně nastaven.');

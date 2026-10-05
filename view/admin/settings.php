@@ -10,6 +10,7 @@ $comgateSecretConfigured ??= false;
 $gopaySecretConfigured ??= false;
 $btcpayApiKeyConfigured ??= false;
 $btcpayWebhookSecretConfigured ??= false;
+$btcpayDraftSecrets ??= [];
 ?>
 <div class="panel-intro"><div><p class="panel-eyebrow">Správa obchodu</p><h1>Nastavení obchodu</h1>
   <p>Každá oblast má vlastní stránku a ukládá se samostatně.</p></div></div>
@@ -99,18 +100,18 @@ $btcpayWebhookSecretConfigured ??= false;
   <p class="panel-help">Prázdné pole ponechá uložený klíč beze změny. Tajný klíč se zde znovu nevypisuje. GoPay zavolá URL oznámení <code><?= $escape(($form['gopay_return_base_url'] !== '' ? rtrim($form['gopay_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/')) . '/gopay-callback.php') ?></code> a zákazníka vrátí přes <code>gopay-return.php</code>. Místní localhost GoPay nemůže zavolat.</p>
   <?php if ($gopaySecretConfigured): ?><label class="panel-check"><input type="checkbox" name="gopay_clear_secret" value="1"> Odstranit uložený Client secret</label><?php endif; ?>
   </div></details>
-  <details class="panel-settings-details"><summary>BTCPay Server – platba bitcoinem</summary><div class="panel-settings-fields">
+  <details class="panel-settings-details"<?= $settingsError !== '' ? ' open' : '' ?>><summary>BTCPay Server – platba bitcoinem</summary><div class="panel-settings-fields">
   <label class="panel-check"><input type="checkbox" name="btcpay_enabled" value="1" <?= $form['btcpay_enabled'] === '1' ? 'checked' : '' ?>> Nabízet platbu bitcoinem přes BTCPay Server</label>
   <p class="panel-help">V BTCPay vytvoř obchod s nastavenou peněženkou. API klíči uděl jen oprávnění <code>btcpay.store.cancreateinvoice</code> a <code>btcpay.store.canviewinvoices</code> pro tento obchod. Platební metoda se nabídne až po úplném nastavení.</p>
-  <label>HTTPS adresa instance BTCPay<input type="url" name="btcpay_server_url" value="<?= $escape($form['btcpay_server_url']) ?>" maxlength="1000" autocomplete="off" placeholder="https://platby.obchod.cz"></label>
+  <label>Adresa instance BTCPay<input type="url" name="btcpay_server_url" value="<?= $escape($form['btcpay_server_url']) ?>" maxlength="1000" autocomplete="off" placeholder="https://platby.obchod.cz"></label>
   <label>ID obchodu (Store ID)<input name="btcpay_store_id" value="<?= $escape($form['btcpay_store_id']) ?>" maxlength="128" autocomplete="off" placeholder="ID obchodu v BTCPay"></label>
-  <label>Veřejná HTTPS adresa tohoto obchodu<input type="url" name="btcpay_return_base_url" value="<?= $escape($form['btcpay_return_base_url']) ?>" maxlength="1000" autocomplete="off" placeholder="<?= $escape('https://obchod.cz' . rtrim($basePath, '/')) ?>"></label>
-  <p class="panel-help">Vlož kořenovou adresu této instalace, ze které BTCPay zavolá webhook. Pro místní test z localhostu potřebuješ veřejně dostupnou testovací adresu.</p>
-  <label>API klíč BTCPay<input type="password" name="btcpay_api_key" value="" maxlength="512" autocomplete="new-password" placeholder="<?= $btcpayApiKeyConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'API klíč pro tento BTCPay obchod' ?>"></label>
+  <label>Adresa tohoto obchodu<input type="url" name="btcpay_return_base_url" value="<?= $escape($form['btcpay_return_base_url']) ?>" maxlength="1000" autocomplete="off" placeholder="<?= $escape('https://obchod.cz' . rtrim($basePath, '/')) ?>"></label>
+  <p class="panel-help">Běžný provoz vyžaduje veřejné HTTPS. Při testu obou aplikací na stejném počítači můžeš pro obě adresy použít <code>http://localhost</code> (včetně instalačních podsložek). V BTCPay Lite musíš zapnout <code>allow_local_webhooks</code>; bez toho webhook na localhost nebude doručen.</p>
+  <label>API klíč BTCPay<input type="password" name="btcpay_api_key" value="<?= $escape($btcpayDraftSecrets['btcpay_api_key'] ?? '') ?>" maxlength="512" autocomplete="new-password" placeholder="<?= $btcpayApiKeyConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'API klíč pro tento BTCPay obchod' ?>"></label>
   <?php if ($btcpayApiKeyConfigured): ?><label class="panel-check"><input type="checkbox" name="btcpay_clear_api_key" value="1"> Odstranit uložený API klíč</label><?php endif; ?>
-  <label>Tajný klíč webhooku<input type="password" name="btcpay_webhook_secret" value="" maxlength="512" autocomplete="new-password" placeholder="<?= $btcpayWebhookSecretConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'Secret z nastavení webhooku v BTCPay' ?>"></label>
+  <label>Tajný klíč webhooku<input type="password" name="btcpay_webhook_secret" value="<?= $escape($btcpayDraftSecrets['btcpay_webhook_secret'] ?? '') ?>" maxlength="512" autocomplete="new-password" placeholder="<?= $btcpayWebhookSecretConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'Secret z nastavení webhooku v BTCPay' ?>"></label>
   <?php if ($btcpayWebhookSecretConfigured): ?><label class="panel-check"><input type="checkbox" name="btcpay_clear_webhook_secret" value="1"> Odstranit uložený tajný klíč webhooku</label><?php endif; ?>
-  <p class="panel-help">V BTCPay v nastavení tohoto obchodu založ webhook pro události faktur. Jeho URL nastav na <code><?= $escape(($form['btcpay_return_base_url'] !== '' ? rtrim($form['btcpay_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/')) . '/btcpay-callback.php') ?></code>. Secret webhooku zkopíruj sem. Prázdná pole s klíči ponechají uložené hodnoty beze změny; klíče se na stránce znovu nevypisují.</p>
+  <p class="panel-help">V BTCPay v nastavení tohoto obchodu založ webhook pro události faktur. Jeho URL nastav na <code><?= $escape(($form['btcpay_return_base_url'] !== '' ? rtrim($form['btcpay_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/')) . '/btcpay-callback.php') ?></code>. Secret webhooku zkopíruj sem. Prázdná pole s klíči ponechají uložené hodnoty beze změny; uložené klíče se znovu nevypisují. Pokud uložení selže, právě zadané klíče zůstanou pouze v tomto formuláři.</p>
   </div></details>
   </section>
 <?php endif; ?>
