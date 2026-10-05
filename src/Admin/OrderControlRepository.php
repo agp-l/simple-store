@@ -274,7 +274,8 @@ final class OrderControlRepository
                         $orderId, 'queued', 'failed', 'suppressed');
                     $this->db->query('UPDATE shop_mail_outbox SET order_id=NULL WHERE order_id=%i', $orderId);
                 }
-                if (in_array($order['status'], ['shipped', 'completed'], true) &&
+                if (($order['fulfillment_source'] ?? 'own') === 'own' &&
+                    in_array($order['status'], ['shipped', 'completed'], true) &&
                     $this->tableExists('shop_sale_lines') && $this->tableExists('shop_stock_movements')) {
                     foreach ($soldLines as $line) {
                         $this->db->insert('shop_stock_movements', [

@@ -24,6 +24,20 @@ final class OrderEmailComposer
             '{total}' => $total, '{carrier}' => $carrier];
         $subject = strtr($template['subject'], $replace);
         $intro = strtr($template['message'], $replace);
+        // Existing saved templates may still use the older first-person copy.
+        // Keep administrator-written text; normalize only the known defaults when
+        // a supplier is responsible for handing the parcel to the carrier.
+        if (($order['fulfillment_source'] ?? 'own') === 'external') {
+            if ($event === 'shipped' && $intro === 'Zásilku jsme předali dopravci. Podrobnosti ke sledování najdete níže.') {
+                $intro = 'Zásilka byla předána dopravci. Podrobnosti ke sledování najdete níže.';
+            } elseif ($event === 'ready_to_ship' && $intro ===
+                'Balík je připravený k předání dopravci. O předání vás budeme informovat.') {
+                $intro = 'Zásilka je připravená k předání dopravci. O předání vás budeme informovat.';
+            } elseif ($event === 'paid' && $intro ===
+                'Platbu jsme obdrželi. Objednávku nyní připravíme k odeslání.') {
+                $intro = 'Platbu jsme obdrželi. O dalším postupu doručení vás budeme informovat.';
+            }
+        }
         $paidAfterCancellation = $event === 'paid' && ($order['status'] ?? '') === 'cancelled';
         if ($paidAfterCancellation) {
             // Merchant-defined 'paid' copy usually promises shipping. A late verified

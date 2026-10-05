@@ -100,6 +100,40 @@ expectStock((int) $db->queryFirstField('SELECT available_quantity FROM shop_prod
 expectStock((int) $db->queryFirstField('SELECT COUNT(*) FROM shop_order_stock_reservations
     WHERE order_id=%i', (int) $order['id']) === 0, 'Deleted order kept stock reservations.');
 
+// An order placed from the catalogue initially reserves local stock. Switching
+// to a supplier must release it; switching back must reserve it once again.
+$supplied = $orders->create(null, 'supplier@example.test', [$item], $shipping, 79,
+    bin2hex(random_bytes(32)));
+$suppliedId = (int) $supplied['id'];
+$orders->markPaid($suppliedId, 1);
+expectStock((int) $db->queryFirstField('SELECT available_quantity FROM shop_product_inventory
+    WHERE product_key=%s', $key) === 3, 'Supplier order was not initially reserved.');
+$orders->setFulfillmentStatus($suppliedId, 'processing', 'external', 'Dodavatel');
+expectStock((int) $db->queryFirstField('SELECT available_quantity FROM shop_product_inventory
+    WHERE product_key=%s', $key) === 5, 'Supplier fulfillment kept local inventory reserved.');
+$stock->setAvailable($key, 5, 0);
+try {
+    $orders->setFulfillmentStatus($suppliedId, 'ready_to_ship', 'own');
+    throw new RuntimeException('Switching to own fulfillment oversold local stock.');
+} catch (InvalidArgumentException $expected) {}
+expectStock($orders->findById($suppliedId)['fulfillment_source'] === 'external',
+    'Failed stock reclaim changed the fulfillment owner.');
+$stock->setAvailable($key, 0, 5);
+$orders->setFulfillmentStatus($suppliedId, 'ready_to_ship', 'own');
+expectStock((int) $db->queryFirstField('SELECT available_quantity FROM shop_product_inventory
+    WHERE product_key=%s', $key) === 3, 'Switching back did not reclaim stock.');
+$orders->setFulfillmentStatus($suppliedId, 'ready_to_ship', 'external', 'Dodavatel');
+$orders->setFulfillmentStatus($suppliedId, 'shipped', 'external', 'Dodavatel');
+expectStock((int) $db->queryFirstField('SELECT available_quantity FROM shop_product_inventory
+    WHERE product_key=%s', $key) === 5, 'Externally shipped order consumed local stock.');
+$controls->deleteOrder($suppliedId, (string) $supplied['order_number'], 1,
+    'Úklid testovací objednávky');
+expectStock((int) $db->queryFirstField('SELECT available_quantity FROM shop_product_inventory
+    WHERE product_key=%s', $key) === 5, 'Deleting supplier order changed local inventory.');
+expectStock((int) $db->queryFirstField('SELECT COUNT(*) FROM shop_stock_movements
+    WHERE reference=%s', (string) $supplied['order_number']) === 0,
+    'Deleted supplier order was recorded as dispatch from local stock.');
+
 $newSlug = $slug . '-updated';
 $db->query('UPDATE product_revisions SET slug=%s, active_slug=%s WHERE product_key=%s
     AND active_product_key IS NOT NULL', $newSlug, $newSlug, $key);

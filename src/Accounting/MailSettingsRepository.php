@@ -15,13 +15,13 @@ final class MailSettingsRepository
         'order' => ['label' => 'Přijetí objednávky', 'subject' => 'Přijali jsme objednávku {order_number}',
             'message' => 'Děkujeme, {customer_name}. Objednávku jsme přijali. Níže najdete její souhrn a způsob úhrady.'],
         'paid' => ['label' => 'Platba potvrzena', 'subject' => 'Platba za objednávku {order_number} dorazila',
-            'message' => 'Platbu jsme obdrželi. Objednávku nyní připravíme k odeslání.'],
+            'message' => 'Platbu jsme obdrželi. O dalším postupu doručení vás budeme informovat.'],
         'processing' => ['label' => 'Připravuje se', 'subject' => 'Připravujeme objednávku {order_number}',
             'message' => 'Vaši objednávku právě připravujeme. Jakmile bude připravena, dáme vám vědět.'],
         'ready_to_ship' => ['label' => 'Připraveno k odeslání', 'subject' => 'Objednávka {order_number} je připravena',
             'message' => 'Balík je připravený k předání dopravci. O předání vás budeme informovat.'],
         'shipped' => ['label' => 'Předáno dopravci', 'subject' => 'Objednávka {order_number} je na cestě',
-            'message' => 'Zásilku jsme předali dopravci. Podrobnosti ke sledování najdete níže.'],
+            'message' => 'Zásilka byla předána dopravci. Podrobnosti ke sledování najdete níže.'],
         'tracking' => ['label' => 'Doplněno sledování', 'subject' => 'Sledování zásilky {order_number}',
             'message' => 'Doplnili jsme číslo nebo odkaz pro sledování vaší zásilky.'],
         'completed' => ['label' => 'Dokončeno', 'subject' => 'Objednávka {order_number} je dokončena',
@@ -55,7 +55,10 @@ final class MailSettingsRepository
             'smtp_security' => 'starttls', 'smtp_username' => '', 'smtp_password_encrypted' => ''];
         $templates = [];
         foreach (self::EVENTS as $event => $default) {
-            $templates[$event] = ['enabled' => true, 'subject' => $default['subject'],
+            // Routine internal handling steps should not generate three additional
+            // customer messages between payment confirmation and dispatch.
+            $templates[$event] = ['enabled' => !in_array($event,
+                ['processing', 'ready_to_ship', 'completed'], true), 'subject' => $default['subject'],
                 'message' => $default['message'], 'label' => $default['label']];
         }
         if (!$this->installed()) return ['settings' => $settings, 'templates' => $templates];

@@ -520,8 +520,16 @@ final class OrderRepository
                     throw new InvalidArgumentException('Nejdřív vyřeš nebo stornuj zásilku vytvořenou v tomto obchodě. Potom může objednávku převzít dodavatel.');
                 }
             }
-            if ($status === 'cancelled') $this->stock?->release($id);
-            if ($status === 'shipped') $this->stock?->consume($id);
+            $previousSource = (string) ($row['fulfillment_source'] ?? 'own');
+            // Checkout reserves our own stock before the fulfillment owner is known.
+            // A supplier order must give those pieces back. Reclaim them atomically
+            // if the administrator later switches back to shipping from our stock.
+            if ($status === 'cancelled' || ($previousSource === 'own' && $source === 'external')) {
+                $this->stock?->release($id);
+            } elseif ($previousSource === 'external' && $source === 'own') {
+                $this->stock?->reopen($id);
+            }
+            if ($status === 'shipped' && $source === 'own') $this->stock?->consume($id);
             if ($hasSource) {
                 $this->db->query('UPDATE shop_orders SET status=%s, fulfillment_source=%s,
                     fulfillment_note=%s WHERE id=%i AND status=%s',

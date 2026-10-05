@@ -49,6 +49,16 @@ if (!str_contains($shipping['text'], 'Číslo zásilky: GLS123456') ||
     str_contains($shipping['text'], 'Číslo účtu:')) {
     throw new RuntimeException('Shipment notification has wrong stage-specific content.');
 }
+$supplierOrder = array_replace($order, ['fulfillment_source' => 'external']);
+$supplierMail = OrderEmailComposer::compose('shipped', $supplierOrder,
+    ['subject' => MailSettingsRepository::EVENTS['shipped']['subject'],
+        'message' => 'Zásilku jsme předali dopravci. Podrobnosti ke sledování najdete níže.'],
+    ['number' => 'GLS123456']);
+if (!str_contains($supplierMail['text'], 'Zásilka byla předána dopravci.') ||
+    str_contains($supplierMail['text'], 'Zásilku jsme předali dopravci.') ||
+    str_contains($supplierMail['text'], 'Dodavatel A')) {
+    throw new RuntimeException('Supplier dispatch mail claims the merchant handled the parcel.');
+}
 $withoutTracking = OrderEmailComposer::compose('shipped', $order, MailSettingsRepository::EVENTS['shipped']);
 if (!str_contains($withoutTracking['text'], 'zatím nepřidělil číslo')) {
     throw new RuntimeException('The shipment notification must explain when tracking is not yet available.');
