@@ -255,7 +255,7 @@ final class CheckoutSettingsRepository
             self::value($input, 'btcpay_return_base_url'), $basePath, 'BTCPay', true);
         if ($btcpayEnabled && ($btcpayServerUrl === '' || $btcpayStoreId === '' || $btcpayApiKey === '' ||
             $btcpayWebhookSecret === '' || $btcpayReturnBaseUrl === '')) {
-            throw new InvalidArgumentException('Před zapnutím BTCPay vyplň adresu serveru, ID obchodu, API klíč, tajný klíč webhooku a veřejnou HTTPS adresu obchodu.');
+            throw new InvalidArgumentException('Před zapnutím BTCPay vyplň adresu serveru, ID obchodu, API klíč, tajný klíč webhooku a adresu obchodu. Pro místní test můžeš použít HTTP na localhostu.');
         }
         $settings = [
             'btc_prices_enabled' => ($input['btc_prices_enabled'] ?? null) === '1',

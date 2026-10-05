@@ -5,7 +5,7 @@ declare(strict_types=1);
  * Cross-project contract test with real HTTP, MariaDB, XPUB derivation and webhook handlers.
  * Fiat prices and blockchain observations are simulated; no Bitcoin is sent.
  * A loopback HTTP router instantiates the real Lite controller with test dependencies;
- * a loopback WebhookTransport replaces production HTTPS/DNS delivery restrictions.
+ * the production webhook cron and cURL transport use the explicit localhost opt-in.
  * This does not test Apache routing, public TLS, DNS, Electrum or SMTP delivery.
  * Mail is captured by a temporary sendmail command, never sent to a real recipient.
  *
@@ -20,7 +20,7 @@ declare(strict_types=1);
 use BtcPayLite\{AddressPaymentObservation, BitcoinAmount, BitcoinMarketDataProvider,
     BlockchainProviderInterface, BtcInvoiceManager, Database, ElectrumRPC, ElectrumWallet,
     GreenfieldApiController, GreenfieldApiException, GreenfieldApiRepository, GreenfieldApiService,
-    InstallationManager, PaymentWorker, WebhookDeliveryRepository, WebhookProcessor, WebhookTransport};
+    InstallationManager, PaymentWorker, WebhookCronApplication, WebhookDeliveryRepository, WebhookEndpointPolicy};
 use SimpleStore\Accounting\{InvoiceRepository, MailSettingsRepository};
 use SimpleStore\Checkout\{BTCPayPaymentService, OrderRepository};
 use SimpleStore\Database\{ConnectionFactory, SchemaUpdater};
@@ -68,7 +68,8 @@ if (PHP_SAPI === 'cli-server') {
         public function getFiatPrice(string $currency): ?float { return $currency === 'CZK' ? 1_000_000.0 : null; }
     };
     $service = new GreenfieldApiService(new GreenfieldApiRepository($db), $db, $wallet,
-        new BtcInvoiceManager($wallet, str_repeat('s', 32), $db), '', $fixture['lite_url'], null, $market);
+        new BtcInvoiceManager($wallet, str_repeat('s', 32), $db), '', $fixture['lite_url'],
+        new WebhookEndpointPolicy(null, ($fixture['allow_local_webhooks'] ?? false) === true), $market);
     header('Content-Type: application/json');
     try {
         $server = array_replace($_SERVER, ['SCRIPT_NAME' => '/greenfield.php']);
@@ -142,10 +143,11 @@ try {
     $secret = 'test-only-webhook-secret';
     $settings = ['enabled' => true, 'server_url' => $liteUrl, 'store_id' => 'integration',
         'api_key' => 'integration-key', 'webhook_secret' => $secret,
-        'return_base_url' => 'https://shop.example.test'];
+        'return_base_url' => $shopUrl];
     $fixturePath = $temporary . '/fixture.php';
     file_put_contents($fixturePath, '<?php return ' . var_export(['lite_root' => $liteRoot,
-        'db' => $connection, 'lite_schema' => $liteSchema, 'lite_url' => $liteUrl], true) . ';');
+        'db' => $connection, 'lite_schema' => $liteSchema, 'lite_url' => $liteUrl,
+        'allow_local_webhooks' => true], true) . ';');
     $webRoot = $temporary . '/shop'; mkdir($webRoot); mkdir($webRoot . '/config');
     symlink($storeRoot . '/src', $webRoot . '/src');
     symlink($storeRoot . '/vendor', $webRoot . '/vendor');
@@ -171,8 +173,23 @@ try {
         liteIntegrationCheck($ready, 'HTTP server did not start: ' . $url);
     }
 
-    $pdo->prepare('INSERT INTO webhooks (id,store_id,url,secret,created_at) VALUES (?, ?, ?, ?, ?)')
-        ->execute(['wh_integration', 'integration', $shopUrl . '/btcpay-callback.php', $secret, 1]);
+    $webhookEndpoint = $liteUrl . '/api/v1/stores/integration/webhooks';
+    $webhookHeaders = ['Authorization: token integration-key', 'Content-Type: application/json'];
+    foreach (['http://public.example.test/hook', 'http://localhost.evil.test/hook',
+        'http://192.168.1.2/hook', 'http://user@localhost/hook'] as $invalidUrl) {
+        $rejected = liteIntegrationRequest('POST', $webhookEndpoint,
+            json_encode(['url' => $invalidUrl], JSON_THROW_ON_ERROR), $webhookHeaders);
+        liteIntegrationCheck($rejected['status'] === 400, 'Local opt-in accepted a non-loopback webhook.');
+    }
+    $webhookUrl = str_replace('127.0.0.1', 'localhost', $shopUrl) . '/btcpay-callback.php';
+    $createdWebhook = liteIntegrationRequest('POST', $webhookEndpoint,
+        json_encode(['url' => $webhookUrl, 'secret' => $secret], JSON_THROW_ON_ERROR), $webhookHeaders);
+    $webhook = json_decode($createdWebhook['body'], true, 32, JSON_THROW_ON_ERROR);
+    liteIntegrationCheck($createdWebhook['status'] === 200 && ($webhook['url'] ?? null) === $webhookUrl &&
+        ($webhook['secret'] ?? null) === $secret &&
+        (int) $pdo->query('SELECT COUNT(*) FROM webhooks')->fetchColumn() === 1,
+        'HTTP localhost webhook could not be registered through the real Lite policy/API.');
+    echo "[PASS] HTTP localhost webhook registration with explicit opt-in; remote/private HTTP rejected\n";
     $templates = [];
     foreach (MailSettingsRepository::EVENTS as $code => $definition) $templates[$code] = [
         'enabled' => '1', 'subject' => $definition['subject'], 'message' => $definition['message']];
@@ -187,12 +204,15 @@ try {
     $stock = new ProductStockRepository($storeDb); $stock->ensure($productKey); $stock->setAvailable($productKey, 0, 10);
     $orders = new OrderRepository($storeDb, null, 7, $stock);
     $payments = new BTCPayPaymentService($storeDb, $settings);
+    liteIntegrationCheck($payments->canInitiate(), 'HTTP return URL disabled BTCPay checkout.');
     $items = [['product_key' => $productKey, 'language' => 'cs', 'slug' => 'integration-tent',
         'name' => 'Stan', 'quantity' => 2, 'unit_price_czk' => 500, 'image_path' => '', 'options' => []]];
     $shipping = ['method' => 'gls_home', 'label' => 'GLS', 'name' => 'Test Buyer', 'street' => 'Test 1',
         'city' => 'Praha', 'postal_code' => '11000', 'country' => 'CZ'];
     $submission = bin2hex(random_bytes(32));
     $order = $orders->create(null, 'buyer@example.test', $items, $shipping, 79, $submission, 'btcpay');
+    liteIntegrationCheck($payments->receiptUrl($order, 'cs') ===
+        $shopUrl . '/cs/objednavka/' . $order['order_token'], 'Receipt URL requires HTTPS on localhost.');
     liteIntegrationCheck($orders->create(null, 'buyer@example.test', $items, $shipping, 79, $submission, 'btcpay')['id'] === $order['id'],
         'Repeated checkout created a second order.');
     $checkout = $payments->initiate($order);
@@ -217,7 +237,9 @@ try {
     echo "[PASS] Real HTTP create/read/payment-methods, CZK metadata, XPUB/BIP21, scoped auth, one order/invoice\n";
 
     $token = (string) $storeDb->queryFirstField('SELECT return_token FROM shop_btcpay_payments WHERE order_id=%i', $order['id']);
-    liteIntegrationCheck(liteIntegrationRequest('GET', $shopUrl . '/btcpay-return.php?token=' . $token)['status'] === 303 &&
+    $return = liteIntegrationRequest('GET', $shopUrl . '/btcpay-return.php?token=' . $token);
+    liteIntegrationCheck($return['status'] === 303 &&
+        in_array('Location: /cs/objednavka/' . $order['order_token'], $return['headers'], true) &&
         $orders->findById((int) $order['id'])['payment_status'] === 'pending' &&
         liteIntegrationRequest('GET', $shopUrl . '/btcpay-return.php?token=' . str_repeat('f', 64))['status'] === 404,
         'Browser return changed payment state or accepted an unknown token.');
@@ -244,16 +266,9 @@ try {
     };
     $outbox = new WebhookDeliveryRepository($liteDb);
     $worker = new PaymentWorker($liteDb, $observations, $outbox);
-    $transport = new class implements WebhookTransport {
-        public array $deliveries = [];
-        public function deliver(string $url, string $payload, string $signature): array {
-            $reply = liteIntegrationRequest('POST', $url, $payload, ['Content-Type: application/json', 'BTCPay-Sig: ' . $signature]);
-            $this->deliveries[] = ['payload' => $payload, 'signature' => $signature, 'status' => $reply['status']];
-            liteIntegrationCheck($reply['status'] === 200, 'Real shop callback rejected the generated Lite webhook: ' . $reply['status']);
-            return ['http_status' => $reply['status'], 'primary_ip' => '127.0.0.1'];
-        }
-    };
-    $processor = new WebhookProcessor($outbox, $transport);
+    $processor = new WebhookCronApplication(['db_host' => $connection['host'], 'db_port' => $connection['port'],
+        'db_name' => $liteSchema, 'db_user' => $connection['user'], 'db_pass' => $connection['password'],
+        'allow_local_webhooks' => true]);
     $expectedSats = BitcoinAmount::fromBtc($methods[0]['amount'])->satoshis();
     $observations->mempool = $expectedSats;
     liteIntegrationCheck($worker->run(1)['deliveries_queued'] === 1 && $processor->run()['deliveries_delivered'] === 1 &&
@@ -289,9 +304,12 @@ try {
         $orders->findById((int) $order['id'])['payment_status'] === 'paid',
         'Confirmed simulated payment did not settle the order through the real webhook endpoint.');
     $paidAt = $orders->findById((int) $order['id'])['payment_paid_at'];
-    $settlement = end($transport->deliveries);
+    $settlementPayload = (string) $pdo->query("SELECT payload FROM webhook_deliveries WHERE event_type='InvoiceSettled'")->fetchColumn();
+    $settlementSignature = 'sha256=' . hash_hmac('sha256', $settlementPayload, $secret);
+    liteIntegrationCheck($pdo->query("SELECT last_primary_ip FROM webhook_deliveries WHERE event_type='InvoiceSettled'")->fetchColumn() === '127.0.0.1',
+        'Production cURL transport did not use the pinned localhost address.');
     for ($i = 0; $i < 3; $i++) liteIntegrationCheck(liteIntegrationRequest('POST', $shopUrl . '/btcpay-callback.php',
-        $settlement['payload'], ['BTCPay-Sig: ' . $settlement['signature']])['status'] === 200, 'Settlement replay failed.');
+        $settlementPayload, ['BTCPay-Sig: ' . $settlementSignature])['status'] === 200, 'Settlement replay failed.');
     liteIntegrationCheck($orders->findById((int) $order['id'])['payment_paid_at'] === $paidAt &&
         (int) $storeDb->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s', $productKey) === 8 &&
         (int) $storeDb->queryFirstField('SELECT COUNT(*) FROM shop_btcpay_payments WHERE order_id=%i', $order['id']) === 1 &&
@@ -312,6 +330,8 @@ try {
     $late = $orders->create(null, 'late@example.test', $items, $shipping, 79, bin2hex(random_bytes(32)), 'btcpay');
     $payments->initiate($late); $lateId = (string) $payments->state((int) $late['id'])['invoice_id'];
     $observations->confirmed = 0;
+    // The expiry fixture is backdated; its webhook must still predate the invoice.
+    $pdo->prepare('UPDATE webhooks SET created_at=? WHERE id=?')->execute([time() - 30, $webhook['id']]);
     $pdo->prepare('UPDATE invoices SET created_at=?, expires_at=?, next_check_at=0 WHERE id=?')->execute([time() - 20, time() - 1, $lateId]);
     liteIntegrationCheck($worker->run(1)['expired'] === 1 && $processor->run()['deliveries_delivered'] === 1 &&
         $payments->state((int) $late['id'])['status'] === 'expired' && $orders->findById((int) $late['id'])['payment_status'] === 'pending',

@@ -23,7 +23,16 @@ BTCPay nemá společný vývojářský API klíč. Pro testy lze použít vlastn
 
 ### Místní test se dvěma aplikacemi na stejném počítači
 
-V Simple Store nastav adresu serveru například na `http://localhost/BTCPayLite` a adresu obchodu na `http://localhost/simple-store` (přizpůsob skutečné instalační složky a porty). Propojení přes HTTP je povolené pouze pro `localhost`, `127.0.0.1` a `::1`; pro domény a síťové adresy se dál vyžaduje HTTPS. Ve správě BTCPay Lite nastav `allow_local_webhooks => true` v jeho souboru `config.php` a vytvoř webhook s URL `http://localhost/simple-store/btcpay-callback.php`. Obě aplikace musí být dostupné ze stejného počítače, na kterém běží BTCPay Lite; jeho samostatný worker musí webhook odeslat. Před ostrým provozem nastav veřejné HTTPS adresy a vypni místní webhooky.
+V Simple Store nastav adresu serveru například na `http://localhost/BTCPayLite` a adresu obchodu na `http://localhost/simple-store` (přizpůsob skutečné instalační složky a porty). Propojení přes HTTP je povolené pouze pro `localhost`, `127.0.0.1` a `::1`; pro domény a síťové adresy se dál vyžaduje HTTPS.
+
+V existujícím `config.php` BTCPay Lite uprav jen tyto položky:
+
+```php
+'app_url' => 'http://localhost/BTCPayLite',
+'allow_local_webhooks' => true,
+```
+
+`app_url` musí odpovídat adrese instance vyplněné v e-shopu. Zachovej ostatní položky a klíče. Aktualizace z Gitu tuto místní konfiguraci nemění. V Lite vytvoř před první objednávkou webhook s URL `http://localhost/simple-store/btcpay-callback.php`; jeho secret vlož do e-shopu. Obě aplikace musí být dostupné ze stejného počítače, na kterém běží BTCPay Lite. Platby zjišťuje `payment_worker.php`, ale doručení oznámení vyžaduje samostatný `webhook_cron.php`. Na XAMPP jej můžeš jednorázově spustit z adresáře Lite příkazem `/opt/lampp/bin/php webhook_cron.php`. Podpis webhooku a ověřování API fungují i přes místní HTTP. Před ostrým provozem nastav veřejné HTTPS adresy a vypni místní webhooky.
 
 Nastavení klíčů samo neověřuje spojení; ukládá se při platných adresách a dalších polích. Pokud formulář odmítne chybný údaj, právě zadané klíče zůstanou v odpovědi formuláře, abys je mohl opravit a znovu uložit. Po úspěšném uložení se skryjí a prázdná pole zachovají uložené hodnoty.
 
@@ -55,6 +64,6 @@ MYSQL_TEST_USER=root MYSQL_TEST_PASSWORD='' \
 php tests/btcpay-lite-integration.php
 ```
 
-Když leží repozitáře vedle sebe pod názvy `simple-store` a `BTCPayServerLite`, `BTCPAY_LITE_PATH` není potřeba. Test ověří objednávku za 1 079 Kč, odpovídající BTC fakturu a odkaz `/pay?id=…`, rozdíl mezi `Processing`, `Settled` a `Expired`, potvrzenou částečnou platbu, opožděné potvrzení, podpis webhooku, odmítnutí nesouhlasící částky/měny/obchodu/objednávky a opakované doručení bez druhé rezervace skladu, faktury či platebního e-mailu. Lokální testovací router a transport webhooku nahrazují nasazení přes Apache a veřejné HTTPS/DNS. Test neověřuje skutečné Electrum, platbu na testnetu ani SMTP; ty zkontroluj zvlášť při nasazení.
+Když leží repozitáře vedle sebe pod názvy `simple-store` a `BTCPayServerLite`, `BTCPAY_LITE_PATH` není potřeba. Test ověří objednávku za 1 079 Kč, odpovídající BTC fakturu a odkaz `/pay?id=…`, rozdíl mezi `Processing`, `Settled` a `Expired`, potvrzenou částečnou platbu, opožděné potvrzení, podpis webhooku, odmítnutí nesouhlasící částky/měny/obchodu/objednávky a opakované doručení bez druhé rezervace skladu, faktury či platebního e-mailu. Obě adresy i návrat zákazníka používají HTTP. Webhook se registruje přes Greenfield API se zapnutým `allow_local_webhooks`; doručuje jej produkční `WebhookCronApplication` a `CurlWebhookTransport`, včetně připnutí `localhost` na `127.0.0.1`. Vzdálené a privátní HTTP adresy se odmítají. Lokální testovací router nahrazuje Apache; test neověřuje skutečné Electrum, platbu na testnetu, veřejné HTTPS/DNS ani SMTP.
 
 Workflow **BTCPay Lite integration** spouští tento test při pull requestu, po změně `main` e-shopu nebo ručně v GitHub Actions. Stáhne aktuální `main` repozitáře BTC Pay Lite a používá vyhrazenou MariaDB 10.11 s PHP 8.2. Samotná změna v repozitáři BTC Pay Lite workflow e-shopu nespouští; po takové změně jej lze spustit ručně.
