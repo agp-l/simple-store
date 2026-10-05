@@ -338,9 +338,6 @@ $db->orders[15] = orderRow(15, 'new', 'bank_transfer', 'pending');
 $controls->deleteOrder(15, 'DB-20260930-15', 3, 'Nesprávně vytvořená neplacená objednávka.');
 $db->orders[16] = orderRow(16, 'cancelled', 'bank_transfer', 'pending');
 $controls->deleteOrder(16, 'DB-20260930-16', 3, 'Duplicitní neplacená objednávka zákazníka.');
-if ($controls->recentDeletions(1)[0]['order_number'] !== 'DB-20260930-16') {
-    throw new RuntimeException('Deleted real order audit is not visible to administrators.');
-}
 $db->mailInstalled = true;
 $db->orders[17] = orderRow(17, 'new', 'bank_transfer', 'pending');
 $db->outbox[17] = [['id' => 900, 'order_id' => 17, 'state' => 'sending']];

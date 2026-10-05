@@ -20,7 +20,7 @@ $btcpayDraftSecrets ??= [];
 <?php if ($settingsTab === 'overview'): ?>
 <div class="panel-settings-overview">
   <?php foreach ([
-      ['appearance', 'Texty webu', 'Nadpis a popis v hlavičce, texty v patičce.'],
+      ['appearance', 'Texty webu', 'Hlavička, výpis produktů a patička.'],
       ['delivery', 'Doprava', 'Ceník a dostupnost výdejních míst i doručení na adresu.'],
       ['carriers', 'Dopravci', 'Widgety výdejních míst a údaje pro podávání zásilek.'],
       ['payment', 'Platby', 'Bankovní převod a připojené platební brány.'],
@@ -49,6 +49,13 @@ $btcpayDraftSecrets ??= [];
     <p class="panel-help">Texty pro jazyk <?= $escape(strtoupper($copyLanguage)) ?>. Každý jazyk má vlastní znění.</p>
     <label>Nadpis v hlavičce<input name="hero_title" value="<?= $escape($siteCopyValues['hero_title']) ?>" maxlength="90" required></label>
     <label>Text pod nadpisem<input name="hero_subtitle" value="<?= $escape($siteCopyValues['hero_subtitle']) ?>" maxlength="200" required></label>
+    <h3>Výpis produktů</h3>
+    <label>Nadpis výběru na úvodní stránce<input name="catalog_home_title" value="<?= $escape($siteCopyValues['catalog_home_title']) ?>" maxlength="90" required></label>
+    <label>Nadpis celého katalogu<input name="catalog_title" value="<?= $escape($siteCopyValues['catalog_title']) ?>" maxlength="90" required></label>
+    <label>Text pod výběrem na úvodní stránce<input name="catalog_home_intro" value="<?= $escape($siteCopyValues['catalog_home_intro']) ?>" maxlength="200" required></label>
+    <label>Text pod celým katalogem<input name="catalog_all_intro" value="<?= $escape($siteCopyValues['catalog_all_intro']) ?>" maxlength="200" required></label>
+    <label>Text v kategorii<input name="catalog_category_intro" value="<?= $escape($siteCopyValues['catalog_category_intro']) ?>" maxlength="200" required></label>
+    <h3>Patička</h3>
     <label>Úvodní text patičky<input name="footer_intro" value="<?= $escape($siteCopyValues['footer_intro']) ?>" maxlength="200" required></label>
     <label>Krátký závěr patičky<input name="footer_closing" value="<?= $escape($siteCopyValues['footer_closing']) ?>" maxlength="200" required></label>
   </section>

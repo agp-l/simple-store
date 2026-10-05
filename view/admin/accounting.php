@@ -93,8 +93,8 @@ $accountingYearMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'
       <?php if ($accountingNextUrl !== ''): ?><a href="<?= $escape($accountingNextUrl) ?>">Další →</a><?php endif; ?>
     </nav>
   </section>
-  <section class="panel-panel">
-    <h2>Opravy plateb a smazané objednávky</h2>
+  <details class="panel-panel panel-settings-details" <?= $financialPreviousUrl !== '' ? 'open' : '' ?>>
+    <summary>Technické záznamy oprav plateb a odstraněných objednávek</summary>
     <p class="panel-help">Zásahy za vybrané období podle data změny (UTC). Původní potvrzení platby a částka zůstávají dohledatelné i po smazání objednávky. Tato evidence nenahrazuje bankovní výpis ani doklad.</p>
     <?php if (!$financialEventsReady): ?><p class="panel-help">Pro historii zásahů <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
     <?php if ($financialEventsReady && $financialChanges['items'] === []): ?><p class="panel-empty">V tomto období nejsou finanční opravy ani smazání.</p><?php endif; ?>
@@ -119,7 +119,7 @@ $accountingYearMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'
       <?php if ($financialPreviousUrl !== ''): ?><a href="<?= $escape($financialPreviousUrl) ?>">← Předchozí zásahy</a><?php endif; ?>
       <?php if ($financialNextUrl !== ''): ?><a href="<?= $escape($financialNextUrl) ?>">Další zásahy →</a><?php endif; ?>
     </nav>
-  </section>
+  </details>
 <?php endif; ?>
 <?php elseif ($accountingTab === 'guide'): ?>
   <?php require __DIR__ . '/accounting-guide.php'; ?>

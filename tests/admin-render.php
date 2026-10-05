@@ -345,8 +345,6 @@ $orderPage = ['items' => [
         'shipping_json' => json_encode(['label' => 'GLS', 'recipient' => 'Pavel'], JSON_THROW_ON_ERROR)]),
 ], 'nextOffset' => 25];
 $ordersNextUrl = $orderBaseUrl . '&status=all&offset=25';
-$deletedOrders = [['order_number' => 'TEST-26-A1B2C3D4', 'created_at' => '2026-09-30 09:00:00',
-    'admin_id' => 3, 'reason' => 'Test <script>']];
 $paymentFilter = 'bank_transfer';
 $orderSearch = 'eva';
 $orderDetailForLatePayment = $order;

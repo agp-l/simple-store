@@ -30,17 +30,6 @@ final class OrderControlRepository
         );
     }
 
-    /** Deleted orders cannot be opened, but their minimal action log remains visible. */
-    public function recentDeletions(int $limit = 20): array
-    {
-        if ($limit < 1 || $limit > 50 || !$this->installed()) return [];
-        return $this->db->query(
-            'SELECT order_number, reason, admin_id, created_at
-             FROM shop_order_admin_events WHERE action=%s ORDER BY id DESC LIMIT %i',
-            'order_deleted', $limit
-        );
-    }
-
     /** Correct an accidentally advanced state without changing payment or fulfillment source. */
     public function correctFulfillment(
         int $orderId,

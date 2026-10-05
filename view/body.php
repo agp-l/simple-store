@@ -29,8 +29,8 @@ if ($manualCategoryMenu) {
     <?php if ($homepageEditing): ?><?php require __DIR__ . '/homepage-editor.php'; ?><?php endif; ?>
     <div class="section-heading">
       <div>
-        <h2 id="section-title"><?= $managingCatalog ? 'Správa produktů' : ($homepageSelectionActive ? 'Náš výběr vybavení' : $escape($currentCategory['title'] ?? 'Objevte vybavení')) ?></h2>
-        <p id="section-description"><?= $managingCatalog ? 'Prohlížej zveřejněné i skryté produkty v jejich skutečných kategoriích. Otevři kartu a uprav produkt přímo na jeho stránce.' : ($homepageSelectionActive ? 'Lehké, odolné a osvědčené vybavení na cesty.' : ($currentCategory === null ? 'Poctivý výběr pro pohodlí na stezce i mimo ni.' : 'Vybavení na každou cestu. Vyberte si z nabídky níže.')) ?></p>
+        <h2 id="section-title"><?= $managingCatalog ? 'Správa produktů' : $escape($homepageSelectionActive ? $siteCopy['catalog_home_title'] : ($currentCategory['title'] ?? $siteCopy['catalog_title'])) ?></h2>
+        <p id="section-description"><?= $managingCatalog ? 'Prohlížej zveřejněné i skryté produkty v jejich skutečných kategoriích. Otevři kartu a uprav produkt přímo na jeho stránce.' : $escape($siteCopy[$homepageSelectionActive ? 'catalog_home_intro' : ($currentCategory === null ? 'catalog_all_intro' : 'catalog_category_intro')]) ?></p>
         <?php if (!$canManageCatalog && $currentCategory === null && $homepageConfigured && !$managingCatalog && !$homepageEditing): ?><p class="catalog-public-links"><?php if ($homepageSelectionActive): ?><a href="<?= $escape($siteRoot . $language . '?all=1#produkty') ?>">Prohlédnout veškeré vybavení →</a><?php else: ?><a href="<?= $escape($siteRoot . $language . '#produkty') ?>">Zpět na výběr pro úvodní stránku →</a><?php endif; ?></p><?php endif; ?>
       </div><span class="result-count" id="result-count" aria-live="polite">Načteno <?= $productCount . ' ' . $productWord ?></span>
     </div>

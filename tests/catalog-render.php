@@ -20,6 +20,8 @@ if (!str_contains($html, 'Načteno 0 produktů') ||
 }
 $customCopy = array_replace(\SimpleStore\Content\SiteCopyRepository::DEFAULTS, [
     'hero_title' => 'Naše výprava <test>',
+    'catalog_title' => 'Výbava <katalog>',
+    'catalog_all_intro' => 'Zkouška & pohodlí',
     'footer_intro' => 'Lehké & odolné',
     'footer_closing' => 'Zpátky na cestu',
 ]);
@@ -28,8 +30,11 @@ $renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs', 'siteC
 $customHtml = ob_get_clean();
 if (!str_contains($customHtml, 'Naše výprava &lt;test&gt;') ||
     !str_contains($customHtml, 'Lehké &amp; odolné') ||
+    !str_contains($customHtml, 'Výbava &lt;katalog&gt;') ||
+    !str_contains($customHtml, 'Zkouška &amp; pohodlí') ||
     !str_contains($customHtml, 'Zpátky na cestu') ||
-    str_contains($customHtml, 'Naše výprava <test>')) {
+    str_contains($customHtml, 'Naše výprava <test>') ||
+    str_contains($customHtml, 'Výbava <katalog>')) {
     throw new RuntimeException('Editable shared copy was not safely rendered.');
 }
 

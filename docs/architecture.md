@@ -1,8 +1,8 @@
 # Návrh jádra Simple Store
 
-## Smysl první etapy
+## Současný stav
 
-CMS řeší stránky, blog a produkty s revizemi. První nákupní proces vytváří objednávky s doručením na adresu v ČR a bankovním převodem v Kč. Správce i zákazníci mají roli v `users`; heslo se ukládá pouze jako hash. Host může objednat bez účtu. Reset hesla správce provádí `tools/admin.php --reset` z terminálu.
+CMS řeší stránky, blog a produkty s revizemi. Pokladna nabízí české doručení na adresu a výdejní místa, bankovní převod, Comgate, GoPay a BTCPay. Správce i zákazníci mají roli v `users`; heslo se ukládá pouze jako hash. Host může objednat bez účtu. Heslo lze obnovit e-mailem nebo správcovským CLI nástrojem. Stav platby, expedice, dokladu a externího přepravce tvoří různé osy; nelze je odvodit pouze z jediného statusu objednávky. [Audit a otevřené otázky](audit-2026-10.md) rozlišují ověřené funkce od těch, které potřebují rozhodnutí před ostrým provozem.
 
 ## Jak jde požadavek aplikací
 
@@ -27,6 +27,7 @@ CMS řeší stránky, blog a produkty s revizemi. První nákupní proces vytvá
 | `src/Content/ContentRepository.php` | SQL dotazy, publikovaný obsah a ukládání revizí. |
 | `src/Content/ContentBody.php` | Bloky textu, seznamu, tabulky a fotografie v jediném sloupci body; starý prostý text se načítá jako jeden blok. |
 | `src/Content/ContentInlineEditor.php` | Převod jedné drobné úpravy na nový úplný snímek dokumentu. |
+| `src/Content/SiteCopyRepository.php` | Krátké texty hlavičky a patičky po jazycích; bez SQL aktualizace použije výchozí znění. |
 | `src/Rendering/PageRenderer.php` | Vybere schválený PHP pohled a předá mu data. |
 | `src/Product/ProductRepository.php` | Publikovaný katalog, omezený správcovský výpis, revize a odstranění produktu v transakci. |
 | `src/Product/ProductDetails.php` | Ověří a připraví volitelné výběry, technické údaje, galerii a bloky obsahu. |
@@ -38,6 +39,8 @@ CMS řeší stránky, blog a produkty s revizemi. První nákupní proces vytvá
 | `src/Checkout/CheckoutController.php`, `view/checkout/` | PHP formuláře košíku, dopravy, kontroly objednávky a bankovní platby. |
 | `src/Checkout/OrderRepository.php` | Transakční uložení objednávky, omezený správcovský výpis a ruční potvrzení platby. |
 | `src/Checkout/BankTransferPayment.php`, `src/Checkout/ShippingPolicy.php` | Ověření českého účtu a cen dopravy, příprava platebních údajů. |
+| `src/Checkout/*PaymentService.php`, `src/Checkout/*ApiClient.php` | Platební pokusy a ověřování stavu vzdálených bran; návrat prohlížeče sám platbu nepotvrzuje. |
+| `src/Product/ProductStockRepository.php` | Rezervace, uvolnění a spotřebování volných kusů podle zdroje expedice. |
 | `config/checkout.php` | Místní banka, doprava a obchodní podmínky; vychází z `config/checkout.example.php` a není ve verzovacím systému. |
 | `src/Admin/orders.php`, `view/admin/orders.php` | Přehled přijatých objednávek a ruční kontrola přijatého bankovního převodu. |
 | `src/Admin/delete-product.php` | Tenký POST vstup do kontroly revize a transakčního odstranění produktu. |
@@ -52,15 +55,16 @@ CMS řeší stránky, blog a produkty s revizemi. První nákupní proces vytvá
 | `view/shell.php`, `view/panel/`, `assets/panel.css` | Jedno záhlaví a patička; jedna postranní navigace a styly obou soukromých částí. |
 | `database/schema.sql` | Jediný aktuální soubor pro vytvoření celé databáze. |
 | `src/Database/SchemaUpdater.php` | Administrátorem spouštěná opakovatelná aktualizace schématu v připojené databázi; ukládá otisk a průběh v `shop_schema_updates`. |
+| `src/Database/CommerceTestReset.php`, `tools/reset-test-commerce.php` | Výhradně ruční reset testovacích obchodních dat; není součástí aktualizace schématu. |
 | `view/` | HTML a malé výpisy proměnných; současná grafika obchodu. |
 
 ## Jedna šablona, dvě soukromé části
 
-`view/shell.php` vkládá jediný `<head>`, hlavičku, zvolený obsah, patičku a společné skripty. Veřejný `PageRenderer` předává svůj pohled přes `view/layout.php`. `view/admin/layout.php` a `view/account/layout.php` nastavují jen titulek, text v hero a obsah pro `view/panel/layout.php`. Obě soukromé části používají `view/panel/sidebar.php`; odkazy a aktivní položky mu dodávají samostatně. Styly panelů žijí v `assets/panel.css` pod `.panel-area`, takže se vzhled formulářů nemíchá do katalogu. Změna loga, patičky nebo hlavního menu se dělá pouze ve společných souborech.
+`view/shell.php` vkládá jediný `<head>`, hlavičku, zvolený obsah, patičku a společné skripty. Veřejný `PageRenderer` předává svůj pohled přes `view/layout.php`. `view/admin/layout.php` a `view/account/layout.php` nastavují jen titulek, text v hero a obsah pro `view/panel/layout.php`. Obě soukromé části používají `view/panel/sidebar.php`; odkazy a aktivní položky mu dodávají samostatně. Styly panelů žijí v `assets/panel.css` pod `.panel-area`, takže se vzhled formulářů nemíchá do katalogu. Nadpis a podnadpis veřejné hlavičky, úvody katalogu a texty patičky se ukládají v `shop_site_copy`; nadpisy soukromých panelů zůstávají pracovními popisky. Menu spravuje `navigation_menus`.
 
 Zákaznický účet je na `account.php`, administrativa na `admin.php`. Oba používají `RoleAuth`, ale jiné názvy cookie a repository, která vracejí pouze správnou roli. Případná klientská session tedy nikdy nepovolí správcovský zápis. Registrační a editační POST požadavky ověřují CSRF; dotazy na adresy a historii objednávek účtu vždy filtrují `user_id`. `users` obsahuje e-mail, jméno a telefon zákazníka; více adres je v `customer_addresses`. Host může objednat s `user_id=NULL` a zadaným kontaktním e-mailem; jeho objednávka se v historii cizího účtu neobjeví.
 
-Pokladna nabízí bankovní převod a po konfiguraci také Comgate a GoPay. Obchod nepřijímá čísla karet ani bezpečnostní kódy. Každá online brána má vlastní tabulku trvalých pokusů, přístupové údaje a návratový endpoint. `payment_method` určuje bránu u objednávky, `provider_reference` její vzdálené ID. Návrat zákazníka a příchozí notifikace samy platbu nepotvrzují: server ověřuje vzdálený stav autentizovaným požadavkem a porovnává objednávku, částku i měnu. GoPay používá oficiální PHP SDK; podrobnosti instalace jsou v [gopay.md](gopay.md), Comgate v [comgate.md](comgate.md).
+Pokladna nabízí bankovní převod a po konfiguraci také Comgate, GoPay a BTCPay Server. Obchod nepřijímá čísla karet ani bezpečnostní kódy. Každá online brána má vlastní tabulku trvalých pokusů, přístupové údaje a návratový endpoint. `payment_method` určuje bránu u objednávky, `provider_reference` její vzdálené ID. Návrat zákazníka a příchozí notifikace samy platbu nepotvrzují: server ověřuje vzdálený stav autentizovaným požadavkem a porovnává objednávku, částku i měnu. GoPay používá oficiální PHP SDK; podrobnosti instalace jsou v [gopay.md](gopay.md), Comgate v [comgate.md](comgate.md).
 
 ## Košík a objednávka
 
@@ -70,7 +74,7 @@ Košík na `/cs/kosik` používá oddělenou krátkodobou PHP session a CSRF tok
 
 `OrderRepository::create()` v jedné transakci vloží do `shop_orders` snímek názvů, cen, možností, dopravy, kontaktních a bankovních údajů. Změna produktu nebo účtu pak nemění již založenou objednávku. Náhodný `idempotency_key` z košíku a unikátní index zamezují dvojímu založení při opakovaném POST včetně souběžných požadavků. Objednávka dostane trvalé číslo, náhodný `order_token`, unikátní variabilní symbol a počáteční stav platby `pending`; produktové revize nejsou její jediný zdroj historických cen. `database/schema.sql` obsahuje opakovatelnou migraci starších řádků, které nedostanou vymyšlené bankovní údaje.
 
-Stránka `/cs/objednavka/<token>` funguje i bez účtu jako soukromý odkaz; odkaz dorazí také e-mailem. Token je přístupový údaj k objednávce, proto odpověď používá `no-store`, `noindex` a pravidla pro referrer. Přihlášený zákazník vidí vlastní objednávky v účtu. `admin.php?section=orders` nabízí přehled a detail. Správce potvrzuje bankovní převod podle výpisu; Comgate a GoPay se aktualizují autentizovaným dotazem na příslušného poskytovatele. Potvrzené online platby lze dále fakturovat a expedovat stejným postupem jako převod.
+Stránka `/cs/objednavka/<token>` funguje i bez účtu jako soukromý odkaz; odkaz dorazí také e-mailem. Token je přístupový údaj k objednávce, proto odpověď používá `no-store`, `noindex` a pravidla pro referrer. Přihlášený zákazník vidí vlastní objednávky v účtu. `admin.php?section=orders` nabízí přehled a detail. Správce potvrzuje bankovní převod podle výpisu; Comgate, GoPay a BTCPay se aktualizují autentizovaným dotazem na příslušného poskytovatele. Potvrzené online platby lze dále fakturovat a expedovat stejným postupem jako převod.
 
 ## Jedna tabulka pro stránky, články a historii
 
@@ -104,7 +108,7 @@ Produktová revize nadále ukládá kořen do `category` a zbytek cesty do `subc
 
 Revize jednoho dokumentu či produktu jsou úplné snímky. Společný `document_key` / `product_key` a unikátní indexy určují identitu, jazyk, číslo a aktuální adresu. Zápis v transakci a kontrola očekávané revize zabraňují přepsání novější práce. Při vytváření překladu repository ověří, že původní identita už existuje. Není nutná další tabulka pro jednotlivé bloky ani cizí klíč na každý odstavec. Limit 50 revizí na identitu a jazyk nastavuje `config/site.php`; po úspěšném vložení se v téže transakci odstraní jen starší neaktivní snímky. Již existující dlouhé historie se zkrátí při příštím uložení daného obsahu.
 
-Kategorie používají stabilní řetězcovou cestu a překlady mají stejné cesty. Repository před uložením produktu ověřuje, že zapnutá kategorie a její rodiče existují. Kdyby někdo ručně smazal kategorii SQL příkazem, neexistuje cizí klíč, který by změnu zastavil; navázané produkty bude třeba najít a přiřadit znovu. Objednávka proto ukládá vlastní úplný snímek zakoupených položek a částek; její historický obsah není závislý na budoucích úpravách či odstranění produktu. Skladové pohyby a napojení externích plateb by vyžadovaly další pravidla konzistence.
+Kategorie používají stabilní řetězcovou cestu a překlady mají stejné cesty. Repository před uložením produktu ověřuje, že zapnutá kategorie a její rodiče existují. Kdyby někdo ručně smazal kategorii SQL příkazem, neexistuje cizí klíč, který by změnu zastavil; navázané produkty bude třeba najít a přiřadit znovu. Objednávka proto ukládá vlastní úplný snímek zakoupených položek a částek; její historický obsah není závislý na budoucích úpravách či odstranění produktu. Volné kusy skladu jsou v `shop_product_inventory`; objednávky vytvářejí rezervace v `shop_order_stock_reservations`. Přepnutí na externího dodavatele rezervaci uvolní a návrat k vlastní expedici ji musí znovu získat v transakci. Samostatný peněžní deník, faktury a trvalé pokusy o platbu mají jiné účely než inventář a nelze je zaměňovat.
 
 Veřejný katalog čte 12 produktů a blog 6 článků v jedné dávce. SQL používá `LIMIT` a `OFFSET`; současně kontroluje jeden další řádek kvůli zobrazení odkazu na další dávku. Odkaz funguje i bez JavaScriptu, s JavaScriptem načte JSON s HTML kartami ze stejné URL a připojí je k seznamu. Pokud během procházení někdo mění publikovaný obsah, posun mezi dávkami může některou kartu zopakovat či přeskočit; při větším provozu lze přejít na kurzorové stránkování. `database/schema.sql` zůstává jediným aktuálním schématem.
 
