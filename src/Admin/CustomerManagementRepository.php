@@ -82,8 +82,8 @@ final class CustomerManagementRepository
     public function setPassword(int $id, string $password): void
     {
         if ($this->find($id) === null) throw new InvalidArgumentException('Zákazník neexistuje.');
-        if (preg_match('/^.{12,}$/usD', $password) !== 1 || strlen($password) > 72) {
-            throw new InvalidArgumentException('Heslo musí mít alespoň 12 znaků a nesmí být příliš dlouhé.');
+        if (preg_match('/^.{10,}$/usD', $password) !== 1 || strlen($password) > 72) {
+            throw new InvalidArgumentException('Heslo musí mít alespoň 10 znaků a nesmí být příliš dlouhé.');
         }
         $this->db->query('UPDATE users SET password_hash=%s, password_changed_at=CURRENT_TIMESTAMP
             WHERE id=%i AND role=%s', password_hash($password, PASSWORD_DEFAULT), $id, 'customer');

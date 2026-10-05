@@ -66,9 +66,15 @@ try {
 }
 $db->passwordHash = password_hash('old-password', PASSWORD_DEFAULT);
 $db->reset['password_hash_at_issue'] = hash('sha256', $db->passwordHash);
-$service->complete('admin', $token, 'new-secure-password', 'new-secure-password');
+try {
+    $service->complete('admin', $token, '123456789', '123456789');
+    throw new RuntimeException('Nine-character password was accepted.');
+} catch (InvalidArgumentException $expected) {
+    if ($db->commits !== 0) throw new RuntimeException('Invalid password changed the account.');
+}
+$service->complete('admin', $token, '1234567890', '1234567890');
 if ($db->commits !== 1 || $service->valid('admin', $token) ||
-    !password_verify('new-secure-password', $db->passwordHash)) {
+    !password_verify('1234567890', $db->passwordHash)) {
     throw new RuntimeException('Password reset did not finish and invalidate the token.');
 }
 echo "Password reset collation regression OK\n";

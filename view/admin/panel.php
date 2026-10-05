@@ -74,8 +74,8 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
         <?php else: ?>
           <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
           <?php if ($resetToken !== ''): ?><form method="post" action="<?= $escape($adminUrl . '?mode=reset') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="reset-complete"><input type="hidden" name="token" value="<?= $escape($resetToken) ?>">
-            <label>Nové heslo<input type="password" name="password" minlength="12" maxlength="72" autocomplete="new-password" required></label>
-            <label>Potvrdit nové heslo<input type="password" name="password_confirm" minlength="12" maxlength="72" autocomplete="new-password" required></label>
+            <label>Nové heslo<input type="password" name="password" minlength="10" maxlength="72" autocomplete="new-password" required></label>
+            <label>Potvrdit nové heslo<input type="password" name="password_confirm" minlength="10" maxlength="72" autocomplete="new-password" required></label>
             <button class="panel-button" type="submit">Změnit heslo</button></form><?php endif; ?>
         <?php endif; ?><p><a href="<?= $escape($adminUrl) ?>">Přihlásit se</a></p>
       </section>

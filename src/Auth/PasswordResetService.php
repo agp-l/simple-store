@@ -91,8 +91,8 @@ final class PasswordResetService
     public function complete(string $role, string $token, string $password, string $confirmation): void
     {
         self::role($role);
-        if ($password !== $confirmation || preg_match('/^.{12,}$/usD', $password) !== 1 || strlen($password) > 72) {
-            throw new InvalidArgumentException('Hesla se musí shodovat a mít 12 až 72 znaků.');
+        if ($password !== $confirmation || preg_match('/^.{10,}$/usD', $password) !== 1 || strlen($password) > 72) {
+            throw new InvalidArgumentException('Hesla se musí shodovat a mít 10 až 72 znaků.');
         }
         if (!self::tokenValid($token) || !$this->available()) {
             throw new InvalidArgumentException('Odkaz pro obnovu vypršel nebo už byl použit.');

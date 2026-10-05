@@ -255,8 +255,8 @@ final class CustomerRepository
 
     private static function password(string $password): void
     {
-        if (preg_match('/^.{12,}$/usD', $password) !== 1 || strlen($password) > 72) {
-            throw new InvalidArgumentException('Heslo musí mít alespoň 12 znaků a nesmí být příliš dlouhé.');
+        if (preg_match('/^.{10,}$/usD', $password) !== 1 || strlen($password) > 72) {
+            throw new InvalidArgumentException('Heslo musí mít alespoň 10 znaků a nesmí být příliš dlouhé.');
         }
     }
 
