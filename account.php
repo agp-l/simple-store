@@ -124,7 +124,10 @@ try {
             }
             if ($action === 'login' && $user === null) {
                 if (!$auth->signIn($input('email'), $input('password'))) {
-                    throw new InvalidArgumentException('E-mail nebo heslo není správné. Po pěti pokusech počkej pět minut.');
+                    $remaining = $auth->retryAfterSeconds();
+                    throw new InvalidArgumentException($remaining > 0
+                        ? 'Příliš mnoho pokusů. Zkus to znovu za ' . (int) ceil($remaining / 60) . ' min.'
+                        : 'E-mail nebo heslo není správné. Zkontroluj údaje nebo použij obnovu hesla.');
                 }
                 $redirect($checkoutReturn);
             }

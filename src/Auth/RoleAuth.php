@@ -72,9 +72,16 @@ abstract class RoleAuth
         return is_string($token) && hash_equals($this->token(), $token);
     }
 
+    public function retryAfterSeconds(): int
+    {
+        $remaining = max(0, (int) ($_SESSION['blocked_until'] ?? 0) - time());
+        if ($remaining === 0) unset($_SESSION['blocked_until']);
+        return $remaining;
+    }
+
     public function signIn(string $name, string $password): bool
     {
-        if (($_SESSION['blocked_until'] ?? 0) > time()) return false;
+        if ($this->retryAfterSeconds() > 0) return false;
         $user = $this->byName($name);
         if ($user !== null && password_verify($password, $user['password_hash'])) {
             session_regenerate_id(true);

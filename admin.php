@@ -103,7 +103,10 @@ try {
             $username = $_POST['username'] ?? null;
             $password = $_POST['password'] ?? null;
             if (!is_string($username) || !is_string($password) || !$auth->signIn($username, $password)) {
-                $error = 'Nesprávné přihlašovací údaje. Po pěti pokusech počkej pět minut.';
+                $remaining = $auth->retryAfterSeconds();
+                $error = $remaining > 0
+                    ? 'Příliš mnoho pokusů. Zkus to znovu za ' . (int) ceil($remaining / 60) . ' min.'
+                    : 'Nesprávné přihlašovací údaje. Zkontroluj jméno a heslo nebo použij obnovu hesla.';
             } else {
                 header('Location: ' . $adminUrl, true, 303);
                 exit;

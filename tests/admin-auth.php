@@ -74,4 +74,15 @@ $auth->signOut();
 if ($auth->signedIn()) {
     throw new RuntimeException('Administrator logout failed.');
 }
+for ($attempt = 0; $attempt < 5; $attempt++) {
+    if ($auth->signIn('admin', 'bad-password')) throw new RuntimeException('Invalid login was accepted.');
+}
+if ($auth->retryAfterSeconds() < 1 || $auth->signIn('admin', 'new-password')) {
+    throw new RuntimeException('Failed login lockout was not enforced.');
+}
+$_SESSION['blocked_until'] = time() - 1;
+if ($auth->retryAfterSeconds() !== 0 || !$auth->signIn('admin', 'new-password') ||
+    $auth->retryAfterSeconds() !== 0) {
+    throw new RuntimeException('Login did not recover after the five-minute lockout.');
+}
 echo "Admin authentication tests passed.\n";
