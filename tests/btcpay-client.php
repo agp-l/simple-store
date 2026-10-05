@@ -33,7 +33,7 @@ expectBTCPayClient(($created['id'] ?? null) === 'Abc123' && count($requests) ===
     'BTCPay create used the wrong endpoint, payload, or scoped API key.');
 $client->status('Abc123');
 expectBTCPayClient(count($requests) === 2 && $requests[1][0] === 'GET' &&
-    $requests[1][1] === 'https://pay.example.test/shop/api/v1/invoices/Abc123' &&
+    $requests[1][1] === 'https://pay.example.test/shop/api/v1/stores/Store_123/invoices/Abc123' &&
     $requests[1][3] === null,
     'BTCPay invoice status did not use the Greenfield invoice endpoint.');
 

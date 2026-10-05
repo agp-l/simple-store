@@ -92,7 +92,8 @@ final class BTCPayPaymentService
                 'SELECT * FROM shop_btcpay_payments WHERE order_id=%i ORDER BY id DESC LIMIT 1 FOR UPDATE', $orderId
             );
             if ($last !== null && in_array($last['status'], ['new', 'processing'], true)) {
-                if (!is_string($last['redirect_url']) || !$this->redirectValid($last['redirect_url'])) {
+                if (!is_string($last['redirect_url']) || !is_string($last['invoice_id']) ||
+                    !$this->redirectValid($last['redirect_url'], $last['invoice_id'])) {
                     throw new RuntimeException('BTCPay nevrátil bezpečný odkaz na platbu.');
                 }
                 $this->db->commit();
@@ -135,7 +136,8 @@ final class BTCPayPaymentService
         }
         if (!$this->matches($created, $order) ||
             !in_array($created['status'] ?? null, ['New', 'Processing'], true) ||
-            !is_string($created['checkoutLink'] ?? null) || !$this->redirectValid($created['checkoutLink'])) {
+            !is_string($created['checkoutLink'] ?? null) ||
+            !$this->redirectValid($created['checkoutLink'], $created['id'])) {
             $this->setAttempt($attemptId, 'uncertain', 'Odpověď BTCPay nesouhlasí s objednávkou.');
             throw new RuntimeException('BTCPay nevrátil ověřitelný odkaz na platbu. Prověř fakturu.');
         }
@@ -359,8 +361,9 @@ final class BTCPayPaymentService
             !isset($parts['query']) && !isset($parts['fragment']);
     }
 
-    private function redirectValid(string $url): bool
+    private function redirectValid(string $url, string $invoiceId): bool
     {
+        if (preg_match('/^[A-Za-z0-9_-]{1,100}$/D', $invoiceId) !== 1) return false;
         $base = parse_url($this->serverUrl);
         $redirect = parse_url($url);
         if (!is_array($base) || !is_array($redirect) ||
@@ -369,6 +372,12 @@ final class BTCPayPaymentService
             ($redirect['port'] ?? null) !== ($base['port'] ?? null) ||
             isset($redirect['user']) || isset($redirect['pass']) || isset($redirect['fragment'])) return false;
         $basePath = rtrim((string) ($base['path'] ?? ''), '/');
-        return str_starts_with((string) ($redirect['path'] ?? ''), $basePath . '/i/');
+        $path = (string) ($redirect['path'] ?? '');
+        $canonicalPath = $basePath . '/i/' . rawurlencode($invoiceId);
+        if (in_array($path, [$canonicalPath, $canonicalPath . '/'], true)) return true;
+        // Lite uses /pay?id= instead of /i/. Keep the exact invoice binding and
+        // installation path; unrelated same-origin pages are not checkout links.
+        return $path === $basePath . '/pay' &&
+            ($redirect['query'] ?? '') === 'id=' . rawurlencode($invoiceId);
     }
 }

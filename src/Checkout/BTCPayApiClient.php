@@ -39,7 +39,8 @@ final class BTCPayApiClient
         if (preg_match('/^[A-Za-z0-9_-]{1,100}$/D', $invoiceId) !== 1) {
             throw new RuntimeException('Neplatné ID faktury BTCPay.');
         }
-        return $this->request('GET', '/api/v1/invoices/' . rawurlencode($invoiceId));
+        return $this->request('GET', '/api/v1/stores/' . rawurlencode($this->storeId) .
+            '/invoices/' . rawurlencode($invoiceId));
     }
 
     private function request(string $method, string $path, ?array $payload = null): array
