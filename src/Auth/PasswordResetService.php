@@ -82,10 +82,10 @@ final class PasswordResetService
     {
         self::role($role);
         if (!$this->available() || !self::tokenValid($token)) return false;
-        return $this->db->queryFirstRow('SELECT r.token_hash FROM shop_password_resets r
+        $row = $this->db->queryFirstRow('SELECT r.password_hash_at_issue, u.password_hash FROM shop_password_resets r
             JOIN users u ON u.id=r.user_id WHERE r.token_hash=%s AND r.role=%s AND u.role=%s AND u.is_active=1
-            AND r.expires_at > UTC_TIMESTAMP() AND r.password_hash_at_issue=SHA2(u.password_hash, 256) LIMIT 1',
-            hash('sha256', $token), $role, $role) !== null;
+            AND r.expires_at > UTC_TIMESTAMP() LIMIT 1', hash('sha256', $token), $role, $role);
+        return $row !== null && self::passwordUnchanged($row);
     }
 
     public function complete(string $role, string $token, string $password, string $confirmation): void
@@ -100,11 +100,14 @@ final class PasswordResetService
         $hash = hash('sha256', $token);
         $this->db->startTransaction();
         try {
-            $row = $this->db->queryFirstRow('SELECT r.user_id FROM shop_password_resets r
+            $row = $this->db->queryFirstRow('SELECT r.user_id, r.password_hash_at_issue, u.password_hash
+                FROM shop_password_resets r
                 JOIN users u ON u.id=r.user_id WHERE r.token_hash=%s AND r.role=%s AND u.role=%s AND u.is_active=1
-                AND r.expires_at > UTC_TIMESTAMP() AND r.password_hash_at_issue=SHA2(u.password_hash, 256) LIMIT 1 FOR UPDATE',
+                AND r.expires_at > UTC_TIMESTAMP() LIMIT 1 FOR UPDATE',
                 $hash, $role, $role);
-            if ($row === null) throw new InvalidArgumentException('Odkaz pro obnovu vypršel nebo už byl použit.');
+            if ($row === null || !self::passwordUnchanged($row)) {
+                throw new InvalidArgumentException('Odkaz pro obnovu vypršel nebo už byl použit.');
+            }
             $userId = (int) $row['user_id'];
             $this->db->query('UPDATE users SET password_hash=%s, password_changed_at=UTC_TIMESTAMP()
                 WHERE id=%i AND role=%s AND is_active=1', password_hash($password, PASSWORD_DEFAULT), $userId, $role);
@@ -119,6 +122,13 @@ final class PasswordResetService
     private static function tokenValid(string $token): bool
     {
         return preg_match('/^[a-f0-9]{64}$/D', $token) === 1;
+    }
+
+    private static function passwordUnchanged(array $row): bool
+    {
+        return is_string($row['password_hash_at_issue'] ?? null) &&
+            is_string($row['password_hash'] ?? null) &&
+            hash_equals($row['password_hash_at_issue'], hash('sha256', $row['password_hash']));
     }
 
     private static function role(string $role): void

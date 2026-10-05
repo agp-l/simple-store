@@ -67,6 +67,7 @@ jobs:
           php tests/admin-customers.php
           php tests/admin-render.php
           php tests/admin-auth.php
+          php tests/password-reset-collation.php
           php tests/inline-editor.php
           php tests/content-editor.php
           php tests/content-deletion.php
