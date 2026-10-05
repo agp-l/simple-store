@@ -3,6 +3,7 @@ declare(strict_types=1);
 
 use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Content\ContentRepository;
+use SimpleStore\Content\SiteCopyRepository;
 use SimpleStore\Checkout\CartSession;
 use SimpleStore\Checkout\PacketaShipmentRepository;
 use SimpleStore\Customer\CustomerAuth;
@@ -76,6 +77,7 @@ try {
     $chrome = StorefrontMenus::load($db, $menuUrl,
         new ContentRepository($db, $site['languages'], $site['revision_limit']),
         new CategoryRepository($db));
+    $siteCopy = (new SiteCopyRepository($db))->load($site['default_language']);
     $cartCount = (new CartSession($basePath))->count();
     $customers = new CustomerRepository($db);
     if (!$customers->installed()) {

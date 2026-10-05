@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use SimpleStore\Content\ContentRepository;
+use SimpleStore\Content\SiteCopyRepository;
 use SimpleStore\Checkout\BankTransferPayment;
 use SimpleStore\Checkout\CartService;
 use SimpleStore\Checkout\CartSession;
@@ -81,6 +82,7 @@ try {
     $hasContent = $navigation['hasContent'];
     unset($navigation['manager'], $navigation['hasContent']);
     $shared = array_merge($shared, $navigation);
+    $shared['siteCopy'] = (new SiteCopyRepository($db))->load($url->getLanguage());
     if (in_array($route['name'], ['catalog', 'category', 'product'], true)) {
         $checkoutFile = __DIR__ . '/config/checkout.php';
         $exampleCheckout = require __DIR__ . '/config/checkout.example.php';

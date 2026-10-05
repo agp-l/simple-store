@@ -18,6 +18,20 @@ if (!str_contains($html, 'Načteno 0 produktů') ||
     str_contains($html, 'data-add')) {
     throw new RuntimeException('The empty catalog must not display old sample products or leave the language.');
 }
+$customCopy = array_replace(\SimpleStore\Content\SiteCopyRepository::DEFAULTS, [
+    'hero_title' => 'Naše výprava <test>',
+    'footer_intro' => 'Lehké & odolné',
+    'footer_closing' => 'Zpátky na cestu',
+]);
+ob_start();
+$renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs', 'siteCopy' => $customCopy]);
+$customHtml = ob_get_clean();
+if (!str_contains($customHtml, 'Naše výprava &lt;test&gt;') ||
+    !str_contains($customHtml, 'Lehké &amp; odolné') ||
+    !str_contains($customHtml, 'Zpátky na cestu') ||
+    str_contains($customHtml, 'Naše výprava <test>')) {
+    throw new RuntimeException('Editable shared copy was not safely rendered.');
+}
 
 $product = ['slug' => 'bota', 'product_key' => str_repeat('b', 32),
     'name' => 'Lehká bota', 'brand' => 'Topo',

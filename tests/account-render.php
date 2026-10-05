@@ -1,6 +1,8 @@
 <?php
 declare(strict_types=1);
 
+require dirname(__DIR__) . '/src/bootstrap.php';
+
 $site = ['default_language' => 'cs'];
 $basePath = '/simple-store/';
 $accountUrl = $basePath . 'account.php';
@@ -14,6 +16,7 @@ $section = 'overview';
 $addresses = [];
 $orders = [];
 $editAddress = null;
+$priceDisplay = null;
 
 ob_start();
 require dirname(__DIR__) . '/view/account/layout.php';

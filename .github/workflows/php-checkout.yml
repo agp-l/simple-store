@@ -57,6 +57,7 @@ jobs:
           php tests/tax-invoice-mail.php
           php tests/catalog-render.php
           php tests/footer-legal.php
+          php tests/site-copy.php
           php tests/menu-definitions.php
           php tests/menu-manager.php
           php tests/storefront-footer.php

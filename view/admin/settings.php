@@ -20,6 +20,7 @@ $btcpayDraftSecrets ??= [];
 <?php if ($settingsTab === 'overview'): ?>
 <div class="panel-settings-overview">
   <?php foreach ([
+      ['appearance', 'Texty webu', 'Nadpis a popis v hlavičce, texty v patičce.'],
       ['delivery', 'Doprava', 'Ceník a dostupnost výdejních míst i doručení na adresu.'],
       ['carriers', 'Dopravci', 'Widgety výdejních míst a údaje pro podávání zásilek.'],
       ['payment', 'Platby', 'Bankovní převod a připojené platební brány.'],
@@ -32,6 +33,27 @@ $btcpayDraftSecrets ??= [];
 </div>
 <?php elseif ($settingsTab === 'mail'): ?>
 <?php require __DIR__ . '/settings-mail.php'; ?>
+<?php elseif ($settingsTab === 'appearance'): ?>
+<form class="panel-form panel-settings-form" method="post" action="<?= $escape($adminUrl . '?section=settings&tab=appearance') ?>">
+  <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
+  <input type="hidden" name="action" value="save-site-copy">
+  <input type="hidden" name="tab" value="appearance">
+  <section class="panel-panel panel-settings-block">
+    <h2>Texty společné pro celý web</h2>
+    <input type="hidden" name="language" value="<?= $escape($copyLanguage) ?>">
+    <?php if (count($site['languages']) > 1): ?>
+      <nav class="panel-quick" aria-label="Jazyk textů">
+        <?php foreach ($site['languages'] as $code): ?><a href="<?= $escape($adminUrl . '?section=settings&tab=appearance&language=' . $code) ?>" <?= $copyLanguage === $code ? 'aria-current="page"' : '' ?>><?= $escape(strtoupper($code)) ?></a><?php endforeach; ?>
+      </nav>
+    <?php endif; ?>
+    <p class="panel-help">Texty pro jazyk <?= $escape(strtoupper($copyLanguage)) ?>. Každý jazyk má vlastní znění.</p>
+    <label>Nadpis v hlavičce<input name="hero_title" value="<?= $escape($siteCopyValues['hero_title']) ?>" maxlength="90" required></label>
+    <label>Text pod nadpisem<input name="hero_subtitle" value="<?= $escape($siteCopyValues['hero_subtitle']) ?>" maxlength="200" required></label>
+    <label>Úvodní text patičky<input name="footer_intro" value="<?= $escape($siteCopyValues['footer_intro']) ?>" maxlength="200" required></label>
+    <label>Krátký závěr patičky<input name="footer_closing" value="<?= $escape($siteCopyValues['footer_closing']) ?>" maxlength="200" required></label>
+  </section>
+  <div class="panel-settings-save"><button class="panel-button" type="submit">Uložit texty</button></div>
+</form>
 <?php else: ?>
 <form class="panel-form panel-settings-form" method="post" action="<?= $escape($adminUrl . '?section=settings&tab=' . $settingsTab) ?>">
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">

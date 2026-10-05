@@ -1,6 +1,6 @@
 <?php
 declare(strict_types=1);
-$settingsLinks = ['overview' => 'Přehled', 'delivery' => 'Doprava',
+$settingsLinks = ['overview' => 'Přehled', 'appearance' => 'Texty webu', 'delivery' => 'Doprava',
     'carriers' => 'Dopravci', 'payment' => 'Platby', 'prices' => 'Ceny',
     'mail' => 'E-maily', 'legal' => 'Podmínky'];
 ?>

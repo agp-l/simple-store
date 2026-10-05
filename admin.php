@@ -6,6 +6,7 @@ use SimpleStore\Admin\AdminUserRepository;
 use SimpleStore\Admin\StorefrontReturnUrl;
 use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Content\ContentRepository;
+use SimpleStore\Content\SiteCopyRepository;
 use SimpleStore\Checkout\CartSession;
 use SimpleStore\Checkout\CheckoutSettingsRepository;
 use SimpleStore\Database\ConnectionFactory;
@@ -50,6 +51,7 @@ try {
     $chrome = StorefrontMenus::load($db, $menuUrl,
         new ContentRepository($db, $site['languages'], $site['revision_limit']),
         new CategoryRepository($db));
+    $siteCopy = (new SiteCopyRepository($db))->load($site['default_language']);
     $cartCount = (new CartSession($basePath))->count();
     $users = new AdminUserRepository($db);
     if (!$users->installed() || !$users->hasAdmin()) {
@@ -154,7 +156,7 @@ try {
         } elseif (!in_array($action, array_merge(['create-content', 'create-translation', 'inline-content', 'create-product',
             'inline-product', 'set-product-stock', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
             'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'media-delete', 'delete-product', 'delete-content', 'homepage-product', 'product-supplier-link',
-            'save-checkout-settings', 'save-mail-settings', 'mail-test', 'customer-create', 'customer-update', 'customer-active',
+            'save-checkout-settings', 'save-site-copy', 'save-mail-settings', 'mail-test', 'customer-create', 'customer-update', 'customer-active',
             'customer-password', 'schema-apply'], $orderActions, $taxActions, $returnActions), true) ||
             !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach', 'media-delete'], true)) {
@@ -268,7 +270,7 @@ try {
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }
-    if (in_array($action, ['save-checkout-settings', 'save-mail-settings', 'mail-test'], true) ||
+    if (in_array($action, ['save-checkout-settings', 'save-site-copy', 'save-mail-settings', 'mail-test'], true) ||
         ($method !== 'POST' && $section === 'settings')) {
         require __DIR__ . '/src/Admin/settings.php';
         require __DIR__ . '/view/admin/layout.php';

@@ -416,6 +416,17 @@ $form = ['shipping_price' => array_fill_keys(array_keys($shippingCatalog), '120'
     'shipping_enabled' => array_fill_keys(array_keys($shippingCatalog), '1'),
     'account_display' => '123456/0100', 'iban' => '', 'recipient' => 'Test',
     'payment_due_days' => '7', 'terms_url' => ''];
+$copyLanguage = 'cs';
+$siteCopyValues = \SimpleStore\Content\SiteCopyRepository::DEFAULTS;
+$settingsTab = 'appearance';
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'value="save-site-copy"') ||
+    !str_contains($html, 'name="hero_title"') || !str_contains($html, 'name="footer_intro"') ||
+    !str_contains($html, 'name="csrf" value="test-token"')) {
+    throw new RuntimeException('Storefront copy must be editable from the protected settings page.');
+}
 foreach (['overview', 'delivery', 'carriers', 'payment', 'prices', 'legal'] as $settingsTab) {
     ob_start();
     require dirname(__DIR__) . '/view/admin/layout.php';

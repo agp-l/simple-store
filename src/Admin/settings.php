@@ -6,14 +6,20 @@ use SimpleStore\Checkout\ShippingPolicy;
 use SimpleStore\Accounting\MailSettingsRepository;
 use SimpleStore\Accounting\OrderMailQueue;
 use SimpleStore\Accounting\TaxEvidenceRepository;
+use SimpleStore\Content\SiteCopyRepository;
 
 // admin.php has already verified the administrator session and form token.
 $screen = 'settings';
 $settingsError = '';
-$settingsTabs = ['overview', 'delivery', 'carriers', 'payment', 'prices', 'mail', 'legal'];
+$settingsTabs = ['overview', 'appearance', 'delivery', 'carriers', 'payment', 'prices', 'mail', 'legal'];
 $requestedTab = $_POST['tab'] ?? $_GET['tab'] ?? 'overview';
 $settingsTab = is_string($requestedTab) && in_array($requestedTab, $settingsTabs, true)
     ? $requestedTab : 'overview';
+$copyLanguageInput = $_POST['language'] ?? $_GET['language'] ?? $site['default_language'];
+$copyLanguage = is_string($copyLanguageInput) && in_array($copyLanguageInput, $site['languages'], true)
+    ? $copyLanguageInput : $site['default_language'];
+$siteCopyStore = new SiteCopyRepository($db);
+$siteCopyValues = $siteCopyStore->load($copyLanguage);
 $example = require __DIR__ . '/../../config/checkout.example.php';
 $localFile = __DIR__ . '/../../config/checkout.php';
 $fallback = CheckoutSettingsRepository::withDefaults(
@@ -108,6 +114,14 @@ foreach ($shippingCatalog as $code => $definition) {
 }
 if ($method === 'POST') {
     try {
+        if (($_POST['action'] ?? null) === 'save-site-copy') {
+            if ($settingsTab !== 'appearance' || $copyLanguageInput !== $copyLanguage) {
+                throw new InvalidArgumentException('Vyber platný jazyk a stránku vzhledu.');
+            }
+            $siteCopyStore->save($copyLanguage, $_POST);
+            header('Location: ' . $adminUrl . '?section=settings&tab=appearance&language=' . $copyLanguage . '&saved=1', true, 303);
+            exit;
+        }
         if (($_POST['action'] ?? null) === 'save-mail-settings') {
             $mailSettingsStore->save($_POST);
             header('Location: ' . $adminUrl . '?section=settings&tab=mail&saved=1', true, 303);
@@ -132,6 +146,11 @@ if ($method === 'POST') {
     } catch (InvalidArgumentException $exception) {
         http_response_code(422);
         $settingsError = $exception->getMessage();
+        if ($settingsTab === 'appearance') {
+            foreach ($siteCopyValues as $key => $value) {
+                if (is_string($_POST[$key] ?? null)) $siteCopyValues[$key] = $_POST[$key];
+            }
+        }
         if ($settingsTab === 'mail') {
             foreach (['from_email', 'from_name', 'reply_to', 'public_base_url', 'admin_recovery_email',
                 'smtp_host', 'smtp_port', 'smtp_security', 'smtp_username'] as $key) {
