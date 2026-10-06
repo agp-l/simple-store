@@ -176,7 +176,8 @@ final class CheckoutController
         if (ShippingPolicy::isPickup($method)) {
             $fields['street'] = $fields['city'] = $fields['postal_code'] = '';
             if ($method !== 'balikovna_pickup') $fields['pickup_postal_code'] = '';
-            $fields = $this->pickup->fromPost($method, $fields, self::field(...));
+            $fields = $this->pickup->fromPost($method, $fields,
+                static fn (string $name): string => self::field($name));
         } else {
             $fields['pickup_point'] = $fields['pickup_address'] = $fields['pickup_code'] =
                 $fields['pickup_postal_code'] = '';
