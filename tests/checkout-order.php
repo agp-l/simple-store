@@ -156,7 +156,11 @@ class MeekroDB
 require dirname(__DIR__) . '/src/bootstrap.php';
 
 use SimpleStore\Checkout\BankTransferPayment;
+use SimpleStore\Checkout\CartSession;
+use SimpleStore\Checkout\OrderReceiptController;
 use SimpleStore\Checkout\OrderRepository;
+use SimpleStore\Navigation\UrlManager;
+use SimpleStore\Rendering\PageRenderer;
 
 $bank = new BankTransferPayment('CZ58 5500 0000 0012 6509 8001', '1265098001/5500', 'Obchod');
 $db = new MeekroDB();
@@ -202,6 +206,23 @@ if (count($db->rows) !== 1 || count($db->saleLines) !== 1 ||
     $repository->findByToken($order['order_token'])['order_number'] !== $order['order_number'] ||
     $repository->findByToken('guess') !== null || $repository->findById(0) !== null) {
     throw new RuntimeException('Idempotent checkout or private order lookup failed.');
+}
+$receipt = new OrderReceiptController(
+    new UrlManager('/shop/cs/objednavka/' . $order['order_token'], '/shop/index.php'),
+    new PageRenderer(dirname(__DIR__) . '/view'),
+    ['basePath' => '/shop/', 'language' => 'cs'], new CartSession('/shop/'),
+    $repository, null, null, null, null, null
+);
+$_SERVER['REQUEST_METHOD'] = 'GET';
+$_GET = [];
+ob_start();
+$receipt->handle(['name' => 'order', 'token' => $order['order_token']]);
+$receiptHtml = ob_get_clean();
+if (!str_contains($receiptHtml, $order['order_number']) ||
+    !str_contains($receiptHtml, 'Údaje pro platbu') ||
+    !str_contains($receiptHtml, 'Souhrn nákupu') ||
+    !str_contains($receiptHtml, $order['variable_symbol'])) {
+    throw new RuntimeException('The private order link did not render the saved bank transfer receipt.');
 }
 try {
     $repository->create(null, 'eve@example.org', $items, $shipping, 100, $key);
