@@ -7,6 +7,25 @@ on:
   workflow_dispatch:
 
 jobs:
+  php80-syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.0'
+          tools: none
+          coverage: none
+      # Existing XAMPP installations may still run PHP 8.0. The installed
+      # GoPay SDK requires 8.1+, but our source must not add parse errors.
+      - name: Check application source syntax on PHP 8.0
+        run: |
+          find src view -name '*.php' -print0 | xargs -0 -n1 php -l
+          for file in index.php admin.php account.php support.php \
+            comgate-callback.php comgate-return.php gopay-callback.php \
+            gopay-return.php btcpay-callback.php btcpay-return.php; do
+            php -l "$file"
+          done
   php:
     runs-on: ubuntu-latest
     strategy:
