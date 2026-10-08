@@ -88,6 +88,22 @@ if (!str_contains($html, 'name="action" value="schema-apply"') ||
     !str_contains($html, '?section=database')) {
     throw new RuntimeException('Database update screen is not integrated into the admin panel.');
 }
+$tablePrefixStatus = ['state' => 'ready', 'tables' => []];
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'name="action" value="table-prefix-migrate"')) {
+    throw new RuntimeException('Legacy table migration is missing in the admin panel.');
+}
+$tablePrefixStatus['state'] = 'migrated';
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (str_contains($html, 'name="action" value="schema-apply"') ||
+    str_contains($html, 'name="action" value="table-prefix-migrate"')) {
+    throw new RuntimeException('Old schema actions were offered after the table migration.');
+}
+unset($tablePrefixStatus);
 $databaseStatus['current'] = true;
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';

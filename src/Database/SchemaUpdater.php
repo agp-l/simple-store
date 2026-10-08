@@ -68,6 +68,10 @@ final class SchemaUpdater
                 hash_equals($plan['hash'], (string) $row['schema_hash'])) {
                 return false;
             }
+            if (str_starts_with($plan['statements'][0], 'CREATE TABLE IF NOT EXISTS users') &&
+                (new LegacyTablePrefixMigration($this->db))->status()['state'] === 'migrated') {
+                throw new RuntimeException('Stará verze schématu už nesmí upravovat přejmenované tabulky.');
+            }
             $this->db->query('INSERT INTO shop_schema_updates
                 (id, schema_hash, state, completed_statements, started_at, finished_at, last_error)
                 VALUES (%i, %s, %s, %i, UTC_TIMESTAMP(), NULL, NULL)
