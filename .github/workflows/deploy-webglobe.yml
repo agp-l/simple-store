@@ -36,16 +36,12 @@ jobs:
         run: composer install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
       - name: Assemble release
         run: python3 scripts/build-release.py --output "$RUNNER_TEMP/simple-store-release"
-      - name: Connect to pinned SFTP host and upload changes
+      - name: Upload changed files over FTP
         env:
-          SFTP_HOST: ${{ secrets.WEBGLOBE_SFTP_HOST }}
-          SFTP_USER: ${{ secrets.WEBGLOBE_SFTP_USER }}
-          SFTP_PASSWORD: ${{ secrets.WEBGLOBE_SFTP_PASSWORD }}
-          SFTP_ROOT: ${{ secrets.WEBGLOBE_SFTP_ROOT }}
-          WEBGLOBE_KNOWN_HOSTS: ${{ secrets.WEBGLOBE_KNOWN_HOSTS }}
-        run: |
-          python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
-          printf '%s\n' "$WEBGLOBE_KNOWN_HOSTS" > "$RUNNER_TEMP/webglobe-known-hosts"
-          chmod 600 "$RUNNER_TEMP/webglobe-known-hosts"
-          export SFTP_KNOWN_HOSTS="$RUNNER_TEMP/webglobe-known-hosts"
-          python3 scripts/deploy-sftp.py --package "$RUNNER_TEMP/simple-store-release"
+          FTP_HOST: ${{ secrets.WEBGLOBE_FTP_HOST }}
+          FTP_USER: ${{ secrets.WEBGLOBE_FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.WEBGLOBE_FTP_PASSWORD }}
+          FTP_ROOT: ${{ secrets.WEBGLOBE_FTP_ROOT }}
+          FTP_SECURITY: ${{ vars.WEBGLOBE_FTP_SECURITY || 'ftp' }}
+          FTP_PORT: ${{ vars.WEBGLOBE_FTP_PORT || '21' }}
+        run: python3 scripts/deploy-ftp.py --package "$RUNNER_TEMP/simple-store-release"

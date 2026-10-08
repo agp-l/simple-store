@@ -6,7 +6,7 @@ Online platby: [Comgate](docs/comgate.md), [GoPay](docs/gopay.md) a [BTCPay Serv
 
 Aktuální kritické nálezy, kroky před nasazením a pořadí dalších oprav jsou v [auditu projektu](docs/audit-2026-10.md).
 
-Testovací hosting Webglobe: [postup nasazení po SFTP a aktualizace databáze](docs/deploy-webglobe.md). GitHub workflow po úspěšných testech zveřejní změny pouze po zapnutí repository variable a nastavení SFTP secrets. Soukromé konfigurace a nahrané fotografie se nepřenášejí ani nemažou.
+Testovací hosting Webglobe: [postup nasazení přes FTP a aktualizace databáze](docs/deploy-webglobe.md). GitHub workflow po úspěšných testech zveřejní změny pouze po zapnutí repository variable a nastavení FTP secrets. Soukromé konfigurace a nahrané fotografie se nepřenášejí ani nemažou.
 
 **Nejdřív spusť v kořeni projektu:**
 

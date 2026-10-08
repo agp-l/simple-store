@@ -21,7 +21,7 @@ def load(name: str, filename: str):
 
 
 builder = load("builder", "build-release.py")
-deployer = load("deployer", "deploy-sftp.py")
+deployer = load("deployer", "deploy-ftp.py")
 
 
 with tempfile.TemporaryDirectory() as directory:
@@ -67,29 +67,44 @@ with tempfile.TemporaryDirectory() as directory:
     except ValueError:
         pass
 
-    class FakeSFTP:
+    class FakeFTP:
         def __init__(self):
             self.files = {"/site/index.php": b"old code", "/site/config/database.php": b"private"}
 
-        def put(self, source, target):
-            self.files[target] = Path(source).read_bytes()
+        def storbinary(self, command, source):
+            self.files[command.removeprefix("STOR ")] = source.read()
 
-        def posix_rename(self, source, target):
-            raise OSError("extension unavailable")
-
-        def stat(self, target):
+        def size(self, target):
             if target not in self.files:
-                raise FileNotFoundError(target)
+                raise deployer.ftplib.error_perm("550 Not found")
+            return len(self.files[target])
 
         def rename(self, source, target):
             self.files[target] = self.files.pop(source)
 
-        def remove(self, target):
+        def delete(self, target):
             del self.files[target]
 
-    remote = FakeSFTP()
+    remote = FakeFTP()
     deployer.upload(remote, package / "index.php", "/site/index.php")
     assert remote.files == {"/site/index.php": b"<?php echo 'store';",
                             "/site/config/database.php": b"private"}
+
+    class FailingFTP(FakeFTP):
+        def rename(self, source, target):
+            if ".upload-" in source:
+                raise deployer.ftplib.error_perm("550 Cannot rename uploaded file")
+            super().rename(source, target)
+
+    failing = FailingFTP()
+    try:
+        deployer.upload(failing, package / "index.php", "/site/index.php")
+        raise AssertionError("A failed FTP rename appeared to succeed.")
+    except deployer.ftplib.error_perm:
+        assert failing.files == {"/site/index.php": b"old code",
+                                 "/site/config/database.php": b"private"}
+
+    assert deployer.missing(deployer.ftplib.error_perm("550 Not found"))
+    assert not deployer.missing(deployer.ftplib.error_perm("530 Login incorrect"))
 
 print("Deployment packaging tests passed.")
