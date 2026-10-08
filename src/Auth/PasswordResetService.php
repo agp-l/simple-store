@@ -52,7 +52,7 @@ final class PasswordResetService
         } else {
             $email = strtolower(trim($identifier));
             $user = filter_var($email, FILTER_VALIDATE_EMAIL) !== false && strlen($email) <= 254
-                ? $this->db->queryFirstRow('SELECT id, password_hash FROM users WHERE email=%s AND role=%s AND is_active=1 LIMIT 1',
+                ? $this->db->queryFirstRow('SELECT id, password_hash FROM shop_users WHERE email=%s AND role=%s AND is_active=1 LIMIT 1',
                     $email, 'customer') : null;
         }
         if ($user === null) {
@@ -105,7 +105,7 @@ final class PasswordResetService
         self::role($role);
         if (!$this->available() || !self::tokenValid($token)) return false;
         $row = $this->db->queryFirstRow('SELECT r.password_hash_at_issue, u.password_hash FROM shop_password_resets r
-            JOIN users u ON u.id=r.user_id WHERE r.token_hash=%s AND r.role=%s AND u.role=%s AND u.is_active=1
+            JOIN shop_users u ON u.id=r.user_id WHERE r.token_hash=%s AND r.role=%s AND u.role=%s AND u.is_active=1
             AND r.expires_at > UTC_TIMESTAMP() LIMIT 1', hash('sha256', $token), $role, $role);
         return $row !== null && self::passwordUnchanged($row);
     }
@@ -124,14 +124,14 @@ final class PasswordResetService
         try {
             $row = $this->db->queryFirstRow('SELECT r.user_id, r.password_hash_at_issue, u.password_hash
                 FROM shop_password_resets r
-                JOIN users u ON u.id=r.user_id WHERE r.token_hash=%s AND r.role=%s AND u.role=%s AND u.is_active=1
+                JOIN shop_users u ON u.id=r.user_id WHERE r.token_hash=%s AND r.role=%s AND u.role=%s AND u.is_active=1
                 AND r.expires_at > UTC_TIMESTAMP() LIMIT 1 FOR UPDATE',
                 $hash, $role, $role);
             if ($row === null || !self::passwordUnchanged($row)) {
                 throw new InvalidArgumentException('Odkaz pro obnovu vypršel nebo už byl použit.');
             }
             $userId = (int) $row['user_id'];
-            $this->db->query('UPDATE users SET password_hash=%s, password_changed_at=UTC_TIMESTAMP()
+            $this->db->query('UPDATE shop_users SET password_hash=%s, password_changed_at=UTC_TIMESTAMP()
                 WHERE id=%i AND role=%s AND is_active=1', password_hash($password, PASSWORD_DEFAULT), $userId, $role);
             $this->db->query('DELETE FROM shop_password_resets WHERE user_id=%i', $userId);
             $this->db->commit();

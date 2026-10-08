@@ -29,7 +29,7 @@ final class OrderProductLinks
         if ($keys === []) return [];
 
         $holders = implode(',', array_fill(0, count($keys), '%s'));
-        $rows = $this->db->query('SELECT product_key, language, slug FROM product_revisions
+        $rows = $this->db->query('SELECT product_key, language, slug FROM shop_product_revisions
             WHERE active_product_key IS NOT NULL AND product_key IN (' . $holders . ')',
             ...array_keys($keys));
         $links = [];

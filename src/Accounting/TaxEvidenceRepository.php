@@ -468,7 +468,7 @@ final class TaxEvidenceRepository
                           JOIN shop_orders o ON o.id=l.order_id
                           WHERE l.product_key=p.product_key AND o.fulfillment_source=%s
                             AND o.status IN (%s,%s)),0) AS dispatched
-             FROM product_revisions p WHERE p.active_product_key IS NOT NULL AND p.language=%s
+             FROM shop_product_revisions p WHERE p.active_product_key IS NOT NULL AND p.language=%s
                  AND (%s=%s OR LOCATE(%s,p.name)>0 OR p.product_key=%s)
              ORDER BY p.name ASC LIMIT %i',
             'own', 'shipped', 'completed', 'cs', $search, '', $search, $search, 60

@@ -9,6 +9,7 @@ declare(strict_types=1);
 <?php if (($_GET['updated'] ?? '') === '1'): ?><p class="panel-notice" role="status">Tabulky byly aktualizovány.</p><?php endif; ?>
 <?php if (($_GET['updated'] ?? '') === '0'): ?><p class="panel-notice" role="status">Databáze už používá aktuální verzi schématu.</p><?php endif; ?>
 <?php if (($_GET['prefix_updated'] ?? '') === '1'): ?><p class="panel-notice" role="status">Šest tabulek má nyní prefix <code>shop_</code>. Existující data zůstala na místě.</p><?php endif; ?>
+<?php if (($_GET['prefix_cleaned'] ?? '') === '1'): ?><p class="panel-notice" role="status">Dočasné pohledy byly odstraněny. Všechny tabulky obchodu teď začínají <code>shop_</code>.</p><?php endif; ?>
 <?php if (isset($tablePrefixStatus)): ?>
   <section class="panel-panel">
     <h2>Sjednocení názvů tabulek</h2>
@@ -20,7 +21,14 @@ declare(strict_types=1);
         <button class="panel-button" type="submit">Přejmenovat šest tabulek</button>
       </form>
     <?php elseif ($tablePrefixStatus['state'] === 'migrated'): ?>
-      <p>Šest tabulek bylo přejmenováno. Původní názvy jsou pro tuto přechodnou verzi aplikace zapisovatelné pohledy; produkty, zákazníci a obsah zůstávají zachované.</p>
+      <p>Tabulky mají prefix <code>shop_</code>. Staré názvy jsou již nepotřebné přechodné pohledy.</p>
+      <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=database') ?>">
+        <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
+        <input type="hidden" name="action" value="table-prefix-cleanup">
+        <button class="panel-button" type="submit">Odstranit staré pohledy</button>
+      </form>
+    <?php elseif ($tablePrefixStatus['state'] === 'complete'): ?>
+      <p>Hotovo. Tabulky tohoto obchodu používají jednotně prefix <code>shop_</code> a původní pohledy byly odstraněny.</p>
     <?php elseif ($tablePrefixStatus['state'] === 'empty'): ?>
       <p>Tabulky ještě neexistují. Nejdřív nainstaluj schéma obchodu.</p>
     <?php else: ?>
@@ -52,7 +60,7 @@ declare(strict_types=1);
         <?php if ($schemaRecord['last_error']): ?><div><dt>Poslední chyba</dt><dd><?= $escape($schemaRecord['last_error']) ?></dd></div><?php endif; ?>
       <?php endif; ?>
     </dl>
-    <?php if (!$databaseStatus['current'] && ($tablePrefixStatus['state'] ?? '') !== 'migrated'): ?>
+    <?php if (!$databaseStatus['current'] && !in_array($tablePrefixStatus['state'] ?? '', ['ready', 'conflict'], true)): ?>
       <p class="panel-help">Použije se právě databáze uvedená výše. Příkazy pro vytvoření a přepnutí databáze ze souboru se nespouštějí; stávající obsah tabulek zůstává zachován.</p>
       <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=database') ?>">
         <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">

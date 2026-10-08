@@ -16,7 +16,7 @@ $db = ConnectionFactory::create([
 (new SchemaUpdater($db, dirname(__DIR__) . '/database/schema.sql'))->apply();
 $key = bin2hex(random_bytes(16));
 $slug = 'reset-' . substr($key, 0, 12);
-$db->insert('product_revisions', [
+$db->insert('shop_product_revisions', [
     'product_key' => $key, 'active_product_key' => $key, 'language' => 'cs',
     'revision_number' => 1, 'slug' => $slug, 'active_slug' => $slug,
     'name' => 'Produkt chráněný při úklidu', 'category' => 'batohy', 'price_czk' => 100,
@@ -48,11 +48,11 @@ try {
     throw new RuntimeException('Reset accepted a different database name.');
 } catch (RuntimeException $expected) {}
 $result = $reset->apply('simple_store');
-if ($result['before']['product_revisions'] !== $result['after']['product_revisions'] ||
+if ($result['before']['shop_product_revisions'] !== $result['after']['shop_product_revisions'] ||
     $result['after']['tables']['shop_orders'] !== 0 ||
     (int) $db->queryFirstField('SELECT available_quantity FROM shop_product_inventory
         WHERE product_key=%s', $key) !== 4 ||
-    (int) $db->queryFirstField('SELECT COUNT(*) FROM product_revisions
+    (int) $db->queryFirstField('SELECT COUNT(*) FROM shop_product_revisions
         WHERE product_key=%s', $key) !== 1 ||
     $result['before']['stock_movements_preserved'] !== $result['after']['stock_movements_preserved']) {
     throw new RuntimeException('Commerce reset altered the catalog or local inventory incorrectly.');

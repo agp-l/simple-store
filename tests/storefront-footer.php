@@ -10,12 +10,12 @@ class MeekroDB
 {
     public function queryFirstField(string $sql, mixed ...$args): int
     {
-        return ($args[0] ?? '') === 'content_revisions' ? 1 : 0;
+        return ($args[0] ?? '') === 'shop_content_revisions' ? 1 : 0;
     }
 
     public function query(string $sql, mixed ...$args): array
     {
-        if (str_contains($sql, 'SELECT slug FROM content_revisions')) {
+        if (str_contains($sql, 'SELECT slug FROM shop_content_revisions')) {
             return [['slug' => 'obchodni-podminky']];
         }
         return [];

@@ -15,11 +15,11 @@ class MeekroDB
         if (str_contains($sql, 'SELECT path, title, sort_order, enabled')) {
             return array_values($this->categories);
         }
-        if (str_contains($sql, 'SELECT path, title, sort_order FROM catalog_categories')) {
+        if (str_contains($sql, 'SELECT path, title, sort_order FROM shop_catalog_categories')) {
             return array_values(array_filter($this->categories,
                 static fn (array $row): bool => $row['enabled'] === 1));
         }
-        if (str_contains($sql, 'UPDATE catalog_categories')) {
+        if (str_contains($sql, 'UPDATE shop_catalog_categories')) {
             $this->categories[$args[3] . ':' . $args[4]] = [
                 'path' => $args[4], 'title' => $args[0], 'sort_order' => $args[1], 'enabled' => $args[2],
             ];

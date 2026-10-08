@@ -240,7 +240,7 @@ try {
         $shared['categoryMenu'] = $path === null ? [] : $menus->links('category_tabs', $menuRoot);
         $hasProducts = (int) $db->queryFirstField(
             'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
-            'product_revisions'
+            'shop_product_revisions'
         ) > 0;
         $offset = filter_var($_GET['offset'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 100000]]);
         $rawSearch = $_GET['search'] ?? '';

@@ -8,7 +8,7 @@ class MeekroDB
 
     public function queryFirstRow(string $sql, mixed ...$parameters): ?array
     {
-        if (!str_contains($sql, 'product_revisions') || !str_contains($sql, 'published=1') ||
+        if (!str_contains($sql, 'shop_product_revisions') || !str_contains($sql, 'published=1') ||
             !str_contains($sql, 'active_product_key IS NOT NULL')) {
             throw new RuntimeException('Checkout must only load the current published product.');
         }

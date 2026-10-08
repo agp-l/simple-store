@@ -65,14 +65,14 @@ for slug, title, summary, placeholder in PAGES:
     key = hashlib.md5(("dobrodruzi:legal:" + slug).encode("utf-8")).hexdigest()
     queries.append(
         "\n-- " + title + "\n"
-        "INSERT INTO content_revisions\n"
+        "INSERT INTO shop_content_revisions\n"
         "  (document_key, active_document_key, language, revision_number, type, slug, active_slug,\n"
         "   title, summary, body, published, visible_in_menu, menu_order)\n"
         f"SELECT '{key}', '{key}', 'cs', 1, 'page', '{slug}', '{slug}',\n"
         f"       {sql_string(title)}, {sql_string(summary)}, {sql_utf8(body)}, 0, 0, 0\n"
-        "WHERE NOT EXISTS (SELECT 1 FROM content_revisions WHERE type='page' AND language='cs'\n"
+        "WHERE NOT EXISTS (SELECT 1 FROM shop_content_revisions WHERE type='page' AND language='cs'\n"
         f"  AND active_slug='{slug}')\n"
-        "  AND NOT EXISTS (SELECT 1 FROM content_revisions WHERE document_key='" + key + "' AND language='cs');"
+        "  AND NOT EXISTS (SELECT 1 FROM shop_content_revisions WHERE document_key='" + key + "' AND language='cs');"
     )
 queries.append("\nCOMMIT;\n")
 DESTINATION.write_text("\n".join(queries), encoding="utf-8")

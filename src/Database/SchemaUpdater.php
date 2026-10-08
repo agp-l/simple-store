@@ -40,7 +40,7 @@ final class SchemaUpdater
         // These two commands are for the CLI installer. The admin never changes databases.
         $statements = array_slice($all, 2);
         foreach ($statements as $statement) {
-            if (preg_match('/^(?:CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS|SET\s+@|PREPARE\s+\w+\s+FROM\s+@|EXECUTE\s+\w+|DEALLOCATE\s+PREPARE\s+\w+|UPDATE\s+shop_orders\s+SET|INSERT\s+IGNORE\s+INTO\s+(?:catalog_categories|shop_product_inventory))\b/i', $statement) !== 1) {
+            if (preg_match('/^(?:CREATE\s+TABLE\s+IF\s+NOT\s+EXISTS|SET\s+@|PREPARE\s+\w+\s+FROM\s+@|EXECUTE\s+\w+|DEALLOCATE\s+PREPARE\s+\w+|UPDATE\s+shop_orders\s+SET|INSERT\s+IGNORE\s+INTO\s+(?:shop_catalog_categories|shop_product_inventory))\b/i', $statement) !== 1) {
                 throw new RuntimeException('Soubor schématu obsahuje nepodporovaný příkaz. Aktualizaci nelze spustit.');
             }
         }
@@ -68,9 +68,8 @@ final class SchemaUpdater
                 hash_equals($plan['hash'], (string) $row['schema_hash'])) {
                 return false;
             }
-            if (str_starts_with($plan['statements'][0], 'CREATE TABLE IF NOT EXISTS users') &&
-                (new LegacyTablePrefixMigration($this->db))->status()['state'] === 'migrated') {
-                throw new RuntimeException('Stará verze schématu už nesmí upravovat přejmenované tabulky.');
+            if (in_array((new LegacyTablePrefixMigration($this->db))->status()['state'], ['ready', 'conflict'], true)) {
+                throw new RuntimeException('Nejdřív přejmenuj starší tabulky na shop_ v administraci Databáze.');
             }
             $this->db->query('INSERT INTO shop_schema_updates
                 (id, schema_hash, state, completed_statements, started_at, finished_at, last_error)

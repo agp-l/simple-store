@@ -14,7 +14,7 @@ class MeekroDB
 
     public function queryFirstRow(string $sql, mixed ...$args): ?array
     {
-        if (str_contains($sql, 'FROM content_revisions')) {
+        if (str_contains($sql, 'FROM shop_content_revisions')) {
             return $args[1] === 'obchodni-podminky' ? $this->page : null;
         }
         if (str_contains($sql, 'FROM shop_order_legal_snapshots')) return $this->snapshots[$args[0]] ?? null;

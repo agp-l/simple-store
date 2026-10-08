@@ -4,7 +4,7 @@ CREATE DATABASE IF NOT EXISTS simple_store
 USE simple_store;
 
 -- Admin and customer accounts share a role-scoped identity table.
-CREATE TABLE IF NOT EXISTS users (
+CREATE TABLE IF NOT EXISTS shop_users (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   username VARCHAR(80) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   email VARCHAR(254) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL,
@@ -29,45 +29,45 @@ CREATE TABLE IF NOT EXISTS shop_password_resets (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   expires_at DATETIME NOT NULL,
   KEY reset_rate (user_id, created_at),
-  CONSTRAINT password_reset_user_fk FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  CONSTRAINT password_reset_user_fk FOREIGN KEY (user_id) REFERENCES shop_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Add customer fields to installations created before customer accounts existed.
 SET @customer_email_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
-  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='email');
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_users' AND COLUMN_NAME='email');
 SET @customer_email_upgrade = IF(@customer_email_column=0,
-  'ALTER TABLE users ADD COLUMN email VARCHAR(254) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL AFTER username',
+  'ALTER TABLE shop_users ADD COLUMN email VARCHAR(254) CHARACTER SET ascii COLLATE ascii_bin NULL DEFAULT NULL AFTER username',
   'SELECT 1');
 PREPARE customer_email_statement FROM @customer_email_upgrade;
 EXECUTE customer_email_statement;
 DEALLOCATE PREPARE customer_email_statement;
 
 SET @customer_name_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
-  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='display_name');
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_users' AND COLUMN_NAME='display_name');
 SET @customer_name_upgrade = IF(@customer_name_column=0,
-  'ALTER TABLE users ADD COLUMN display_name VARCHAR(120) NOT NULL DEFAULT '''' AFTER email', 'SELECT 1');
+  'ALTER TABLE shop_users ADD COLUMN display_name VARCHAR(120) NOT NULL DEFAULT '''' AFTER email', 'SELECT 1');
 PREPARE customer_name_statement FROM @customer_name_upgrade;
 EXECUTE customer_name_statement;
 DEALLOCATE PREPARE customer_name_statement;
 
 SET @customer_phone_column = (SELECT COUNT(*) FROM information_schema.COLUMNS
-  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND COLUMN_NAME='phone');
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_users' AND COLUMN_NAME='phone');
 SET @customer_phone_upgrade = IF(@customer_phone_column=0,
-  'ALTER TABLE users ADD COLUMN phone VARCHAR(40) NOT NULL DEFAULT '''' AFTER display_name', 'SELECT 1');
+  'ALTER TABLE shop_users ADD COLUMN phone VARCHAR(40) NOT NULL DEFAULT '''' AFTER display_name', 'SELECT 1');
 PREPARE customer_phone_statement FROM @customer_phone_upgrade;
 EXECUTE customer_phone_statement;
 DEALLOCATE PREPARE customer_phone_statement;
 
 SET @customer_email_index = (SELECT COUNT(*) FROM information_schema.STATISTICS
-  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='users' AND INDEX_NAME='users_customer_email');
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_users' AND INDEX_NAME='users_customer_email');
 SET @customer_index_upgrade = IF(@customer_email_index=0,
-  'ALTER TABLE users ADD UNIQUE KEY users_customer_email (email)', 'SELECT 1');
+  'ALTER TABLE shop_users ADD UNIQUE KEY users_customer_email (email)', 'SELECT 1');
 PREPARE customer_index_statement FROM @customer_index_upgrade;
 EXECUTE customer_index_statement;
 DEALLOCATE PREPARE customer_index_statement;
 
 -- Addresses are owned by one customer and are always queried with user_id.
-CREATE TABLE IF NOT EXISTS customer_addresses (
+CREATE TABLE IF NOT EXISTS shop_customer_addresses (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   user_id BIGINT UNSIGNED NOT NULL,
   label VARCHAR(60) NOT NULL,
@@ -84,9 +84,9 @@ CREATE TABLE IF NOT EXISTS customer_addresses (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SET @customer_address_company_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
-  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='customer_addresses' AND COLUMN_NAME='company');
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_customer_addresses' AND COLUMN_NAME='company');
 SET @customer_address_company_upgrade = IF(@customer_address_company_exists=0,
-  'ALTER TABLE customer_addresses ADD COLUMN company VARCHAR(120) NOT NULL DEFAULT '''' AFTER recipient', 'SELECT 1');
+  'ALTER TABLE shop_customer_addresses ADD COLUMN company VARCHAR(120) NOT NULL DEFAULT '''' AFTER recipient', 'SELECT 1');
 PREPARE customer_address_company_statement FROM @customer_address_company_upgrade;
 EXECUTE customer_address_company_statement;
 DEALLOCATE PREPARE customer_address_company_statement;
@@ -766,7 +766,7 @@ DEALLOCATE PREPARE fulfillment_index_statement;
 
 -- Each save inserts a complete snapshot of a page or blog post.
 -- Older inactive snapshots are pruned to config/site.php revision_limit after saving.
-CREATE TABLE IF NOT EXISTS content_revisions (
+CREATE TABLE IF NOT EXISTS shop_content_revisions (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   document_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   active_document_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
@@ -793,7 +793,7 @@ CREATE TABLE IF NOT EXISTS content_revisions (
 -- Product fields live together; saving creates a new row with all current values.
 -- Options, technical specifications, content blocks and gallery live in details_json.
 -- They are a complete snapshot, without extra tables or foreign keys.
-CREATE TABLE IF NOT EXISTS product_revisions (
+CREATE TABLE IF NOT EXISTS shop_product_revisions (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   active_product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
@@ -842,9 +842,9 @@ CREATE TABLE IF NOT EXISTS shop_homepage_selections (
 -- Upgrade installations with products created before details_json was introduced.
 -- Prepared SQL keeps this single schema safe to re-import in both MySQL and MariaDB.
 SET @details_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
-  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'product_revisions' AND COLUMN_NAME = 'details_json');
+  WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'shop_product_revisions' AND COLUMN_NAME = 'details_json');
 SET @details_upgrade = IF(@details_exists = 0,
-  'ALTER TABLE product_revisions ADD COLUMN details_json LONGTEXT NULL AFTER description',
+  'ALTER TABLE shop_product_revisions ADD COLUMN details_json LONGTEXT NULL AFTER description',
   'SELECT 1');
 PREPARE details_statement FROM @details_upgrade;
 EXECUTE details_statement;
@@ -852,18 +852,18 @@ DEALLOCATE PREPARE details_statement;
 
 -- Expand the existing product fields to hold a root slug and an arbitrarily nested path.
 SET @category_width = (SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS
-  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='product_revisions' AND COLUMN_NAME='category');
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_product_revisions' AND COLUMN_NAME='category');
 SET @category_upgrade = IF(@category_width < 190,
-  'ALTER TABLE product_revisions MODIFY COLUMN category VARCHAR(190) CHARACTER SET ascii COLLATE ascii_bin NOT NULL',
+  'ALTER TABLE shop_product_revisions MODIFY COLUMN category VARCHAR(190) CHARACTER SET ascii COLLATE ascii_bin NOT NULL',
   'SELECT 1');
 PREPARE category_statement FROM @category_upgrade;
 EXECUTE category_statement;
 DEALLOCATE PREPARE category_statement;
 
 SET @subcategory_width = (SELECT CHARACTER_MAXIMUM_LENGTH FROM information_schema.COLUMNS
-  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='product_revisions' AND COLUMN_NAME='subcategory');
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_product_revisions' AND COLUMN_NAME='subcategory');
 SET @subcategory_upgrade = IF(@subcategory_width < 500,
-  'ALTER TABLE product_revisions MODIFY COLUMN subcategory VARCHAR(500) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT ''''',
+  'ALTER TABLE shop_product_revisions MODIFY COLUMN subcategory VARCHAR(500) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT ''''',
   'SELECT 1');
 PREPARE subcategory_statement FROM @subcategory_upgrade;
 EXECUTE subcategory_statement;
@@ -871,7 +871,7 @@ DEALLOCATE PREPARE subcategory_statement;
 
 -- A full path identifies each category; its parent is the path before the last slash.
 -- Labels may be translated by adding the same path under another language.
-CREATE TABLE IF NOT EXISTS catalog_categories (
+CREATE TABLE IF NOT EXISTS shop_catalog_categories (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
   language CHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   path VARCHAR(500) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
@@ -884,7 +884,7 @@ CREATE TABLE IF NOT EXISTS catalog_categories (
 
 -- Optional overrides for named menu placements. A missing row uses config/menus.php.
 -- Manual links live in one JSON list per placement and language; no foreign keys.
-CREATE TABLE IF NOT EXISTS navigation_menus (
+CREATE TABLE IF NOT EXISTS shop_navigation_menus (
   language CHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   slot VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   source VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
@@ -896,7 +896,7 @@ CREATE TABLE IF NOT EXISTS navigation_menus (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- Seed once; re-importing the schema never overwrites edited titles or ordering.
-INSERT IGNORE INTO catalog_categories (language, path, title, sort_order) VALUES
+INSERT IGNORE INTO shop_catalog_categories (language, path, title, sort_order) VALUES
   ('cs', 'spani', 'Spaní', 1),
   ('cs', 'spani/spacaky', 'Spacáky', 1),
   ('cs', 'spani/quilty', 'Quilty', 2),
@@ -965,7 +965,7 @@ CREATE TABLE IF NOT EXISTS shop_product_inventory (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO shop_product_inventory (product_key, available_quantity)
-  SELECT DISTINCT product_key, 0 FROM product_revisions WHERE active_product_key IS NOT NULL;
+  SELECT DISTINCT product_key, 0 FROM shop_product_revisions WHERE active_product_key IS NOT NULL;
 
 -- A reservation records why pieces left the sellable count. Consumed pieces remain
 -- deducted; cancelling an unshipped order may release its pieces exactly once.

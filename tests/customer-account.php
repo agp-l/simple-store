@@ -44,20 +44,20 @@ class MeekroDB
         if (str_contains($sql, 'SET password_hash=')) {
             $this->users[$args[1]]['password_hash'] = $args[0];
         }
-        if (str_contains($sql, 'UPDATE customer_addresses')) {
+        if (str_contains($sql, 'UPDATE shop_customer_addresses')) {
             $this->addresses[$args[8]] = ['id' => $args[8], 'user_id' => $args[9]] +
                 array_combine(['label', 'recipient', 'company', 'street', 'city', 'postal_code', 'country', 'phone'],
                     array_slice($args, 0, 8));
         }
-        if (str_contains($sql, 'DELETE FROM customer_addresses')) unset($this->addresses[$args[0]]);
+        if (str_contains($sql, 'DELETE FROM shop_customer_addresses')) unset($this->addresses[$args[0]]);
         return [];
     }
 
     public function insert(string $table, array $fields): void
     {
         $id = $this->nextId++;
-        if ($table === 'users') $this->users[$id] = ['id' => $id] + $fields;
-        if ($table === 'customer_addresses') $this->addresses[$id] = ['id' => $id] + $fields;
+        if ($table === 'shop_users') $this->users[$id] = ['id' => $id] + $fields;
+        if ($table === 'shop_customer_addresses') $this->addresses[$id] = ['id' => $id] + $fields;
     }
 }
 

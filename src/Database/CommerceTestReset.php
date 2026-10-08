@@ -50,8 +50,8 @@ final class CommerceTestReset
             }
         }
         return ['database' => $name, 'tables' => $counts, 'reservations' => $inventory,
-            'product_revisions' => $this->exists('product_revisions')
-                ? (int) $this->db->queryFirstField('SELECT COUNT(*) FROM product_revisions') : null,
+            'shop_product_revisions' => $this->exists('shop_product_revisions')
+                ? (int) $this->db->queryFirstField('SELECT COUNT(*) FROM shop_product_revisions') : null,
             'stock_movements_preserved' => $this->exists('shop_stock_movements')
                 ? (int) $this->db->queryFirstField('SELECT COUNT(*) FROM shop_stock_movements') : null];
     }
@@ -79,8 +79,8 @@ final class CommerceTestReset
             foreach (self::TABLES as $table) {
                 if ($this->exists($table)) $this->db->query('DELETE FROM ' . $table);
             }
-            if ($before['product_revisions'] !== null && (int) $this->db->queryFirstField(
-                'SELECT COUNT(*) FROM product_revisions') !== $before['product_revisions']) {
+            if ($before['shop_product_revisions'] !== null && (int) $this->db->queryFirstField(
+                'SELECT COUNT(*) FROM shop_product_revisions') !== $before['shop_product_revisions']) {
                 throw new RuntimeException('Počet produktových revizí se změnil. Úklid byl vrácen zpět.');
             }
             $this->db->commit();

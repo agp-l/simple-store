@@ -22,7 +22,7 @@ final class CategoryRepository
         if ($this->installed === null) {
             $this->installed = (int) $this->db->queryFirstField(
                 'SELECT COUNT(*) FROM information_schema.TABLES
-                 WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', 'catalog_categories'
+                 WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', 'shop_catalog_categories'
             ) > 0;
         }
         return $this->installed;
@@ -32,7 +32,7 @@ final class CategoryRepository
     {
         if (!isset($this->cache[$language])) {
             $rows = $this->installed() ? $this->db->query(
-                'SELECT path, title, sort_order FROM catalog_categories
+                'SELECT path, title, sort_order FROM shop_catalog_categories
                  WHERE language=%s AND enabled=1 ORDER BY sort_order, title', $language
             ) : [];
             $this->cache[$language] = [];
@@ -104,7 +104,7 @@ final class CategoryRepository
     public function allForAdmin(string $language): array
     {
         $rows = $this->db->query(
-            'SELECT path, title, sort_order, enabled FROM catalog_categories WHERE language=%s', $language
+            'SELECT path, title, sort_order, enabled FROM shop_catalog_categories WHERE language=%s', $language
         );
         $children = [];
         foreach ($rows as $row) {
@@ -129,7 +129,7 @@ final class CategoryRepository
     {
         if (!CategoryPath::valid($path)) return null;
         return $this->db->queryFirstRow(
-            'SELECT path, title, sort_order, enabled FROM catalog_categories
+            'SELECT path, title, sort_order, enabled FROM shop_catalog_categories
              WHERE language=%s AND path=%s LIMIT 1', $language, $path
         );
     }
@@ -146,7 +146,7 @@ final class CategoryRepository
         if ($this->findForAdmin($language, $path) !== null) {
             throw new InvalidArgumentException('Tato adresa kategorie se už používá.');
         }
-        $this->db->insert('catalog_categories', [
+        $this->db->insert('shop_catalog_categories', [
             'language' => $language, 'path' => $path, 'title' => $title,
             'sort_order' => $order, 'enabled' => 1,
         ]);
@@ -162,7 +162,7 @@ final class CategoryRepository
             throw new InvalidArgumentException('Kategorie neexistuje.');
         }
         $this->db->query(
-            'UPDATE catalog_categories SET title=%s, sort_order=%i, enabled=%i
+            'UPDATE shop_catalog_categories SET title=%s, sort_order=%i, enabled=%i
              WHERE language=%s AND path=%s',
             $title, $order, (int) $enabled, $language, $path
         );

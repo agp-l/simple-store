@@ -21,7 +21,7 @@ class MeekroDB
         if (str_contains($sql, 'DELETE FROM')) {
             $this->deletions[] = [$sql, $values];
         }
-        if (str_contains($sql, 'FROM catalog_categories')) {
+        if (str_contains($sql, 'FROM shop_catalog_categories')) {
             return [['path' => 'boty', 'title' => 'Boty', 'sort_order' => 1]];
         }
         return [];
@@ -35,21 +35,21 @@ class MeekroDB
 
     public function queryFirstRow(string $sql, mixed ...$values): ?array
     {
-        if (str_contains($sql, 'SELECT * FROM content_revisions') &&
+        if (str_contains($sql, 'SELECT * FROM shop_content_revisions') &&
             str_contains($sql, 'active_document_key IS NOT NULL')) {
             return $this->currentPage;
         }
-        if (str_contains($sql, 'SELECT type FROM content_revisions')) {
+        if (str_contains($sql, 'SELECT type FROM shop_content_revisions')) {
             return $this->sourceType === null ? null : ['type' => $this->sourceType];
         }
-        if (str_contains($sql, 'SELECT product_key FROM product_revisions WHERE product_key=%s')) {
+        if (str_contains($sql, 'SELECT product_key FROM shop_product_revisions WHERE product_key=%s')) {
             return $this->sourceType === null ? null : ['product_key' => $values[0]];
         }
-        if (str_contains($sql, 'SELECT id, type, revision_number FROM content_revisions') &&
+        if (str_contains($sql, 'SELECT id, type, revision_number FROM shop_content_revisions') &&
             $this->currentRevision !== null) {
             return ['id' => 1, 'type' => 'page', 'revision_number' => $this->currentRevision];
         }
-        if (str_contains($sql, 'SELECT id, revision_number FROM product_revisions') &&
+        if (str_contains($sql, 'SELECT id, revision_number FROM shop_product_revisions') &&
             $this->currentRevision !== null) {
             return ['id' => 1, 'revision_number' => $this->currentRevision];
         }

@@ -26,7 +26,7 @@ try {
     }
     $users = new AdminUserRepository(ConnectionFactory::create(require $root . '/config/database.php'));
     if (!$users->installed()) {
-        throw new RuntimeException('Import database/schema.sql into the configured database first (users table missing).');
+        throw new RuntimeException('Import database/schema.sql into the configured database first (shop_users table missing).');
     }
     $configuredEmail = $users->loginEmail();
     $loginEmail = $configuredEmail;

@@ -37,14 +37,14 @@ if ($config->load()['settings']['smtp_password_encrypted'] !== $loaded['smtp_pas
 }
 $suffix = bin2hex(random_bytes(6));
 $customer = 'reset-' . $suffix . '@example.test';
-$db->insert('users', ['username' => 'reset_' . $suffix, 'email' => $customer,
+$db->insert('shop_users', ['username' => 'reset_' . $suffix, 'email' => $customer,
     'password_hash' => password_hash('old-customer-password', PASSWORD_DEFAULT),
     'role' => 'customer', 'is_active' => 1]);
-$customerId = (int) $db->queryFirstField('SELECT id FROM users WHERE email=%s', $customer);
-$db->insert('users', ['username' => 'recovery_' . $suffix,
+$customerId = (int) $db->queryFirstField('SELECT id FROM shop_users WHERE email=%s', $customer);
+$db->insert('shop_users', ['username' => 'recovery_' . $suffix,
     'password_hash' => password_hash('old-admin-password', PASSWORD_DEFAULT),
     'role' => 'admin', 'is_active' => 1]);
-$adminId = (int) $db->queryFirstField('SELECT id FROM users WHERE role=%s AND is_active=1 ORDER BY id LIMIT 1', 'admin');
+$adminId = (int) $db->queryFirstField('SELECT id FROM shop_users WHERE role=%s AND is_active=1 ORDER BY id LIMIT 1', 'admin');
 $messages = [];
 $service = new PasswordResetService($db, static function (string $email, string $subject,
     string $body, string $headers) use (&$messages): bool {
@@ -66,7 +66,7 @@ if (!$service->valid('customer', $token) || $service->valid('admin', $token) ||
 }
 $service->complete('customer', $token, 'new-customer-password', 'new-customer-password');
 if ($service->valid('customer', $token) || !password_verify('new-customer-password',
-    $db->queryFirstField('SELECT password_hash FROM users WHERE id=%i', $customerId))) {
+    $db->queryFirstField('SELECT password_hash FROM shop_users WHERE id=%i', $customerId))) {
     throw new RuntimeException('Used token remained valid or password was not changed.');
 }
 $service->request('admin', 'not-owner@example.test', 'admin.php');
@@ -79,7 +79,7 @@ if (count($messages) !== 2 || $messages[1][0] !== 'owner@example.test' ||
 preg_match('/\?mode=reset&token=([a-f0-9]{64})/', $messages[1][1], $matches);
 $service->complete('admin', $matches[1], 'new-admin-password', 'new-admin-password');
 if (!password_verify('new-admin-password',
-    $db->queryFirstField('SELECT password_hash FROM users WHERE id=%i', $adminId))) {
+    $db->queryFirstField('SELECT password_hash FROM shop_users WHERE id=%i', $adminId))) {
     throw new RuntimeException('Admin password was not changed.');
 }
 echo "SMTP settings and password reset lifecycle OK\n";

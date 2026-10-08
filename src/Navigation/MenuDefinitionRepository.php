@@ -21,7 +21,7 @@ final class MenuDefinitionRepository
     {
         return (int) $this->db->queryFirstField(
             'SELECT COUNT(*) FROM information_schema.TABLES
-             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', 'navigation_menus'
+             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', 'shop_navigation_menus'
         ) > 0;
     }
 
@@ -31,7 +31,7 @@ final class MenuDefinitionRepository
         if (!$this->installed()) return $settings;
         foreach ($this->db->query(
             'SELECT slot, source, parent_path, include_blog, items_json
-             FROM navigation_menus WHERE language=%s', $language
+             FROM shop_navigation_menus WHERE language=%s', $language
         ) as $row) {
             if ($this->legacyFooter($row)) {
                 $settings['footer'] = $this->defaults['footer'];
@@ -84,7 +84,7 @@ final class MenuDefinitionRepository
         }
         $json = $this->encode($items, $title);
         $this->db->query(
-            'INSERT INTO navigation_menus (language, slot, source, parent_path, include_blog, items_json)
+            'INSERT INTO shop_navigation_menus (language, slot, source, parent_path, include_blog, items_json)
              VALUES (%s, %s, %s, %s, %i, %s)
              ON DUPLICATE KEY UPDATE source=VALUES(source), parent_path=VALUES(parent_path),
              include_blog=VALUES(include_blog), items_json=VALUES(items_json)',
@@ -179,7 +179,7 @@ final class MenuDefinitionRepository
         $this->validateSlot($language, $slot);
         if (!$this->installed()) return null;
         return $this->db->queryFirstRow(
-            'SELECT source, parent_path, items_json FROM navigation_menus WHERE language=%s AND slot=%s LIMIT 1',
+            'SELECT source, parent_path, items_json FROM shop_navigation_menus WHERE language=%s AND slot=%s LIMIT 1',
             $language, $slot
         );
     }
@@ -188,7 +188,7 @@ final class MenuDefinitionRepository
     {
         $row = $this->row($language, $slot);
         $this->db->query(
-            'UPDATE navigation_menus SET items_json=%s WHERE language=%s AND slot=%s',
+            'UPDATE shop_navigation_menus SET items_json=%s WHERE language=%s AND slot=%s',
             $this->encode($items, $this->title($row['items_json'], $this->defaults[$slot]['title'] ?? 'Informace')),
             $language, $slot
         );

@@ -38,7 +38,7 @@ $repository->deleteDocument($key, 'cs', 'post', 3);
 if ($db->begun !== 1 || $db->committed !== 1 || $db->rolledBack !== 0 ||
     count($db->lookups) !== 1 || !str_contains($db->lookups[0][0], 'FOR UPDATE') ||
     $db->lookups[0][1] !== [$key, 'cs'] || count($db->deletions) !== 1 ||
-    !str_contains($db->deletions[0][0], 'DELETE FROM content_revisions') ||
+    !str_contains($db->deletions[0][0], 'DELETE FROM shop_content_revisions') ||
     $db->deletions[0][1] !== [$key, 'cs']) {
     throw new RuntimeException('Deleting a document must lock the current revision and remove only one language.');
 }

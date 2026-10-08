@@ -26,7 +26,7 @@ class MeekroDB
             }
             return $rows;
         }
-        if (str_contains($sql, 'INSERT INTO navigation_menus')) {
+        if (str_contains($sql, 'INSERT INTO shop_navigation_menus')) {
             [$language, $slot, $source, $parent, $blog, $items] = $args;
             $key = $language . ':' . $slot;
             $this->menus[$key] = [
@@ -35,7 +35,7 @@ class MeekroDB
                 'items_json' => $items,
             ];
         }
-        if (str_contains($sql, 'UPDATE navigation_menus SET items_json')) {
+        if (str_contains($sql, 'UPDATE shop_navigation_menus SET items_json')) {
             $this->menus[$args[1] . ':' . $args[2]]['items_json'] = $args[0];
         }
         return [];

@@ -28,17 +28,17 @@ class MeekroDB
             return array_map(static fn (array $row): array => $row + ['order_count' => 2],
                 array_slice($rows, $start, $length));
         }
-        if (str_contains($sql, 'UPDATE users SET email=')) {
+        if (str_contains($sql, 'UPDATE shop_users SET email=')) {
             $id = $args[3];
             if ($this->users[$id]['role'] === $args[4]) {
                 [$this->users[$id]['email'], $this->users[$id]['display_name'], $this->users[$id]['phone']] =
                     array_slice($args, 0, 3);
             }
-        } elseif (str_contains($sql, 'UPDATE users SET is_active=')) {
+        } elseif (str_contains($sql, 'UPDATE shop_users SET is_active=')) {
             if ($this->users[$args[1]]['role'] === $args[2]) {
                 $this->users[$args[1]]['is_active'] = $args[0];
             }
-        } elseif (str_contains($sql, 'UPDATE users SET password_hash=')) {
+        } elseif (str_contains($sql, 'UPDATE shop_users SET password_hash=')) {
             if ($this->users[$args[1]]['role'] === $args[2]) {
                 $this->users[$args[1]]['password_hash'] = $args[0];
             }
