@@ -55,11 +55,19 @@ final class StorefrontMenus
             return $visible;
         };
 
+        $utility = $hasContent ? $menus->links('utility') : [];
+        if (!$hasContent && ($settings['utility']['items'] ?? []) !== []) {
+            $fallback = new MenuManager($content, $categories, $url, [
+                'utility' => ['source' => 'manual', 'items' => $settings['utility']['items']],
+            ]);
+            $utility = $fallback->links('utility');
+        }
+
         return [
             'manager' => $menus,
             'hasContent' => $hasContent,
             'primaryMenu' => $menus->links('primary'),
-            'utilityMenu' => $hasContent ? $menus->links('utility') : [],
+            'utilityMenu' => $utility,
             'footerMenu' => $filter($footer),
             'footerTitle' => $settings['footer']['title'] ?? 'Informace',
             'manualPrimaryMenu' => ($settings['primary']['source'] ?? '') === 'manual',

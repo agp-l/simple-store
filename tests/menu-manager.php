@@ -29,7 +29,7 @@ class MeekroDB
 }
 
 foreach (['Category/CategoryPath', 'Category/CategoryRepository', 'Content/ContentRepository',
-    'Navigation/UrlManager', 'Navigation/MenuManager'] as $file) {
+    'Navigation/UrlManager', 'Navigation/MenuDefinitionRepository', 'Navigation/MenuManager'] as $file) {
     require dirname(__DIR__) . '/src/' . $file . '.php';
 }
 
@@ -41,10 +41,17 @@ $settings['custom'] = ['source' => 'manual', 'items' => [
         ['label' => 'Bundy', 'category' => 'obleceni/muzi/bundy'],
     ]],
 ]];
+$settings['primary']['items'] = [
+    ['label' => 'Cestovní deník', 'external' => 'https://example.org/vypravy', 'children' => []],
+];
+$settings['utility']['items'] = [
+    ['label' => 'Kontakt', 'external' => 'mailto:info@example.org', 'children' => []],
+];
 $menus = new MenuManager(new ContentRepository($db), new CategoryRepository($db), $url, $settings);
 
 $primary = $menus->links('primary');
-if (array_column($primary, 'label') !== ['Spaní', 'Oblečení'] || !$primary[1]['active']
+if (array_column($primary, 'label') !== ['Spaní', 'Oblečení', 'Cestovní deník'] || !$primary[1]['active']
+    || $primary[2]['href'] !== 'https://example.org/vypravy' || !$primary[2]['newTab']
     || $primary[1]['children'][0]['children'][0]['href'] !== '/shop/cs/kategorie-produktu/obleceni/muzi/bundy') {
     throw new RuntimeException('Category menu did not preserve nesting and the current page.');
 }
@@ -52,7 +59,8 @@ $tabs = $menus->links('category_tabs', 'obleceni/muzi');
 if (array_column($tabs, 'label') !== ['Bundy'] || !$tabs[0]['active']) {
     throw new RuntimeException('Nested category tabs were not loaded.');
 }
-if (array_column($menus->links('utility'), 'label') !== ['Blog', 'O nás']) {
+if (array_column($menus->links('utility'), 'label') !== ['Blog', 'O nás', 'Kontakt'] ||
+    $menus->links('utility')[2]['newTab']) {
     throw new RuntimeException('Pages appeared in the wrong menu placement.');
 }
 if (!$menus->links('custom')[0]['children'][0]['active']) {
@@ -65,6 +73,15 @@ $blogUrl = new UrlManager('/shop/cs/blog/na-ceste', '/shop/index.php');
 $blogMenu = new MenuManager(new ContentRepository($db), new CategoryRepository($db), $blogUrl, $settings);
 if (!$blogMenu->links('utility')[0]['active'] || !$blogMenu->links('custom')[0]['active']) {
     throw new RuntimeException('Blog navigation must remain active on an article.');
+}
+
+$primaryMenu = $primary;
+ob_start();
+require dirname(__DIR__) . '/view/menu.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'href="https://example.org/vypravy"') ||
+    !str_contains($html, 'target="_blank" rel="noopener noreferrer"')) {
+    throw new RuntimeException('The top menu must open external HTTPS links in a safe new tab.');
 }
 
 echo "Menu manager tests passed.\n";

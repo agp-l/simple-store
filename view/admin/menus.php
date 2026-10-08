@@ -27,7 +27,7 @@
         <div class="panel-workspace">
           <section class="panel-panel" aria-labelledby="menu-settings-title">
             <p class="panel-eyebrow">Nastavení</p><h2 id="menu-settings-title"><?= $escape($slotNames[$slot] ?? $slot) ?></h2>
-            <p class="panel-help">Vyber, co se v tomto místě bude zobrazovat. U vlastních odkazů můžeš upravit každou položku níže.</p>
+            <p class="panel-help">Vyber automatický obsah menu. Další vlastní odkazy můžeš přidat níže bez změny zdroje.</p>
             <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $slot])) ?>">
               <input type="hidden" name="action" value="menu-slot"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
               <input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="slot" value="<?= $escape($slot) ?>">
@@ -44,7 +44,7 @@
                 <?php endif; ?><?php endforeach; ?>
               </select></label>
               <label class="panel-check"><input type="checkbox" name="include_blog" value="1" <?= ($activeSlot['include_blog'] ?? false) ? 'checked' : '' ?>> Přidat odkaz na blog mezi stránky</label>
-              <p class="panel-help">Přepnutí zdroje zachová dříve uložené vlastní odkazy. Volba Blog platí pouze pro zdroj Publikované stránky.</p>
+              <p class="panel-help">Vlastní odkazy zůstanou na konci menu i po přepnutí zdroje. Volba Blog platí pouze pro zdroj Publikované stránky.</p>
               <button class="panel-button" type="submit" <?= $menuReady ? '' : 'disabled' ?>>Uložit zdroj menu</button>
             </form>
           </section>
@@ -53,10 +53,11 @@
               <p>Odkazy se automaticky načítají z katalogu. Řazení, zobrazení a názvy upravíš ve správě kategorií.</p>
               <a class="panel-text-link" href="<?= $escape($adminUrl . '?section=categories&language=' . rawurlencode($language)) ?>">Spravovat kategorie →</a>
             </section>
-          <?php elseif ($activeSlot['source'] === 'manual'): ?>
+          <?php endif; ?>
             <section class="panel-panel" aria-labelledby="manual-items-title">
-              <div class="panel-panel-head"><h2 id="manual-items-title">Vlastní odkazy <span><?= count($menuItems) ?></span></h2>
+              <div class="panel-panel-head"><h2 id="manual-items-title"><?= $activeSlot['source'] === 'manual' ? 'Vlastní odkazy' : 'Další odkazy' ?> <span><?= count($menuItems) ?></span></h2>
                 <a href="<?= $escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $slot]) . '#menu-item-form') ?>">＋ Nový odkaz</a></div>
+              <?php if ($activeSlot['source'] !== 'manual'): ?><p class="panel-help">Odkazy níže se zobrazí za automatickými <?= $activeSlot['source'] === 'categories' ? 'kategoriemi' : 'stránkami' ?>. Pro externí web zvol „Externí web nebo e-mail“ a vlož celou adresu https://.</p><?php endif; ?>
               <?php if ($menuItems === []): ?><p class="panel-empty">Zatím prázdné menu. Přidej první odkaz níže.</p><?php endif; ?>
               <div class="panel-tree"><?php foreach ($menuItems as $item): ?>
                 <a class="panel-tree-row<?= ($selectedItem['id'] ?? '') === $item['id'] ? ' is-active' : '' ?>" style="--indent:<?= min(5, (int) $item['depth']) * 17 ?>px" href="<?= $escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $slot, 'item' => $item['id']])) ?>">
@@ -90,6 +91,7 @@
                 </select></label>
                 <label>Jiná vnitřní cesta <input name="destination_custom" value="<?= $selectedType === 'custom' ? $escape($selectedItem['target']) : '' ?>" placeholder="např. kosik"></label>
                 <label>Externí odkaz nebo e-mail <input name="destination_external" value="<?= $selectedType === 'external' ? $escape($selectedItem['target']) : '' ?>" placeholder="https://priklad.cz nebo mailto:info@priklad.cz"></label>
+                <p class="panel-help">Externí web (https://) se otevře v nové záložce. E-mailový odkaz (mailto:) otevře poštovní aplikaci.</p>
                 <label>Vnořit pod odkaz <select name="parent_id"><option value="">Na hlavní úrovni</option>
                   <?php foreach ($menuItems as $item): ?><option value="<?= $escape($item['id']) ?>" <?= ($selectedItem['parent_id'] ?? '') === $item['id'] ? 'selected' : '' ?>><?= $escape(str_repeat('— ', (int) $item['depth']) . $item['label']) ?></option><?php endforeach; ?>
                 </select></label>
@@ -103,7 +105,6 @@
                 <button type="submit">Odebrat odkaz</button><span>Jeho pododkazy se přesunou o úroveň výš.</span>
               </form><?php endif; ?>
             </section>
-          <?php endif; ?>
           <?php if ($slot === 'utility'): ?>
             <section class="panel-panel" aria-labelledby="menu-pages-title">
               <p class="panel-eyebrow">Stránky</p><h2 id="menu-pages-title">Pořadí horních odkazů</h2>

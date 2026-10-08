@@ -52,6 +52,8 @@ ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
 if (!str_contains($html, 'value="menu-slot"') ||
+    !str_contains($html, 'value="menu-item-save"') ||
+    !str_contains($html, 'destination_external') ||
     !str_contains($html, 'value="page-menu"') ||
     !str_contains($html, 'Pořadí horních odkazů') ||
     str_contains($html, 'Prozkoumat') || str_contains($html, 'Na cestu')) {

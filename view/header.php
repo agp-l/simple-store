@@ -42,8 +42,8 @@
         <p></p>
         <nav class="utility-right hero-tag" aria-label="Stránky a blog">
           <?php foreach ($utilityMenu as $link): ?>
-            <?php if ($manualUtilityMenu && $link['children'] !== []): ?><?php require __DIR__ . '/nav-dropdown.php'; ?>
-            <?php else: ?><a href="<?= htmlspecialchars($link['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" <?= $link['active'] ? 'aria-current="page"' : '' ?>><?= htmlspecialchars($link['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a><?php endif; ?>
+            <?php if ($link['children'] !== []): ?><?php require __DIR__ . '/nav-dropdown.php'; ?>
+            <?php else: ?><a href="<?= htmlspecialchars($link['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" <?= $link['active'] ? 'aria-current="page"' : '' ?><?= !empty($link['newTab']) ? ' target="_blank" rel="noopener noreferrer"' : '' ?>><?= htmlspecialchars($link['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a><?php endif; ?>
           <?php endforeach; ?>
           <?php if ($canManageMenu && !($canManageCatalog ?? false) && !($canEditProduct ?? false)): ?><a class="menu-admin-shortcut" href="<?= htmlspecialchars($menuAdminUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">✎ Upravit menu</a><?php endif; ?>
         </nav>

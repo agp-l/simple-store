@@ -57,7 +57,7 @@ if ($manualCategoryMenu) {
             <?php $filterHref = $managingCatalog && isset($link['path'])
                 ? $siteRoot . $language . '/kategorie-produktu/' . $link['path'] . '?' . http_build_query(array_filter(['manage' => '1', 'visibility' => $catalogVisibility === 'all' ? '' : $catalogVisibility, 'search' => $searchTerm], 'strlen')) . '#produkty'
                 : $link['href'] . (isset($link['path']) ? '#produkty' : ''); ?>
-            <a class="filter<?= $link['active'] ? ' active' : '' ?>" href="<?= $escape($filterHref) ?>" <?= $isCurrent ? 'aria-current="page"' : '' ?>><?php if (($link['depth'] ?? 0) > 0): ?><span aria-hidden="true">↳ </span><?php endif; ?><?= $escape($link['label']) ?></a>
+            <a class="filter<?= $link['active'] ? ' active' : '' ?>" href="<?= $escape($filterHref) ?>" <?= $isCurrent ? 'aria-current="page"' : '' ?><?= !empty($link['newTab']) ? ' target="_blank" rel="noopener noreferrer"' : '' ?>><?php if (($link['depth'] ?? 0) > 0): ?><span aria-hidden="true">↳ </span><?php endif; ?><?= $escape($link['label']) ?></a>
           <?php endforeach; ?>
         </nav>
       <?php endif; ?>
@@ -81,6 +81,6 @@ if ($manualCategoryMenu) {
         <h2 id="category-title">Kam dál?</h2>
         <p>Zvolte si směr a vyberte výbavu pro další cestu.</p>
       </div>
-      <div class="category-list"><?php foreach ($primaryMenu as $link): ?><a href="<?= $escape($link['href'] . ($manualPrimaryMenu ? '' : '#produkty')) ?>"><?= $escape($link['label']) ?></a><?php endforeach; ?></div>
+      <div class="category-list"><?php foreach ($primaryMenu as $link): ?><?php if (!isset($link['path']) && !$manualPrimaryMenu) continue; ?><a href="<?= $escape($link['href'] . (isset($link['path']) ? '#produkty' : '')) ?>"<?= !empty($link['newTab']) ? ' target="_blank" rel="noopener noreferrer"' : '' ?>><?= $escape($link['label']) ?></a><?php endforeach; ?></div>
     </section><?php endif; ?>
   </main>

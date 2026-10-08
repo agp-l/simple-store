@@ -91,6 +91,32 @@ if ($menus->settings('cs')['primary']['source'] !== 'categories' ||
     $menus->settings('cs')['primary']['parent'] !== '') {
     throw new RuntimeException('Switching to category source must restore the automatic menu.');
 }
+$menus->saveItem('cs', 'primary', null, [
+    'label' => 'Cestovní deník', 'target_type' => 'external', 'target' => 'https://example.org/vypravy',
+    'parent_id' => '', 'sort_order' => '20',
+]);
+$categoriesAndLink = new MenuManager(new ContentRepository($db), new CategoryRepository($db),
+    new UrlManager('/shop/cs', '/shop/index.php'), $menus->settings('cs'));
+$primaryLinks = $categoriesAndLink->links('primary');
+if (array_column($primaryLinks, 'label') !== ['Boty', 'Cestovní deník'] ||
+    $primaryLinks[1]['href'] !== 'https://example.org/vypravy' || !$primaryLinks[1]['newTab']) {
+    throw new RuntimeException('The external link must work alongside an automatic category menu.');
+}
+$menus->saveItem('cs', 'utility', null, [
+    'label' => 'Expedice', 'target_type' => 'external', 'target' => 'https://example.org/expedice',
+    'parent_id' => '', 'sort_order' => '10',
+]);
+$updated = new MenuManager(new ContentRepository($db), new CategoryRepository($db),
+    new UrlManager('/shop/cs', '/shop/index.php'), $menus->settings('cs'));
+if ($menus->settings('cs')['utility']['source'] !== 'content' ||
+    array_column($updated->links('utility'), 'label') !== ['Blog', 'Expedice'] ||
+    !$updated->links('utility')[1]['newTab']) {
+    throw new RuntimeException('Adding an external link must preserve automatic page links.');
+}
+$menus->removeItem('cs', 'utility', $menus->itemsForAdmin('cs', 'utility')[0]['id']);
+if ($menus->settings('cs')['utility']['items'] !== []) {
+    throw new RuntimeException('An additional link could not be removed from the automatic menu.');
+}
 $menus->saveSlot('en', 'utility', 'content', '', false);
 if ($menus->settings('en')['utility']['include_blog'] || !$menus->settings('cs')['utility']['include_blog']) {
     throw new RuntimeException('Menu settings must be separate per language.');

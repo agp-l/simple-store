@@ -206,6 +206,20 @@ if (!str_contains($html, '<details class="nav-dropdown') ||
     throw new RuntimeException('Nested manual menus must remain reachable on the public site.');
 }
 
+$external = ['label' => 'Expedice', 'href' => 'https://example.org/expedice',
+    'active' => false, 'children' => [], 'newTab' => true];
+ob_start();
+$renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
+    'primaryMenu' => [['label' => 'Spaní', 'href' => '/shop/cs/kategorie-produktu/spani',
+        'path' => 'spani', 'active' => false, 'children' => []], $external],
+    'utilityMenu' => [$external]]);
+$html = ob_get_clean();
+if (preg_match_all('/href="https:\/\/example\.org\/expedice"\s+target="_blank" rel="noopener noreferrer"/', $html) !== 2 ||
+    str_contains($html, 'https://example.org/expedice#produkty') ||
+    !str_contains($html, 'href="/shop/cs/kategorie-produktu/spani#produkty"')) {
+    throw new RuntimeException('External top links need new tabs without changing the catalog category list.');
+}
+
 ob_start();
 $renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
     'currentCategory' => ['path' => 'spani', 'title' => 'Spaní'],

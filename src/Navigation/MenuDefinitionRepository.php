@@ -39,8 +39,10 @@ final class MenuDefinitionRepository
             }
             $title = $this->title($row['items_json'], $settings[$row['slot']]['title'] ?? 'Informace');
             $settings[$row['slot']] = match ($row['source']) {
-                'categories' => ['source' => 'categories', 'parent' => $row['parent_path'], 'title' => $title],
-                'content' => ['source' => 'content', 'include_blog' => (bool) $row['include_blog'], 'title' => $title],
+                'categories' => ['source' => 'categories', 'parent' => $row['parent_path'], 'title' => $title,
+                    'items' => $this->buildTree($this->decode($row['items_json']))],
+                'content' => ['source' => 'content', 'include_blog' => (bool) $row['include_blog'], 'title' => $title,
+                    'items' => $this->buildTree($this->decode($row['items_json']))],
                 'manual' => ['source' => 'manual', 'title' => $title,
                     'items' => $this->buildTree($this->decode($row['items_json']))],
                 default => $settings[$row['slot']] ?? ['source' => 'manual', 'items' => []],
@@ -94,13 +96,15 @@ final class MenuDefinitionRepository
     public function saveItem(string $language, string $slot, ?string $id, array $input): string
     {
         $row = $this->row($language, $slot);
-        if (($row === null && ($this->defaults[$slot]['source'] ?? '') === 'manual') ||
-            ($row !== null && $this->legacyFooter(['slot' => $slot] + $row))) {
-            $this->saveSlot($language, $slot, 'manual', '', false);
+        if ($row === null || $this->legacyFooter(['slot' => $slot] + $row)) {
+            $default = $this->defaults[$slot] ?? null;
+            if ($default === null) throw new InvalidArgumentException('Neznámé umístění menu.');
+            $this->saveSlot($language, $slot, $default['source'], $default['parent'] ?? '',
+                (bool) ($default['include_blog'] ?? false));
             $row = $this->row($language, $slot);
         }
-        if ($row === null || $row['source'] !== 'manual') {
-            throw new InvalidArgumentException('Nejdřív nastav zdroj menu na vlastní odkazy.');
+        if ($row === null) {
+            throw new InvalidArgumentException('Menu neexistuje.');
         }
         $items = $this->decode($row['items_json']);
         $label = trim((string) ($input['label'] ?? ''));
@@ -147,13 +151,15 @@ final class MenuDefinitionRepository
     public function removeItem(string $language, string $slot, string $id): void
     {
         $row = $this->row($language, $slot);
-        if (($row === null && ($this->defaults[$slot]['source'] ?? '') === 'manual') ||
-            ($row !== null && $this->legacyFooter(['slot' => $slot] + $row))) {
-            $this->saveSlot($language, $slot, 'manual', '', false);
+        if ($row === null || $this->legacyFooter(['slot' => $slot] + $row)) {
+            $default = $this->defaults[$slot] ?? null;
+            if ($default === null) throw new InvalidArgumentException('Neznámé umístění menu.');
+            $this->saveSlot($language, $slot, $default['source'], $default['parent'] ?? '',
+                (bool) ($default['include_blog'] ?? false));
             $row = $this->row($language, $slot);
         }
-        if ($row === null || $row['source'] !== 'manual') {
-            throw new InvalidArgumentException('Vlastní menu neexistuje.');
+        if ($row === null) {
+            throw new InvalidArgumentException('Menu neexistuje.');
         }
         $items = $this->decode($row['items_json']);
         if (!isset($items[$id])) {

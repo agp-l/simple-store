@@ -3,7 +3,9 @@ $siteCopy ??= \SimpleStore\Content\SiteCopyRepository::DEFAULTS;
 $footerEscape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $drawFooterBranch = static function (array $links) use (&$drawFooterBranch, $footerEscape): void {
     foreach ($links as $link) {
-        echo '<li><a href="' . $footerEscape($link['href']) . '">' . $footerEscape($link['label']) . '</a>';
+        echo '<li><a href="' . $footerEscape($link['href']) . '"' .
+            (!empty($link['newTab']) ? ' target="_blank" rel="noopener noreferrer"' : '') .
+            '>' . $footerEscape($link['label']) . '</a>';
         if ($link['children'] !== []) {
             echo '<ul class="footer-submenu">';
             $drawFooterBranch($link['children']);

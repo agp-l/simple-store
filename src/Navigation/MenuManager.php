@@ -35,7 +35,8 @@ final class MenuManager
             if (!is_string($parent) || ($parent !== '' && !CategoryPath::valid($parent))) {
                 throw new InvalidArgumentException('Invalid menu category path.');
             }
-            return $this->categoryLinks($this->categories->tree($this->url->getLanguage(), $parent));
+            $links = $this->categoryLinks($this->categories->tree($this->url->getLanguage(), $parent));
+            return array_merge($links, $this->manualLinks($settings['items'] ?? []));
         }
         if ($source === 'content') {
             $links = [];
@@ -47,7 +48,7 @@ final class MenuManager
                 $links[] = $this->item($page['title'], $this->url->path($page['slug']),
                     $this->url->getSegments() === [$page['slug']]);
             }
-            return $links;
+            return array_merge($links, $this->manualLinks($settings['items'] ?? []));
         }
         if ($source === 'manual') {
             return $this->manualLinks($settings['items'] ?? []);
@@ -96,7 +97,10 @@ final class MenuManager
             }
             $children = $this->manualLinks($item['children'] ?? []);
             $active = $active || in_array(true, array_column($children, 'active'), true);
-            $links[] = $this->item($item['label'], $href, $active, $children);
+            $link = $this->item($item['label'], $href, $active, $children);
+            $link['manual'] = true;
+            $link['newTab'] = is_string($external) && str_starts_with($external, 'https://');
+            $links[] = $link;
         }
         return $links;
     }
