@@ -52,6 +52,9 @@ jobs:
           php -l gopay-return.php
           php -l btcpay-callback.php
           php -l btcpay-return.php
+          php -l tools/apply-schema.php
+      - name: Verify deployment package excludes private data
+        run: python3 tests/deployment.py
       - name: Test checkout and shared views
         run: |
           php tests/checkout-cart.php

@@ -6,6 +6,8 @@ Online platby: [Comgate](docs/comgate.md), [GoPay](docs/gopay.md) a [BTCPay Serv
 
 Aktuální kritické nálezy, kroky před nasazením a pořadí dalších oprav jsou v [auditu projektu](docs/audit-2026-10.md).
 
+Testovací hosting Webglobe: [postup nasazení po SFTP a aktualizace databáze](docs/deploy-webglobe.md). GitHub workflow po úspěšných testech zveřejní změny pouze po zapnutí repository variable a nastavení SFTP secrets. Soukromé konfigurace a nahrané fotografie se nepřenášejí ani nemažou.
+
 **Nejdřív spusť v kořeni projektu:**
 
 ```bash
@@ -23,7 +25,7 @@ Pak otevři `config/database.php` a nastav `host`, `port`, `database`, `user` a 
 4. Pokud ještě nemáš `config/database.php`, zkopíruj `config/database.example.php` do `config/database.php` a vyplň přístupové údaje. Tento soubor je v `.gitignore` a nesmí se commitovat.
 5. Otevři adresu složky projektu v Apache. Úvod bez databáze zobrazí pokyny k nastavení, ale nevydává ukázkové produkty za skutečné. Blog, menu, redakční stránky a produkty potřebují importované tabulky. Prohlížej `/cs`, `/cs/kategorie-produktu/spani/spacaky`, `/cs/blog` a `/cs/o-nas` po založení obsahu.
 
-Konfigurace databáze je obyčejný PHP soubor, který `return [...]` vrací pojmenované hodnoty. Aplikace jej načítá jen při připojení k databázi; nepoužívá globální proměnné. Původní zápis s `dsn` také funguje. Při vývoji je v `config/site.php` zapnuto `'debug' => true`; PHP chyby, upozornění a zachycené výjimky se zobrazují na stránce. Až web skutečně zveřejníš, přepni jej na `false`. Pokud se stále objeví holá chyba 500 bez stránky aplikace, zkontroluj Apache error log a podporu `.htaccess`/`mod_rewrite`. Příkaz `ini_set()` nemůže zobrazit chybu parsování v tomtéž souboru, pokud se kvůli ní PHP vůbec nespustí.
+Konfigurace databáze je obyčejný PHP soubor, který `return [...]` vrací pojmenované hodnoty. Aplikace jej načítá jen při připojení k databázi; nepoužívá globální proměnné. Původní zápis s `dsn` také funguje. Ladicí výpisy jsou na veřejném hostingu ve výchozím stavu vypnuté; v místním Apache je lze zapnout proměnnou prostředí `SIMPLE_STORE_DEBUG=1`. Pokud se objeví holá chyba 500 bez stránky aplikace, zkontroluj Apache error log a podporu `.htaccess`/`mod_rewrite`. Příkaz `ini_set()` nemůže zobrazit chybu parsování v tomtéž souboru, pokud se kvůli ní PHP vůbec nespustí.
 
 ## Administrace obsahu
 
@@ -37,7 +39,7 @@ git pull
 
 Pokud má root účet bez hesla, vynech `-p`; pokud příkaz `/opt/lampp/bin/mysql` neexistuje, importuj soubor v phpMyAdmin. **Zapomenuté heslo nelze přečíst zpět.** Jen pokud chceš změnit heslo správce, spusť `/opt/lampp/bin/php tools/admin.php --reset`: vytvoří účet `admin`, pokud ještě není v databázi, nebo mu nastaví nové náhodné heslo. Heslo se zobrazí jednou v terminálu a předchozí přihlášené relace přestanou fungovat. Při prvním nasazení funguje také `/opt/lampp/bin/php tools/admin.php`.
 
-Pokud znáš původní heslo a chceš ho zachovat, místo `--reset` spusť jednorázově `/opt/lampp/bin/php tools/admin.php --migrate`. Převezme původní jméno a hash z `config/admin.php`, pokud ještě v databázi žádný správce není. Starý soubor pak web už nepoužívá; po ověření přihlášení jej můžeš smazat. Databázové přihlašovací údaje zůstávají v `config/database.php`. Administrace obsahuje seznam dokumentů a jejich přímou úpravu. Přihlášení chrání PHP session, zápisy ověřuje CSRF token. Před zveřejněním webu vypni režim `debug`.
+Pokud znáš původní heslo a chceš ho zachovat, místo `--reset` spusť jednorázově `/opt/lampp/bin/php tools/admin.php --migrate`. Převezme původní jméno a hash z `config/admin.php`, pokud ještě v databázi žádný správce není. Starý soubor pak web už nepoužívá; po ověření přihlášení jej můžeš smazat. Databázové přihlašovací údaje zůstávají v `config/database.php`. Administrace obsahuje seznam dokumentů a jejich přímou úpravu. Přihlášení chrání PHP session, zápisy ověřuje CSRF token. Na veřejném webu nezapínej `SIMPLE_STORE_DEBUG`.
 
 V administraci se ukládá otisk posledního úspěšně použitého schématu. Po přerušení můžeš stejnou aktualizaci spustit znovu; současný soubor je opakovatelný a existující obsah ani heslo správce nemaže. Nová prázdná instalace stále potřebuje první import a založení správce mimo administraci, protože bez tabulky `users` se nelze přihlásit. Rychlé kontroly: `/opt/lampp/bin/php tests/schema-updater.php`, `/opt/lampp/bin/php tests/admin-auth.php` a `/opt/lampp/bin/php tests/database-connection.php`.
 

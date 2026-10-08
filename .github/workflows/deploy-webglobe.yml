@@ -1,0 +1,51 @@
+name: Deploy Webglobe test shop
+
+on:
+  workflow_dispatch:
+  workflow_run:
+    workflows: [PHP checkout]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: webglobe-test-shop
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: >-
+      vars.WEBGLOBE_DEPLOY_ENABLED == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.event == 'push'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || 'main' }}
+          persist-credentials: false
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+          coverage: none
+      - name: Install locked runtime dependencies
+        run: composer install --no-dev --no-interaction --prefer-dist --no-progress --optimize-autoloader
+      - name: Assemble release
+        run: python3 scripts/build-release.py --output "$RUNNER_TEMP/simple-store-release"
+      - name: Connect to pinned SFTP host and upload changes
+        env:
+          SFTP_HOST: ${{ secrets.WEBGLOBE_SFTP_HOST }}
+          SFTP_USER: ${{ secrets.WEBGLOBE_SFTP_USER }}
+          SFTP_PASSWORD: ${{ secrets.WEBGLOBE_SFTP_PASSWORD }}
+          SFTP_ROOT: ${{ secrets.WEBGLOBE_SFTP_ROOT }}
+          WEBGLOBE_KNOWN_HOSTS: ${{ secrets.WEBGLOBE_KNOWN_HOSTS }}
+        run: |
+          python3 -m pip install --disable-pip-version-check 'paramiko==3.5.1'
+          printf '%s\n' "$WEBGLOBE_KNOWN_HOSTS" > "$RUNNER_TEMP/webglobe-known-hosts"
+          chmod 600 "$RUNNER_TEMP/webglobe-known-hosts"
+          export SFTP_KNOWN_HOSTS="$RUNNER_TEMP/webglobe-known-hosts"
+          python3 scripts/deploy-sftp.py --package "$RUNNER_TEMP/simple-store-release"

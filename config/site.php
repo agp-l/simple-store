@@ -2,8 +2,8 @@
 declare(strict_types=1);
 
 return [
-    // Show PHP errors and application exceptions while building the project.
-    'debug' => true,
+    // Opt in only on a local development server; public hosting hides error details.
+    'debug' => getenv('SIMPLE_STORE_DEBUG') === '1',
     'default_language' => 'cs',
     // Add another language only after its interface texts have been translated.
     'languages' => ['cs'],

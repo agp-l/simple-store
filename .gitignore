@@ -10,3 +10,4 @@
 /composer.phar
 /images/media/*
 !/images/media/.htaccess
+__pycache__/
