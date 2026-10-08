@@ -11,3 +11,5 @@
 /images/media/*
 !/images/media/.htaccess
 __pycache__/
+/database/*.sql
+!/database/schema.sql

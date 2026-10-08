@@ -32,6 +32,7 @@ with tempfile.TemporaryDirectory() as directory:
         "config/site.php": "<?php return [];",
         "config/database.php": "<?php return ['password' => 'private'];",
         "database/schema.sql": "CREATE DATABASE test;",
+        "database/zaloha.sql": "private database dump",
         "images/media/photo.jpg": "private uploaded photo",
         "images/media/.htaccess": "deny scripts",
         "vendor/autoload.php": "<?php",
@@ -52,6 +53,7 @@ with tempfile.TemporaryDirectory() as directory:
     assert "vendor/autoload.php" in manifest["files"]
     assert "images/media/.htaccess" in manifest["files"]
     assert "config/database.php" not in manifest["files"]
+    assert "database/zaloha.sql" not in manifest["files"]
     assert "images/media/photo.jpg" not in manifest["files"]
     assert not (package / "config/database.php").exists()
     assert not (package / "images/media/photo.jpg").exists()
