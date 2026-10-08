@@ -27,7 +27,7 @@ $stock = new ProductStockRepository($db);
 expectStock($stock->installed(), 'Inventory tables were not installed.');
 $key = bin2hex(random_bytes(16));
 $slug = 'stock-' . substr($key, 0, 12);
-$db->insert('product_revisions', [
+$db->insert('shop_product_revisions', [
     'product_key' => $key, 'active_product_key' => $key, 'language' => 'cs',
     'revision_number' => 1, 'slug' => $slug, 'active_slug' => $slug,
     'name' => 'Test skladu', 'category' => 'batohy', 'price_czk' => 100,
@@ -135,7 +135,7 @@ expectStock((int) $db->queryFirstField('SELECT COUNT(*) FROM shop_stock_movement
     'Deleted supplier order was recorded as dispatch from local stock.');
 
 $newSlug = $slug . '-updated';
-$db->query('UPDATE product_revisions SET slug=%s, active_slug=%s WHERE product_key=%s
+$db->query('UPDATE shop_product_revisions SET slug=%s, active_slug=%s WHERE product_key=%s
     AND active_product_key IS NOT NULL', $newSlug, $newSlug, $key);
 $links = (new OrderProductLinks($db))->forItems([$item], '/store/');
 expectStock(($links[$key . ':cs'] ?? '') === '/store/cs/produkt/' . $newSlug . '?edit=1',

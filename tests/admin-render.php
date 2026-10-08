@@ -99,9 +99,10 @@ $tablePrefixStatus['state'] = 'migrated';
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
-if (str_contains($html, 'name="action" value="schema-apply"') ||
+if (!str_contains($html, 'name="action" value="schema-apply"') ||
+    !str_contains($html, 'name="action" value="table-prefix-cleanup"') ||
     str_contains($html, 'name="action" value="table-prefix-migrate"')) {
-    throw new RuntimeException('Old schema actions were offered after the table migration.');
+    throw new RuntimeException('Prefixed schema actions were not offered after the table migration.');
 }
 unset($tablePrefixStatus);
 $databaseStatus['current'] = true;

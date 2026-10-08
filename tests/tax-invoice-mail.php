@@ -53,7 +53,7 @@ class MeekroDB
 
     public function queryFirstRow(string $sql, mixed ...$args): ?array
     {
-        if (str_contains($sql, 'FROM content_revisions') ||
+        if (str_contains($sql, 'FROM shop_content_revisions') ||
             str_contains($sql, 'FROM shop_order_legal_snapshots')) return null;
         if (str_contains($sql, 'FROM shop_mail_settings')) return null;
         if (str_contains($sql, 'FROM shop_tax_settings')) return null;

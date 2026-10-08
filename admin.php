@@ -156,7 +156,7 @@ try {
             'inline-product', 'set-product-stock', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
             'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'media-delete', 'delete-product', 'delete-content', 'homepage-product', 'product-supplier-link',
             'save-checkout-settings', 'save-site-copy', 'save-mail-settings', 'mail-test', 'customer-create', 'customer-update', 'customer-active',
-            'customer-password', 'schema-apply', 'table-prefix-migrate'], $orderActions, $taxActions, $returnActions), true) ||
+            'customer-password', 'schema-apply', 'table-prefix-migrate', 'table-prefix-cleanup'], $orderActions, $taxActions, $returnActions), true) ||
             !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach', 'media-delete'], true)) {
                 header('Content-Type: application/json; charset=utf-8');
@@ -275,7 +275,7 @@ try {
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }
-    if (in_array($action, ['schema-apply', 'table-prefix-migrate'], true) ||
+    if (in_array($action, ['schema-apply', 'table-prefix-migrate', 'table-prefix-cleanup'], true) ||
         ($method !== 'POST' && $section === 'database')) {
         require __DIR__ . '/src/Admin/database.php';
         require __DIR__ . '/view/admin/layout.php';

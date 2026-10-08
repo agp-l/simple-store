@@ -22,7 +22,7 @@ final class ContentRepository
     public function findPublished(string $type, string $slug, string $language): ?array
     {
         return $this->db->queryFirstRow(
-            'SELECT * FROM content_revisions WHERE type=%s AND slug=%s AND language=%s
+            'SELECT * FROM shop_content_revisions WHERE type=%s AND slug=%s AND language=%s
              AND active_document_key IS NOT NULL AND published=1 LIMIT 1',
             $type, $slug, $language
         );
@@ -32,7 +32,7 @@ final class ContentRepository
     public function findCurrentBySlug(string $type, string $slug, string $language): ?array
     {
         return $this->db->queryFirstRow(
-            'SELECT * FROM content_revisions WHERE type=%s AND slug=%s AND language=%s
+            'SELECT * FROM shop_content_revisions WHERE type=%s AND slug=%s AND language=%s
              AND active_document_key IS NOT NULL LIMIT 1',
             $type, $slug, $language
         );
@@ -45,7 +45,7 @@ final class ContentRepository
         }
         $rows = $this->db->query(
             'SELECT document_key, language, slug, title, summary, body, saved_at, revision_number
-             FROM content_revisions WHERE type=%s AND language=%s
+             FROM shop_content_revisions WHERE type=%s AND language=%s
              AND active_document_key IS NOT NULL AND published=1
              ORDER BY id DESC LIMIT %i OFFSET %i',
             'post', $language, $limit + 1, $offset
@@ -62,7 +62,7 @@ final class ContentRepository
         }
         $rows = $this->db->query(
             'SELECT document_key, language, slug, title, saved_at, revision_number
-             FROM content_revisions WHERE type=%s AND language=%s
+             FROM shop_content_revisions WHERE type=%s AND language=%s
              AND active_document_key IS NOT NULL AND published=0
              ORDER BY id DESC LIMIT %i OFFSET %i',
             'post', $language, $limit + 1, $offset
@@ -74,7 +74,7 @@ final class ContentRepository
     public function menuPages(string $language): array
     {
         return $this->db->query(
-            'SELECT slug, title FROM content_revisions WHERE type=%s AND language=%s
+            'SELECT slug, title FROM shop_content_revisions WHERE type=%s AND language=%s
              AND active_document_key IS NOT NULL AND published=1 AND visible_in_menu=1
              ORDER BY menu_order ASC, title ASC',
             'page', $language
@@ -94,7 +94,7 @@ final class ContentRepository
         }
         $placeholders = implode(', ', array_fill(0, count($slugs), '%s'));
         $rows = $this->db->query(
-            'SELECT slug FROM content_revisions WHERE type=%s AND language=%s
+            'SELECT slug FROM shop_content_revisions WHERE type=%s AND language=%s
              AND active_document_key IS NOT NULL AND published=1 AND slug IN (' . $placeholders . ')',
             'page', $language, ...$slugs
         );
@@ -107,7 +107,7 @@ final class ContentRepository
         return $this->db->query(
             'SELECT document_key, language, slug, title, published, visible_in_menu,
                     menu_order, revision_number
-             FROM content_revisions WHERE type=%s AND language=%s
+             FROM shop_content_revisions WHERE type=%s AND language=%s
              AND active_document_key IS NOT NULL ORDER BY menu_order ASC, title ASC',
             'page', $language
         );
@@ -170,7 +170,7 @@ final class ContentRepository
         array_push($arguments, $limit + 1, $offset);
         $rows = $this->db->query(
             'SELECT document_key, language, type, slug, title, revision_number, published, visible_in_menu, saved_at
-             FROM content_revisions WHERE ' . implode(' AND ', $conditions) . '
+             FROM shop_content_revisions WHERE ' . implode(' AND ', $conditions) . '
              ORDER BY id DESC LIMIT %i OFFSET %i', ...$arguments
         );
         $hasMore = count($rows) > $limit;
@@ -195,7 +195,7 @@ final class ContentRepository
         }
         $placeholders = implode(', ', array_fill(0, count($keys), '%s'));
         $rows = $this->db->query(
-            'SELECT document_key, language FROM content_revisions
+            'SELECT document_key, language FROM shop_content_revisions
              WHERE active_document_key IS NOT NULL AND document_key IN (' . $placeholders . ')', ...$keys
         );
         $translations = [];
@@ -208,7 +208,7 @@ final class ContentRepository
     public function currentDocument(string $documentKey, string $language): ?array
     {
         return $this->db->queryFirstRow(
-            'SELECT * FROM content_revisions
+            'SELECT * FROM shop_content_revisions
              WHERE document_key=%s AND language=%s AND active_document_key IS NOT NULL LIMIT 1',
             $documentKey, $language
         );
@@ -217,7 +217,7 @@ final class ContentRepository
     public function revision(string $documentKey, string $language, int $number): ?array
     {
         return $this->db->queryFirstRow(
-            'SELECT * FROM content_revisions
+            'SELECT * FROM shop_content_revisions
              WHERE document_key=%s AND language=%s AND revision_number=%i LIMIT 1',
             $documentKey, $language, $number
         );
@@ -227,7 +227,7 @@ final class ContentRepository
     public function history(string $documentKey, string $language): array
     {
         return $this->db->query(
-            'SELECT * FROM content_revisions WHERE document_key=%s AND language=%s
+            'SELECT * FROM shop_content_revisions WHERE document_key=%s AND language=%s
              ORDER BY revision_number DESC',
             $documentKey, $language
         );
@@ -238,7 +238,7 @@ final class ContentRepository
     {
         return $this->db->query(
             'SELECT revision_number, title, saved_at, active_document_key
-             FROM content_revisions WHERE document_key=%s AND language=%s
+             FROM shop_content_revisions WHERE document_key=%s AND language=%s
              ORDER BY revision_number DESC', $documentKey, $language
         );
     }
@@ -255,7 +255,7 @@ final class ContentRepository
         $this->db->startTransaction();
         try {
             $current = $this->db->queryFirstRow(
-                'SELECT type, revision_number FROM content_revisions
+                'SELECT type, revision_number FROM shop_content_revisions
                  WHERE document_key=%s AND language=%s AND active_document_key IS NOT NULL
                  LIMIT 1 FOR UPDATE', $key, $language
             );
@@ -266,7 +266,7 @@ final class ContentRepository
                 throw new RuntimeException('Obsah se mezitím změnil. Obnov stránku a zkus to znovu.');
             }
             $this->db->query(
-                'DELETE FROM content_revisions WHERE document_key=%s AND language=%s', $key, $language
+                'DELETE FROM shop_content_revisions WHERE document_key=%s AND language=%s', $key, $language
             );
             $this->db->commit();
         } catch (Throwable $error) {
@@ -317,7 +317,7 @@ final class ContentRepository
         $this->db->startTransaction();
         try {
             $document = $this->db->queryFirstRow(
-                'SELECT type FROM content_revisions WHERE document_key=%s LIMIT 1 FOR UPDATE',
+                'SELECT type FROM shop_content_revisions WHERE document_key=%s LIMIT 1 FOR UPDATE',
                 $documentKey
             );
             if ($expectedRevision === 0 && $document === null) {
@@ -327,7 +327,7 @@ final class ContentRepository
                 throw new InvalidArgumentException('A translation must keep the document type.');
             }
             $previous = $this->db->queryFirstRow(
-                'SELECT id, type, revision_number FROM content_revisions
+                'SELECT id, type, revision_number FROM shop_content_revisions
                  WHERE document_key=%s AND language=%s AND active_document_key IS NOT NULL
                  LIMIT 1 FOR UPDATE',
                 $documentKey, $language
@@ -339,7 +339,7 @@ final class ContentRepository
             }
 
             $duplicate = $this->db->queryFirstRow(
-                'SELECT document_key FROM content_revisions WHERE type=%s AND language=%s AND active_slug=%s LIMIT 1',
+                'SELECT document_key FROM shop_content_revisions WHERE type=%s AND language=%s AND active_slug=%s LIMIT 1',
                 $type, $language, $slug
             );
             if ($duplicate !== null && $duplicate['document_key'] !== $documentKey) {
@@ -349,11 +349,11 @@ final class ContentRepository
             $revision = $previous === null ? 1 : (int) $previous['revision_number'] + 1;
             if ($previous !== null) {
                 $this->db->query(
-                    'UPDATE content_revisions SET active_document_key=NULL, active_slug=NULL WHERE id=%i',
+                    'UPDATE shop_content_revisions SET active_document_key=NULL, active_slug=NULL WHERE id=%i',
                     $previous['id']
                 );
             }
-            $this->db->insert('content_revisions', [
+            $this->db->insert('shop_content_revisions', [
                 'document_key' => $documentKey,
                 'active_document_key' => $documentKey,
                 'language' => $language,
@@ -371,7 +371,7 @@ final class ContentRepository
             $id = $this->db->insertId();
             if ($revision > $this->revisionLimit) {
                 $this->db->query(
-                    'DELETE FROM content_revisions WHERE document_key=%s AND language=%s
+                    'DELETE FROM shop_content_revisions WHERE document_key=%s AND language=%s
                      AND active_document_key IS NULL AND revision_number<=%i',
                     $documentKey, $language, $revision - $this->revisionLimit
                 );

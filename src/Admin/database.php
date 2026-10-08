@@ -17,10 +17,12 @@ try {
         header('Location: ' . $adminUrl . '?section=database&prefix_updated=' . ($changed ? '1' : '0'), true, 303);
         exit;
     }
+    if ($method === 'POST' && ($_POST['action'] ?? '') === 'table-prefix-cleanup') {
+        $changed = $tablePrefixMigration->removeLegacyViews();
+        header('Location: ' . $adminUrl . '?section=database&prefix_cleaned=' . ($changed ? '1' : '0'), true, 303);
+        exit;
+    }
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'schema-apply') {
-        if ($tablePrefixMigration->status()['state'] === 'migrated') {
-            throw new RuntimeException('Stará verze schématu už nesmí upravovat přejmenované tabulky.');
-        }
         $changed = $updater->apply();
         header('Location: ' . $adminUrl . '?section=database&updated=' . ($changed ? '1' : '0'), true, 303);
         exit;

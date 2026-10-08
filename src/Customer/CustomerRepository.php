@@ -15,7 +15,7 @@ final class CustomerRepository
 
     public function installed(): bool
     {
-        foreach (['users', 'customer_addresses', 'shop_orders'] as $table) {
+        foreach (['shop_users', 'shop_customer_addresses', 'shop_orders'] as $table) {
             if ((int) $this->db->queryFirstField(
                 'SELECT COUNT(*) FROM information_schema.TABLES
                  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', $table
@@ -23,14 +23,14 @@ final class CustomerRepository
         }
         return (int) $this->db->queryFirstField(
             'SELECT COUNT(*) FROM information_schema.COLUMNS
-             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME=%s', 'users', 'email'
+             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME=%s', 'shop_users', 'email'
         ) > 0;
     }
 
     public function byEmail(string $email): ?array
     {
         return $this->db->queryFirstRow(
-            'SELECT id, email, display_name, phone, password_hash FROM users
+            'SELECT id, email, display_name, phone, password_hash FROM shop_users
              WHERE email=%s AND role=%s AND is_active=1 LIMIT 1', self::email($email), 'customer'
         );
     }
@@ -38,7 +38,7 @@ final class CustomerRepository
     public function byId(int $id): ?array
     {
         return $this->db->queryFirstRow(
-            'SELECT id, email, display_name, phone, password_hash FROM users
+            'SELECT id, email, display_name, phone, password_hash FROM shop_users
              WHERE id=%i AND role=%s AND is_active=1 LIMIT 1', $id, 'customer'
         );
     }
@@ -48,10 +48,10 @@ final class CustomerRepository
         $email = self::email($email);
         $name = self::shortText($name, 120, 'Jméno');
         self::password($password);
-        if ($this->db->queryFirstRow('SELECT id FROM users WHERE email=%s LIMIT 1', $email) !== null) {
+        if ($this->db->queryFirstRow('SELECT id FROM shop_users WHERE email=%s LIMIT 1', $email) !== null) {
             throw new InvalidArgumentException('Tento e-mail je již zaregistrovaný.');
         }
-        $this->db->insert('users', [
+        $this->db->insert('shop_users', [
             'username' => 'customer_' . bin2hex(random_bytes(12)),
             'email' => $email,
             'display_name' => $name,
@@ -67,7 +67,7 @@ final class CustomerRepository
         $name = self::shortText($name, 120, 'Jméno');
         $phone = self::shortText($phone, 40, 'Telefon', true);
         $this->db->query(
-            'UPDATE users SET display_name=%s, phone=%s WHERE id=%i AND role=%s AND is_active=1',
+            'UPDATE shop_users SET display_name=%s, phone=%s WHERE id=%i AND role=%s AND is_active=1',
             $name, $phone, $userId, 'customer'
         );
     }
@@ -81,11 +81,11 @@ final class CustomerRepository
         }
         $replacement = self::email($replacement);
         if ($replacement === $user['email']) return;
-        if ($this->db->queryFirstRow('SELECT id FROM users WHERE email=%s LIMIT 1', $replacement) !== null) {
+        if ($this->db->queryFirstRow('SELECT id FROM shop_users WHERE email=%s LIMIT 1', $replacement) !== null) {
             throw new InvalidArgumentException('Tento e-mail už používá jiný účet.');
         }
         $this->db->query(
-            'UPDATE users SET email=%s WHERE id=%i AND role=%s AND is_active=1',
+            'UPDATE shop_users SET email=%s WHERE id=%i AND role=%s AND is_active=1',
             $replacement, $userId, 'customer'
         );
     }
@@ -98,7 +98,7 @@ final class CustomerRepository
         }
         self::password($replacement);
         $this->db->query(
-            'UPDATE users SET password_hash=%s, password_changed_at=CURRENT_TIMESTAMP
+            'UPDATE shop_users SET password_hash=%s, password_changed_at=CURRENT_TIMESTAMP
              WHERE id=%i AND role=%s AND is_active=1',
             password_hash($replacement, PASSWORD_DEFAULT), $userId, 'customer'
         );
@@ -108,7 +108,7 @@ final class CustomerRepository
     {
         return $this->db->query(
             'SELECT id, label, recipient, company, street, city, postal_code, country, phone
-             FROM customer_addresses WHERE user_id=%i ORDER BY id DESC', $userId
+             FROM shop_customer_addresses WHERE user_id=%i ORDER BY id DESC', $userId
         );
     }
 
@@ -116,7 +116,7 @@ final class CustomerRepository
     {
         return $this->db->queryFirstRow(
             'SELECT id, label, recipient, company, street, city, postal_code, country, phone
-             FROM customer_addresses WHERE user_id=%i AND id=%i LIMIT 1', $userId, $id
+             FROM shop_customer_addresses WHERE user_id=%i AND id=%i LIMIT 1', $userId, $id
         );
     }
 
@@ -140,7 +140,7 @@ final class CustomerRepository
                 throw new InvalidArgumentException('Adresa neexistuje.');
             }
             $this->db->query(
-                'UPDATE customer_addresses SET label=%s, recipient=%s, company=%s, street=%s, city=%s,
+                'UPDATE shop_customer_addresses SET label=%s, recipient=%s, company=%s, street=%s, city=%s,
                  postal_code=%s, country=%s, phone=%s WHERE id=%i AND user_id=%i',
                 ...array_merge(array_values($fields), [$id, $userId])
             );
@@ -149,7 +149,7 @@ final class CustomerRepository
         if (count($this->addresses($userId)) >= 20) {
             throw new InvalidArgumentException('Můžeš mít nejvýše 20 uložených adres.');
         }
-        $this->db->insert('customer_addresses', ['user_id' => $userId] + $fields);
+        $this->db->insert('shop_customer_addresses', ['user_id' => $userId] + $fields);
     }
 
     public function removeAddress(int $userId, int $id): void
@@ -157,7 +157,7 @@ final class CustomerRepository
         if ($id < 1 || $this->address($userId, $id) === null) {
             throw new InvalidArgumentException('Adresa neexistuje.');
         }
-        $this->db->query('DELETE FROM customer_addresses WHERE id=%i AND user_id=%i', $id, $userId);
+        $this->db->query('DELETE FROM shop_customer_addresses WHERE id=%i AND user_id=%i', $id, $userId);
     }
 
     public function orders(int $userId): array

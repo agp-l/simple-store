@@ -93,7 +93,7 @@ $mailId = (new OrderMailQueue($db))->enqueueCustom($key, null, $customerEmail,
     $message['subject'], $message['text'], $message['html']);
 expectCase($mailId > 0 && $db->queryFirstField('SELECT order_id FROM shop_mail_outbox WHERE id=%i', $mailId) === null,
     'Withdrawal notice was attached to an order that administrators can delete.');
-$db->insert('users', ['username' => 'after_sales_' . bin2hex(random_bytes(5)),
+$db->insert('shop_users', ['username' => 'after_sales_' . bin2hex(random_bytes(5)),
     'email' => $customerEmail, 'display_name' => 'Eva', 'phone' => '',
     'password_hash' => password_hash('integration-secret', PASSWORD_DEFAULT),
     'role' => 'customer', 'is_active' => 1]);

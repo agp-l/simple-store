@@ -229,7 +229,7 @@ try {
         'from_name' => 'Integration fixture', 'reply_to' => '', 'public_base_url' => 'https://shop.example.test',
         'automatic_enabled' => '1', 'templates' => $templates]);
     $productKey = bin2hex(random_bytes(16));
-    $storeDb->insert('product_revisions', ['product_key' => $productKey, 'active_product_key' => $productKey,
+    $storeDb->insert('shop_product_revisions', ['product_key' => $productKey, 'active_product_key' => $productKey,
         'language' => 'cs', 'revision_number' => 1, 'slug' => 'integration-tent', 'active_slug' => 'integration-tent',
         'name' => 'Stan', 'category' => 'vybaveni', 'price_czk' => 500, 'description' => '',
         'image_path' => '', 'stock_status' => 'in_stock', 'published' => 1]);

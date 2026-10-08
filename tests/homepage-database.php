@@ -17,7 +17,7 @@ if (!$homepage->installed() || $homepage->keys('cs') !== null) {
 
 $keys = [bin2hex(random_bytes(16)), bin2hex(random_bytes(16)), bin2hex(random_bytes(16))];
 foreach ($keys as $index => $key) {
-    $db->insert('product_revisions', [
+    $db->insert('shop_product_revisions', [
         'product_key' => $key, 'active_product_key' => $key, 'language' => 'cs',
         'revision_number' => 1, 'slug' => 'home-test-' . $key, 'active_slug' => 'home-test-' . $key,
         'name' => 'Homepage item ' . $index, 'description' => '', 'category' => 'batohy',
@@ -39,7 +39,7 @@ try {
 } catch (InvalidArgumentException $expected) {
     if (!str_contains($expected->getMessage(), 'zveřejněný')) throw $expected;
 }
-$db->query('UPDATE product_revisions SET published=0 WHERE product_key=%s AND language=%s', $keys[1], 'cs');
+$db->query('UPDATE shop_product_revisions SET published=0 WHERE product_key=%s AND language=%s', $keys[1], 'cs');
 if (array_column($homepage->products('cs', $homepage->keys('cs')), 'product_key') !== [$keys[0]] ||
     count($homepage->products('cs', $homepage->keys('cs'), null, true)) !== 2) {
     throw new RuntimeException('Unpublished items must disappear publicly but remain removable by the administrator.');

@@ -36,7 +36,7 @@ class MeekroDB
 
     public function query(string $sql, mixed ...$values): array
     {
-        if (str_starts_with($sql, 'UPDATE users SET')) {
+        if (str_starts_with($sql, 'UPDATE shop_users SET')) {
             foreach ($this->admins as &$user) {
                 if ($user['id'] === $values[1] && $user['role'] === $values[2]) {
                     $user['password_hash'] = $values[0];

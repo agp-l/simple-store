@@ -50,13 +50,13 @@ final class MediaDeletion
     {
         $needle = '%' . $key . '%';
         $products = $this->db->query(
-            'SELECT image_path, details_json, description, summary FROM product_revisions
+            'SELECT image_path, details_json, description, summary FROM shop_product_revisions
              WHERE active_product_key IS NOT NULL AND
              (image_path LIKE %s OR details_json LIKE %s OR description LIKE %s OR summary LIKE %s)',
             $needle, $needle, $needle, $needle
         );
         $documents = $this->db->query(
-            'SELECT body, summary FROM content_revisions WHERE active_document_key IS NOT NULL
+            'SELECT body, summary FROM shop_content_revisions WHERE active_document_key IS NOT NULL
              AND (body LIKE %s OR summary LIKE %s)', $needle, $needle
         );
         $tokens = [];

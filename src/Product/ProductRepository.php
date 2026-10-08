@@ -64,7 +64,7 @@ final class ProductRepository
         $rows = $this->db->query(
             'SELECT product_key, slug, name, brand, summary, details_json, category, subcategory,
                     price_czk, image_path, sizes, stock_status
-             FROM product_revisions WHERE ' . $where . ' ORDER BY ' . $order . ' LIMIT %i OFFSET %i',
+             FROM shop_product_revisions WHERE ' . $where . ' ORDER BY ' . $order . ' LIMIT %i OFFSET %i',
             ...$values
         );
         $hasMore = count($rows) > $limit;
@@ -107,7 +107,7 @@ final class ProductRepository
             'SELECT product_key, language, slug, name, brand, summary, details_json,
                     category, subcategory, price_czk, image_path, sizes, stock_status,
                     published, revision_number, saved_at
-             FROM product_revisions WHERE ' . $where . ' ORDER BY id DESC LIMIT %i OFFSET %i',
+             FROM shop_product_revisions WHERE ' . $where . ' ORDER BY id DESC LIMIT %i OFFSET %i',
             ...$values
         );
         return ['items' => $this->stock?->decorate(array_slice($rows, 0, $limit)) ?? array_slice($rows, 0, $limit),
@@ -141,7 +141,7 @@ final class ProductRepository
     public function findPublished(string $slug, string $language): ?array
     {
         $row = $this->db->queryFirstRow(
-            'SELECT * FROM product_revisions WHERE slug=%s AND language=%s AND published=1
+            'SELECT * FROM shop_product_revisions WHERE slug=%s AND language=%s AND published=1
              AND active_product_key IS NOT NULL LIMIT 1', $slug, $language
         );
         return $this->withStock($row);
@@ -155,7 +155,7 @@ final class ProductRepository
             throw new InvalidArgumentException('Neplatný produkt v košíku.');
         }
         $row = $this->db->queryFirstRow(
-            'SELECT * FROM product_revisions WHERE product_key=%s AND language=%s
+            'SELECT * FROM shop_product_revisions WHERE product_key=%s AND language=%s
              AND active_product_key IS NOT NULL AND published=1 LIMIT 1', $key, $language
         );
         return $this->withStock($row);
@@ -165,7 +165,7 @@ final class ProductRepository
     public function findCurrentBySlug(string $slug, string $language): ?array
     {
         $row = $this->db->queryFirstRow(
-            'SELECT * FROM product_revisions WHERE active_slug=%s AND language=%s
+            'SELECT * FROM shop_product_revisions WHERE active_slug=%s AND language=%s
              AND active_product_key IS NOT NULL LIMIT 1', $slug, $language
         );
         return $this->withStock($row);
@@ -174,7 +174,7 @@ final class ProductRepository
     public function current(string $key, string $language): ?array
     {
         $row = $this->db->queryFirstRow(
-            'SELECT * FROM product_revisions WHERE product_key=%s AND language=%s
+            'SELECT * FROM shop_product_revisions WHERE product_key=%s AND language=%s
              AND active_product_key IS NOT NULL LIMIT 1', $key, $language
         );
         return $this->withStock($row);
@@ -188,7 +188,7 @@ final class ProductRepository
     public function history(string $key, string $language): array
     {
         return $this->db->query(
-            'SELECT * FROM product_revisions WHERE product_key=%s AND language=%s
+            'SELECT * FROM shop_product_revisions WHERE product_key=%s AND language=%s
              ORDER BY revision_number DESC', $key, $language
         );
     }
@@ -198,7 +198,7 @@ final class ProductRepository
     {
         return $this->db->query(
             'SELECT revision_number, name, saved_at, active_product_key
-             FROM product_revisions WHERE product_key=%s AND language=%s
+             FROM shop_product_revisions WHERE product_key=%s AND language=%s
              ORDER BY revision_number DESC', $key, $language
         );
     }
@@ -206,7 +206,7 @@ final class ProductRepository
     public function revision(string $key, string $language, int $number): ?array
     {
         return $this->db->queryFirstRow(
-            'SELECT * FROM product_revisions WHERE product_key=%s AND language=%s
+            'SELECT * FROM shop_product_revisions WHERE product_key=%s AND language=%s
              AND revision_number=%i LIMIT 1', $key, $language, $number
         );
     }
@@ -216,7 +216,7 @@ final class ProductRepository
         return (int) $this->db->queryFirstField(
             'SELECT COUNT(*) FROM information_schema.COLUMNS
              WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME=%s',
-            'product_revisions', 'details_json'
+            'shop_product_revisions', 'details_json'
         ) > 0;
     }
 
@@ -231,7 +231,7 @@ final class ProductRepository
         $this->db->startTransaction();
         try {
             $current = $this->db->queryFirstRow(
-                'SELECT revision_number FROM product_revisions WHERE product_key=%s AND language=%s
+                'SELECT revision_number FROM shop_product_revisions WHERE product_key=%s AND language=%s
                  AND active_product_key IS NOT NULL LIMIT 1 FOR UPDATE', $key, $language
             );
             if ($current === null) {
@@ -241,7 +241,7 @@ final class ProductRepository
                 throw new RuntimeException('Produkt se mezitím změnil. Obnov stránku a zkus to znovu.');
             }
             $this->db->query(
-                'DELETE FROM product_revisions WHERE product_key=%s AND language=%s',
+                'DELETE FROM shop_product_revisions WHERE product_key=%s AND language=%s',
                 $key, $language
             );
             $this->db->commit();
@@ -301,21 +301,21 @@ final class ProductRepository
             throw new InvalidArgumentException('An existing product requires its last revision number.');
         }
         if (!$this->detailsColumnExists()) {
-            throw new RuntimeException('V databázi chybí product_revisions.details_json. '
+            throw new RuntimeException('V databázi chybí shop_product_revisions.details_json. '
                 . 'V phpMyAdmin vyber databázi z config/database.php a spusť: '
-                . 'ALTER TABLE product_revisions ADD COLUMN details_json LONGTEXT NULL AFTER description;');
+                . 'ALTER TABLE shop_product_revisions ADD COLUMN details_json LONGTEXT NULL AFTER description;');
         }
 
         $key ??= bin2hex(random_bytes(16));
         $this->db->startTransaction();
         try {
             if ($expected === 0 && $this->db->queryFirstRow(
-                'SELECT product_key FROM product_revisions WHERE product_key=%s LIMIT 1 FOR UPDATE', $key
+                'SELECT product_key FROM shop_product_revisions WHERE product_key=%s LIMIT 1 FOR UPDATE', $key
             ) === null) {
                 throw new InvalidArgumentException('Nelze vytvořit překlad: původní produkt neexistuje.');
             }
             $previous = $this->db->queryFirstRow(
-                'SELECT id, revision_number FROM product_revisions WHERE product_key=%s
+                'SELECT id, revision_number FROM shop_product_revisions WHERE product_key=%s
                  AND language=%s AND active_product_key IS NOT NULL LIMIT 1 FOR UPDATE', $key, $language
             );
             if ($expected !== null && ($previous === null ? $expected !== 0 :
@@ -323,7 +323,7 @@ final class ProductRepository
                 throw new RuntimeException('This product changed since you opened it. Reload before saving.');
             }
             $duplicate = $this->db->queryFirstRow(
-                'SELECT product_key FROM product_revisions WHERE language=%s AND active_slug=%s LIMIT 1',
+                'SELECT product_key FROM shop_product_revisions WHERE language=%s AND active_slug=%s LIMIT 1',
                 $language, $slug
             );
             if ($duplicate !== null && $duplicate['product_key'] !== $key) {
@@ -332,11 +332,11 @@ final class ProductRepository
             $revision = $previous === null ? 1 : (int) $previous['revision_number'] + 1;
             if ($previous !== null) {
                 $this->db->query(
-                    'UPDATE product_revisions SET active_product_key=NULL, active_slug=NULL WHERE id=%i',
+                    'UPDATE shop_product_revisions SET active_product_key=NULL, active_slug=NULL WHERE id=%i',
                     $previous['id']
                 );
             }
-            $this->db->insert('product_revisions', [
+            $this->db->insert('shop_product_revisions', [
                 'product_key' => $key, 'active_product_key' => $key,
                 'language' => $language, 'revision_number' => $revision,
                 'slug' => $slug, 'active_slug' => $slug,
@@ -350,7 +350,7 @@ final class ProductRepository
             $this->stock?->ensure($key);
             if ($revision > $this->revisionLimit) {
                 $this->db->query(
-                    'DELETE FROM product_revisions WHERE product_key=%s AND language=%s
+                    'DELETE FROM shop_product_revisions WHERE product_key=%s AND language=%s
                      AND active_product_key IS NULL AND revision_number<=%i',
                     $key, $language, $revision - $this->revisionLimit
                 );

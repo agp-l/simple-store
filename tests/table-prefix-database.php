@@ -6,6 +6,7 @@ require dirname(__DIR__) . '/vendor/autoload.php';
 use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Database\LegacyTablePrefixMigration;
 use SimpleStore\Database\SchemaUpdater;
+use SimpleStore\Database\SqlStatementParser;
 
 $config = ['host' => '127.0.0.1', 'user' => 'root',
     'password' => (string) getenv('MYSQL_TEST_PASSWORD'), 'database' => 'simple_store', 'port' => 3306];
@@ -14,9 +15,23 @@ $database = 'shop_prefix_test_' . bin2hex(random_bytes(4));
 $server->query('CREATE DATABASE `' . $database . '` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci');
 try {
     $db = ConnectionFactory::create(array_replace($config, ['database' => $database]));
-    (new SchemaUpdater($db, dirname(__DIR__) . '/database/schema.sql'))->apply();
+    $schemaPath = dirname(__DIR__) . '/database/schema.sql';
+    $currentSchema = file_get_contents($schemaPath);
+    if (!is_string($currentSchema)) throw new RuntimeException('Schema file is missing.');
+    $legacySchema = preg_replace('/\bshop_(users|customer_addresses|content_revisions|product_revisions|catalog_categories|navigation_menus)\b/',
+        '$1', $currentSchema);
+    if (!is_string($legacySchema)) throw new RuntimeException('Cannot build legacy fixture.');
+    foreach (array_slice(SqlStatementParser::split($legacySchema), 2) as $statement) {
+        $db->query($statement);
+    }
     $migration = new LegacyTablePrefixMigration($db);
     if ($migration->status()['state'] !== 'ready') throw new RuntimeException('Legacy schema is not ready.');
+    try {
+        (new SchemaUpdater($db, $schemaPath))->apply();
+        throw new RuntimeException('Current schema recreated empty prefixed tables before migration.');
+    } catch (RuntimeException $error) {
+        if (!str_contains($error->getMessage(), 'přejmenuj')) throw $error;
+    }
 
     $db->query('CREATE TABLE shop_users (id BIGINT PRIMARY KEY)');
     if ($migration->status()['state'] !== 'conflict') throw new RuntimeException('Name collision was ignored.');
@@ -77,6 +92,16 @@ try {
     if ((int) $db->queryFirstField('SELECT COUNT(*) FROM shop_password_resets WHERE user_id=%i', $userId) !== 0) {
         throw new RuntimeException('Foreign key did not follow renamed users table.');
     }
+    $updater = new SchemaUpdater($db, $schemaPath);
+    if (!$updater->apply() || !$updater->status()['current']) {
+        throw new RuntimeException('The new schema could not run on renamed tables.');
+    }
+    if (!$migration->removeLegacyViews() || $migration->status()['state'] !== 'complete' ||
+        $migration->removeLegacyViews()) {
+        throw new RuntimeException('Compatibility views were not removed safely.');
+    }
+    if ($db->queryFirstField('SELECT name FROM shop_product_revisions WHERE product_key=%s', $key)
+        !== 'Updated product') throw new RuntimeException('Cleanup removed a product.');
     echo "Legacy table prefix migration preserves products, writes and references.\n";
 } finally {
     $server->query('DROP DATABASE `' . $database . '`');

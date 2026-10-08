@@ -7,7 +7,7 @@ use InvalidArgumentException;
 use MeekroDB;
 use SimpleStore\Accounting\MailSettingsRepository;
 
-/** Read and update administrator accounts stored in the users table. */
+/** Read and update administrator accounts stored in the shop_users table. */
 final class AdminUserRepository
 {
     public function __construct(private MeekroDB $db)
@@ -18,21 +18,21 @@ final class AdminUserRepository
     {
         return (int) $this->db->queryFirstField(
             'SELECT COUNT(*) FROM information_schema.TABLES
-             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', 'users'
+             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', 'shop_users'
         ) > 0;
     }
 
     public function hasAdmin(): bool
     {
         return (int) $this->db->queryFirstField(
-            'SELECT COUNT(*) FROM users WHERE role=%s AND is_active=1', 'admin'
+            'SELECT COUNT(*) FROM shop_users WHERE role=%s AND is_active=1', 'admin'
         ) > 0;
     }
 
     public function findAdminByUsername(string $username): ?array
     {
         return $this->db->queryFirstRow(
-            'SELECT id, username, email, password_hash FROM users
+            'SELECT id, username, email, password_hash FROM shop_users
              WHERE username=%s AND role=%s AND is_active=1 LIMIT 1', $username, 'admin'
         );
     }
@@ -43,7 +43,7 @@ final class AdminUserRepository
         $settings = (new MailSettingsRepository($this->db))->load()['settings'];
         $configured = strtolower(trim((string) ($settings['admin_recovery_email'] ?? '')));
         if (self::validEmail($configured)) return $configured;
-        $user = $this->db->queryFirstRow('SELECT email FROM users WHERE role=%s AND is_active=1 ORDER BY id LIMIT 1', 'admin');
+        $user = $this->db->queryFirstRow('SELECT email FROM shop_users WHERE role=%s AND is_active=1 ORDER BY id LIMIT 1', 'admin');
         $stored = strtolower(trim((string) ($user['email'] ?? '')));
         return self::validEmail($stored) ? $stored : null;
     }
@@ -54,7 +54,7 @@ final class AdminUserRepository
         $configured = $this->loginEmail();
         if ($configured === null || !hash_equals($configured, $email)) return null;
         return $this->db->queryFirstRow(
-            'SELECT id, username, email, password_hash FROM users
+            'SELECT id, username, email, password_hash FROM shop_users
              WHERE role=%s AND is_active=1 ORDER BY id LIMIT 1', 'admin'
         );
     }
@@ -62,7 +62,7 @@ final class AdminUserRepository
     public function findAdminById(int $id): ?array
     {
         return $this->db->queryFirstRow(
-            'SELECT id, username, password_hash FROM users
+            'SELECT id, username, password_hash FROM shop_users
              WHERE id=%i AND role=%s AND is_active=1 LIMIT 1', $id, 'admin'
         );
     }
@@ -74,7 +74,7 @@ final class AdminUserRepository
             ($email !== null && !self::validEmail($email))) {
             throw new InvalidArgumentException('Invalid administrator name, email or password hash.');
         }
-        $this->db->insert('users', [
+        $this->db->insert('shop_users', [
             'username' => $username,
             'email' => $email === null ? null : strtolower(trim($email)),
             'password_hash' => $passwordHash,
@@ -89,7 +89,7 @@ final class AdminUserRepository
             throw new InvalidArgumentException('Invalid administrator or password hash.');
         }
         $this->db->query(
-            'UPDATE users SET password_hash=%s, password_changed_at=CURRENT_TIMESTAMP
+            'UPDATE shop_users SET password_hash=%s, password_changed_at=CURRENT_TIMESTAMP
              WHERE id=%i AND role=%s AND is_active=1',
             $passwordHash, $id, 'admin'
         );
@@ -100,7 +100,7 @@ final class AdminUserRepository
         if ($id < 1 || !self::validEmail($email)) {
             throw new InvalidArgumentException('Invalid administrator or email.');
         }
-        $this->db->query('UPDATE users SET email=%s WHERE id=%i AND role=%s AND is_active=1',
+        $this->db->query('UPDATE shop_users SET email=%s WHERE id=%i AND role=%s AND is_active=1',
             strtolower(trim($email)), $id, 'admin');
     }
 

@@ -44,7 +44,7 @@ final class HomepageProductSelection
         $rows = $this->db->query(
             'SELECT product_key, slug, name, brand, summary, details_json, category, subcategory,
                     price_czk, image_path, sizes, stock_status, published
-             FROM product_revisions WHERE language=%s AND active_product_key IS NOT NULL
+             FROM shop_product_revisions WHERE language=%s AND active_product_key IS NOT NULL
              AND product_key IN (' . $placeholders . ')', $language, ...$keys);
         $byKey = [];
         foreach ($rows as $row) $byKey[$row['product_key']] = $row;
@@ -82,7 +82,7 @@ final class HomepageProductSelection
                 $index = array_search($key, $keys, true);
                 if ($operation === 'add') {
                     $published = $this->db->queryFirstField(
-                        'SELECT COUNT(*) FROM product_revisions WHERE product_key=%s AND language=%s
+                        'SELECT COUNT(*) FROM shop_product_revisions WHERE product_key=%s AND language=%s
                          AND active_product_key IS NOT NULL AND published=1', $key, $language);
                     if ((int) $published !== 1) throw new InvalidArgumentException('Na úvodní stránku lze přidat jen zveřejněný produkt.');
                     if ($index === false) {

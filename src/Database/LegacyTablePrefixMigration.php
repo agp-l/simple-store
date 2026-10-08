@@ -33,17 +33,19 @@ final class LegacyTablePrefixMigration
         }
 
         $tables = [];
-        $legacy = $renamed = $empty = true;
+        $legacy = $renamed = $complete = $empty = true;
         foreach (self::TABLES as $old => $new) {
             $source = $types[$old] ?? null;
             $target = $types[$new] ?? null;
             $tables[$old] = ['old' => $source, 'new' => $target];
             $legacy = $legacy && $source === 'BASE TABLE' && $target === null;
-            $renamed = $renamed && $source === 'VIEW' && $target === 'BASE TABLE';
+            $renamed = $renamed && in_array($source, [null, 'VIEW'], true) && $target === 'BASE TABLE';
+            $complete = $complete && $source === null && $target === 'BASE TABLE';
             $empty = $empty && $source === null && $target === null;
         }
 
-        return ['state' => $legacy ? 'ready' : ($renamed ? 'migrated' : ($empty ? 'empty' : 'conflict')),
+        return ['state' => $legacy ? 'ready' : ($complete ? 'complete' : ($renamed ? 'migrated' :
+            ($empty ? 'empty' : 'conflict'))),
             'tables' => $tables];
     }
 
@@ -60,7 +62,7 @@ final class LegacyTablePrefixMigration
         }
         try {
             $state = $this->status()['state'];
-            if ($state === 'migrated' || $state === 'empty') return false;
+            if (in_array($state, ['migrated', 'complete', 'empty'], true)) return false;
             if ($state !== 'ready') {
                 throw new RuntimeException('Názvy tabulek jsou neúplné nebo kolidují s jiným projektem. Nic nebylo změněno.');
             }
@@ -107,6 +109,42 @@ final class LegacyTablePrefixMigration
                     . $error->getMessage(), 0, $error);
             }
             return true;
+        } finally {
+            $this->db->queryFirstField('SELECT RELEASE_LOCK(%s)', $lock);
+        }
+    }
+
+    /** Drop only the compatibility views created for the transition to prefixed tables. */
+    public function removeLegacyViews(): bool
+    {
+        $database = $this->db->queryFirstField('SELECT DATABASE()');
+        if (!is_string($database) || $database === '') {
+            throw new RuntimeException('Není vybraná databáze obchodu.');
+        }
+        $lock = 'simple-store-schema:' . sha1($database);
+        if ((int) $this->db->queryFirstField('SELECT GET_LOCK(%s, %i)', $lock, 0) !== 1) {
+            throw new RuntimeException('Právě probíhá jiná úprava databáze.');
+        }
+        try {
+            $status = $this->status();
+            if ($status['state'] === 'complete') return false;
+            $views = [];
+            foreach (self::TABLES as $old => $new) {
+                $row = $status['tables'][$old];
+                if ($row['new'] !== 'BASE TABLE' || !in_array($row['old'], [null, 'VIEW'], true)) {
+                    throw new RuntimeException('Názvy tabulek nejsou připravené pro odstranění pohledů.');
+                }
+                if ($row['old'] === null) continue;
+                $definition = $this->db->queryFirstField('SELECT VIEW_DEFINITION FROM information_schema.VIEWS
+                    WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', $old);
+                if (!is_string($definition) || preg_match('/\b' . preg_quote($new, '/') . '\b/i',
+                    $definition) !== 1) {
+                    throw new RuntimeException('Pohled ' . $old . ' neukazuje na očekávanou tabulku. Nic nebylo odstraněno.');
+                }
+                $views[] = $old;
+            }
+            foreach ($views as $old) $this->db->query('DROP VIEW `' . $old . '`');
+            return $views !== [];
         } finally {
             $this->db->queryFirstField('SELECT RELEASE_LOCK(%s)', $lock);
         }

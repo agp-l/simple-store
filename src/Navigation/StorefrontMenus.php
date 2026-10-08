@@ -19,7 +19,7 @@ final class StorefrontMenus
         $menus = new MenuManager($content, $categories, $url, $settings);
         $hasContent = (int) $db->queryFirstField(
             'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
-            'content_revisions'
+            'shop_content_revisions'
         ) > 0;
 
         $footer = $menus->links('footer');

@@ -7,7 +7,7 @@ class MeekroDB
 
     public function query(string $sql, mixed ...$values): array
     {
-        if (str_contains($sql, 'FROM product_revisions')) {
+        if (str_contains($sql, 'FROM shop_product_revisions')) {
             if (!str_contains($sql, 'active_product_key IS NOT NULL')) {
                 throw new RuntimeException('Deletion must check only current product revisions.');
             }

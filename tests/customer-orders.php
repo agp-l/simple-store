@@ -12,7 +12,7 @@ class MeekroDB
 
     public function queryFirstRow(string $sql, mixed ...$args): ?array
     {
-        if (str_contains($sql, 'FROM users')) {
+        if (str_contains($sql, 'FROM shop_users')) {
             foreach ($this->users as $row) {
                 if (str_contains($sql, 'WHERE id=%i') && $row['id'] === $args[0] &&
                     $row['role'] === $args[1] && $row['is_active'] === 1) return $row;
@@ -31,7 +31,7 @@ class MeekroDB
 
     public function query(string $sql, mixed ...$args): array
     {
-        if (str_contains($sql, 'UPDATE users SET email=')) {
+        if (str_contains($sql, 'UPDATE shop_users SET email=')) {
             $this->users[$args[1]]['email'] = $args[0];
             return [];
         }

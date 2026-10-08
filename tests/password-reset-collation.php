@@ -37,7 +37,7 @@ class MeekroDB
 
     public function query(string $sql, mixed ...$values): void
     {
-        if (str_starts_with($sql, 'UPDATE users SET')) {
+        if (str_starts_with($sql, 'UPDATE shop_users SET')) {
             $this->passwordHash = $values[0];
         } elseif (str_starts_with($sql, 'DELETE FROM shop_password_resets')) {
             $this->reset['token_hash'] = '';

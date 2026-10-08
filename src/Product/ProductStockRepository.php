@@ -97,7 +97,7 @@ final class ProductStockRepository
             if ($stock === null) throw new InvalidArgumentException('Produkt ještě nemá nastavený sklad.');
             $needsStock = false;
             foreach (array_keys($line['languages']) as $language) {
-                $product = $this->db->queryFirstRow('SELECT stock_status FROM product_revisions
+                $product = $this->db->queryFirstRow('SELECT stock_status FROM shop_product_revisions
                     WHERE product_key=%s AND language=%s AND active_product_key IS NOT NULL
                     AND published=1 LIMIT 1', $key, $language);
                 if ($product === null || $product['stock_status'] === 'out_of_stock') {
