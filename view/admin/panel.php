@@ -40,7 +40,7 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
     <?php if ($screen === 'setup'): ?>
       <section class="panel-panel panel-centered">
         <p class="panel-eyebrow">První spuštění</p><h1>Vytvoř administrátora</h1>
-        <p>Nejdřív importuj <code>database/schema.sql</code>, pak v kořeni projektu spusť <code>/opt/lampp/bin/php tools/admin.php</code>. Příkaz jednou vypíše přístupové heslo; ulož si ho. Pokud už účet existoval v souboru, můžeš jej převést příkazem <code>/opt/lampp/bin/php tools/admin.php --migrate</code>.</p>
+        <p>Nejdřív importuj <code>database/schema.sql</code>, pak v kořeni projektu spusť <code>php tools/admin.php create --email=tvuj@email.cz</code>. Příkaz jednou vypíše přístupové heslo; ulož si ho. Pokud už účet existoval v souboru, můžeš jej převést příkazem <code>php tools/admin.php --migrate --email=tvuj@email.cz</code>.</p>
       </section>
     <?php elseif ($screen === 'forbidden'): ?>
       <section class="panel-panel panel-centered"><h1>Přístup odepřen</h1><p role="alert"><?= $escape($error) ?></p><p><a href="<?= $escape($adminUrl) ?>">Přejít do administrace</a></p></section>
@@ -52,7 +52,7 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
         <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
         <form method="post" action="<?= $escape($adminUrl) ?>">
           <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
-          <label>Uživatelské jméno<input name="username" autocomplete="username" required autofocus></label>
+          <label>E-mail správce<input type="email" name="email" maxlength="254" autocomplete="username" required autofocus></label>
           <label>Heslo<input type="password" name="password" autocomplete="current-password" required></label>
           <button class="panel-button" name="action" value="login">Přihlásit se</button>
         </form>
@@ -61,9 +61,9 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
     <?php elseif ($screen === 'reset-request'): ?>
       <section class="panel-panel panel-centered"><h1>Obnovit heslo správce</h1>
         <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
-        <?php if (($_GET['sent'] ?? '') === '1'): ?><p class="panel-notice" role="status">Pokud je adresa nastavená pro správce, poslali jsme na ni odkaz pro obnovu. Další zprávu lze vyžádat nejdříve za pět minut.</p><?php endif; ?>
+        <?php if (($_GET['sent'] ?? '') === '1'): ?><p class="panel-notice" role="status">Odkaz jsme odeslali na nastavený e-mail správce.</p><?php endif; ?>
         <form method="post" action="<?= $escape($adminUrl . '?mode=forgot') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="reset-request">
-          <label>E-mail správce<input type="email" name="email" maxlength="254" autocomplete="email" required autofocus></label>
+          <p>Obnovovací odkaz pošleme na e-mail správce nastavený u obchodu. Další zprávu lze poslat nejdříve za pět minut.</p>
           <button class="panel-button" type="submit">Poslat odkaz</button></form>
         <p><a href="<?= $escape($adminUrl) ?>">Zpět na přihlášení</a></p>
         <p>Pokud nemáš přístup k e-mailu, na serveru lze spustit <code>php tools/admin.php --reset</code>.</p>

@@ -18,7 +18,7 @@ final class AdminAuth extends RoleAuth
 
     protected function byName(string $name): ?array
     {
-        return $this->users->findAdminByUsername($name);
+        return $this->users->findAdminByEmail($name);
     }
 
     protected function byId(int $id): ?array

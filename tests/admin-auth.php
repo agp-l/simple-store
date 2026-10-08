@@ -4,6 +4,7 @@ declare(strict_types=1);
 class MeekroDB
 {
     public array $admins = [];
+    public string $recoveryEmail = 'owner@example.test';
 
     public function queryFirstField(string $sql, mixed ...$values): int
     {
@@ -14,10 +15,15 @@ class MeekroDB
 
     public function queryFirstRow(string $sql, mixed ...$values): ?array
     {
+        if (str_contains($sql, 'FROM shop_tax_settings')) return null;
+        if (str_contains($sql, 'FROM shop_mail_settings')) {
+            return ['settings_json' => json_encode(['admin_recovery_email' => $this->recoveryEmail], JSON_THROW_ON_ERROR)];
+        }
         foreach ($this->admins as $user) {
             if ($user['role'] !== 'admin' || $user['is_active'] !== 1) continue;
             if (str_contains($sql, 'WHERE username=%s') && $user['username'] === $values[0]) return $user;
             if (str_contains($sql, 'WHERE id=%i') && $user['id'] === $values[0]) return $user;
+            if (str_contains($sql, 'WHERE role=%s') && $user['role'] === $values[0]) return $user;
         }
         return null;
     }
@@ -41,9 +47,7 @@ class MeekroDB
     }
 }
 
-require dirname(__DIR__) . '/src/Admin/AdminUserRepository.php';
-require dirname(__DIR__) . '/src/Auth/RoleAuth.php';
-require dirname(__DIR__) . '/src/Admin/AdminAuth.php';
+require dirname(__DIR__) . '/src/bootstrap.php';
 
 use SimpleStore\Admin\AdminAuth;
 use SimpleStore\Admin\AdminUserRepository;
@@ -56,17 +60,18 @@ if (!$users->installed() || $users->hasAdmin()) {
 $users->createAdmin('admin', password_hash('correct-password', PASSWORD_DEFAULT));
 $auth = new AdminAuth($users, '/simple-store/');
 if (!$users->hasAdmin() || $auth->signedIn() || !$auth->validToken($auth->token()) ||
-    $auth->validToken('wrong-token') || $auth->signIn('admin', 'wrong-password') ||
-    !$auth->signIn('admin', 'correct-password') || !$auth->signedIn()) {
+    $auth->validToken('wrong-token') || $auth->signIn('owner@example.test', 'wrong-password') ||
+    $auth->signIn('admin', 'correct-password') ||
+    !$auth->signIn('OWNER@example.test', 'correct-password') || !$auth->signedIn()) {
     throw new RuntimeException('Administrator login failed.');
 }
 $users->replacePassword(1, password_hash('new-password', PASSWORD_DEFAULT));
-if ($auth->signedIn() || $auth->signIn('admin', 'correct-password') ||
-    !$auth->signIn('admin', 'new-password')) {
+if ($auth->signedIn() || $auth->signIn('owner@example.test', 'correct-password') ||
+    !$auth->signIn('owner@example.test', 'new-password')) {
     throw new RuntimeException('Password reset did not invalidate the existing session and old password.');
 }
 $db->admins['admin']['is_active'] = 0;
-if ($auth->signedIn() || $auth->signIn('admin', 'new-password')) {
+if ($auth->signedIn() || $auth->signIn('owner@example.test', 'new-password')) {
     throw new RuntimeException('A deactivated account retained access.');
 }
 $db->admins['admin']['is_active'] = 1;
@@ -75,14 +80,26 @@ if ($auth->signedIn()) {
     throw new RuntimeException('Administrator logout failed.');
 }
 for ($attempt = 0; $attempt < 5; $attempt++) {
-    if ($auth->signIn('admin', 'bad-password')) throw new RuntimeException('Invalid login was accepted.');
+    if ($auth->signIn('owner@example.test', 'bad-password')) throw new RuntimeException('Invalid login was accepted.');
 }
-if ($auth->retryAfterSeconds() < 1 || $auth->signIn('admin', 'new-password')) {
+if ($auth->retryAfterSeconds() < 1 || $auth->signIn('owner@example.test', 'new-password')) {
     throw new RuntimeException('Failed login lockout was not enforced.');
 }
 $_SESSION['blocked_until'] = time() - 1;
-if ($auth->retryAfterSeconds() !== 0 || !$auth->signIn('admin', 'new-password') ||
+if ($auth->retryAfterSeconds() !== 0 || !$auth->signIn('owner@example.test', 'new-password') ||
     $auth->retryAfterSeconds() !== 0) {
     throw new RuntimeException('Login did not recover after the five-minute lockout.');
+}
+$auth->signOut();
+$db->recoveryEmail = 'new-owner@example.test';
+if ($auth->signIn('owner@example.test', 'new-password') ||
+    !$auth->signIn('new-owner@example.test', 'new-password')) {
+    throw new RuntimeException('Changed administrator email was not used for login.');
+}
+$auth->signOut();
+$db->recoveryEmail = '';
+$db->admins['admin']['email'] = 'stored@example.test';
+if (!$auth->signIn('stored@example.test', 'new-password')) {
+    throw new RuntimeException('Initial administrator email without mail settings was not used.');
 }
 echo "Admin authentication tests passed.\n";

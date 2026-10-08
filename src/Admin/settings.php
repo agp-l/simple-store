@@ -123,6 +123,10 @@ if ($method === 'POST') {
             exit;
         }
         if (($_POST['action'] ?? null) === 'save-mail-settings') {
+            $adminEmail = $_POST['admin_recovery_email'] ?? null;
+            if (!is_string($adminEmail) || filter_var(trim($adminEmail), FILTER_VALIDATE_EMAIL) === false) {
+                throw new InvalidArgumentException('Vyplň platný e-mail správce pro přihlášení a obnovu hesla.');
+            }
             $mailSettingsStore->save($_POST);
             header('Location: ' . $adminUrl . '?section=settings&tab=mail&saved=1', true, 303);
             exit;

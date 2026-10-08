@@ -8,6 +8,7 @@ use MeekroDB;
 use RuntimeException;
 use SimpleStore\Accounting\MailSettingsRepository;
 use SimpleStore\Accounting\MailTransport;
+use SimpleStore\Admin\AdminUserRepository;
 use Throwable;
 
 /** Role-scoped, time-limited password recovery. A password change invalidates all account sessions. */
@@ -41,10 +42,13 @@ final class PasswordResetService
             throw new RuntimeException('Veřejná HTTPS adresa v nastavení e-mailů vede na jiný web. Oprav ji na adresu této instalace bez /cs.');
         }
         if ($role === 'admin') {
-            $email = strtolower(trim((string) $settings['admin_recovery_email']));
-            $user = $email !== '' && hash_equals($email, strtolower(trim($identifier)))
-                ? $this->db->queryFirstRow('SELECT id, password_hash FROM users WHERE role=%s AND is_active=1 ORDER BY id LIMIT 1', 'admin')
-                : null;
+            $adminUsers = new AdminUserRepository($this->db);
+            $email = $adminUsers->loginEmail();
+            if ($email === null) {
+                throw new RuntimeException('Správce zatím nemá nastavený e-mail pro přihlášení a obnovu hesla.');
+            }
+            $user = $identifier === '' || hash_equals($email, strtolower(trim($identifier)))
+                ? $adminUsers->findAdminByEmail($email) : null;
         } else {
             $email = strtolower(trim($identifier));
             $user = filter_var($email, FILTER_VALIDATE_EMAIL) !== false && strlen($email) <= 254
@@ -52,11 +56,19 @@ final class PasswordResetService
                     $email, 'customer') : null;
         }
         if ($user === null) {
+            if ($role === 'admin' && $identifier === '') {
+                throw new RuntimeException('Aktivní účet správce pro nastavený e-mail nebyl nalezen.');
+            }
             return;
         }
         $id = (int) $user['id'];
         if ((int) $this->db->queryFirstField('SELECT COUNT(*) FROM shop_password_resets
-            WHERE user_id=%i AND created_at > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 5 MINUTE)', $id) > 0) return;
+            WHERE user_id=%i AND created_at > DATE_SUB(UTC_TIMESTAMP(), INTERVAL 5 MINUTE)', $id) > 0) {
+            if ($role === 'admin' && $identifier === '') {
+                throw new RuntimeException('Odkaz už byl vyžádán. Další zprávu lze poslat za pět minut.');
+            }
+            return;
+        }
         $token = bin2hex(random_bytes(32));
         $hash = hash('sha256', $token);
         $this->db->query('INSERT INTO shop_password_resets (token_hash, user_id, password_hash_at_issue, role, created_at, expires_at)
@@ -82,6 +94,9 @@ final class PasswordResetService
         } catch (Throwable $error) {
             $this->db->query('DELETE FROM shop_password_resets WHERE token_hash=%s', $hash);
             error_log('Password recovery delivery failed: ' . $error->getMessage());
+            if ($role === 'admin' && $identifier === '') {
+                throw new RuntimeException('Obnovovací e-mail se nepodařilo odeslat. Zkontroluj SMTP nebo zkus obnovu přes server.');
+            }
         }
     }
 

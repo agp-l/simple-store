@@ -103,23 +103,21 @@ try {
 
         $action = $_POST['action'] ?? '';
         if ($action === 'login' && !$auth->signedIn()) {
-            $username = $_POST['username'] ?? null;
+            $email = $_POST['email'] ?? null;
             $password = $_POST['password'] ?? null;
-            if (!is_string($username) || !is_string($password) || !$auth->signIn($username, $password)) {
+            if (!is_string($email) || !is_string($password) || !$auth->signIn($email, $password)) {
                 $remaining = $auth->retryAfterSeconds();
                 $error = $remaining > 0
                     ? 'Příliš mnoho pokusů. Zkus to znovu za ' . (int) ceil($remaining / 60) . ' min.'
-                    : 'Nesprávné přihlašovací údaje. Zkontroluj jméno a heslo nebo použij obnovu hesla.';
+                    : 'Nesprávné přihlašovací údaje. Zkontroluj e-mail správce a heslo nebo použij obnovu hesla.';
             } else {
                 header('Location: ' . $adminUrl, true, 303);
                 exit;
             }
         } elseif ($action === 'reset-request' && !$auth->signedIn()) {
             try {
-                $recoveryEmail = $_POST['email'] ?? null;
-                if (!is_string($recoveryEmail) || strlen($recoveryEmail) > 254) throw new InvalidArgumentException('Zadej platný e-mail.');
                 $entryUrl = 'https://' . ($_SERVER['HTTP_HOST'] ?? '') . $adminUrl;
-                (new PasswordResetService($db))->request('admin', $recoveryEmail, 'admin.php', $entryUrl);
+                (new PasswordResetService($db))->request('admin', '', 'admin.php', $entryUrl);
                 header('Location: ' . $adminUrl . '?mode=forgot&sent=1', true, 303);
                 exit;
             } catch (InvalidArgumentException | RuntimeException $exception) {
