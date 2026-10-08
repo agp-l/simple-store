@@ -41,7 +41,6 @@ jobs:
           FTP_HOST: ${{ secrets.WEBGLOBE_FTP_HOST }}
           FTP_USER: ${{ secrets.WEBGLOBE_FTP_USER }}
           FTP_PASSWORD: ${{ secrets.WEBGLOBE_FTP_PASSWORD }}
-          FTP_ROOT: ${{ secrets.WEBGLOBE_FTP_ROOT }}
           FTP_SECURITY: ${{ vars.WEBGLOBE_FTP_SECURITY || 'ftp' }}
           FTP_PORT: ${{ vars.WEBGLOBE_FTP_PORT || '21' }}
         run: python3 scripts/deploy-ftp.py --package "$RUNNER_TEMP/simple-store-release"

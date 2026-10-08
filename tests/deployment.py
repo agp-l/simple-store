@@ -3,10 +3,12 @@
 
 import importlib.util
 import json
+import os
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+from unittest.mock import patch
 
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
@@ -22,6 +24,10 @@ def load(name: str, filename: str):
 
 builder = load("builder", "build-release.py")
 deployer = load("deployer", "deploy-ftp.py")
+
+with patch.dict(os.environ, {"FTP_HOST": "ftp.example.org", "FTP_USER": "shop",
+                           "FTP_PASSWORD": "example", "FTP_ROOT": "/unrelated"}):
+    assert deployer.configuration() == ("ftp.example.org", 21, "shop", "example", "/", "ftp")
 
 
 with tempfile.TemporaryDirectory() as directory:

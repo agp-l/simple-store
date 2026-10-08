@@ -4,8 +4,8 @@ Zdrojovým kódem je větev `main` na GitHubu. Databáze, produkty, účty a obj
 
 ## Jednorázové nastavení
 
-1. Ve Webglobe Adminu otevři **Hosting → FTP a soubory → FTP účty** a zjisti skutečný FTP hostitel, přihlašovací jméno a heslo účtu omezeného na `eshop.dobrodruzi.cz`. Odkaz na editaci FTP účtu není FTP hostitel. Ověř přes FTP klienta port **21** a cílovou složku, která už obsahuje `index.php`, `.htaccess` a `config/database.php`. Pokud se FTP účet připojí přímo do složky webu, `WEBGLOBE_FTP_ROOT` může být `/`; neodhaduj jej z URL webu.
-2. V GitHub repozitáři otevři **Settings → Secrets and variables → Actions**. Do *repository secrets* ulož `WEBGLOBE_FTP_HOST`, `WEBGLOBE_FTP_USER`, `WEBGLOBE_FTP_PASSWORD`, `WEBGLOBE_FTP_ROOT`. Přihlašovací údaje nezapisuj do Gitu, workflow ani dokumentace. Staré SFTP secrets už nasazení nepoužívá a lze je z GitHubu odstranit.
+1. Ve Webglobe Adminu otevři **Hosting → FTP a soubory → FTP účty** a zjisti skutečný FTP hostitel, přihlašovací jméno a heslo účtu omezeného přímo na složku `eshop.dobrodruzi.cz`. Odkaz na editaci FTP účtu není FTP hostitel. Kořen tohoto účtu je pro nasazení `/` a skript ověří, že obsahuje `index.php`, `.htaccess` a `config/database.php`.
+2. V GitHub repozitáři otevři **Settings → Secrets and variables → Actions**. Do *repository secrets* ulož `WEBGLOBE_FTP_HOST`, `WEBGLOBE_FTP_USER` a `WEBGLOBE_FTP_PASSWORD`. Přihlašovací údaje nezapisuj do Gitu, workflow ani dokumentace. Staré SFTP secrets už nasazení nepoužívá a lze je z GitHubu odstranit.
 3. V *repository variables* nastav `WEBGLOBE_DEPLOY_ENABLED` na `true`. V **Actions → Deploy Webglobe test shop → Run workflow** spusť první nasazení a ověř jeho výsledek. Každý další úspěšný běh **PHP checkout** vyvolaný pushem do `main` nasadí odpovídající commit automaticky. Neúspěšné testy, PR ani úpravy jen v místních souborech nenasazuje.
 
 Přenos používá standardní FTP účet a port 21; **nevyžaduje SSH ani SFTP**. Klasické FTP přenáší heslo a obsah bez šifrování. Pokud hosting na stejném FTP účtu podporuje explicitní TLS (FTPS), lze v repository variables nastavit `WEBGLOBE_FTP_SECURITY=ftps`. Skript v tom případě vyžaduje TLS pro přihlášení i data a při neúspěchu se nepřepne na nešifrované FTP. Nasazovací účet omez na složku testovacího obchodu. V případě neobvyklého portu lze použít `WEBGLOBE_FTP_PORT` jako repository variable (výchozí je 21).
@@ -20,7 +20,7 @@ Po `composer install --no-dev` lze vytvořit release v prázdném adresáři:
 python3 scripts/build-release.py --output /tmp/simple-store-release
 ```
 
-Se zadanými proměnnými prostředí `FTP_HOST`, `FTP_USER`, `FTP_PASSWORD`, `FTP_ROOT` lze spustit `python3 scripts/deploy-ftp.py --package /tmp/simple-store-release --dry-run`. Ověří přihlášení a správnou složku webu, ale nic nenahraje. Na FTP se pro `--dry-run` stejně přihlašuje. Volitelné `FTP_SECURITY=ftps` vynutí TLS. Heslo patří jen do prostředí procesu nebo GitHub secretu; nevkládej jej přímo do příkazu uloženého v historii shellu.
+Se zadanými proměnnými prostředí `FTP_HOST`, `FTP_USER`, `FTP_PASSWORD` lze spustit `python3 scripts/deploy-ftp.py --package /tmp/simple-store-release --dry-run`. Ověří přihlášení a kořen FTP účtu, ale nic nenahraje. Na FTP se pro `--dry-run` stejně přihlašuje. Volitelné `FTP_SECURITY=ftps` vynutí TLS. Heslo patří jen do prostředí procesu nebo GitHub secretu; nevkládej jej přímo do příkazu uloženého v historii shellu.
 
 ## Aktualizace databáze
 

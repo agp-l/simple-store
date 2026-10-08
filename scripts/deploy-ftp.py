@@ -15,12 +15,10 @@ from release_paths import allowed
 
 
 def configuration() -> tuple[str, int, str, str, str, str]:
-    names = ("FTP_HOST", "FTP_USER", "FTP_PASSWORD", "FTP_ROOT")
-    host, user, password, root = (os.environ.get(name, "") for name in names)
-    if not all((host, user, password, root)):
-        raise ValueError("Set FTP_HOST, FTP_USER, FTP_PASSWORD and FTP_ROOT.")
-    if root != posixpath.normpath(root) or not root.startswith("/") or "\n" in root:
-        raise ValueError("FTP_ROOT must be a normalized absolute path within the FTP account.")
+    names = ("FTP_HOST", "FTP_USER", "FTP_PASSWORD")
+    host, user, password = (os.environ.get(name, "") for name in names)
+    if not all((host, user, password)):
+        raise ValueError("Set FTP_HOST, FTP_USER and FTP_PASSWORD.")
     if any(char in host for char in "/:@\r\n "):
         raise ValueError("FTP_HOST must be a hostname, without a URL or port.")
     security = os.environ.get("FTP_SECURITY", "ftp").lower()
@@ -29,7 +27,7 @@ def configuration() -> tuple[str, int, str, str, str, str]:
     port_text = os.environ.get("FTP_PORT", "21")
     if not port_text.isdecimal() or not 1 <= int(port_text) <= 65535:
         raise ValueError("FTP_PORT must be a valid port number.")
-    return host, int(port_text), user, password, root, security
+    return host, int(port_text), user, password, "/", security
 
 
 def release(package: Path) -> dict:
