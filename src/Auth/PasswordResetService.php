@@ -27,7 +27,7 @@ final class PasswordResetService
     }
 
     /** Returns the same result whether the account exists, is inactive, or has been throttled. */
-    public function request(string $role, string $identifier, string $path): void
+    public function request(string $role, string $identifier, string $path, ?string $entryUrl = null): void
     {
         self::role($role);
         if (!in_array($path, ['admin.php', 'account.php'], true)) throw new InvalidArgumentException('Neplatná adresa obnovy.');
@@ -35,6 +35,10 @@ final class PasswordResetService
         $settings = (new MailSettingsRepository($this->db))->load()['settings'];
         if ($settings['from_email'] === '' || $settings['public_base_url'] === '') {
             throw new RuntimeException('Pro obnovu hesla nastav odesílatele a veřejnou HTTPS adresu v Nastavení obchodu → E-maily.');
+        }
+        $url = rtrim($settings['public_base_url'], '/') . '/' . $path;
+        if ($entryUrl !== null && !self::sameEntryPoint($url, $entryUrl)) {
+            throw new RuntimeException('Veřejná HTTPS adresa v nastavení e-mailů vede na jiný web. Oprav ji na adresu této instalace bez /cs.');
         }
         if ($role === 'admin') {
             $email = strtolower(trim((string) $settings['admin_recovery_email']));
@@ -58,7 +62,7 @@ final class PasswordResetService
         $this->db->query('INSERT INTO shop_password_resets (token_hash, user_id, password_hash_at_issue, role, created_at, expires_at)
             VALUES (%s, %i, %s, %s, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 30 MINUTE))',
             $hash, $id, hash('sha256', (string) $user['password_hash']), $role);
-        $url = rtrim($settings['public_base_url'], '/') . '/' . $path . '?mode=reset&token=' . $token;
+        $url .= '?mode=reset&token=' . $token;
         $subject = '=?UTF-8?B?' . base64_encode($role === 'admin'
             ? 'Obnova hesla administrace · dobrodruzi.cz'
             : 'Obnova hesla zákaznického účtu · dobrodruzi.cz') . '?=';
@@ -125,6 +129,17 @@ final class PasswordResetService
     private static function tokenValid(string $token): bool
     {
         return preg_match('/^[a-f0-9]{64}$/D', $token) === 1;
+    }
+
+    private static function sameEntryPoint(string $configured, string $current): bool
+    {
+        $a = parse_url($configured);
+        $b = parse_url($current);
+        return is_array($a) && is_array($b) &&
+            strtolower((string) ($a['host'] ?? '')) === strtolower((string) ($b['host'] ?? '')) &&
+            ($a['port'] ?? 443) === ($b['port'] ?? 443) &&
+            ($a['path'] ?? '/') === ($b['path'] ?? '/') &&
+            ($a['host'] ?? '') !== '';
     }
 
     private static function passwordUnchanged(array $row): bool

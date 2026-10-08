@@ -61,7 +61,7 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
     <?php elseif ($screen === 'reset-request'): ?>
       <section class="panel-panel panel-centered"><h1>Obnovit heslo správce</h1>
         <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
-        <?php if (($_GET['sent'] ?? '') === '1'): ?><p class="panel-notice" role="status">Pokud je adresa nastavená pro správce, poslali jsme na ni odkaz pro obnovu.</p><?php endif; ?>
+        <?php if (($_GET['sent'] ?? '') === '1'): ?><p class="panel-notice" role="status">Pokud je adresa nastavená pro správce, poslali jsme na ni odkaz pro obnovu. Další zprávu lze vyžádat nejdříve za pět minut.</p><?php endif; ?>
         <form method="post" action="<?= $escape($adminUrl . '?mode=forgot') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="reset-request">
           <label>E-mail správce<input type="email" name="email" maxlength="254" autocomplete="email" required autofocus></label>
           <button class="panel-button" type="submit">Poslat odkaz</button></form>

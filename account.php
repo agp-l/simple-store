@@ -107,7 +107,8 @@ try {
         $action = $input('action');
         try {
             if ($action === 'reset-request' && $user === null) {
-                (new PasswordResetService($db))->request('customer', $input('email'), 'account.php');
+                $entryUrl = 'https://' . ($_SERVER['HTTP_HOST'] ?? '') . $accountUrl;
+                (new PasswordResetService($db))->request('customer', $input('email'), 'account.php', $entryUrl);
                 $redirect($accountUrl . '?mode=forgot&sent=1');
             }
             if ($action === 'reset-complete' && $user === null) {

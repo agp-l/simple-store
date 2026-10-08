@@ -118,7 +118,8 @@ try {
             try {
                 $recoveryEmail = $_POST['email'] ?? null;
                 if (!is_string($recoveryEmail) || strlen($recoveryEmail) > 254) throw new InvalidArgumentException('Zadej platný e-mail.');
-                (new PasswordResetService($db))->request('admin', $recoveryEmail, 'admin.php');
+                $entryUrl = 'https://' . ($_SERVER['HTTP_HOST'] ?? '') . $adminUrl;
+                (new PasswordResetService($db))->request('admin', $recoveryEmail, 'admin.php', $entryUrl);
                 header('Location: ' . $adminUrl . '?mode=forgot&sent=1', true, 303);
                 exit;
             } catch (InvalidArgumentException | RuntimeException $exception) {
