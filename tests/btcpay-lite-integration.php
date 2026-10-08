@@ -186,7 +186,8 @@ try {
     copy($storeRoot . '/admin.php', $adminRoot . '/admin.php');
     $storeDb->insert('shop_checkout_settings', ['id' => 1,
         'settings_json' => json_encode(['btcpay' => $settings], JSON_THROW_ON_ERROR)]);
-    (new AdminUserRepository($storeDb))->createAdmin('integration-admin', password_hash('test-only-password', PASSWORD_DEFAULT));
+    (new AdminUserRepository($storeDb))->createAdmin('integration-admin',
+        password_hash('test-only-password', PASSWORD_DEFAULT), 'integration-admin@example.test');
     $mailbox = $temporary . '/mailbox';
     $sendmail = $temporary . '/sendmail';
     file_put_contents($sendmail, "#!/bin/sh\ncat >> '" . $mailbox . "'\nprintf '\\n--MAIL-END--\\n' >> '" . $mailbox . "'\n");
@@ -273,7 +274,7 @@ try {
     $adminCookies = $temporary . '/admin.cookies'; $anonymousCookies = $temporary . '/anonymous.cookies';
     $login = liteIntegrationForm(liteIntegrationRequest('GET', $adminUrl, '', [], $adminCookies)['body'], 'login');
     $loggedIn = liteIntegrationRequest('POST', $shopUrl . $login['url'], http_build_query(array_replace($login['fields'],
-        ['username' => 'integration-admin', 'password' => 'test-only-password'])), [], $adminCookies);
+        ['email' => 'integration-admin@example.test', 'password' => 'test-only-password'])), [], $adminCookies);
     liteIntegrationCheck($loggedIn['status'] === 303 && in_array('Location: /simple-store/admin.php', $loggedIn['headers'], true),
         'Production administrator login did not retain the subdirectory session.');
     $detailUrl = $adminUrl . '?section=orders&id=' . $order['id'];
