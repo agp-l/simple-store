@@ -32,6 +32,9 @@ class MeekroDB
 
     public function query(string $sql, mixed ...$args): array
     {
+        if (str_starts_with($sql, 'SELECT TABLE_NAME, TABLE_TYPE FROM information_schema.TABLES')) {
+            return [];
+        }
         if (str_starts_with($sql, 'CREATE TABLE IF NOT EXISTS shop_schema_updates')) {
             $this->tracking = true;
         } elseif (str_starts_with($sql, 'INSERT INTO shop_schema_updates')) {
@@ -58,10 +61,20 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 
 use SimpleStore\Database\SchemaUpdater;
 use SimpleStore\Database\SqlStatementParser;
+use SimpleStore\Database\LegacyTablePrefixMigration;
 
 $source = file_get_contents(dirname(__DIR__) . '/database/schema.sql');
 if (!is_string($source)) throw new RuntimeException('Schema file is missing.');
 $parsed = SqlStatementParser::split($source);
+$unprefixed = [];
+foreach ($parsed as $statement) {
+    if (preg_match('/^CREATE TABLE IF NOT EXISTS ([a-z0-9_]+)/', $statement, $matches) === 1 &&
+        !str_starts_with($matches[1], 'shop_')) $unprefixed[] = $matches[1];
+}
+if (array_diff($unprefixed, array_keys(LegacyTablePrefixMigration::TABLES)) !== [] ||
+    array_diff(array_keys(LegacyTablePrefixMigration::TABLES), $unprefixed) !== []) {
+    throw new RuntimeException('The prefix migration does not cover every legacy table.');
+}
 if (count($parsed) < 100 || !str_starts_with($parsed[2], 'CREATE TABLE IF NOT EXISTS users') ||
     !str_contains(implode("\n", $parsed), "'ALTER TABLE users") ||
     !str_contains(implode("\n", $parsed), 'CREATE TABLE IF NOT EXISTS shop_password_resets')) {
