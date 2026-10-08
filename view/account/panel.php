@@ -152,7 +152,7 @@ $checkoutReturn = $checkoutReturn ?? $accountUrl;
           <?php if ($screen === 'register'): ?><label>Potvrdit heslo <input type="password" name="password_confirm" minlength="10" autocomplete="new-password" required></label><?php endif; ?>
           <button class="panel-button" type="submit"><?= $screen === 'register' ? 'Zaregistrovat se' : 'Přihlásit se' ?></button>
         </form>
-        <?php if ($screen === 'login'): ?><p><a href="<?= $escape($accountUrl . '?mode=forgot') ?>">Zapomenuté heslo?</a></p><?php endif; ?>
+        <?php if ($screen === 'login'): ?><p><a href="<?= $escape($accountUrl . '?mode=forgot') ?>">Zapomenuté heslo zákaznického účtu?</a></p><p class="panel-auth-switch">Spravuješ obchod? <a href="<?= $escape($basePath . 'admin.php') ?>">Přejít do administrace</a></p><?php endif; ?>
         <?php if ($screen === 'register' || $registrationAllowed): ?><p class="panel-auth-switch"><?= $screen === 'register' ? 'Už máš účet?' : 'Ještě nemáš účet?' ?> <?php if ($screen === 'register'): ?><a href="<?= $escape($accountUrl . ($checkoutReturn !== $accountUrl ? '?checkout=1' : '')) ?>">Přihlásit se</a><?php else: ?><a href="<?= $escape($accountUrl . '?mode=register' . ($checkoutReturn !== $accountUrl ? '&checkout=1' : '')) ?>">Vytvořit účet</a><?php endif; ?></p><?php endif; ?>
       <?php endif; ?>
     </section></main>

@@ -48,7 +48,7 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
       <section class="panel-panel panel-centered"><h1>Administraci se nepodařilo načíst</h1><p class="panel-error"><?= $escape($error) ?></p></section>
     <?php elseif ($screen === 'login'): ?>
       <section class="panel-panel panel-centered">
-        <p class="panel-eyebrow">Redakční systém</p><h1>Přihlášení</h1>
+        <p class="panel-eyebrow">Redakční systém</p><h1>Přihlášení správce</h1>
         <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
         <form method="post" action="<?= $escape($adminUrl) ?>">
           <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">

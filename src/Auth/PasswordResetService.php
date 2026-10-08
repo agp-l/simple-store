@@ -59,11 +59,14 @@ final class PasswordResetService
             VALUES (%s, %i, %s, %s, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 30 MINUTE))',
             $hash, $id, hash('sha256', (string) $user['password_hash']), $role);
         $url = rtrim($settings['public_base_url'], '/') . '/' . $path . '?mode=reset&token=' . $token;
-        $subject = '=?UTF-8?B?' . base64_encode('Obnova hesla · dobrodruzi.cz') . '?=';
+        $subject = '=?UTF-8?B?' . base64_encode($role === 'admin'
+            ? 'Obnova hesla administrace · dobrodruzi.cz'
+            : 'Obnova hesla zákaznického účtu · dobrodruzi.cz') . '?=';
         $from = (string) $settings['from_email'];
         $name = '=?UTF-8?B?' . base64_encode((string) $settings['from_name']) . '?=';
         $headers = 'From: ' . $name . ' <' . $from . ">\r\nContent-Type: text/plain; charset=UTF-8";
-        $message = "Pro obnovu hesla k účtu dobrodruzi.cz otevři tento odkaz:\n\n{$url}\n\n"
+        $account = $role === 'admin' ? 'administrátorskému účtu' : 'zákaznickému účtu';
+        $message = "Pro obnovu hesla k {$account} na dobrodruzi.cz otevři tento odkaz:\n\n{$url}\n\n"
             . "Odkaz platí 30 minut a lze jej použít jen jednou. Pokud jsi o obnovu nežádal(a), zprávu ignoruj.\n";
         try {
             $delivered = $this->transport !== null

@@ -16,7 +16,7 @@ $mailSettingsUrl = $adminUrl . '?section=settings&tab=mail';
     <div class="panel-fields-two"><label>E-mail odesílatele<input type="email" name="from_email" value="<?= $escape($mailForm['from_email']) ?>" maxlength="254" placeholder="objednavky@dobrodruzi.cz"></label>
     <label>Jméno odesílatele<input name="from_name" value="<?= $escape($mailForm['from_name']) ?>" maxlength="100" required></label></div>
     <label>Adresa pro odpovědi (nepovinná)<input type="email" name="reply_to" value="<?= $escape($mailForm['reply_to']) ?>" maxlength="254" placeholder="podpora@dobrodruzi.cz"></label>
-    <label>Veřejná HTTPS adresa obchodu<input type="url" name="public_base_url" value="<?= $escape($mailForm['public_base_url']) ?>" maxlength="500" placeholder="https://dobrodruzi.cz"></label>
+    <label>Veřejná HTTPS adresa obchodu<input type="url" name="public_base_url" value="<?= $escape($mailForm['public_base_url']) ?>" maxlength="500" placeholder="https://eshop.dobrodruzi.cz"></label>
     <p class="panel-help">Z této adresy se vytvoří soukromý odkaz na objednávku a odkazy na publikované obchodní podmínky, vrácení zboží a reklamace. Vyplň kořen instalace bez /cs. Ukládá se do databáze stejně jako ostatní hodnoty níže.</p>
     <label>E-mail pro obnovu hesla správce<input type="email" name="admin_recovery_email" value="<?= $escape($mailForm['admin_recovery_email']) ?>" maxlength="254" autocomplete="email" placeholder="spravce@dobrodruzi.cz"></label>
     <p class="panel-help">Odkaz pro obnovu administrace se pošle jen na tuto adresu. Záložní obnova na serveru zůstává: <code>php tools/admin.php --reset</code>.</p>
