@@ -60,6 +60,10 @@ $btcpaySettings = $checkoutSettings['btcpay'] ?? [];
 $btcpayConfigured = (string) ($btcpaySettings['server_url'] ?? '') !== '' &&
     (string) ($btcpaySettings['store_id'] ?? '') !== '' &&
     (string) ($btcpaySettings['api_key'] ?? '') !== '';
+$fioConfigured = !empty($checkoutSettings['fio_bank']['enabled']) &&
+    (string) ($checkoutSettings['fio_bank']['token'] ?? '') !== '';
+$fioReady = $fioConfigured && (new \SimpleStore\Checkout\FioBankReconciler(
+    $db, $checkoutSettings['fio_bank']))->installed();
 $orderError = '';
 $order = null;
 $orderProductLinks = [];

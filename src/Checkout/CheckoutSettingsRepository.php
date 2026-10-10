@@ -46,6 +46,9 @@ final class CheckoutSettingsRepository
             ($local['bank_transfer']['recipient'] ?? '') === '') {
             $local['bank_transfer'] = $example['bank_transfer'];
         }
+        $local['bank_transfer']['enabled'] = $local['bank_transfer']['enabled'] ?? true;
+        $local['fio_bank'] = is_array($local['fio_bank'] ?? null)
+            ? array_replace($example['fio_bank'], $local['fio_bank']) : $example['fio_bank'];
         return $local;
     }
 
@@ -66,6 +69,7 @@ final class CheckoutSettingsRepository
         $result = array_replace_recursive($fallback, $saved);
         $result['shipping_methods'] = self::normalizedMethods($saved['shipping_methods'] ?? [],
             $fallback['shipping_methods']);
+        $result['bank_transfer']['enabled'] = $saved['bank_transfer']['enabled'] ?? true;
         return $result;
     }
 
@@ -76,7 +80,8 @@ final class CheckoutSettingsRepository
             'delivery' => ['shipping_price', 'shipping_enabled'],
             'carriers' => ['packeta_api_key', 'ppl_widget_key', 'packeta_sender',
                 'packeta_api_password', 'packeta_clear_password'],
-            'payment' => ['account_display', 'iban', 'recipient', 'payment_due_days',
+            'payment' => ['bank_transfer_enabled', 'account_display', 'iban', 'recipient', 'payment_due_days',
+                'fio_enabled', 'fio_account_display', 'fio_token', 'fio_clear_token',
                 'comgate_enabled', 'comgate_test', 'comgate_merchant', 'comgate_return_base_url',
                 'comgate_secret', 'comgate_clear_secret', 'gopay_enabled', 'gopay_test',
                 'gopay_goid', 'gopay_client_id', 'gopay_return_base_url', 'gopay_client_secret',
@@ -93,6 +98,10 @@ final class CheckoutSettingsRepository
             'shipping_price' => [], 'shipping_enabled' => [],
             'btc_prices_enabled' => !empty($current['btc_prices_enabled']) ? '1' : '0',
             'account_display' => (string) ($current['bank_transfer']['account_display'] ?? ''),
+            'bank_transfer_enabled' => !empty($current['bank_transfer']['enabled']) ? '1' : '0',
+            'fio_enabled' => !empty($current['fio_bank']['enabled']) ? '1' : '0',
+            'fio_account_display' => (string) ($current['fio_bank']['account_display'] ?? ''),
+            'fio_token' => '', 'fio_clear_token' => '',
             'iban' => (string) ($current['bank_transfer']['iban'] ?? ''),
             'recipient' => (string) ($current['bank_transfer']['recipient'] ?? ''),
             'payment_due_days' => (string) ($current['bank_transfer']['payment_due_days'] ?? 7),
@@ -123,7 +132,8 @@ final class CheckoutSettingsRepository
         foreach ($fields[$section] as $field) {
             if ($field === 'shipping_enabled' || $field === 'shipping_price') {
                 $values[$field] = $input[$field] ?? [];
-            } elseif (in_array($field, ['btc_prices_enabled', 'comgate_enabled', 'comgate_test',
+            } elseif (in_array($field, ['btc_prices_enabled', 'bank_transfer_enabled', 'fio_enabled',
+                'fio_clear_token', 'comgate_enabled', 'comgate_test',
                 'gopay_enabled', 'gopay_test', 'btcpay_enabled'], true)) {
                 $values[$field] = ($input[$field] ?? null) === '1' ? '1' : '0';
             } else {
@@ -174,6 +184,20 @@ final class CheckoutSettingsRepository
             throw new InvalidArgumentException('Splatnost platby musí být 1 až 60 dní.');
         }
         $bankSettings['payment_due_days'] = $dueDays;
+        $bankSettings['enabled'] = ($input['bank_transfer_enabled'] ?? null) === '1';
+        if ($bankSettings['enabled'] && ($bankSettings['account_display'] ?? '') === '') {
+            throw new InvalidArgumentException('Pro zapnutý bankovní převod vyplň číslo účtu a příjemce.');
+        }
+        $fioEnabled = ($input['fio_enabled'] ?? null) === '1';
+        $fioAccount = self::value($input, 'fio_account_display');
+        if ($fioAccount !== '' && preg_match('/^(?:[0-9]{1,6}-)?[0-9]{1,10}\/2010$/D', $fioAccount) !== 1) {
+            throw new InvalidArgumentException('Číslo účtu Fio zadej ve tvaru číslo/2010.');
+        }
+        $fioToken = self::retainedSecret($input, 'fio_token', 'fio_clear_token',
+            (string) ($current['fio_bank']['token'] ?? ''), 'Token Fio');
+        if ($fioEnabled && ($fioAccount === '' || $fioToken === '')) {
+            throw new InvalidArgumentException('Pro ověřování převodů vyplň účet Fio a jeho token pouze pro čtení.');
+        }
 
         $termsUrl = self::value($input, 'terms_url');
         if ($termsUrl !== '' && (!str_starts_with($termsUrl, $basePath) ||
@@ -263,6 +287,8 @@ final class CheckoutSettingsRepository
             'packeta' => ['api_key' => $packetaKey, 'api_password' => $password, 'sender' => $sender],
             'ppl' => ['widget_key' => $pplKey],
             'bank_transfer' => $bankSettings,
+            'fio_bank' => ['enabled' => $fioEnabled, 'account_display' => $fioAccount,
+                'token' => $fioToken],
             'comgate' => [
                 'enabled' => $comgateEnabled,
                 'test' => ($input['comgate_test'] ?? null) === '1',

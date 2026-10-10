@@ -31,6 +31,14 @@
   </form>
   <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Stav vyřízení byl uložen.</p><?php endif; ?>
   <?php if (($_GET['payment_saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Přijetí platby bylo potvrzeno.</p><?php endif; ?>
+  <?php if (isset($_GET['fio_checked'], $_GET['fio_paid']) && ctype_digit((string) $_GET['fio_checked']) && ctype_digit((string) $_GET['fio_paid'])): ?><p class="panel-notice" role="status">Fio: zkontrolováno <?= (int) $_GET['fio_checked'] ?> pohybů, potvrzeno <?= (int) $_GET['fio_paid'] ?> objednávek.</p><?php endif; ?>
+  <?php if (!empty($fioConfigured)): ?>
+    <?php if (!empty($fioReady)): ?><form method="post" action="<?= $escape($orderBaseUrl) ?>" class="panel-order-search">
+      <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="fio-sync">
+      <button class="panel-button" type="submit">Zkontrolovat převody u Fio</button>
+      <span class="panel-help">Páruje pouze dosud čekající převody na účet uvedený v objednávce. Další dotaz lze odeslat za 35 sekund.</span>
+    </form><?php else: ?><p class="panel-help">Pro ověřování Fio nejdříve <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
+  <?php endif; ?>
   <?php if (($_GET['overdue_cancelled'] ?? '') === '1'): ?><p class="panel-notice" role="status">Objednávka po splatnosti byla stornována; případné rezervace skladu se uvolnily.</p><?php endif; ?>
   <section class="panel-panel" aria-labelledby="panel-orders-list">
     <h2 id="panel-orders-list">Objednávky <span><?= count($orderPage['items']) ?> na stránce</span></h2>

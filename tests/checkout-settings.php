@@ -63,6 +63,7 @@ if ($generated->snapshot()['iban'] !== 'CZ5855000000001265098001') {
 $input = ['shipping_price' => array_map('strval', array_column(ShippingPolicy::defaults(), 'price_czk')),
     'shipping_enabled' => array_fill_keys(array_keys(ShippingPolicy::defaults()), '1'),
     'account_display' => '1265098001/5500', 'iban' => '', 'recipient' => 'Test',
+    'bank_transfer_enabled' => '1', 'fio_enabled' => '0', 'fio_account_display' => '', 'fio_token' => '',
     'payment_due_days' => '10', 'terms_url' => '/simple-store/cs/obchodni-podminky',
     'packeta_api_key' => 'ABCDEF1234567890',
     'ppl_widget_key' => 'public-ppl-key-123',
@@ -111,6 +112,25 @@ $withoutBitcoin = $repo->save(array_replace($input, ['btc_prices_enabled' => '']
 if ($withoutBitcoin['btc_prices_enabled'] !== false ||
     $repo->load($fallback)['btc_prices_enabled'] !== false) {
     throw new RuntimeException('The storefront BTC display switch did not persist.');
+}
+$btcOnly = $repo->saveSection('payment', array_replace($input, [
+    'bank_transfer_enabled' => '0', 'comgate_enabled' => '0', 'gopay_enabled' => '0',
+    'btcpay_enabled' => '1', 'fio_enabled' => '0',
+]), '/simple-store/', $saved);
+if ($btcOnly['bank_transfer']['enabled'] || $btcOnly['bank_transfer']['account_display'] !== '1265098001/5500' ||
+    !$btcOnly['btcpay']['enabled']) {
+    throw new RuntimeException('BTC-only checkout must preserve bank details while disabling transfer.');
+}
+$fio = $repo->saveSection('payment', array_replace($input, [
+    'fio_enabled' => '1', 'fio_account_display' => '123456789/2010',
+    'fio_token' => str_repeat('T', 64),
+]), '/simple-store/', $saved);
+$fioSaved = $repo->saveSection('payment', array_replace($input, [
+    'fio_enabled' => '1', 'fio_account_display' => '123456789/2010', 'fio_token' => '',
+]), '/simple-store/', $fio);
+if ($fioSaved['fio_bank']['token'] !== str_repeat('T', 64) ||
+    $fioSaved['fio_bank']['account_display'] !== '123456789/2010') {
+    throw new RuntimeException('Fio token disappeared when saving payment settings again.');
 }
 $withoutNewPassword = $repo->save(array_replace($input,
     ['packeta_api_password' => '', 'comgate_secret' => '', 'gopay_client_secret' => '',

@@ -140,7 +140,7 @@ try {
         $shared['priceDisplay'] = BitcoinPriceDisplay::fromSettings($db, $checkoutConfig);
         $bankSettings = $checkoutConfig['bank_transfer'] ?? [];
         $bank = null;
-        if (is_array($bankSettings) &&
+        if (is_array($bankSettings) && ($bankSettings['enabled'] ?? true) &&
             ($bankSettings['account_display'] ?? '') !== '' && ($bankSettings['recipient'] ?? '') !== '') {
             $bank = new BankTransferPayment((string) ($bankSettings['iban'] ?? ''),
                 (string) $bankSettings['account_display'], (string) $bankSettings['recipient']);
