@@ -35,6 +35,8 @@ with tempfile.TemporaryDirectory() as directory:
     contents = {
         ".htaccess": "deny secrets",
         "index.php": "<?php echo 'store';",
+        "fio-cron.php": "<?php echo 'fio';",
+        "mail-cron.php": "<?php echo 'mail';",
         "config/site.php": "<?php return [];",
         "config/database.php": "<?php return ['password' => 'private'];",
         "database/schema.sql": "CREATE DATABASE test;",
@@ -57,6 +59,8 @@ with tempfile.TemporaryDirectory() as directory:
     builder.build(package)
     manifest = deployer.release(package)
     assert "index.php" in manifest["files"]
+    assert "fio-cron.php" in manifest["files"]
+    assert "mail-cron.php" in manifest["files"]
     assert "vendor/autoload.php" in manifest["files"]
     assert "tools/fio-worker.php" in manifest["files"]
     assert "images/media/.htaccess" in manifest["files"]

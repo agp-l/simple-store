@@ -26,12 +26,19 @@ catch (Throwable $error) {
 }
 $expected = is_array($config) ? ($config['token'] ?? null) : null;
 $provided = $_GET['token'] ?? null;
-if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET' ||
+$method = $_SERVER['REQUEST_METHOD'] ?? '';
+if (($method !== 'GET' && $method !== 'HEAD') ||
     !in_array(strtolower((string) ($_SERVER['HTTPS'] ?? '')), ['on', '1'], true) ||
     !is_string($expected) || preg_match('/^[a-f0-9]{64}$/D', $expected) !== 1 ||
     !is_string($provided) || preg_match('/^[a-f0-9]{64}$/D', $provided) !== 1 ||
     !hash_equals($expected, $provided)) {
     http_response_code(404);
+    exit;
+}
+// Webglobe checks a script with HEAD when the cron task is created.
+// A valid probe must never send queued emails.
+if ($method === 'HEAD') {
+    http_response_code(200);
     exit;
 }
 
