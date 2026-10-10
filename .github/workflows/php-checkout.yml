@@ -64,6 +64,7 @@ jobs:
           php tests/checkout-availability.php
           php tests/checkout-settings.php
           php tests/fio-statement.php
+          php tests/fio-transport-error.php
           php tests/mail-render.php
           php tests/after-sales-render.php
           php tests/order-legal-snapshot.php

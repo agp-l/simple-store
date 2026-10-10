@@ -8,6 +8,8 @@ use RuntimeException;
 /** Read-only transport for Fio's period export; never expose token-bearing URLs in errors. */
 final class FioStatementClient
 {
+    private const MAX_BODY_BYTES = 16000000;
+
     private $transport;
 
     public function __construct(?callable $transport = null)
@@ -30,7 +32,7 @@ final class FioStatementClient
                 ? 'Fio dovoluje požadavek se stejným tokenem nejvýše jednou za 30 sekund.'
                 : 'Fio nevrátilo výpis (HTTP ' . (int) $status . '). Zkontroluj token a přístup k účtu.');
         }
-        if (!is_string($body) || strlen($body) > 16000000) {
+        if (!is_string($body) || strlen($body) > self::MAX_BODY_BYTES) {
             throw new RuntimeException('Výpis Fio je příliš velký nebo neplatný.');
         }
         $data = json_decode($body, true, 512, JSON_BIGINT_AS_STRING);
@@ -52,18 +54,24 @@ final class FioStatementClient
         $ch = curl_init($url);
         if ($ch === false) throw new RuntimeException('Spojení s Fio nelze otevřít.');
         $body = '';
+        $tooLarge = false;
         curl_setopt_array($ch, [
             CURLOPT_FOLLOWLOCATION => false, CURLOPT_TIMEOUT => 20,
             CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2, CURLOPT_USERAGENT => 'simple-store-fio/1.0',
-            CURLOPT_WRITEFUNCTION => static function ($handle, string $chunk) use (&$body): int {
-                if (strlen($body) + strlen($chunk) > 16000000) return 0;
+            CURLOPT_WRITEFUNCTION => static function ($handle, string $chunk) use (&$body, &$tooLarge): int {
+                if (strlen($body) + strlen($chunk) > self::MAX_BODY_BYTES) {
+                    $tooLarge = true;
+                    return 0;
+                }
                 $body .= $chunk;
                 return strlen($chunk);
             },
         ]);
         try {
-            if (curl_exec($ch) === false) throw new RuntimeException('Výpis Fio nelze bezpečně načíst.');
+            if (curl_exec($ch) === false) {
+                throw new RuntimeException(FioTransportError::message(curl_errno($ch), $tooLarge));
+            }
             return [(int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE), $body];
         } finally {
             curl_close($ch);
