@@ -1,7 +1,7 @@
 <?php
 // This body is framed by the shared storefront shell.
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-$inside = in_array($screen, ['editor', 'categories', 'menus', 'media', 'orders', 'returns', 'accounting', 'settings', 'users', 'database'], true);
+$inside = in_array($screen, ['product-import', 'editor', 'categories', 'menus', 'media', 'orders', 'returns', 'accounting', 'settings', 'users', 'database'], true);
 $panelPreviewControl = $inside && $csrf !== '' ? [
     'active' => (bool) ($adminPreviewActive ?? false),
     'csrf' => $csrf,
@@ -21,6 +21,7 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
     $panelLinks = [
         ['key' => 'editor', 'label' => 'Stránky', 'icon' => '▤', 'href' => $adminUrl . '?section=contents'],
         ['key' => 'products', 'label' => 'Produkty', 'icon' => '▦', 'href' => $basePath . $site['default_language'] . '?manage=1#produkty'],
+        ['key' => 'product-import', 'label' => 'Import z AI', 'icon' => '＋', 'href' => $adminUrl . '?section=product-import'],
         ['key' => 'orders', 'label' => 'Objednávky', 'icon' => '▣', 'href' => $adminUrl . '?section=orders'],
         ['key' => 'returns', 'label' => 'Reklamace a vrácení', 'icon' => '↩', 'href' => $adminUrl . '?section=returns'],
         ['key' => 'accounting', 'label' => 'Doklady a platby', 'icon' => '▤', 'href' => $adminUrl . '?section=accounting'],
@@ -79,6 +80,8 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
             <button class="panel-button" type="submit">Změnit heslo</button></form><?php endif; ?>
         <?php endif; ?><p><a href="<?= $escape($adminUrl) ?>">Přihlásit se</a></p>
       </section>
+    <?php elseif ($screen === 'product-import'): ?>
+      <?php require __DIR__ . '/product-import.php'; ?>
     <?php elseif ($screen === 'categories'): ?>
       <?php require __DIR__ . '/categories.php'; ?>
     <?php elseif ($screen === 'media'): ?>

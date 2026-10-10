@@ -1,0 +1,55 @@
+{
+  "format": "simple-store.product.v1",
+  "language": "cs",
+  "product": {
+    "name": "Flextail ZERO Power 10000",
+    "slug": "flextail-zero-power-10000",
+    "brand": "Flextail",
+    "category_path": "vybaveni/powerbanky",
+    "price_czk": 1960,
+    "published": false,
+    "stock_status": "out_of_stock",
+    "summary": "Karbonová powerbanka s kapacitou 10 000 mAh a hmotností 145 g. Dva USB-C porty a tenké tělo pro cestování nalehko.",
+    "description": "Záložní energie do batohu i příručního zavazadla. Flextail ZERO Power 10000 spojuje kapacitu 10 000 mAh s karbonovým tělem o tloušťce 9,9 mm. Připojíš telefon nebo další kompatibilní zařízení přes USB-C.",
+    "image_path": "https://gramino.cz/wp-content/uploads/2026/04/Flextail-ZERO-Power-10000-Power-Bank-7.jpg",
+    "gallery": [],
+    "options": [],
+    "specifications": [
+      {
+        "name": "Kapacita",
+        "value": "10 000 mAh / 38,7 Wh"
+      },
+      {
+        "name": "Hmotnost",
+        "value": "145 g; kabel/poutko 13 g"
+      },
+      {
+        "name": "Rozměry",
+        "value": "122 × 59,5 × 9,9 mm"
+      },
+      {
+        "name": "Materiál",
+        "value": "Kované uhlíkové vlákno"
+      },
+      {
+        "name": "Vstup USB-C",
+        "value": "Až 18 W"
+      },
+      {
+        "name": "Výstup USB-C",
+        "value": "Až 22,5 W"
+      },
+      {
+        "name": "Balení",
+        "value": "Powerbanka, USB-C kabel/poutko, návod"
+      }
+    ],
+    "sections": [
+      {
+        "type": "text",
+        "heading": "Energie na cesty",
+        "body": "Dva výstupy USB-C umožňují připojit kompatibilní elektroniku. Skutečný počet dobití závisí na zařízení, použitém kabelu a ztrátách při nabíjení."
+      }
+    ]
+  }
+}

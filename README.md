@@ -337,3 +337,7 @@ Detail obsahuje položky s obrázky a odkazy na aktuální produkty, zkopírovat
 Dopravce lze před odesláním změnit na některého zapnutého dopravce doručujícího domů. U původní objednávky na výdejní místo je nutné vyplnit a potvrdit ověřenou adresu zákazníka. Původně sjednaná metoda, cena dopravy a vystavená faktura zůstávají součástí neměnného nákupního dokladu; změna platí jen pro skutečné podání. Aktivní zásilku u Zásilkovny je třeba před přesměrováním vyřešit a podklady k jinému dopravci před změnou výslovně ověřit.
 
 Správce může trvale odstranit objednávku ze seznamu i po platbě nebo expedici. Smazání v obchodě nestornuje platbu ani fyzicky podanou zásilku. U skutečných obchodů zůstává vystavená faktura, údaje o transakci, nutná položková účetní evidence a minimální reference na zásilku; testovací objednávky lze odstranit bez těchto účetních podkladů. Sekce „Nedávno smazané objednávky“ se v běžném přehledu nezobrazuje.
+
+## Import produktů z AI
+
+Administrace → **Import z AI** přijímá jednu JSON zprávu pro vytvoření nebo úpravu produktu, včetně variant, parametrů a obsahových bloků. Detail produktu nabízí **JSON pro AI** pro bezpečnou úpravu aktuální revize. [Formát a postup](docs/product-import.md).

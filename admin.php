@@ -238,6 +238,12 @@ try {
         exit;
     }
 
+    if (in_array($action, ['product-import-preview', 'product-import-save'], true) ||
+        ($method !== 'POST' && $section === 'product-import')) {
+        require __DIR__ . '/src/Admin/product-import.php';
+        require __DIR__ . '/view/admin/layout.php';
+        exit;
+    }
     if ($action === 'create-product' || ($method !== 'POST' && $section === 'products')) {
         require __DIR__ . '/src/Admin/products.php';
         require __DIR__ . '/view/admin/layout.php';
