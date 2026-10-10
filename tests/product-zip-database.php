@@ -69,6 +69,23 @@ try {
         throw new LogicException('Bad supplier was accepted.');
     } catch (InvalidArgumentException $expected) {}
     $check((int) $products->current($keys[0], 'cs')['revision_number'] === 2 && count($links->forProduct($keys[0])) === 1, 'Supplier failure did not roll back the revision.');
+    $patch = ['format' => ProductImport::FORMAT, 'language' => 'cs', 'product_key' => $keys[0], 'revision' => 2,
+        'product' => ['description' => 'Updated by ZIP']];
+    $zip = new ZipArchive(); $zip->open($root . '/update.zip', ZipArchive::CREATE);
+    $zip->addFromString('01-update/product.json', json_encode($patch));
+    $zip->addFromString('02-stale/product.json', json_encode($patch)); $zip->close();
+    $updateJob = new ProductZipJob(ProductZipJob::fromFile($root . '/update.zip')); $jobs[] = $updateJob;
+    $updateJob->step($importer); $updateState = $updateJob->step($importer);
+    $check(array_column($updateState['items'], 'status') === ['success', 'error'], 'ZIP update failed or stale revision was accepted.');
+    $afterZip = $products->current($keys[0], 'cs');
+    $check($afterZip['description'] === 'Updated by ZIP' && $afterZip['image_path'] === $good['image_path'] && $links->forProduct($keys[0])[0]['label'] === 'New', 'ZIP partial update lost photos or private suppliers.');
+    // Simulate a process dying after the durable processing checkpoint.
+    $interruptedToken = ProductZipJob::fromFile($zipPath);
+    $interrupted = new ProductZipJob($interruptedToken); $jobs[] = $interrupted;
+    $checkpoint = $interrupted->state(); $checkpoint['items'][0]['status'] = 'processing';
+    file_put_contents(sys_get_temp_dir() . '/simple-store-import-' . $interruptedToken . '/state.json', json_encode($checkpoint));
+    $resumed = $interrupted->step($importer);
+    $check($resumed['items'][0]['status'] === 'interrupted' && $resumed['items'][1]['status'] === 'error', 'Interrupted item was replayed or blocked the following duplicate check.');
     $zip = new ZipArchive(); $zip->open($root . '/unsafe.zip', ZipArchive::CREATE);
     $zip->addFromString('../outside.php', '<?php'); $zip->close();
     try { new ProductZipArchive($root . '/unsafe.zip'); throw new LogicException('Traversal accepted.'); } catch (InvalidArgumentException $expected) {}

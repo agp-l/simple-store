@@ -6,12 +6,12 @@
 .media-eyebrow { margin:0 0 5px; color:#3c813f; font-size:11px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
 .media-close { min-width:38px; min-height:38px; border:1px solid #c6d8c1; border-radius:4px; background:#fff; color:#203a23; font-size:25px; cursor:pointer; }
 .media-note { max-width:75ch; color:#536250; line-height:1.55; }
-.media-upload-form, .media-url-form { display:flex; flex-wrap:wrap; align-items:end; gap:12px; margin:18px 0; padding:16px; border:1px solid #dce8d8; border-radius:5px; background:#fff; }
-.media-upload-form label, .media-url-form label { flex:1 1 300px; display:grid; gap:7px; font-weight:700; }
-.media-upload-form input, .media-url-form input { width:100%; max-width:100%; min-height:38px; font:inherit; }
-.media-upload-form button, .media-url-form button, .media-item-actions button { min-height:36px; padding:7px 11px; border:1px solid #6b9a69; border-radius:4px; background:#fff; color:#28592e; font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
+.media-upload-form { display:flex; flex-wrap:wrap; align-items:end; gap:12px; margin:18px 0; padding:16px; border:1px solid #dce8d8; border-radius:5px; background:#fff; }
+.media-upload-form label { flex:1 1 300px; display:grid; gap:7px; font-weight:700; }
+.media-upload-form input { width:100%; max-width:100%; min-height:38px; font:inherit; }
+.media-upload-form button, .media-item-actions button { min-height:36px; padding:7px 11px; border:1px solid #6b9a69; border-radius:4px; background:#fff; color:#28592e; font:inherit; font-size:13px; font-weight:700; cursor:pointer; }
 .media-upload-form .media-primary { background:#438c43; color:#fff; }
-.media-upload-form button:hover, .media-url-form button:hover, .media-item-actions button:hover { border-color:#28592e; background:#e9f5e8; color:#205128; }
+.media-upload-form button:hover, .media-item-actions button:hover { border-color:#28592e; background:#e9f5e8; color:#205128; }
 .media-upload-form .media-primary:hover { background:#2d7130; color:#fff; }
 .media-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(175px, 1fr)); gap:13px; margin:16px 0; }
 .media-item { min-width:0; padding:9px; border:1px solid #d8e5d4; border-radius:5px; background:#fff; }

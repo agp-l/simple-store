@@ -96,7 +96,12 @@ final class ProductZipJob
     {
         foreach (glob(sys_get_temp_dir() . '/simple-store-import-*', GLOB_ONLYDIR) ?: [] as $dir) {
             if (is_link($dir) || !preg_match('/simple-store-import-([a-f0-9]{48})$/D', $dir, $match)) continue;
-            if (filemtime($dir) < time() - 86400) (new self($match[1]))->remove();
+            if (filemtime($dir) >= time() - 86400) continue;
+            $lock = @fopen($dir . '/lock', 'c');
+            if ($lock === false) continue;
+            try {
+                if (flock($lock, LOCK_EX | LOCK_NB)) (new self($match[1]))->remove();
+            } finally { fclose($lock); }
         }
     }
 
