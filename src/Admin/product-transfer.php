@@ -12,15 +12,13 @@ $bulkRestore = ($_POST['import_mode'] ?? '') === 'restore';
 $bulkStock = ($_POST['include_stock'] ?? '') === '1';
 $bulkState = null;
 $exportRows = [];
-$exportLanguage = is_string(($_POST['export_language'] ?? $_GET['export_language'] ?? null) ?? null) ? ($_POST['export_language'] ?? $_GET['export_language'] ?? null) : '';
-$exportCategory = is_string(($_POST['export_category'] ?? $_GET['export_category'] ?? null) ?? null) ? ($_POST['export_category'] ?? $_GET['export_category'] ?? null) : '';
-$exportSearch = is_string(($_POST['export_search'] ?? $_GET['export_search'] ?? null) ?? null) ? ($_POST['export_search'] ?? $_GET['export_search'] ?? null) : '';
-$exportUrl = (string) ((new \SimpleStore\Accounting\MailSettingsRepository($db))->load('')['settings']['public_base_url'] ?? '');
-if ($exportUrl === '') {
-    $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
-    if (preg_match('/^[a-zA-Z0-9.-]+(?::[0-9]+)?$/D', $host) !== 1) $host = 'localhost';
-    $exportUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://') . $host . rtrim($basePath, '/');
-}
+$exportLanguageInput = $_POST['export_language'] ?? $_GET['export_language'] ?? '';
+$exportLanguage = is_string($exportLanguageInput) ? $exportLanguageInput : '';
+$exportCategoryInput = $_POST['export_category'] ?? $_GET['export_category'] ?? '';
+$exportCategory = is_string($exportCategoryInput) ? $exportCategoryInput : '';
+$exportSearchInput = $_POST['export_search'] ?? $_GET['export_search'] ?? '';
+$exportSearch = is_string($exportSearchInput) ? $exportSearchInput : '';
+
 try {
     if ($method === 'POST' && $action === 'product-bulk-prepare') {
         if (($_FILES['json_file']['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_NO_FILE) {
@@ -55,6 +53,15 @@ try {
             if ($scope === 'selected') $exportRows = ProductBulkTransfer::select($exportRows, is_string($_POST['selected_json'] ?? null) ? $_POST['selected_json'] : '');
             if ($exportRows === []) throw new InvalidArgumentException('Výběr neobsahuje žádné produkty.');
             $namesOnly = ($_POST['export_format'] ?? '') === 'names';
+            $exportUrl = '';
+            if ($namesOnly) {
+                $exportUrl = (string) ((new \SimpleStore\Accounting\MailSettingsRepository($db))->load('')['settings']['public_base_url'] ?? '');
+                if ($exportUrl === '') {
+                    $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
+                    if (preg_match('/^[a-zA-Z0-9.-]+(?::[0-9]+)?$/D', $host) !== 1) $host = 'localhost';
+                    $exportUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://') . $host . rtrim($basePath, '/');
+                }
+            }
             $body = $namesOnly ? ProductBulkTransfer::names($exportRows, $exportUrl) : $transfer->export($exportRows);
             header('Content-Type: ' . ($namesOnly ? 'text/plain' : 'application/json') . '; charset=utf-8');
             header('Content-Disposition: attachment; filename="products-' . gmdate('Y-m-d-His') . ($namesOnly ? '-ai.txt' : '.json') . '"');
