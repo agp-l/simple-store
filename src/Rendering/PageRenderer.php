@@ -129,6 +129,7 @@ final class PageRenderer
         $order = $data['order'] ?? [];
         $bankPayment = $data['bankPayment'] ?? [];
         $orderUrl = (string) ($data['orderUrl'] ?? '');
+        $orderShareUrl = (string) ($data['orderShareUrl'] ?? $orderUrl);
         $invoiceUrl = (string) ($data['invoiceUrl'] ?? '');
         $qrMarkup = (string) ($data['qrMarkup'] ?? '');
         $checkoutReady = (bool) ($data['checkoutReady'] ?? false);

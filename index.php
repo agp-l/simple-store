@@ -31,6 +31,7 @@ use SimpleStore\Product\HomepageProductSelection;
 use SimpleStore\Rendering\PageRenderer;
 use SimpleStore\Accounting\TaxEvidenceRepository;
 use SimpleStore\Accounting\OrderMailQueue;
+use SimpleStore\Accounting\MailSettingsRepository;
 use SimpleStore\Accounting\InvoiceRepository;
 use SimpleStore\Checkout\OrderTrackingRepository;
 use SimpleStore\Pricing\BitcoinPriceDisplay;
@@ -195,6 +196,8 @@ try {
             }
         }
         $taxSettings = (new TaxEvidenceRepository($db))->settings();
+        $mailConfiguration = (new MailSettingsRepository($db))->load((string) ($taxSettings['mail_from'] ?? ''));
+        $shared['publicBaseUrl'] = (string) ($mailConfiguration['settings']['public_base_url'] ?? '');
         $controller = new CheckoutController($url, $renderer, $shared, $cart,
             new CartService(new ProductRepository($db, $site['languages'], null, 50, $productStock), $site['languages']),
             $shipping, $orders, $bank, $customerId, (string) ($checkoutConfig['terms_url'] ?? ''),
