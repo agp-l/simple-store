@@ -468,14 +468,54 @@ foreach (['overview', 'delivery', 'carriers', 'payment', 'prices', 'legal'] as $
 $settings = ['fio_bank' => ['enabled' => true, 'cron_key_hash' => str_repeat('f', 64)]];
 $fioCronKey = str_repeat('a', 64);
 $settingsTab = 'payment';
+$paymentArea = 'fio';
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
 if (!str_contains($html, 'name="action" value="fio-cron-rotate"') ||
     !str_contains($html, '/shop/fio-cron.php?key=' . $fioCronKey) ||
-    !str_contains($html, 'name="bank_transfer_enabled"')) {
-    throw new RuntimeException('Fio Cron URL and bank transfer switch are missing from payment settings.');
+    !str_contains($html, 'name="payment_area" value="fio"') ||
+    str_contains($html, 'name="bank_transfer_enabled"')) {
+    throw new RuntimeException('Fio settings must be separate from bank transfer and expose Cron.');
 }
+$paymentArea = 'btcpay';
+$settingsError = 'Neplatná adresa obchodu.';
+$paymentDraftSecrets = ['btcpay_api_key' => 'draft<key>',
+    'btcpay_webhook_secret' => 'draft-webhook'];
+$form['btcpay_return_base_url'] = 'http://obchod.example/shop';
+$form['btcpay_enabled'] = '0';
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'name="payment_area" value="btcpay"') ||
+    !str_contains($html, 'draft&lt;key&gt;') || str_contains($html, 'draft<key>') ||
+    !str_contains($html, 'value="http://obchod.example/shop"') ||
+    !str_contains($html, 'Uložit BTCPay') ||
+    str_contains($html, 'name="account_display"') ||
+    !str_contains($html, 'id="settings-btcpay" open')) {
+    throw new RuntimeException('A failed BTCPay save must keep the draft and isolate other payment forms.');
+}
+$paymentArea = 'comgate';
+$paymentDraftSecrets = ['comgate_secret' => 'draft-comgate-secret'];
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'name="payment_area" value="comgate"') ||
+    !str_contains($html, 'value="draft-comgate-secret"') ||
+    str_contains($html, 'name="btcpay_api_key"')) {
+    throw new RuntimeException('A failed Comgate save must keep the submitted secret in its own form.');
+}
+$paymentArea = 'gopay';
+$paymentDraftSecrets = ['gopay_client_secret' => 'draft-gopay-secret'];
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'value="draft-gopay-secret"') ||
+    str_contains($html, 'name="comgate_secret"')) {
+    throw new RuntimeException('A failed GoPay save must keep the submitted secret in its own form.');
+}
+unset($paymentArea, $paymentDraftSecrets);
+$settingsError = '';
 
 $screen = 'editor';
 $filterSearch = $filterStatus = $filterLanguage = '';

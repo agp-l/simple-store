@@ -15,6 +15,10 @@ $settingsTabs = ['overview', 'appearance', 'delivery', 'carriers', 'payment', 'p
 $requestedTab = $_POST['tab'] ?? $_GET['tab'] ?? 'overview';
 $settingsTab = is_string($requestedTab) && in_array($requestedTab, $settingsTabs, true)
     ? $requestedTab : 'overview';
+$requestedPaymentArea = $_POST['payment_area'] ?? $_GET['area'] ?? '';
+$paymentArea = $settingsTab === 'payment' && is_string($requestedPaymentArea) &&
+    in_array($requestedPaymentArea, ['bank', 'fio', 'comgate', 'gopay', 'btcpay'], true)
+    ? $requestedPaymentArea : ($settingsTab === 'payment' ? 'bank' : '');
 $copyLanguageInput = $_POST['language'] ?? $_GET['language'] ?? $site['default_language'];
 $copyLanguage = is_string($copyLanguageInput) && in_array($copyLanguageInput, $site['languages'], true)
     ? $copyLanguageInput : $site['default_language'];
@@ -118,7 +122,7 @@ $fioAccountDifferent = !empty($settings['fio_bank']['enabled']) &&
         (string) ($settings['fio_bank']['account_display'] ?? '')) !==
     \SimpleStore\Checkout\FioTransferMatcher::canonicalAccount(
         (string) ($settings['bank_transfer']['account_display'] ?? ''));
-$btcpayDraftSecrets = [];
+$paymentDraftSecrets = [];
 foreach ($shippingCatalog as $code => $definition) {
     $saved = $settings['shipping_methods'][$code] ?? $definition;
     $form['shipping_price'][$code] = (string) ($saved['price_czk'] ?? $definition['price_czk']);
@@ -162,7 +166,11 @@ if ($method === 'POST') {
         }
         if ($fioCronKey === '') {
             $repository->saveSection($settingsTab, $_POST, $basePath, $settings);
-            header('Location: ' . $adminUrl . '?section=settings&tab=' . $settingsTab . '&saved=1', true, 303);
+            $paymentReturn = $settingsTab === 'payment' && in_array($paymentArea,
+                ['bank', 'fio', 'comgate', 'gopay', 'btcpay'], true)
+                ? '&area=' . $paymentArea . '#settings-' . $paymentArea : '';
+            header('Location: ' . $adminUrl . '?section=settings&tab=' . $settingsTab .
+                '&saved=1' . $paymentReturn, true, 303);
             exit;
         }
     } catch (InvalidArgumentException $exception) {
@@ -189,42 +197,45 @@ if ($method === 'POST') {
             }
             unset($entry);
         }
-        foreach ($form as $key => $value) {
-            if (is_string($_POST[$key] ?? null)) {
-                $form[$key] = $_POST[$key];
-            }
-        }
-        if (($_POST['action'] ?? null) === 'save-checkout-settings') {
-            $form['btc_prices_enabled'] = ($_POST['btc_prices_enabled'] ?? null) === '1' ? '1' : '0';
-            $form['bank_transfer_enabled'] = ($_POST['bank_transfer_enabled'] ?? null) === '1' ? '1' : '0';
-            $form['fio_enabled'] = ($_POST['fio_enabled'] ?? null) === '1' ? '1' : '0';
-            $form['comgate_enabled'] = ($_POST['comgate_enabled'] ?? null) === '1' ? '1' : '0';
-            $form['comgate_test'] = ($_POST['comgate_test'] ?? null) === '1' ? '1' : '0';
-            $form['gopay_enabled'] = ($_POST['gopay_enabled'] ?? null) === '1' ? '1' : '0';
-            $form['gopay_test'] = ($_POST['gopay_test'] ?? null) === '1' ? '1' : '0';
-            $form['btcpay_enabled'] = ($_POST['btcpay_enabled'] ?? null) === '1' ? '1' : '0';
-            foreach ($shippingCatalog as $code => $definition) {
-                if (is_string($_POST['shipping_price'][$code] ?? null)) {
-                    $form['shipping_price'][$code] = $_POST['shipping_price'][$code];
-                }
-                $form['shipping_enabled'][$code] = ($_POST['shipping_enabled'][$code] ?? null) === '1' ? '1' : '0';
-            }
-        }
     } catch (RuntimeException $exception) {
         http_response_code(503);
         $settingsError = $exception->getMessage();
     }
-    // Keep unsaved secrets only in this administrator response after a failed submission.
-    // Never put them into a redirect URL, cookie, log, or persistent session.
-    if ($settingsTab === 'payment' && $settingsError !== '' &&
-        ($_POST['action'] ?? null) === 'save-checkout-settings') {
-        if (is_string($_POST['fio_token'] ?? null) && strlen($_POST['fio_token']) <= 512) {
-            $fioDraftToken = $_POST['fio_token'];
+    if ($settingsError !== '' && ($_POST['action'] ?? null) === 'save-checkout-settings') {
+        foreach ($form as $key => $value) {
+            if (is_string($value) && is_string($_POST[$key] ?? null)) $form[$key] = $_POST[$key];
         }
-        foreach (['btcpay_api_key', 'btcpay_webhook_secret'] as $field) {
-            if (is_string($_POST[$field] ?? null) && strlen($_POST[$field]) <= 512) {
-                $btcpayDraftSecrets[$field] = $_POST[$field];
+        $checkboxes = match ($settingsTab) {
+            'payment' => match ($paymentArea) {
+                'bank' => ['bank_transfer_enabled'], 'fio' => ['fio_enabled'],
+                'comgate' => ['comgate_enabled', 'comgate_test'],
+                'gopay' => ['gopay_enabled', 'gopay_test'],
+                'btcpay' => ['btcpay_enabled'],
+                default => ['bank_transfer_enabled', 'fio_enabled', 'comgate_enabled',
+                    'comgate_test', 'gopay_enabled', 'gopay_test', 'btcpay_enabled'],
+            },
+            'prices' => ['btc_prices_enabled'],
+            default => [],
+        };
+        foreach ($checkboxes as $key) $form[$key] = ($_POST[$key] ?? null) === '1' ? '1' : '0';
+        if ($settingsTab === 'delivery') {
+            foreach ($shippingCatalog as $code => $definition) {
+                if (is_string($_POST['shipping_price'][$code] ?? null)) {
+                    $form['shipping_price'][$code] = $_POST['shipping_price'][$code];
+                }
+                $form['shipping_enabled'][$code] =
+                    ($_POST['shipping_enabled'][$code] ?? null) === '1' ? '1' : '0';
             }
+        }
+        // Secret drafts live only in this failed administrator response, never in a URL or session.
+        if ($settingsTab === 'payment') {
+            foreach (['fio_token', 'comgate_secret', 'gopay_client_secret',
+                'btcpay_api_key', 'btcpay_webhook_secret'] as $field) {
+                if (is_string($_POST[$field] ?? null) && strlen($_POST[$field]) <= 512) {
+                    $paymentDraftSecrets[$field] = $_POST[$field];
+                }
+            }
+            $fioDraftToken = $paymentDraftSecrets['fio_token'] ?? '';
         }
     }
 }

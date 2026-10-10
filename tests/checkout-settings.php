@@ -327,6 +327,52 @@ if ($payment['comgate']['enabled'] || $payment['gopay']['enabled'] || $payment['
     $payment['shipping_methods']['gls_pickup']['price_czk'] !== 81) {
     throw new RuntimeException('Payment settings reset unrelated values or lost secrets.');
 }
+$pausedBtcpay = $repo->saveSection('payment', [
+    'payment_area' => 'btcpay', 'btcpay_server_url' => 'http://btcpay.example/pay',
+    'btcpay_store_id' => 'TestStore123', 'btcpay_return_base_url' => 'http://obchod.example/simple-store',
+], '/simple-store/', $saved);
+if ($pausedBtcpay['btcpay']['enabled'] ||
+    $pausedBtcpay['btcpay']['return_base_url'] !== 'http://obchod.example/simple-store' ||
+    $pausedBtcpay['btcpay']['server_url'] !== 'http://btcpay.example/pay' ||
+    $pausedBtcpay['btcpay']['api_key'] !== $saved['btcpay']['api_key'] ||
+    $pausedBtcpay['bank_transfer'] !== $saved['bank_transfer']) {
+    throw new RuntimeException('Disabling BTCPay must save unfinished URLs without losing keys or bank data.');
+}
+$bankWithoutBtcpay = $repo->saveSection('payment', [
+    'payment_area' => 'bank', 'bank_transfer_enabled' => '0',
+    'bank_source' => 'manual', 'account_display' => '1004823033/3030',
+    'recipient' => 'Test', 'payment_due_days' => '12',
+], '/simple-store/', $pausedBtcpay);
+if ($bankWithoutBtcpay['bank_transfer']['enabled'] ||
+    $bankWithoutBtcpay['bank_transfer']['account_display'] !== '1004823033/3030' ||
+    $bankWithoutBtcpay['btcpay'] !== $pausedBtcpay['btcpay'] ||
+    $repo->load($fallback) != $bankWithoutBtcpay) {
+    throw new RuntimeException('Invalid disabled BTCPay drafts must not block bank settings or change another area.');
+}
+try {
+    $repo->saveSection('payment', [
+        'payment_area' => 'btcpay', 'btcpay_enabled' => '1',
+        'btcpay_server_url' => 'http://btcpay.example/pay',
+        'btcpay_store_id' => 'TestStore123',
+        'btcpay_return_base_url' => 'http://obchod.example/simple-store',
+    ], '/simple-store/', $bankWithoutBtcpay);
+    throw new RuntimeException('Invalid BTCPay URLs were activated.');
+} catch (InvalidArgumentException $expected) {
+    if ($repo->load($fallback) != $bankWithoutBtcpay) {
+        throw new RuntimeException('Failed BTCPay activation overwrote saved bank settings.');
+    }
+}
+$pausedComgate = $repo->saveSection('payment', [
+    'payment_area' => 'comgate', 'comgate_return_base_url' => 'http://localhost/shop',
+], '/simple-store/', $bankWithoutBtcpay);
+$pausedGoPay = $repo->saveSection('payment', [
+    'payment_area' => 'gopay', 'gopay_return_base_url' => 'http://localhost/shop',
+], '/simple-store/', $pausedComgate);
+if ($pausedComgate['comgate']['enabled'] || $pausedGoPay['gopay']['enabled'] ||
+    $pausedGoPay['btcpay'] !== $pausedBtcpay['btcpay'] ||
+    $pausedGoPay['bank_transfer'] !== $bankWithoutBtcpay['bank_transfer']) {
+    throw new RuntimeException('Gateway panels did not persist independently.');
+}
 $db->json = json_encode(['local_test_checkout' => true], JSON_THROW_ON_ERROR);
 if (isset($repo->load($fallback)['local_test_checkout'])) {
     throw new RuntimeException('Obsolete local checkout setting was loaded.');
