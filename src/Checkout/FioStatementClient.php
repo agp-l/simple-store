@@ -9,6 +9,8 @@ use RuntimeException;
 final class FioStatementClient
 {
     private const MAX_BODY_BYTES = 16000000;
+    private const CONNECT_TIMEOUT_SECONDS = 10;
+    private const REQUEST_TIMEOUT_SECONDS = 40;
 
     private $transport;
 
@@ -56,8 +58,8 @@ final class FioStatementClient
         $body = '';
         $tooLarge = false;
         curl_setopt_array($ch, [
-            CURLOPT_FOLLOWLOCATION => false, CURLOPT_TIMEOUT => 20,
-            CURLOPT_CONNECTTIMEOUT => 8, CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_FOLLOWLOCATION => false, CURLOPT_TIMEOUT => self::REQUEST_TIMEOUT_SECONDS,
+            CURLOPT_CONNECTTIMEOUT => self::CONNECT_TIMEOUT_SECONDS, CURLOPT_SSL_VERIFYPEER => true,
             CURLOPT_SSL_VERIFYHOST => 2, CURLOPT_USERAGENT => 'simple-store-fio/1.0',
             CURLOPT_WRITEFUNCTION => static function ($handle, string $chunk) use (&$body, &$tooLarge): int {
                 if (strlen($body) + strlen($chunk) > self::MAX_BODY_BYTES) {
@@ -70,11 +72,22 @@ final class FioStatementClient
         ]);
         try {
             if (curl_exec($ch) === false) {
-                throw new RuntimeException(FioTransportError::message(curl_errno($ch), $tooLarge));
+                $code = curl_errno($ch);
+                $phase = $code === 28 ? self::timeoutPhase($ch) : '';
+                throw new RuntimeException(FioTransportError::message($code, $tooLarge, $phase));
             }
             return [(int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE), $body];
         } finally {
             curl_close($ch);
         }
+    }
+
+    private static function timeoutPhase(\CurlHandle $ch): string
+    {
+        // Only fixed phase labels leave this method; never forward curl_error() or the request URL.
+        if ((float) curl_getinfo($ch, CURLINFO_CONNECT_TIME) <= 0) return 'navazování spojení';
+        if ((float) curl_getinfo($ch, CURLINFO_PRETRANSFER_TIME) <= 0) return 'vyjednávání TLS';
+        if ((float) curl_getinfo($ch, CURLINFO_STARTTRANSFER_TIME) <= 0) return 'čekání na odpověď banky';
+        return 'stahování výpisu';
     }
 }
