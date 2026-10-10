@@ -99,6 +99,13 @@ CREATE TABLE IF NOT EXISTS shop_checkout_settings (
   updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Administrator-authored import instructions, shared across product languages.
+CREATE TABLE IF NOT EXISTS shop_product_import_settings (
+  id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+  prompt_text LONGTEXT NOT NULL,
+  updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Short public texts by language; products, pages and checkout settings stay untouched.
 CREATE TABLE IF NOT EXISTS shop_site_copy (
   language CHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,

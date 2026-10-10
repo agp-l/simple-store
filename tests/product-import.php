@@ -79,3 +79,14 @@ $many = $minimal;
 $many['product']['gallery'] = array_map(static fn (int $n): string => 'images/photo-' . $n . '.jpg', range(1, 30));
 $check(count(ProductDetails::fromForm(ProductImport::fields($many))['gallery']) === 30, 'Gallery limit remains.');
 echo "Suppliers, local-only new photos and unlimited gallery tests passed.\n";
+
+$importTab = 'help';
+$aiPrompt = '</textarea><script>alert(1)</script>';
+$promptError = 'Validation error';
+ob_start();
+require dirname(__DIR__) . '/view/admin/product-import.php';
+$html = ob_get_clean();
+$check(!str_contains($html, '<script>alert(1)</script>') && str_contains($html, '&lt;/textarea&gt;'), 'Prompt editor must escape and retain invalid input.');
+$check(str_contains($html, 'name="ai_prompt"') && str_contains($html, 'value="product-prompt-save"') && str_contains($html, 'name="csrf"'), 'Editable prompt form must use authenticated POST.');
+$check(AdminActionPolicy::allows('product-prompt-save'), 'Prompt save is not allowed for administrators.');
+echo "Editable AI prompt view: safe text retention and authenticated form passed.\n";

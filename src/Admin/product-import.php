@@ -21,6 +21,25 @@ if (!is_string($importTab) || !in_array($importTab, ['export', 'bulk', 'single',
 if (str_starts_with((string) $action, 'product-zip-')) $importTab = 'zip';
 if (str_starts_with((string) $action, 'product-import-')) $importTab = 'single';
 if (str_starts_with((string) $action, 'product-bulk-')) $importTab = $action === 'product-bulk-export' ? 'export' : 'bulk';
+$promptError = '';
+$aiPrompt = '';
+if ($action === 'product-prompt-save') $importTab = 'help';
+if ($importTab === 'help') {
+    $promptStore = new \SimpleStore\Product\ProductImportPromptRepository($db);
+    $aiPrompt = $method === 'POST' && $action === 'product-prompt-save'
+        ? (is_string($_POST['ai_prompt'] ?? null) ? $_POST['ai_prompt'] : '') : $promptStore->load();
+    if ($method === 'POST' && $action === 'product-prompt-save') {
+        try {
+            $promptStore->save($aiPrompt);
+            header('Location: ' . $adminUrl . '?section=product-import&tab=help&language=' . rawurlencode($language) . '&prompt_saved=1', true, 303);
+            exit;
+        } catch (Throwable $exception) {
+            error_log('Product import prompt save: ' . $exception->getMessage());
+            $promptError = $exception instanceof InvalidArgumentException ? $exception->getMessage()
+                : 'Zadání se nepodařilo uložit. Zkontroluj práva databáze nebo aktualizuj tabulky v sekci Databáze. Rozepsaný text zůstal zachován.';
+        }
+    }
+}
 require __DIR__ . '/product-transfer.php';
 $zipState = null;
 $zipError = '';

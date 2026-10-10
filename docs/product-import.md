@@ -110,3 +110,10 @@ Běžný režim kontroluje revize z exportu. **Obnovit údaje ze zálohy** výsl
 Sklad je výchozím stavem chráněn: nepřepisuje se, dokud správce nezaškrtne samostatnou volbu. Při zaškrtnutí se kontroluje počet kusů zaznamenaný při přípravě. Změna skladu mezi přípravou a importem způsobí rollback celé položky (včetně nové revize a dodavatelů). Sklad i dodavatelé jsou společné všem jazykům produktu. Při exportu více překladů musí být jejich skladové hodnoty shodné; sklad se v dávce nastaví u prvního výskytu.
 
 `ProductBulkTransfer` drží formát a plán operací, `ProductImportJob` společnou frontu ZIP/JSON, `ProductRepository` atomický zápis. Všechny endpointy vyžadují správce a CSRF; exporty jsou `no-store`. Přehled produktů používá escapované hodnoty a běžné parametrizované SQL. Migrace databáze není potřeba.
+
+
+## Editable AI instructions
+
+On **Import a export → Zadání pro AI**, the administrator can edit the full-width prompt and save it to `shop_product_import_settings` (singleton row 1). It is shared across product languages; the category list below remains generated from the selected language. The bundled `src/Product/import-prompt.txt` is a fallback until the first save, not an overwrite source for customized prompts.
+
+The additive table is part of `database/schema.sql` and is also created on the first authorized save, so deployment does not require a separate SQL step for this setting. The form uses the existing administrator/CSRF checks. Validation allows UTF-8 text up to 128 KiB, preserves the submitted text on failure and rejects empty instructions. These are editable instructions for AI, not executable code; product import validation still applies independently.

@@ -24,7 +24,7 @@ final class AdminActionPolicy
     public const RETURNS = ['return-update', 'return-refund', 'return-delete'];
 
     private const OTHER = [
-        'product-bulk-export', 'product-bulk-prepare', 'product-bulk-step', 'product-bulk-clear', 'product-zip-upload', 'product-zip-step', 'product-zip-clear', 'product-import-preview', 'product-import-save', 'create-content', 'create-translation', 'inline-content', 'create-product',
+        'product-prompt-save', 'product-bulk-export', 'product-bulk-prepare', 'product-bulk-step', 'product-bulk-clear', 'product-zip-upload', 'product-zip-step', 'product-zip-clear', 'product-import-preview', 'product-import-save', 'create-content', 'create-translation', 'inline-content', 'create-product',
         'inline-product', 'set-product-stock', 'category-create', 'category-update',
         'menu-slot', 'menu-item-save', 'menu-item-remove', 'page-menu',
         'media-upload', 'media-attach', 'media-delete', 'delete-product',
