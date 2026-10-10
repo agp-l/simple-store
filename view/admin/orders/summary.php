@@ -1,6 +1,7 @@
       <section class="panel-panel">
         <div class="panel-panel-head"><h2>Objednávka <?= $escape($order['order_number'] ?? '') ?></h2>
           <div class="panel-order-head-actions">
+            <?php if (($customerOrderUrl = $orderCustomerUrl($order)) !== ''): ?><a class="panel-order-document" href="<?= $escape($customerOrderUrl) ?>" target="_blank" rel="noopener noreferrer" title="Otevřít přehled, který vidí zákazník">Zobrazit objednávku ↗</a><?php endif; ?>
             <?php if ($orderInvoice !== null): ?><a class="panel-order-document" href="<?= $escape($invoiceDetailUrl . '&print=1') ?>" target="_blank" rel="noopener noreferrer">Faktura <?= $escape($orderInvoice['document_number']) ?> ↗</a><?php endif; ?>
             <span class="panel-order-state <?= $paymentHighlight ? 'is-paid' : 'is-pending' ?>"><?= $escape($paymentDisplayLabel) ?></span>
             <span class="panel-order-state"><?= $escape($orderFulfillmentLabel($order['status'] ?? '')) ?></span>

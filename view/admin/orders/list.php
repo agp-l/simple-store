@@ -116,6 +116,7 @@
           <td data-label="Celkem" class="panel-order-amount"><?= $orderMoney($listed['total_czk'] ?? 0) ?></td>
           <td data-label="Ovládání" class="panel-order-actions">
             <a class="panel-text-link" href="<?= $escape($orderBaseUrl . '&id=' . $listedId) ?>">Otevřít detail</a>
+            <?php if (($customerOrderUrl = $orderCustomerUrl($listed)) !== ''): ?><a class="panel-text-link" href="<?= $escape($customerOrderUrl) ?>" target="_blank" rel="noopener noreferrer" title="Otevřít přehled, který vidí zákazník">Zobrazit objednávku ↗</a><?php endif; ?>
             <?php if (!$listedPaid && ($listed['payment_method'] ?? '') === 'bank_transfer' &&
                 ($listed['payment_status'] ?? '') === 'pending' &&
                 !in_array($listedStatus, ['cancelled', 'test'], true)): ?>
