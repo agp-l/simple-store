@@ -85,7 +85,7 @@ try {
         $duplicate['product']['price_czk'] = 450;
         $duplicate['product']['published'] = true;
         $next = $data; $next['product']['slug'] .= '-following-' . $mode;
-        $modePath = $root . '/' . $mode . '.zip';
+        $modePath = $root . '/policy-' . $mode . '.zip';
         $zip = new ZipArchive(); $zip->open($modePath, ZipArchive::CREATE);
         $zip->addFromString('01-duplicate/product.json', json_encode($duplicate));
         $zip->addFromString('01-duplicate/images/01.png', $png);
