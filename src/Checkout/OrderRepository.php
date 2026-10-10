@@ -350,6 +350,9 @@ final class OrderRepository
                 $conditions[] = 'payment_method=%s AND payment_status=%s AND status=%s
                     AND payment_due_at < UTC_TIMESTAMP()';
                 array_push($parameters, 'bank_transfer', 'pending', 'new');
+            } elseif ($filter === 'pending') {
+                $conditions[] = 'payment_status=%s AND status<>%s';
+                array_push($parameters, 'pending', 'cancelled');
             } else {
                 $conditions[] = in_array($filter, ['pending', 'paid', 'test'], true)
                     ? 'payment_status=%s' : 'status=%s';

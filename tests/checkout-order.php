@@ -132,6 +132,11 @@ class MeekroDB
                     static fn (array $row): bool => $row[str_contains($sql, 'payment_status=%s') ? 'payment_status' : 'status'] === $values[0]));
                 $position++;
             }
+            if (str_contains($sql, 'status<>%s')) {
+                $excluded = $values[$position++];
+                $rows = array_values(array_filter($rows,
+                    static fn (array $row): bool => $row['status'] !== $excluded));
+            }
             if (str_contains($sql, 'payment_method=%s')) {
                 if (!str_contains($sql, 'payment_due_at < UTC_TIMESTAMP()') ||
                     substr_count($sql, 'payment_method=%s') > 1) {
@@ -344,6 +349,13 @@ if ($db->outbox['order:' . $pending['id']]['state'] !== 'suppressed') {
 $sending = $repository->create(null, 'sending@example.org', $items, $shipping, 100,
     str_repeat('9', 64));
 $sendingId = (int) $sending['id'];
+$pendingIds = array_column($repository->managementPage(0, 20, 'pending')['items'], 'id');
+if (in_array($pending['id'], $pendingIds, true) || !in_array($sendingId, $pendingIds, true) ||
+    !in_array($pending['id'], array_column($repository->managementPage(0, 20, 'cancelled')['items'], 'id'), true) ||
+    !in_array($pending['id'], array_column($repository->managementPage(0, 20)['items'], 'id'), true) ||
+    array_column($repository->managementPage(0, 20, 'pending', 'bank_transfer', 'sending')['items'], 'id') !== [$sendingId]) {
+    throw new RuntimeException('Pending payment list must exclude cancelled orders while retaining active orders and other filters.');
+}
 $db->outbox['order:' . $sendingId] = ['id' => 901, 'state' => 'sending'];
 try {
     $repository->setFulfillmentStatus($sendingId, 'cancelled');
