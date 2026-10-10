@@ -86,11 +86,25 @@ if (count($calls) !== 1) throw new RuntimeException('Fio sent an invalid token o
 
 foreach ([
     ['column1' => ['value' => -1079]], ['column1' => ['value' => 1079.50]],
+    ['column1' => ['value' => 1079.0000001]], ['column1' => ['value' => '1079.0000001']],
+    ['column1' => ['value' => '1e3']], ['column1' => ['value' => true]],
+    ['column22' => ['value' => true]], ['column5' => ['value' => true]],
     ['column14' => ['value' => 'EUR']], ['column5' => null], ['column22' => null],
 ] as $change) {
     if (FioTransferMatcher::movement(array_replace($statement['transactions'][0], $change)) !== null) {
         throw new RuntimeException('A nonmatching bank movement was accepted.');
     }
+}
+if (FioTransferMatcher::movement(array_replace($statement['transactions'][0],
+    ['column1' => ['value' => '9999999.00']]))['amount'] !== 9999999) {
+    throw new RuntimeException('An exact maximum CZK amount was rejected.');
+}
+try {
+    FioTransferMatcher::account(array_replace($statement['info'], ['iban' => []]),
+        '123456789/2010');
+    throw new RuntimeException('A malformed account identity was accepted.');
+} catch (RuntimeException $expected) {
+    if (str_contains($expected->getMessage(), 'was accepted')) throw $expected;
 }
 try {
     FioTransferMatcher::account(array_replace($statement['info'], ['accountId' => '123456780']),
