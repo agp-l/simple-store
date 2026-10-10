@@ -5,6 +5,7 @@ use SimpleStore\Category\CategoryRepository;
 use SimpleStore\Product\ProductImport;
 use SimpleStore\Product\ProductRepository;
 use SimpleStore\Product\ProductStockRepository;
+use SimpleStore\Product\ProductSupplierLinkRepository;
 
 // Authentication and CSRF validation are performed by admin.php before routing here.
 $screen = 'product-import';
@@ -15,8 +16,43 @@ $language = $_GET['language'] ?? $site['default_language'];
 if (!is_string($language) || !in_array($language, $site['languages'], true)) $language = $site['default_language'];
 $categories = new CategoryRepository($db);
 $repository = new ProductRepository($db, $site['languages'], $categories, $site['revision_limit'], new ProductStockRepository($db));
+$zipState = null;
+$zipError = '';
 try {
-    if ($method === 'POST') {
+    if ($method === 'POST' && in_array($action, ['product-zip-upload', 'product-zip-step', 'product-zip-clear'], true)) {
+        if ($action === 'product-zip-upload') {
+            \SimpleStore\Product\ProductZipJob::expire();
+            $token = \SimpleStore\Product\ProductZipJob::upload($_FILES['package'] ?? []);
+            if (isset($_SESSION['product_zip_job'])) (new \SimpleStore\Product\ProductZipJob($_SESSION['product_zip_job']))->remove();
+            $_SESSION['product_zip_job'] = $token;
+        } else {
+            $job = new \SimpleStore\Product\ProductZipJob($_SESSION['product_zip_job'] ?? '');
+            if ($action === 'product-zip-clear') {
+                $job->remove();
+                unset($_SESSION['product_zip_job']);
+            } else {
+                $job->step(new \SimpleStore\Product\ProductPackageImporter($repository, $categories,
+                    new \SimpleStore\Media\MediaLibrary(dirname(__DIR__, 2)), $site['languages']));
+            }
+        }
+    }
+    if (isset($_SESSION['product_zip_job'])) $zipState = (new \SimpleStore\Product\ProductZipJob($_SESSION['product_zip_job']))->state();
+} catch (InvalidArgumentException | RuntimeException $exception) {
+    $zipError = $exception->getMessage();
+}
+if ($method === 'POST' && $action === 'product-zip-step' && ($_POST['ajax'] ?? '') === '1') {
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: private, no-store');
+    if ($zipError !== '') http_response_code(422);
+    echo json_encode(['state' => $zipState, 'error' => $zipError], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+    exit;
+}
+if ($method === 'POST' && $action === 'product-zip-upload' && $zipError === '') {
+    header('Location: ' . $adminUrl . '?section=product-import#zip-import', true, 303);
+    exit;
+}
+try {
+    if ($method === 'POST' && in_array($action, ['product-import-preview', 'product-import-save'], true)) {
         $importData = ProductImport::decode($importJson);
         $language = $importData['language'];
         if (!in_array($language, $site['languages'], true)) throw new InvalidArgumentException('Neplatný jazyk produktu.');
@@ -27,7 +63,7 @@ try {
             throw new InvalidArgumentException('category_path neodpovídá aktivní kategorii. Použij cestu ze seznamu níže.');
         }
         if ($action === 'product-import-save') {
-            $repository->saveRevision($importPreview, $key, $importData['revision'] ?? null);
+            $repository->saveRevision($importPreview, $key, $importData['revision'] ?? null, ProductImport::suppliers($importData));
             header('Location: ' . $basePath . $language . '/produkt/' . $importPreview['slug'] . '?edit=1', true, 303);
             exit;
         }
@@ -36,7 +72,7 @@ try {
         if (preg_match('/^[a-f0-9]{32}$/D', $key) !== 1) throw new InvalidArgumentException('Neplatný klíč produktu.');
         $current = $repository->current($key, $language);
         if ($current === null) throw new InvalidArgumentException('Produkt neexistuje.');
-        $importJson = ProductImport::export($current);
+        $importJson = ProductImport::export($current, (new ProductSupplierLinkRepository($db))->forProduct($key));
     } elseif (($_GET['example'] ?? '') === 'flextail') {
         $importJson = (string) file_get_contents(__DIR__ . '/../Product/examples/flextail.json');
     }

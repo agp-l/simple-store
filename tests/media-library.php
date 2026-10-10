@@ -106,10 +106,7 @@ if ($attached['gallery'] !== 'images/stara.webp') {
 }
 $product['details_json'] = json_encode(['gallery' => array_fill(0, 12, $path),
     'sections' => [], 'specifications' => [], 'options' => []], JSON_THROW_ON_ERROR);
-try {
-    MediaAttachment::capacity($product, 'product', 1);
-    throw new RuntimeException('Plná galerie přijala další soubor.');
-} catch (InvalidArgumentException $expected) {}
+MediaAttachment::capacity($product, 'product', 25);
 $fullGallery = [];
 for ($i = 0; $i < 12; $i++) {
     $fullGallery[] = str_replace(str_repeat('b', 24), str_pad(dechex($i + 1), 24, '0', STR_PAD_LEFT), $path);

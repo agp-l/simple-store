@@ -48,16 +48,8 @@ final class ProductSupplierLinkRepository
     public function save(string $key, int $id, string $label, string $url): void
     {
         self::validKey($key);
-        if ($id < 0 || preg_match('/^.{1,120}$/usD', $label) !== 1 ||
-            preg_match('/[\x00-\x1f\x7f]/', $label) ||
-            strlen($url) > 1000 || !filter_var($url, FILTER_VALIDATE_URL)) {
-            throw new InvalidArgumentException('Vyplň název dodavatele a platný webový odkaz.');
-        }
-        $parts = parse_url($url);
-        if ($parts === false || !in_array(strtolower((string) ($parts['scheme'] ?? '')), ['https', 'http'], true) ||
-            !isset($parts['host']) || isset($parts['user']) || isset($parts['pass'])) {
-            throw new InvalidArgumentException('Odkaz musí být platná adresa HTTP nebo HTTPS bez přihlašovacích údajů.');
-        }
+        if ($id < 0) throw new InvalidArgumentException('Neplatné ID odkazu.');
+        self::validate($label, $url);
 
         if ($id === 0) {
             $this->db->insert('shop_product_supplier_links', [
@@ -68,6 +60,30 @@ final class ProductSupplierLinkRepository
         $this->assertOwned($id, $key);
         $this->db->query('UPDATE shop_product_supplier_links SET label=%s, url=%s
             WHERE id=%i AND product_key=%s', $label, $url, $id, $key);
+    }
+
+    public static function validate(string $label, string $url): void
+    {
+        if (preg_match('/^.{1,120}$/usD', $label) !== 1 ||
+            preg_match('/[\x00-\x1f\x7f]/', $label) ||
+            strlen($url) > 1000 || !filter_var($url, FILTER_VALIDATE_URL)) {
+            throw new InvalidArgumentException('Vyplň název dodavatele a platný webový odkaz.');
+        }
+        $parts = parse_url($url);
+        if ($parts === false || !in_array(strtolower((string) ($parts['scheme'] ?? '')), ['https', 'http'], true) ||
+            !isset($parts['host']) || isset($parts['user']) || isset($parts['pass'])) {
+            throw new InvalidArgumentException('Odkaz musí být platná adresa HTTP nebo HTTPS bez přihlašovacích údajů.');
+        }
+
+    }
+
+    /** Caller must hold the product revision transaction. Omitted suppliers are never replaced. */
+    public function replace(string $key, array $links): void
+    {
+        self::validKey($key);
+        foreach ($links as $link) self::validate($link['label'], $link['url']);
+        $this->db->query('DELETE FROM shop_product_supplier_links WHERE product_key=%s', $key);
+        foreach ($links as $link) $this->save($key, 0, $link['label'], $link['url']);
     }
 
     public function remove(string $key, int $id): void

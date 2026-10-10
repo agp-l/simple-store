@@ -92,7 +92,7 @@ final class ProductInlineEditor
         }
         if ($operation === 'gallery.add' || $operation === 'gallery.set' || $operation === 'gallery.remove') {
             if ($operation !== 'gallery.remove' && !ProductDetails::imagePath(trim($value))) {
-                throw new InvalidArgumentException('Fotografie potřebuje cestu images/… nebo HTTPS adresu.');
+                throw new InvalidArgumentException('Fotografie potřebuje cestu k nahrané fotografii images/….');
             }
             $gallery = $form['gallery'] === '' ? [] : explode("\n", $form['gallery']);
             if ($operation === 'gallery.add') {

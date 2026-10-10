@@ -238,7 +238,7 @@ try {
         exit;
     }
 
-    if (in_array($action, ['product-import-preview', 'product-import-save'], true) ||
+    if (in_array($action, ['product-import-preview', 'product-import-save', 'product-zip-upload', 'product-zip-step', 'product-zip-clear'], true) ||
         ($method !== 'POST' && $section === 'product-import')) {
         require __DIR__ . '/src/Admin/product-import.php';
         require __DIR__ . '/view/admin/layout.php';

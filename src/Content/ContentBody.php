@@ -18,7 +18,7 @@ final class ContentBody
         if (is_array($data) && ($data['format'] ?? null) === self::FORMAT &&
             isset($data['sections']) && is_array($data['sections'])) {
             try {
-                return self::validate($data['sections']);
+                return self::validate($data['sections'], true);
             } catch (InvalidArgumentException) {
                 // A damaged snapshot is shown safely as plain text instead of being executed as HTML.
             }
@@ -34,7 +34,7 @@ final class ContentBody
             JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     }
 
-    private static function validate(array $sections): array
+    private static function validate(array $sections, bool $reading = false): array
     {
         if (count($sections) > 60) {
             throw new InvalidArgumentException('Stránka může mít nejvýše 60 bloků.');
@@ -45,7 +45,7 @@ final class ContentBody
                 !is_string($section['type']) || !isset(self::TYPES[$section['type']]) ||
                 !is_string($section['heading']) || !is_string($section['body']) ||
                 strlen($section['heading']) > 255 || strlen($section['body']) > 300000 ||
-                ($section['type'] === 'image' && !ProductDetails::imagePath($section['body']))) {
+                ($section['type'] === 'image' && !($reading ? ProductDetails::readableImagePath($section['body']) : ProductDetails::imagePath($section['body'])))) {
                 throw new InvalidArgumentException('Blok obsahuje neplatný text, typ nebo adresu fotografie.');
             }
             $clean[] = ['type' => $section['type'], 'heading' => $section['heading'], 'body' => $section['body']];

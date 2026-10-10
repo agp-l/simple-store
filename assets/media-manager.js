@@ -273,8 +273,13 @@
     const form = event.currentTarget;
     const fileInput = form.querySelector('[type="file"]');
     const files = fileInput.files;
-    if (!files.length || files.length > 12 || [...files].some(file => !file.size || file.size > maxUploadBytes)) {
-      status.textContent = 'Vyber 1 až 12 fotografií, každou nejvýše 12 MB.';
+    if (!files.length || [...files].some(file => !file.size || file.size > maxUploadBytes)) {
+      status.textContent = 'Vyber fotografie, každou nejvýše 12 MB.';
+      return;
+    }
+    const serverLimit = Number(fileInput.dataset.maxFiles);
+    if (serverLimit > 0 && files.length > serverLimit) {
+      status.textContent = `Hosting přijme nejvýše ${serverLimit} souborů v jednom požadavku. Nahraj je po částech nebo použij ZIP import.`;
       return;
     }
     busy = true;
@@ -302,14 +307,4 @@
     finally { busy = false; }
   });
 
-  document.getElementById('media-url-form').addEventListener('submit', async event => {
-    event.preventDefault();
-    if (busy) return;
-    busy = true;
-    try {
-      await attach(event.currentTarget.elements.path.value.trim());
-      dialog.close();
-    } catch (error) { status.textContent = error.message; }
-    finally { busy = false; }
-  });
 })();

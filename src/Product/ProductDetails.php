@@ -13,9 +13,15 @@ final class ProductDetails
     {
         return strlen($path) <= 1000 && (
             preg_match('~^images/[A-Za-z0-9_-]+\.(?:webp|jpg|jpeg|png|avif)$~iD', $path) === 1 ||
-            MediaPath::isAsset($path) ||
-            (filter_var($path, FILTER_VALIDATE_URL) && parse_url($path, PHP_URL_SCHEME) === 'https')
+            MediaPath::isAsset($path)
         );
+    }
+
+    /** Read old snapshots without silently dropping their text and specifications. New writes are local-only. */
+    public static function readableImagePath(string $path): bool
+    {
+        return self::imagePath($path) || (strlen($path) <= 1000 && filter_var($path, FILTER_VALIDATE_URL)
+            && parse_url($path, PHP_URL_SCHEME) === 'https');
     }
 
     public static function decode(?string $json, string $legacySizes = ''): array
@@ -55,10 +61,10 @@ final class ProductDetails
         foreach ($data['sections'] as $section) {
             if (!is_array($section) || !in_array($section['type'] ?? null, ['text', 'list', 'table', 'image'], true) ||
                 !is_string($section['heading'] ?? null) || !is_string($section['body'] ?? null) ||
-                ($section['type'] === 'image' && !self::imagePath($section['body']))) return false;
+                ($section['type'] === 'image' && !self::readableImagePath($section['body']))) return false;
         }
         foreach ($data['gallery'] as $path) {
-            if (!is_string($path) || !self::imagePath($path)) return false;
+            if (!is_string($path) || !self::readableImagePath($path)) return false;
         }
         return true;
     }
@@ -70,8 +76,8 @@ final class ProductDetails
         foreach (preg_split('/\R/u', $gallery) ?: [] as $line) {
             $path = trim($line);
             if ($path === '') continue;
-            if (!self::imagePath($path) || count($data['gallery']) >= 12) {
-                throw new InvalidArgumentException('Galerie: použij nejvýše 12 obrázků ve složce images/ nebo HTTPS adresy.');
+            if (!self::imagePath($path)) {
+                throw new InvalidArgumentException('Galerie: použij fotografie uložené ve složce images/.');
             }
             $data['gallery'][] = $path;
         }
@@ -130,7 +136,7 @@ final class ProductDetails
                 throw new InvalidArgumentException('Blok popisu potřebuje text a volitelný nadpis.');
             }
             if ($type === 'image' && !self::imagePath($body)) {
-                throw new InvalidArgumentException('Obrázek v popisu: použij cestu images/… nebo HTTPS adresu.');
+                throw new InvalidArgumentException('Obrázek v popisu: použij cestu k nahrané fotografii images/….');
             }
             if ($type === 'table') {
                 foreach (preg_split('/\R/u', $body) ?: [] as $line) {

@@ -16,7 +16,7 @@ $check(Slugger::fromTitle('Pánské boty – žlutá špička 42,5 EU') === 'pan
 $check(Slugger::fromTitle('Články o cestách') === 'clanky-o-cestach', 'Czech page title failed.');
 
 $details = ProductDetails::fromForm([
-    'gallery' => "images/bota-bok.webp\nhttps://example.org/bota.jpg",
+    'gallery' => "images/bota-bok.webp\nimages/bota.jpg",
     'option_name' => ['Barva', 'Velikost', 'Pozice zipu'],
     'option_values' => ["Grey / Clay\nBlack", "42 EU\n43 EU", "Levá\nPravá"],
     'spec_name' => ['Drop', 'Hmotnost'], 'spec_value' => ['3 mm', '292 g'],
