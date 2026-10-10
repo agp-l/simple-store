@@ -82,9 +82,18 @@ if ($result !== ['checked' => 2, 'matched' => 1, 'ignored' => 1] ||
     throw new RuntimeException('Exact bank transfer was not settled once.');
 }
 $requestCount = count($requests);
-if ($sync->sync() !== ['checked' => 0, 'matched' => 0, 'ignored' => 0] ||
-    count($requests) !== $requestCount) {
-    throw new RuntimeException('Fio must not be contacted without a pending bank order.');
+$db->startTransaction();
+try {
+    // Other integration tests may leave pending bank orders in the shared CI database.
+    $db->query('UPDATE shop_orders SET status=%s
+        WHERE payment_method=%s AND payment_status=%s AND status=%s',
+        'cancelled', 'bank_transfer', 'pending', 'new');
+    if ($sync->sync() !== ['checked' => 0, 'matched' => 0, 'ignored' => 0] ||
+        count($requests) !== $requestCount) {
+        throw new RuntimeException('Fio must not be contacted without a pending bank order.');
+    }
+} finally {
+    $db->rollback();
 }
 $db->query('UPDATE shop_fio_requests SET last_requested_at=UTC_TIMESTAMP() - INTERVAL 40 SECOND
     WHERE token_hash=%s', hash('sha256', $token));
