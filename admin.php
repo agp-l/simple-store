@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 use SimpleStore\Admin\AdminAuth;
+use SimpleStore\Admin\AdminActionPolicy;
 use SimpleStore\Admin\AdminUserRepository;
 use SimpleStore\Admin\StorefrontReturnUrl;
 use SimpleStore\Category\CategoryRepository;
@@ -69,14 +70,9 @@ try {
     exit;
 }
 $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
-$orderActions = ['mark-order-paid', 'comgate-refresh', 'gopay-refresh', 'btcpay-refresh',
-    'cancel-overdue-bank-order', 'set-order-status', 'save-order-tracking', 'correct-order-status', 'correct-order-payment', 'delete-order', 'packeta-create',
-    'packeta-courier', 'packeta-reconcile', 'packeta-retry', 'packeta-cancel',
-    'packeta-cancel-confirmed', 'packeta-cancel-not-done', 'carrier-save', 'carrier-register'];
-$taxActions = ['tax-save-settings', 'tax-save-year-mode', 'tax-add-flat-advance',
-    'tax-add-entry', 'tax-add-balance', 'tax-close-balance', 'tax-link-payment', 'invoice-issue',
-    'invoice-renumber', 'invoice-email', 'mail-retry', 'mail-reconcile', 'tax-amend-entry', 'tax-void-entry'];
-$returnActions = ['return-update', 'return-refund', 'return-delete'];
+$orderActions = AdminActionPolicy::ORDERS;
+$taxActions = AdminActionPolicy::ACCOUNTING;
+$returnActions = AdminActionPolicy::RETURNS;
 try {
     $csrf = $auth->token();
     if ($method === 'POST' && $_POST === [] && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > 0 &&
@@ -152,12 +148,7 @@ try {
             $auth->setVisitorPreview($enabled === '1');
             header('Location: ' . $returnUrl, true, 303);
             exit;
-        } elseif (!in_array($action, array_merge(['create-content', 'create-translation', 'inline-content', 'create-product',
-            'inline-product', 'set-product-stock', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
-            'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'media-delete', 'delete-product', 'delete-content', 'homepage-product', 'product-supplier-link',
-            'save-checkout-settings', 'fio-cron-rotate', 'save-site-copy', 'save-mail-settings', 'mail-test', 'customer-create', 'customer-update', 'customer-active',
-            'customer-password', 'schema-apply', 'table-prefix-migrate', 'table-prefix-cleanup'], $orderActions, $taxActions, $returnActions), true) ||
-            !$auth->signedIn()) {
+        } elseif (!is_string($action) || !AdminActionPolicy::allows($action) || !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach', 'media-delete'], true)) {
                 header('Content-Type: application/json; charset=utf-8');
                 http_response_code(403);
