@@ -111,7 +111,7 @@
 
   function promotesFirst() {
     return mode === 'main-image' || (mode === 'gallery-add' && context.type === 'product' &&
-      document.getElementById('detail-image')?.dataset.imagePath === 'images/batoh.webp');
+      ['images/batoh.webp', 'images/product-placeholder.png'].includes(document.getElementById('detail-image')?.dataset.imagePath));
   }
 
   function render(container, files) {
@@ -119,7 +119,7 @@
     container.replaceChildren();
     if (!files.length) {
       const empty = document.createElement('p');
-      empty.textContent = 'Zatím tu nejsou žádné nahrané fotografie. Starší soubory v images/ můžeš vložit přes adresu.';
+      empty.textContent = 'Zatím tu nejsou žádné nahrané fotografie. Vyber soubory z počítače a nahraj je.';
       container.append(empty);
       return;
     }
@@ -230,11 +230,10 @@
     }
   }
 
-  function open(nextMode, nextIndex = null, current = '') {
+  function open(nextMode, nextIndex = null) {
     mode = nextMode;
     index = nextIndex;
     status.textContent = '';
-    dialog.querySelector('[name="path"]').value = current;
     dialog.querySelector('.media-primary').textContent = promotesFirst()
       ? 'Nahrát · první jako hlavní' : mode === 'gallery-add'
         ? 'Nahrát do galerie' : mode === 'gallery-set'
