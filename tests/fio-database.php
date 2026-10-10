@@ -27,14 +27,19 @@ $order = $orders->create(null, 'fio-test@example.test', [[
     'phone' => '123', 'street' => 'Polní 1', 'city' => 'Praha',
     'postal_code' => '11000', 'country' => 'CZ',
 ], 79, bin2hex(random_bytes(32)));
+$db->query('UPDATE shop_orders SET created_at=UTC_TIMESTAMP() - INTERVAL 10 DAY WHERE id=%i', $order['id']);
+$expectedFrom = (string) $db->queryFirstField('SELECT DATE_FORMAT(created_at, %s) FROM shop_orders WHERE id=%i',
+    '%Y-%m-%d', $order['id']);
 
 $token = str_repeat('T', 64);
 $config = ['enabled' => true, 'token' => $token, 'account_display' => '123456789/2010'];
 $wrongAccount = false;
 $accountId = '999999999';
 $rows = [];
-$client = new FioStatementClient(static function (string $url) use (&$accountId, &$rows, $token): array {
+$requests = [];
+$client = new FioStatementClient(static function (string $url) use (&$accountId, &$rows, &$requests, $token): array {
     if (!str_contains($url, '/periods/' . $token . '/')) throw new RuntimeException('Bad Fio endpoint.');
+    $requests[] = $url;
     return [200, json_encode(['accountStatement' => [
         'info' => ['accountId' => $accountId, 'bankId' => '2010', 'currency' => 'CZK',
             'iban' => BankTransferPayment::ibanForCzechAccount($accountId . '/2010')],
@@ -51,6 +56,13 @@ if (!str_contains((string) ($lookup['possible_keys'] ?? ''), 'orders_variable_sy
 try { $sync->sync(); } catch (RuntimeException $expected) { $wrongAccount = true; }
 if (!$wrongAccount || $orders->findById((int) $order['id'])['payment_status'] !== 'pending') {
     throw new RuntimeException('A different bank account was accepted.');
+}
+if (!str_contains($requests[0] ?? '', '/' . $expectedFrom . '/')) {
+    throw new RuntimeException('Fio must start at the oldest pending order rather than 89 days ago.');
+}
+try { $sync->sync(); throw new RuntimeException('Fio rate limit was ignored.'); }
+catch (InvalidArgumentException $expected) {
+    if ($expected->getMessage() === 'Fio rate limit was ignored.') throw $expected;
 }
 $accountId = '123456789';
 $rows = [
@@ -69,9 +81,19 @@ if ($result !== ['checked' => 2, 'matched' => 1, 'ignored' => 1] ||
     (int) $db->queryFirstField('SELECT COUNT(*) FROM shop_fio_matches WHERE order_id=%i', $order['id']) !== 1) {
     throw new RuntimeException('Exact bank transfer was not settled once.');
 }
-try { $sync->sync(); throw new RuntimeException('Fio rate limit was ignored.'); }
-catch (InvalidArgumentException $expected) {
-    if ($expected->getMessage() === 'Fio rate limit was ignored.') throw $expected;
+$requestCount = count($requests);
+$db->startTransaction();
+try {
+    // Other integration tests may leave pending bank orders in the shared CI database.
+    $db->query('UPDATE shop_orders SET status=%s
+        WHERE payment_method=%s AND payment_status=%s AND status=%s',
+        'cancelled', 'bank_transfer', 'pending', 'new');
+    if ($sync->sync() !== ['checked' => 0, 'matched' => 0, 'ignored' => 0] ||
+        count($requests) !== $requestCount) {
+        throw new RuntimeException('Fio must not be contacted without a pending bank order.');
+    }
+} finally {
+    $db->rollback();
 }
 $db->query('UPDATE shop_fio_requests SET last_requested_at=UTC_TIMESTAMP() - INTERVAL 40 SECOND
     WHERE token_hash=%s', hash('sha256', $token));

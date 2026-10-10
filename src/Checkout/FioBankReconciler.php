@@ -43,15 +43,25 @@ final class FioBankReconciler
         }
         if (!$this->installed()) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky v administraci.');
 
+        $oldest = $this->db->queryFirstField(
+            'SELECT MIN(created_at) FROM shop_orders
+             WHERE payment_method=%s AND payment_status=%s AND status=%s',
+            'bank_transfer', 'pending', 'new');
+        $result = ['checked' => 0, 'matched' => 0, 'ignored' => 0];
+        if ($oldest === null) return $result;
+
+        // The order timestamp is stored in UTC. Using its UTC date also covers payments
+        // made around midnight in Prague. Fio permits the last 90 days without SCA.
+        $today = new \DateTimeImmutable('now', new \DateTimeZone('Europe/Prague'));
+        $earliest = $today->modify('-89 days')->format('Y-m-d');
+        $from = max($earliest, substr((string) $oldest, 0, 10));
         $fingerprint = hash('sha256', $token);
         $this->reserveRequest($fingerprint);
         // Period export does not advance Fio's server-side last-download cursor. The overlapping
         // window permits retries after errors and unique match IDs make repeated imports safe.
-        $today = new \DateTimeImmutable('now', new \DateTimeZone('Europe/Prague'));
         $statement = ($this->client ?? new FioStatementClient())->fetch($token,
-            $today->modify('-89 days')->format('Y-m-d'), $today->format('Y-m-d'));
+            $from, $today->format('Y-m-d'));
         $account = FioTransferMatcher::account($statement['info'], $account);
-        $result = ['checked' => 0, 'matched' => 0, 'ignored' => 0];
         foreach ($statement['transactions'] as $row) {
             $result['checked']++;
             $movement = is_array($row) ? FioTransferMatcher::movement($row) : null;

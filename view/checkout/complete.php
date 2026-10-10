@@ -128,7 +128,36 @@ if ($testOrder) {
     <?php if (!$testOrder && $orderUrl !== ''): ?><p><a class="checkout-back" href="<?= $checkoutEscape($siteRoot . 'support.php?order=' . rawurlencode((string) ($order['order_token'] ?? ''))) ?>">Reklamace a vrácení zboží →</a></p><?php endif; ?>
   </section>
   <?php if (isset($order['subtotal_czk'], $order['shipping_czk'], $order['total_czk'])): ?>
-  <section class="checkout-panel checkout-receipt"><h2>Souhrn nákupu</h2><dl>
+  <section class="checkout-panel checkout-receipt"><h2>Souhrn nákupu</h2>
+    <?php if (!empty($order['items']) && is_array($order['items'])): ?>
+    <ul class="checkout-lines checkout-order-lines">
+      <?php foreach ($order['items'] as $item):
+          if (!is_array($item)) continue;
+          $imagePath = (string) ($item['image_path'] ?? '');
+          $imagePath = \SimpleStore\Media\MediaPath::variant($imagePath, 'thumb');
+          $imageUrl = preg_match('~^images/(?:[a-zA-Z0-9_-]+/)*[a-zA-Z0-9_.-]+\.(?:webp|jpg|jpeg|png)$~D', $imagePath) === 1
+              ? $siteRoot . $imagePath : '';
+          if ($imageUrl === '' && str_starts_with($imagePath, 'https://') &&
+              filter_var($imagePath, FILTER_VALIDATE_URL) !== false &&
+              parse_url($imagePath, PHP_URL_USER) === null && parse_url($imagePath, PHP_URL_PASS) === null) {
+              $imageUrl = $imagePath;
+          }
+          $quantity = (int) ($item['quantity'] ?? 0);
+          $unitPrice = (int) ($item['unit_price_czk'] ?? 0);
+      ?>
+      <li class="checkout-line">
+        <span class="checkout-line-image" aria-hidden="true"><?php if ($imageUrl !== ''): ?><img src="<?= $checkoutEscape($imageUrl) ?>" alt="" loading="lazy" width="96" height="96"><?php endif; ?></span>
+        <div class="checkout-line-detail">
+          <strong class="checkout-line-title"><?= $checkoutEscape($item['name'] ?? '') ?></strong>
+          <small><?= $quantity ?> ks × <?= $checkoutMoney($unitPrice) ?> / ks</small>
+          <?php foreach (($item['options'] ?? []) as $label => $value): ?><?php if (is_scalar($value)): ?><small><?= $checkoutEscape($label) ?>: <?= $checkoutEscape($value) ?></small><?php endif; ?><?php endforeach; ?>
+        </div>
+        <strong class="checkout-line-price"><?= $checkoutMoney($quantity * $unitPrice) ?></strong>
+      </li>
+      <?php endforeach; ?>
+    </ul>
+    <?php endif; ?>
+    <dl>
     <div><dt>Produkty</dt><dd><?= $checkoutMoney((int) $order['subtotal_czk']) ?></dd></div>
     <div><dt><?= $checkoutEscape($order['shipping_ordered']['label'] ?? $order['shipping']['label'] ?? 'Doprava') ?></dt><dd><?= $checkoutMoney((int) $order['shipping_czk']) ?></dd></div>
     <div><dt><?= $gopayRefund !== '' ? 'Původní cena objednávky' : 'Celkem' ?></dt><dd><strong><?= $checkoutMoney((int) $order['total_czk']) ?></strong></dd></div>

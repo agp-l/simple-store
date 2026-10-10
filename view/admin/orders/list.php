@@ -36,7 +36,7 @@
     <?php if (!empty($fioReady)): ?><form method="post" action="<?= $escape($orderBaseUrl) ?>" class="panel-order-search">
       <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="fio-sync">
       <button class="panel-button" type="submit">Zkontrolovat převody u Fio</button>
-      <span class="panel-help">Páruje pouze dosud čekající převody na účet uvedený v objednávce. Další dotaz lze odeslat za 35 sekund.</span>
+      <span class="panel-help">Bez čekajících převodů banku nekontaktuje. Jinak čte výpis od nejstarší čekající objednávky (nejvýše 89 dní zpět); další dotaz lze odeslat za 35 sekund. Splatnost sama objednávku neruší.</span>
     </form><?php else: ?><p class="panel-help">Pro ověřování Fio nejdříve <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
   <?php endif; ?>
   <?php if (($_GET['overdue_cancelled'] ?? '') === '1'): ?><p class="panel-notice" role="status">Objednávka po splatnosti byla stornována; případné rezervace skladu se uvolnily.</p><?php endif; ?>

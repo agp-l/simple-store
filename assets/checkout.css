@@ -141,6 +141,15 @@
   margin-top: 20px;
 }
 
+.checkout-receipt .checkout-order-lines {
+  margin: 12px 0 20px;
+}
+
+.checkout-order-lines .checkout-line:first-child {
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+}
+
 .checkout-receipt dl>div {
   display: flex;
   justify-content: space-between;
