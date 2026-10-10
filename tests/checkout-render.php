@@ -230,7 +230,10 @@ if (!str_contains($gopayComplete, 'id="checkout-gopay-handoff" method="post"') |
 $shippedData = $bankData;
 $shippedData['order'] = [
     'order_number' => 'DB-26-1234567890', 'payment_method' => 'bank_transfer',
-    'payment_status' => 'paid', 'status' => 'shipped', 'total_czk' => 1099,
+    'payment_status' => 'paid', 'status' => 'shipped', 'subtotal_czk' => 1000,
+    'shipping_czk' => 99, 'total_czk' => 1099,
+    'items' => [['name' => 'Batoh <test>', 'quantity' => 2, 'unit_price_czk' => 500,
+        'image_path' => 'images/batoh.webp', 'options' => ['Barva' => 'červená']]],
     'customer_tracking' => ['number' => '<unsafe>',
         'url' => 'https://tracking.example.test/?id=AB&src=order'],
 ];
@@ -241,6 +244,10 @@ if (!str_contains($shippedComplete, 'Stav vyřízení') ||
     !str_contains($shippedComplete, 'Předáno dopravci') ||
     !str_contains($shippedComplete, 'Číslo zásilky: &lt;unsafe&gt;') ||
     !str_contains($shippedComplete, 'href="https://tracking.example.test/?id=AB&amp;src=order"') ||
+    !str_contains($shippedComplete, 'Batoh &lt;test&gt;') ||
+    !str_contains($shippedComplete, 'src="/simple-store/images/batoh.webp"') ||
+    !str_contains($shippedComplete, '2 ks × 500 Kč / ks') ||
+    !str_contains($shippedComplete, 'Barva: červená') ||
     str_contains($shippedComplete, '<unsafe>')) {
     throw new RuntimeException('Private order page must show fulfillment and escaped tracking.');
 }
