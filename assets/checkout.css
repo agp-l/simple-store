@@ -141,7 +141,7 @@
   margin-top: 20px;
 }
 
-.checkout-order-lines {
+.checkout-receipt .checkout-order-lines {
   margin: 12px 0 20px;
 }
 
