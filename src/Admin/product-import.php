@@ -41,13 +41,14 @@ if ($importTab === 'help') {
     }
 }
 require __DIR__ . '/product-transfer.php';
+$zipMode = is_string($_POST['duplicate_mode'] ?? null) ? $_POST['duplicate_mode'] : 'skip';
 $zipState = null;
 $zipError = '';
 try {
     if ($method === 'POST' && in_array($action, ['product-zip-upload', 'product-zip-step', 'product-zip-clear'], true)) {
         if ($action === 'product-zip-upload') {
             \SimpleStore\Product\ProductImportJob::expire();
-            $token = \SimpleStore\Product\ProductImportJob::upload($_FILES['package'] ?? []);
+            $token = \SimpleStore\Product\ProductImportJob::upload($_FILES['package'] ?? [], $zipMode);
             if (isset($_SESSION['product_zip_job'])) (new \SimpleStore\Product\ProductImportJob($_SESSION['product_zip_job']))->remove();
             $_SESSION['product_zip_job'] = $token;
         } else {

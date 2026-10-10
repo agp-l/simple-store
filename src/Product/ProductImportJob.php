@@ -16,17 +16,18 @@ final class ProductImportJob
         $this->directory = sys_get_temp_dir() . '/simple-store-import-' . $token;
     }
 
-    public static function upload(array $upload): string
+    public static function upload(array $upload, string $mode = 'skip'): string
     {
         if (($upload['error'] ?? null) !== UPLOAD_ERR_OK || !is_string($upload['tmp_name'] ?? null) || !is_uploaded_file($upload['tmp_name'])) {
             throw new InvalidArgumentException('ZIP se nenahrál. Zkontroluj limity upload_max_filesize a post_max_size na hostingu.');
         }
-        return self::fromFile($upload['tmp_name']);
+        return self::fromFile($upload['tmp_name'], $mode);
     }
 
     /** Trusted local file entry point for CLI/tests; HTTP callers must use upload(). */
-    public static function fromFile(string $path): string
+    public static function fromFile(string $path, string $mode = 'skip'): string
     {
+        ProductZipConflictPolicy::validate($mode);
         $archive = new ProductZipArchive($path);
         $folders = $archive->products();
         $token = bin2hex(random_bytes(24));
@@ -35,7 +36,7 @@ final class ProductImportJob
         try {
             if (!copy($path, $job->directory . '/archive.zip')) throw new RuntimeException('ZIP nelze uložit.');
             chmod($job->directory . '/archive.zip', 0600);
-            $job->write(['kind' => 'zip', 'created' => time(), 'items' => array_map(static fn (string $folder): array =>
+            $job->write(['kind' => 'zip', 'duplicate_mode' => $mode, 'created' => time(), 'items' => array_map(static fn (string $folder): array =>
                 ['folder' => $folder, 'status' => 'pending', 'message' => '', 'new_key' => bin2hex(random_bytes(16))], $folders)]);
         } catch (Throwable $error) { $job->remove(); throw $error; }
         return $token;
@@ -80,7 +81,8 @@ final class ProductImportJob
     public function step(ProductPackageImporter $importer): array
     {
         if (($this->state()['kind'] ?? 'zip') !== 'zip') throw new InvalidArgumentException('Neplatný typ importu.');
-        return $this->process(fn (array $item): array => $importer->import(new ProductZipArchive($this->directory . '/archive.zip'), $item['folder'], $item['new_key']));
+        $mode = $this->state()['duplicate_mode'] ?? 'update';
+        return $this->process(fn (array $item): array => $importer->import(new ProductZipArchive($this->directory . '/archive.zip'), $item['folder'], $item['new_key'], $mode));
     }
 
     private function process(callable $import): array
@@ -103,9 +105,14 @@ final class ProductImportJob
                 $this->write($state);
                 try {
                     $saved = $import($item);
-                    $item['status'] = 'success';
-                    $item['saved'] = $saved;
-                    $item['message'] = $saved['name'] . ' — uložena revize ' . $saved['revision_number'];
+                    if (isset($saved['skipped'])) {
+                        $item['status'] = 'skipped';
+                        $item['message'] = $saved['message'];
+                    } else {
+                        $item['status'] = 'success';
+                        $item['saved'] = $saved;
+                        $item['message'] = $saved['name'] . ' — uložena revize ' . $saved['revision_number'];
+                    }
                 } catch (Throwable $error) {
                     error_log('Product import: ' . $error->getMessage());
                     $item['status'] = 'error';

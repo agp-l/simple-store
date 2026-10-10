@@ -13,12 +13,13 @@ final class ProductPackageImporter
     public function __construct(private ProductRepository $products, private CategoryRepository $categories,
         private MediaLibrary $media, private array $languages) {}
 
-    public function import(ProductZipArchive $archive, string $folder, string $newKey): array
+    public function import(ProductZipArchive $archive, string $folder, string $newKey, string $mode = 'skip'): array
     {
         $data = ProductImport::decode($archive->read($folder . '/product.json', ProductImport::LIMIT));
         if (!in_array($data['language'], $this->languages, true)) throw new InvalidArgumentException('Neplatný jazyk produktu.');
-        $key = $data['product_key'] ?? null;
-        $current = $key === null ? null : $this->products->current($key, $data['language']);
+        $resolved = ProductZipConflictPolicy::resolve($this->products, $data, $newKey, $mode);
+        if (isset($resolved['skipped'])) return $resolved;
+        ['data' => $data, 'key' => $key, 'current' => $current] = $resolved;
         ProductImport::fields($data, $current);
         $images = $archive->images($folder);
         $references = [];

@@ -3,7 +3,7 @@
 <?php $importPending = count(array_filter($importState['items'], static fn (array $item): bool => in_array($item['status'], ['pending', 'processing'], true))); ?>
 <p id="import-progress">Zpracováno <?= count($importState['items']) - $importPending ?> / <?= count($importState['items']) ?> produktů.</p>
 <div style="overflow-x:auto"><table class="panel-table"><thead><tr><th>Produkt / složka</th><th>Stav</th><th>Výsledek</th></tr></thead><tbody id="import-result-rows">
-<?php foreach ($importState['items'] as $item): ?><tr><td><?= $escape($item['folder']) ?></td><td><?= $escape(['pending' => 'Čeká', 'processing' => 'Zpracovává se', 'success' => 'Uloženo', 'error' => 'Přeskočeno', 'interrupted' => 'Přerušeno – ověř ručně'][$item['status']] ?? $item['status']) ?></td><td><?= $escape($item['message']) ?>
+<?php foreach ($importState['items'] as $item): ?><tr><td><?= $escape($item['folder']) ?></td><td><?= $escape(['pending' => 'Čeká', 'processing' => 'Zpracovává se', 'success' => 'Uloženo', 'skipped' => 'Přeskočeno', 'error' => 'Chyba položky', 'interrupted' => 'Přerušeno – ověř ručně'][$item['status']] ?? $item['status']) ?></td><td><?= $escape($item['message']) ?>
 <?php if (isset($item['saved'])): ?> <a href="<?= $escape($basePath . $item['saved']['language'] . '/produkt/' . $item['saved']['slug'] . '?edit=1') ?>">Otevřít produkt</a><?php endif; ?></td></tr><?php endforeach; ?>
 </tbody></table></div></div>
 <form method="post" id="import-step-form" data-base-path="<?= $escape($basePath) ?>" action="<?= $escape($progressUrl) ?>">
