@@ -225,6 +225,10 @@ final class CheckoutSettingsRepository
         }
         $fioToken = self::retainedSecret($input, 'fio_token', 'fio_clear_token',
             (string) ($current['fio_bank']['token'] ?? ''), 'Token Fio');
+        if (($fioEnabled || self::value($input, 'fio_token') !== '') && $fioToken !== '' &&
+            !FioStatementClient::validToken($fioToken)) {
+            throw new InvalidArgumentException('Token Fio musí mít přesně 64 znaků (písmena a číslice). Zkontroluj celý vložený token.');
+        }
         if ($fioEnabled && ($fioAccount === '' || $fioToken === '')) {
             throw new InvalidArgumentException('Pro ověřování převodů vyplň účet Fio a jeho token pouze pro čtení.');
         }

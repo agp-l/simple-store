@@ -13,11 +13,21 @@ final class FioTransferMatcher
         $account = (string) ($info['accountId'] ?? '');
         $bank = (string) ($info['bankId'] ?? '');
         $currency = (string) ($info['currency'] ?? '');
-        if (!preg_match('/^[0-9]{1,10}$/D', $account) || $bank !== '2010' || $currency !== 'CZK' ||
-            !hash_equals(self::canonicalAccount($expected), self::canonicalAccount($account . '/' . $bank))) {
+        $iban = (string) ($info['iban'] ?? '');
+        $expectedKey = self::canonicalAccount($expected);
+        $expectedIban = $expectedKey === '' ? '' : BankTransferPayment::ibanForCzechAccount($expected);
+        $accountDigits = ltrim($account, '0');
+        // Fio documents accountId as up to 16 digits: it may contain the prefix
+        // together with the main account number. The IBAN identifies both parts.
+        $number = ltrim(substr($expectedIban, 14, 10), '0');
+        $fullNumber = ltrim(substr($expectedIban, 8, 16), '0');
+        if ($expectedKey === '' || preg_match('/^[0-9]{1,16}$/D', $account) !== 1 ||
+            $bank !== '2010' || $currency !== 'CZK' ||
+            !hash_equals($expectedIban, $iban) ||
+            (!hash_equals($number, $accountDigits) && !hash_equals($fullNumber, $accountDigits))) {
             throw new RuntimeException('Token Fio patří jinému účtu nebo měně než účet nastavený pro ověřování.');
         }
-        return self::canonicalAccount($expected);
+        return $expectedKey;
     }
 
     public static function movement(array $row): ?array
