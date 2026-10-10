@@ -15,10 +15,17 @@ return [
         'widget_key' => '', // Public Widget 2.0 key; allow this site's domains in PPL administration.
     ],
     'bank_transfer' => [
+        'enabled' => true, // Can be disabled independently of saved account details.
         'iban' => '', // Calculated from the Czech account number if left empty.
         'account_display' => '', // Enter in administration; do not commit a private account.
         'recipient' => '',
         'payment_due_days' => 7,
+    ],
+    'fio_bank' => [
+        'enabled' => false, // Reconcile incoming bank transfers on the linked Fio account.
+        'account_display' => '', // Exact Fio account in the form account/2010.
+        'token' => '', // Read-only token entered in administration; never commit a real token.
+        'cron_key_hash' => '', // Generated in admin; only its SHA-256 digest is saved.
     ],
     'comgate' => [
         'enabled' => false, // Enable only after entering merchant and secret in administration.

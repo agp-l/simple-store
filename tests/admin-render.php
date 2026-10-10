@@ -463,6 +463,17 @@ foreach (['overview', 'delivery', 'carriers', 'payment', 'prices', 'legal'] as $
         throw new RuntimeException('Settings fields are on the wrong page: ' . $settingsTab);
     }
 }
+$settings = ['fio_bank' => ['enabled' => true, 'cron_key_hash' => str_repeat('f', 64)]];
+$fioCronKey = str_repeat('a', 64);
+$settingsTab = 'payment';
+ob_start();
+require dirname(__DIR__) . '/view/admin/layout.php';
+$html = ob_get_clean();
+if (!str_contains($html, 'name="action" value="fio-cron-rotate"') ||
+    !str_contains($html, '/shop/fio-cron.php?key=' . $fioCronKey) ||
+    !str_contains($html, 'name="bank_transfer_enabled"')) {
+    throw new RuntimeException('Fio Cron URL and bank transfer switch are missing from payment settings.');
+}
 
 $screen = 'editor';
 $filterSearch = $filterStatus = $filterLanguage = '';

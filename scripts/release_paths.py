@@ -8,7 +8,7 @@ APP_FILES = {".htaccess", "style.css", "composer.json", "composer.lock", "databa
 CONFIG_FILES = {"config/.htaccess", "config/site.php", "config/menus.php",
                 "config/database.example.php", "config/checkout.example.php"}
 TOOLS = {"tools/admin.php", "tools/apply-schema.php", "tools/content.php",
-         "tools/mail-worker.php"}
+         "tools/mail-worker.php", "tools/fio-worker.php"}
 
 
 def allowed(name: str, *, vendor: bool = False) -> bool:

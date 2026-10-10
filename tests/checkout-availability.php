@@ -40,6 +40,24 @@ $cart->setDelivery(['method' => 'home', 'name' => 'Eva Nová', 'email' => 'eva@e
     'phone' => '123', 'street' => 'Polní 1', 'city' => 'Praha',
     'postal_code' => '11000', 'country' => 'CZ']);
 $bank = new BankTransferPayment('CZ5855000000001265098001', '1265098001/5500', 'Test');
+$cart->setPaymentMethod('bank_transfer');
+$unavailable = new CheckoutController($url = new UrlManager('/simple-store/cs/pokladna?step=payment', '/simple-store/index.php'),
+    $renderer = new PageRenderer(dirname(__DIR__) . '/view'),
+    ['basePath' => '/simple-store/', 'language' => 'cs'], $cart,
+    new CartService(new ProductRepository($db), ['cs']),
+    new ShippingPolicy(['home' => ['label' => 'Doručení na adresu',
+        'price_czk' => 99, 'requires_address' => true]]),
+    new OrderRepository($db), null, null, '');
+$_SERVER['REQUEST_METHOD'] = 'GET';
+$_GET['step'] = 'payment';
+ob_start();
+$unavailable->handle(['name' => 'checkout']);
+$noPaymentHtml = ob_get_clean();
+if (!str_contains($noPaymentHtml, 'Není nastavený žádný způsob platby') ||
+    str_contains($noPaymentHtml, 'value="bank_transfer"') ||
+    str_contains($noPaymentHtml, 'Zkontrolovat objednávku')) {
+    throw new RuntimeException('Checkout accepted orders with all payment methods disabled.');
+}
 $url = new UrlManager('/simple-store/cs/pokladna?step=payment', '/simple-store/index.php');
 $renderer = new PageRenderer(dirname(__DIR__) . '/view');
 $controller = new CheckoutController($url, $renderer,

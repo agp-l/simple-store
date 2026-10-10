@@ -63,7 +63,7 @@
           </form>
         </details>
       <?php endif; ?>
-      <?php if ($bankTransfer): ?><p class="panel-help">Stav platby se z banky nenačítá automaticky.</p><?php endif; ?>
+      <?php if ($bankTransfer): ?><p class="panel-help"><?= !empty($fioConfigured) ? 'Převody na propojený účet Fio lze ověřit tlačítkem v přehledu objednávek. Pravidelnou kontrolu lze spouštět z cronu; jiné účty kontroluj ručně.' : 'Platbu zkontroluj ve výpisu banky, nebo zapni ověřování Fio v nastavení plateb.' ?></p><?php endif; ?>
       <?php if ($onlineGateway): ?><p class="panel-help">Stav platby potvrzuje <?= $gatewayName ?>. Samotný návrat zákazníka na web platbu nepotvrzuje.</p><?php endif; ?>
       <?php if (($bankTransfer || $onlineGateway) && $paid && $orderTaxReady && ($order['status'] ?? '') !== 'test'): ?>
         <details class="panel-order-accordion panel-order-controls" aria-label="Daňová evidence objednávky">

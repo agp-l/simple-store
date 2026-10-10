@@ -53,6 +53,8 @@ jobs:
           php -l btcpay-callback.php
           php -l btcpay-return.php
           php -l tools/apply-schema.php
+          php -l tools/fio-worker.php
+          php -l fio-cron.php
       - name: Verify deployment package excludes private data
         run: python3 tests/deployment.py
       - name: Test checkout and shared views
@@ -61,6 +63,7 @@ jobs:
           php tests/checkout-render.php
           php tests/checkout-availability.php
           php tests/checkout-settings.php
+          php tests/fio-statement.php
           php tests/mail-render.php
           php tests/after-sales-render.php
           php tests/order-legal-snapshot.php
@@ -147,6 +150,7 @@ jobs:
           php tests/comgate-database.php
           php tests/gopay-database.php
           php tests/btcpay-database.php
+          php tests/fio-database.php
           php tests/stock-database.php
           php tests/shipping-database.php
           php tests/homepage-database.php

@@ -80,6 +80,9 @@ $form = [
     'shipping_price' => [],
     'shipping_enabled' => [],
     'account_display' => $settings['bank_transfer']['account_display'] ?? '',
+    'bank_transfer_enabled' => ($settings['bank_transfer']['enabled'] ?? true) ? '1' : '0',
+    'fio_enabled' => ($settings['fio_bank']['enabled'] ?? false) ? '1' : '0',
+    'fio_account_display' => $settings['fio_bank']['account_display'] ?? '',
     'iban' => $settings['bank_transfer']['iban'] ?? '',
     'recipient' => $settings['bank_transfer']['recipient'] ?? '',
     'payment_due_days' => (string) ($settings['bank_transfer']['payment_due_days'] ?? 7),
@@ -106,6 +109,14 @@ $comgateSecretConfigured = ($settings['comgate']['secret'] ?? '') !== '';
 $gopaySecretConfigured = ($settings['gopay']['client_secret'] ?? '') !== '';
 $btcpayApiKeyConfigured = ($settings['btcpay']['api_key'] ?? '') !== '';
 $btcpayWebhookSecretConfigured = ($settings['btcpay']['webhook_secret'] ?? '') !== '';
+$fioTokenConfigured = ($settings['fio_bank']['token'] ?? '') !== '';
+$fioDraftToken = '';
+$fioCronKey = '';
+$fioAccountDifferent = !empty($settings['fio_bank']['enabled']) &&
+    \SimpleStore\Checkout\FioTransferMatcher::canonicalAccount(
+        (string) ($settings['fio_bank']['account_display'] ?? '')) !==
+    \SimpleStore\Checkout\FioTransferMatcher::canonicalAccount(
+        (string) ($settings['bank_transfer']['account_display'] ?? ''));
 $btcpayDraftSecrets = [];
 foreach ($shippingCatalog as $code => $definition) {
     $saved = $settings['shipping_methods'][$code] ?? $definition;
@@ -114,7 +125,11 @@ foreach ($shippingCatalog as $code => $definition) {
 }
 if ($method === 'POST') {
     try {
-        if (($_POST['action'] ?? null) === 'save-site-copy') {
+        if (($_POST['action'] ?? null) === 'fio-cron-rotate') {
+            if ($settingsTab !== 'payment') throw new InvalidArgumentException('Neplatná stránka nastavení Fio.');
+            $fioCronKey = $repository->rotateFioCronKey($settings);
+            header('Cache-Control: private, no-store');
+        } elseif (($_POST['action'] ?? null) === 'save-site-copy') {
             if ($settingsTab !== 'appearance' || $copyLanguageInput !== $copyLanguage) {
                 throw new InvalidArgumentException('Vyber platný jazyk a stránku vzhledu.');
             }
@@ -141,12 +156,14 @@ if ($method === 'POST') {
             header('Location: ' . $adminUrl . '?section=settings&tab=mail&test=' . ($sent ? 'sent' : 'failed'), true, 303);
             exit;
         }
-        if (($_POST['action'] ?? null) !== 'save-checkout-settings') {
+        if (($_POST['action'] ?? null) !== 'save-checkout-settings' && $fioCronKey === '') {
             throw new InvalidArgumentException('Neznámá akce nastavení.');
         }
-        $repository->saveSection($settingsTab, $_POST, $basePath, $settings);
-        header('Location: ' . $adminUrl . '?section=settings&tab=' . $settingsTab . '&saved=1', true, 303);
-        exit;
+        if ($fioCronKey === '') {
+            $repository->saveSection($settingsTab, $_POST, $basePath, $settings);
+            header('Location: ' . $adminUrl . '?section=settings&tab=' . $settingsTab . '&saved=1', true, 303);
+            exit;
+        }
     } catch (InvalidArgumentException $exception) {
         http_response_code(422);
         $settingsError = $exception->getMessage();
@@ -176,17 +193,21 @@ if ($method === 'POST') {
                 $form[$key] = $_POST[$key];
             }
         }
-        $form['btc_prices_enabled'] = ($_POST['btc_prices_enabled'] ?? null) === '1' ? '1' : '0';
-        $form['comgate_enabled'] = ($_POST['comgate_enabled'] ?? null) === '1' ? '1' : '0';
-        $form['comgate_test'] = ($_POST['comgate_test'] ?? null) === '1' ? '1' : '0';
-        $form['gopay_enabled'] = ($_POST['gopay_enabled'] ?? null) === '1' ? '1' : '0';
-        $form['gopay_test'] = ($_POST['gopay_test'] ?? null) === '1' ? '1' : '0';
-        $form['btcpay_enabled'] = ($_POST['btcpay_enabled'] ?? null) === '1' ? '1' : '0';
-        foreach ($shippingCatalog as $code => $definition) {
-            if (is_string($_POST['shipping_price'][$code] ?? null)) {
-                $form['shipping_price'][$code] = $_POST['shipping_price'][$code];
+        if (($_POST['action'] ?? null) === 'save-checkout-settings') {
+            $form['btc_prices_enabled'] = ($_POST['btc_prices_enabled'] ?? null) === '1' ? '1' : '0';
+            $form['bank_transfer_enabled'] = ($_POST['bank_transfer_enabled'] ?? null) === '1' ? '1' : '0';
+            $form['fio_enabled'] = ($_POST['fio_enabled'] ?? null) === '1' ? '1' : '0';
+            $form['comgate_enabled'] = ($_POST['comgate_enabled'] ?? null) === '1' ? '1' : '0';
+            $form['comgate_test'] = ($_POST['comgate_test'] ?? null) === '1' ? '1' : '0';
+            $form['gopay_enabled'] = ($_POST['gopay_enabled'] ?? null) === '1' ? '1' : '0';
+            $form['gopay_test'] = ($_POST['gopay_test'] ?? null) === '1' ? '1' : '0';
+            $form['btcpay_enabled'] = ($_POST['btcpay_enabled'] ?? null) === '1' ? '1' : '0';
+            foreach ($shippingCatalog as $code => $definition) {
+                if (is_string($_POST['shipping_price'][$code] ?? null)) {
+                    $form['shipping_price'][$code] = $_POST['shipping_price'][$code];
+                }
+                $form['shipping_enabled'][$code] = ($_POST['shipping_enabled'][$code] ?? null) === '1' ? '1' : '0';
             }
-            $form['shipping_enabled'][$code] = ($_POST['shipping_enabled'][$code] ?? null) === '1' ? '1' : '0';
         }
     } catch (RuntimeException $exception) {
         http_response_code(503);
@@ -196,6 +217,9 @@ if ($method === 'POST') {
     // Never put them into a redirect URL, cookie, log, or persistent session.
     if ($settingsTab === 'payment' && $settingsError !== '' &&
         ($_POST['action'] ?? null) === 'save-checkout-settings') {
+        if (is_string($_POST['fio_token'] ?? null) && strlen($_POST['fio_token']) <= 512) {
+            $fioDraftToken = $_POST['fio_token'];
+        }
         foreach (['btcpay_api_key', 'btcpay_webhook_secret'] as $field) {
             if (is_string($_POST[$field] ?? null) && strlen($_POST[$field]) <= 512) {
                 $btcpayDraftSecrets[$field] = $_POST[$field];

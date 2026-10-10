@@ -204,11 +204,12 @@ final class CheckoutController
     private function selectedPaymentMethod(): string
     {
         $selected = $this->cart->state()['payment_method'];
-        if (is_string($selected)) return $selected;
+        if (is_string($selected)) return $this->paymentAvailable($selected) ? $selected : '';
         if ($this->bank !== null) return 'bank_transfer';
         if ($this->comgate !== null && $this->comgate->canInitiate()) return 'comgate';
         if ($this->gopay !== null && $this->gopay->canInitiate()) return 'gopay';
-        return 'btcpay';
+        if ($this->btcpay !== null && $this->btcpay->canInitiate()) return 'btcpay';
+        return '';
     }
 
     private function paymentAvailable(string $method): bool

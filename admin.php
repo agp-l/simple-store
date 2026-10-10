@@ -155,7 +155,7 @@ try {
         } elseif (!in_array($action, array_merge(['create-content', 'create-translation', 'inline-content', 'create-product',
             'inline-product', 'set-product-stock', 'category-create', 'category-update', 'menu-slot', 'menu-item-save',
             'menu-item-remove', 'page-menu', 'media-upload', 'media-attach', 'media-delete', 'delete-product', 'delete-content', 'homepage-product', 'product-supplier-link',
-            'save-checkout-settings', 'save-site-copy', 'save-mail-settings', 'mail-test', 'customer-create', 'customer-update', 'customer-active',
+            'save-checkout-settings', 'fio-cron-rotate', 'save-site-copy', 'save-mail-settings', 'mail-test', 'customer-create', 'customer-update', 'customer-active',
             'customer-password', 'schema-apply', 'table-prefix-migrate', 'table-prefix-cleanup'], $orderActions, $taxActions, $returnActions), true) ||
             !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach', 'media-delete'], true)) {
@@ -269,7 +269,7 @@ try {
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }
-    if (in_array($action, ['save-checkout-settings', 'save-site-copy', 'save-mail-settings', 'mail-test'], true) ||
+    if (in_array($action, ['save-checkout-settings', 'fio-cron-rotate', 'save-site-copy', 'save-mail-settings', 'mail-test'], true) ||
         ($method !== 'POST' && $section === 'settings')) {
         require __DIR__ . '/src/Admin/settings.php';
         require __DIR__ . '/view/admin/layout.php';

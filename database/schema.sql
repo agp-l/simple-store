@@ -160,6 +160,24 @@ CREATE TABLE IF NOT EXISTS shop_orders (
   KEY orders_fulfillment_status (status, id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Fio import rate limiting is shared by the admin button and the CLI worker.
+CREATE TABLE IF NOT EXISTS shop_fio_requests (
+  token_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+  last_requested_at DATETIME NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Store only successfully matched movements; no unrelated personal-account data.
+CREATE TABLE IF NOT EXISTS shop_fio_matches (
+  account_key VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  movement_id VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  order_id BIGINT UNSIGNED NOT NULL,
+  amount_czk INT UNSIGNED NOT NULL,
+  matched_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (account_key, movement_id),
+  UNIQUE KEY fio_match_order (order_id),
+  CONSTRAINT fio_match_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- A payment may be retried after cancellation. Keep every remote transaction so
 -- late notifications can still be reconciled against the original order.
 CREATE TABLE IF NOT EXISTS shop_comgate_payments (

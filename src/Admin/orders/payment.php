@@ -4,6 +4,23 @@ declare(strict_types=1);
 use SimpleStore\Checkout\ComgatePaymentService;
 use SimpleStore\Checkout\GoPayPaymentService;
 use SimpleStore\Checkout\BTCPayPaymentService;
+use SimpleStore\Checkout\FioBankReconciler;
+
+if ($method === 'POST' && ($_POST['action'] ?? '') === 'fio-sync') {
+    try {
+        $result = (new FioBankReconciler($db, $checkoutSettings['fio_bank'] ?? [], null,
+            $orderMail, $orderMailSender))->sync();
+        header('Location: ' . $orderListReturnUrl . '&fio_checked=' . (int) $result['checked'] .
+            '&fio_paid=' . (int) $result['matched'], true, 303);
+        exit;
+    } catch (InvalidArgumentException $exception) {
+        http_response_code(422);
+        $orderError = $exception->getMessage();
+    } catch (RuntimeException $exception) {
+        http_response_code(503);
+        $orderError = $exception->getMessage();
+    }
+}
 
 if ($method === 'POST' && ($_POST['action'] ?? '') === 'mark-order-paid') {
     $rawId = $_POST['id'] ?? null;

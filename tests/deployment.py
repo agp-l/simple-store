@@ -38,6 +38,7 @@ with tempfile.TemporaryDirectory() as directory:
         "config/site.php": "<?php return [];",
         "config/database.php": "<?php return ['password' => 'private'];",
         "database/schema.sql": "CREATE DATABASE test;",
+        "tools/fio-worker.php": "<?php echo 'worker';",
         "database/zaloha.sql": "private database dump",
         "images/media/photo.jpg": "private uploaded photo",
         "images/media/.htaccess": "deny scripts",
@@ -57,6 +58,7 @@ with tempfile.TemporaryDirectory() as directory:
     manifest = deployer.release(package)
     assert "index.php" in manifest["files"]
     assert "vendor/autoload.php" in manifest["files"]
+    assert "tools/fio-worker.php" in manifest["files"]
     assert "images/media/.htaccess" in manifest["files"]
     assert "config/database.php" not in manifest["files"]
     assert "database/zaloha.sql" not in manifest["files"]
