@@ -54,6 +54,7 @@ jobs:
           php -l btcpay-return.php
           php -l tools/apply-schema.php
           php -l tools/fio-worker.php
+          php -l fio-cron.php
       - name: Verify deployment package excludes private data
         run: python3 tests/deployment.py
       - name: Test checkout and shared views

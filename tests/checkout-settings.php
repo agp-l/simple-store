@@ -132,6 +132,18 @@ if ($fioSaved['fio_bank']['token'] !== str_repeat('T', 64) ||
     $fioSaved['fio_bank']['account_display'] !== '123456789/2010') {
     throw new RuntimeException('Fio token disappeared when saving payment settings again.');
 }
+$fioCronKey = $repo->rotateFioCronKey($fioSaved);
+$withCron = $repo->load($fallback);
+if (strlen($fioCronKey) !== 64 || $withCron['fio_bank']['cron_key_hash'] !== hash('sha256', $fioCronKey) ||
+    $withCron['fio_bank']['token'] !== str_repeat('T', 64)) {
+    throw new RuntimeException('Fio scheduler key must be stored only as a digest.');
+}
+$retainedCron = $repo->saveSection('payment', array_replace($input, [
+    'fio_enabled' => '1', 'fio_account_display' => '123456789/2010', 'fio_token' => '',
+]), '/simple-store/', $withCron);
+if ($retainedCron['fio_bank']['cron_key_hash'] !== hash('sha256', $fioCronKey)) {
+    throw new RuntimeException('Saving payment settings removed the Fio scheduler key.');
+}
 $withoutNewPassword = $repo->save(array_replace($input,
     ['packeta_api_password' => '', 'comgate_secret' => '', 'gopay_client_secret' => '',
         'btcpay_api_key' => '', 'btcpay_webhook_secret' => '']),

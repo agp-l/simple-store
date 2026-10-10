@@ -288,7 +288,7 @@ final class CheckoutSettingsRepository
             'ppl' => ['widget_key' => $pplKey],
             'bank_transfer' => $bankSettings,
             'fio_bank' => ['enabled' => $fioEnabled, 'account_display' => $fioAccount,
-                'token' => $fioToken],
+                'token' => $fioToken, 'cron_key_hash' => (string) ($current['fio_bank']['cron_key_hash'] ?? '')],
             'comgate' => [
                 'enabled' => $comgateEnabled,
                 'test' => ($input['comgate_test'] ?? null) === '1',
@@ -319,6 +319,23 @@ final class CheckoutSettingsRepository
         $this->db->query('INSERT INTO shop_checkout_settings (id, settings_json) VALUES (%i, %s)
             ON DUPLICATE KEY UPDATE settings_json=VALUES(settings_json), updated_at=CURRENT_TIMESTAMP', 1, $json);
         return $settings;
+    }
+
+    /** Rotate the URL-only scheduler key. Persist its digest, never the one-time clear text. */
+    public function rotateFioCronKey(array $current): string
+    {
+        if (empty($current['fio_bank']['enabled']) ||
+            (string) ($current['fio_bank']['token'] ?? '') === '' ||
+            (string) ($current['fio_bank']['account_display'] ?? '') === '') {
+            throw new InvalidArgumentException('Nejdřív ulož zapnuté připojení Fio.');
+        }
+        $key = bin2hex(random_bytes(32));
+        $current['fio_bank']['cron_key_hash'] = hash('sha256', $key);
+        $this->ensureTable();
+        $this->db->query('INSERT INTO shop_checkout_settings (id, settings_json) VALUES (%i, %s)
+            ON DUPLICATE KEY UPDATE settings_json=VALUES(settings_json), updated_at=CURRENT_TIMESTAMP',
+            1, json_encode($current, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+        return $key;
     }
 
     private function installed(): bool

@@ -25,6 +25,7 @@ return [
         'enabled' => false, // Reconcile incoming bank transfers on the linked Fio account.
         'account_display' => '', // Exact Fio account in the form account/2010.
         'token' => '', // Read-only token entered in administration; never commit a real token.
+        'cron_key_hash' => '', // Generated in admin; only its SHA-256 digest is saved.
     ],
     'comgate' => [
         'enabled' => false, // Enable only after entering merchant and secret in administration.
