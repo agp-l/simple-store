@@ -12,6 +12,8 @@ use Throwable;
 /** Periodic Fio statement import. A unique movement may settle only one pending bank order. */
 final class FioBankReconciler
 {
+    private ?bool $hasFinancialEvents = null;
+
     public function __construct(
         private MeekroDB $db,
         private array $config,
@@ -70,12 +72,13 @@ final class FioBankReconciler
                 VALUES (%s, NULL)', $fingerprint);
             $row = $this->db->queryFirstRow(
                 'SELECT TIMESTAMPDIFF(SECOND, last_requested_at, UTC_TIMESTAMP()) AS elapsed
-                 FROM shop_fio_requests WHERE BINARY token_hash=BINARY %s LIMIT 1 FOR UPDATE', $fingerprint);
+                 FROM shop_fio_requests WHERE token_hash=CONVERT(%s USING ascii) COLLATE ascii_bin
+                 LIMIT 1 FOR UPDATE', $fingerprint);
             if ($row === null || $row['elapsed'] !== null && (int) $row['elapsed'] < 35) {
                 throw new InvalidArgumentException('Další kontrolu Fio lze spustit za 35 sekund.');
             }
             $this->db->query('UPDATE shop_fio_requests SET last_requested_at=UTC_TIMESTAMP()
-                WHERE BINARY token_hash=BINARY %s', $fingerprint);
+                WHERE token_hash=CONVERT(%s USING ascii) COLLATE ascii_bin', $fingerprint);
             $this->db->commit();
         } catch (Throwable $error) {
             $this->db->rollback();
@@ -88,8 +91,9 @@ final class FioBankReconciler
         $this->db->startTransaction();
         try {
             $existing = $this->db->queryFirstRow(
-                'SELECT order_id FROM shop_fio_matches WHERE BINARY account_key=BINARY %s
-                 AND BINARY movement_id=BINARY %s LIMIT 1',
+                'SELECT order_id FROM shop_fio_matches
+                 WHERE account_key=CONVERT(%s USING ascii) COLLATE ascii_bin
+                 AND movement_id=CONVERT(%s USING ascii) COLLATE ascii_bin LIMIT 1',
                 $account, $movement['id']);
             if ($existing !== null) {
                 $this->db->commit();
@@ -98,7 +102,8 @@ final class FioBankReconciler
             $order = $this->db->queryFirstRow(
                 'SELECT id, status, payment_method, payment_status, variable_symbol,
                     total_czk, payment_details_json FROM shop_orders
-                 WHERE BINARY variable_symbol=BINARY %s LIMIT 1 FOR UPDATE', $movement['vs']);
+                 WHERE variable_symbol=CONVERT(%s USING ascii) COLLATE ascii_bin
+                 LIMIT 1 FOR UPDATE', $movement['vs']);
             if ($order === null || !FioTransferMatcher::matchesOrder($order, $movement, $account)) {
                 $this->db->commit();
                 return false;
@@ -107,6 +112,16 @@ final class FioBankReconciler
             // A manual correction must not be undone by a second transfer with the same VS.
             if ($this->db->queryFirstRow(
                 'SELECT movement_id FROM shop_fio_matches WHERE order_id=%i LIMIT 1', $orderId
+            ) !== null) {
+                $this->db->commit();
+                return false;
+            }
+            // A correction is an explicit instruction to leave this order unpaid.
+            // A historical positive movement may still be in the 89-day window,
+            // even after a bank reversal or a mistaken manual confirmation.
+            if ($this->hasFinancialEvents() && $this->db->queryFirstRow(
+                'SELECT id FROM shop_order_financial_events
+                 WHERE order_id=%i AND action=%s LIMIT 1', $orderId, 'payment_correction'
             ) !== null) {
                 $this->db->commit();
                 return false;
@@ -127,5 +142,17 @@ final class FioBankReconciler
             catch (Throwable $error) { error_log('Fio payment email for order ' . $orderId . ' failed.'); }
         }
         return true;
+    }
+
+    private function hasFinancialEvents(): bool
+    {
+        if ($this->hasFinancialEvents === null) {
+            $this->hasFinancialEvents = (int) $this->db->queryFirstField(
+                'SELECT COUNT(*) FROM information_schema.TABLES
+                 WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
+                'shop_order_financial_events'
+            ) === 1;
+        }
+        return $this->hasFinancialEvents;
     }
 }

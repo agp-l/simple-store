@@ -10,10 +10,15 @@ final class FioTransferMatcher
 {
     public static function account(array $info, string $expected): string
     {
-        $account = (string) ($info['accountId'] ?? '');
-        $bank = (string) ($info['bankId'] ?? '');
-        $currency = (string) ($info['currency'] ?? '');
-        $iban = (string) ($info['iban'] ?? '');
+        if ((!is_string($info['accountId'] ?? null) && !is_int($info['accountId'] ?? null)) ||
+            (!is_string($info['bankId'] ?? null) && !is_int($info['bankId'] ?? null)) ||
+            !is_string($info['currency'] ?? null) || !is_string($info['iban'] ?? null)) {
+            throw new RuntimeException('Fio nevrátilo platnou identifikaci účtu.');
+        }
+        $account = (string) $info['accountId'];
+        $bank = (string) $info['bankId'];
+        $currency = (string) $info['currency'];
+        $iban = (string) $info['iban'];
         $expectedKey = self::canonicalAccount($expected);
         $expectedIban = $expectedKey === '' ? '' : BankTransferPayment::ibanForCzechAccount($expected);
         $accountDigits = ltrim($account, '0');
@@ -36,12 +41,17 @@ final class FioTransferMatcher
         $vs = self::value($row, 5);
         $currency = self::value($row, 14);
         $amount = self::value($row, 1);
-        if (!is_scalar($id) || !preg_match('/^[0-9]{1,20}$/D', (string) $id) ||
-            !is_scalar($vs) || !preg_match('/^[0-9]{1,10}$/D', (string) $vs) ||
-            $currency !== 'CZK' || !is_numeric($amount)) return null;
-        $number = (float) $amount;
-        if ($number < 1 || $number > 9999999 || abs($number - round($number)) > 0.000001) return null;
-        return ['id' => (string) $id, 'vs' => (string) $vs, 'amount' => (int) round($number)];
+        if ((!is_string($id) && !is_int($id)) ||
+            !preg_match('/^[0-9]{1,20}$/D', (string) $id) ||
+            (!is_string($vs) && !is_int($vs)) ||
+            !preg_match('/^[0-9]{1,10}$/D', (string) $vs) ||
+            $currency !== 'CZK' ||
+            (!is_string($amount) && !is_int($amount) && !is_float($amount))) return null;
+        // Fio reports CZK as a decimal. Never round a fractional bank movement up to
+        // an integer order total, even when the fractional part is very small.
+        if (is_float($amount) && floor($amount) !== $amount) return null;
+        if (preg_match('/^([1-9][0-9]{0,6})(?:\.0+)?$/D', (string) $amount, $whole) !== 1) return null;
+        return ['id' => (string) $id, 'vs' => (string) $vs, 'amount' => (int) $whole[1]];
     }
 
     public static function matchesOrder(array $order, array $movement, string $account): bool
