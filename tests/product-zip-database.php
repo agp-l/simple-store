@@ -74,18 +74,56 @@ try {
     $zip = new ZipArchive(); $zip->open($root . '/update.zip', ZipArchive::CREATE);
     $zip->addFromString('01-update/product.json', json_encode($patch));
     $zip->addFromString('02-stale/product.json', json_encode($patch)); $zip->close();
-    $updateJob = new ProductImportJob(ProductImportJob::fromFile($root . '/update.zip')); $jobs[] = $updateJob;
+    $updateJob = new ProductImportJob(ProductImportJob::fromFile($root . '/update.zip', 'update')); $jobs[] = $updateJob;
     $updateJob->step($importer); $updateState = $updateJob->step($importer);
-    $check(array_column($updateState['items'], 'status') === ['success', 'error'], 'ZIP update failed or stale revision was accepted.');
+    $check(array_column($updateState['items'], 'status') === ['success', 'skipped'], 'ZIP update failed or stale revision was accepted.');
     $afterZip = $products->current($keys[0], 'cs');
     $check($afterZip['description'] === 'Updated by ZIP' && $afterZip['image_path'] === $good['image_path'] && $links->forProduct($keys[0])[0]['label'] === 'New', 'ZIP partial update lost photos or private suppliers.');
+    // Exact URL matching supports AI packages without keys; a duplicate never blocks the next item.
+    foreach (['skip', 'update', 'copy'] as $mode) {
+        $duplicate = $data;
+        $duplicate['product']['price_czk'] = 450;
+        $duplicate['product']['published'] = true;
+        $next = $data; $next['product']['slug'] .= '-following-' . $mode;
+        $modePath = $root . '/policy-' . $mode . '.zip';
+        $zip = new ZipArchive(); $zip->open($modePath, ZipArchive::CREATE);
+        $zip->addFromString('01-duplicate/product.json', json_encode($duplicate));
+        $zip->addFromString('01-duplicate/images/01.png', $png);
+        $zip->addFromString('02-new/product.json', json_encode($next));
+        $zip->addFromString('03-invalid/product.json', '{invalid'); $zip->close();
+        $before = $products->current($keys[0], 'cs');
+        $photoCount = count($media->files('product', $keys[0]));
+        $modeJob = new ProductImportJob(ProductImportJob::fromFile($modePath, $mode)); $jobs[] = $modeJob;
+        for ($i = 0; $i < 3; $i++) $modeState = $modeJob->step($importer);
+        foreach ($modeState['items'] as $item) if (isset($item['saved']) && !in_array($item['saved']['product_key'], $keys, true)) $keys[] = $item['saved']['product_key'];
+        $check($modeState['items'][1]['status'] === 'success' && $modeState['items'][2]['status'] === 'error', 'Duplicate mode blocked a later new product or hid malformed JSON.');
+        $first = $modeState['items'][0];
+        if ($mode === 'skip') {
+            $check($first['status'] === 'skipped' && $products->current($keys[0], 'cs')['revision_number'] === $before['revision_number'], 'Skip modified the product.');
+            $check(count($media->files('product', $keys[0])) === $photoCount, 'Skipped duplicate stored unused photos.');
+        } elseif ($mode === 'update') {
+            $check($first['status'] === 'success' && $first['saved']['product_key'] === $keys[0], 'Keyless update failed to match the exact slug.');
+            $check((int) $products->current($keys[0], 'cs')['price_czk'] === 450, 'Keyless update did not apply fields.');
+        } else {
+            $copy = $products->current($first['saved']['product_key'], 'cs');
+            $check($copy['product_key'] !== $keys[0] && $copy['slug'] !== $slug && (int) $copy['published'] === 0, 'Copy reused the identity or was publicly published.');
+            $check(count($media->files('product', $copy['product_key'])) === 1, 'Copy photos were not stored under its own key.');
+            $check($products->current($keys[0], 'cs')['revision_number'] === $before['revision_number'], 'Copy modified the original.');
+        }
+        $check($modeJob->step($importer) === $modeState, 'Completed duplicate mode was replayed.');
+    }
+    $future = $patch; $future['revision'] = 9999;
+    $zip = new ZipArchive(); $zip->open($root . '/future.zip', ZipArchive::CREATE);
+    $zip->addFromString('future/product.json', json_encode($future)); $zip->close();
+    $futureJob = new ProductImportJob(ProductImportJob::fromFile($root . '/future.zip', 'update')); $jobs[] = $futureJob;
+    $check($futureJob->step($importer)['items'][0]['status'] === 'skipped', 'Future revision bypassed optimistic locking.');
     // Simulate a process dying after the durable processing checkpoint.
     $interruptedToken = ProductImportJob::fromFile($zipPath);
     $interrupted = new ProductImportJob($interruptedToken); $jobs[] = $interrupted;
     $checkpoint = $interrupted->state(); $checkpoint['items'][0]['status'] = 'processing';
     file_put_contents(sys_get_temp_dir() . '/simple-store-import-' . $interruptedToken . '/state.json', json_encode($checkpoint));
     $resumed = $interrupted->step($importer);
-    $check($resumed['items'][0]['status'] === 'interrupted' && $resumed['items'][1]['status'] === 'error', 'Interrupted item was replayed or blocked the following duplicate check.');
+    $check($resumed['items'][0]['status'] === 'interrupted' && $resumed['items'][1]['status'] === 'skipped', 'Interrupted item was replayed or blocked the following duplicate check.');
     $zip = new ZipArchive(); $zip->open($root . '/unsafe.zip', ZipArchive::CREATE);
     $zip->addFromString('../outside.php', '<?php'); $zip->close();
     try { new ProductZipArchive($root . '/unsafe.zip'); throw new LogicException('Traversal accepted.'); } catch (InvalidArgumentException $expected) {}

@@ -117,3 +117,16 @@ Sklad je výchozím stavem chráněn: nepřepisuje se, dokud správce nezaškrtn
 On **Import a export → Zadání pro AI**, the administrator can edit the full-width prompt and save it to `shop_product_import_settings` (singleton row 1). It is shared across product languages; the category list below remains generated from the selected language. The bundled `src/Product/import-prompt.txt` is a fallback until the first save, not an overwrite source for customized prompts.
 
 The additive table is part of `database/schema.sql` and is also created on the first authorized save, so deployment does not require a separate SQL step for this setting. The form uses the existing administrator/CSRF checks. Validation allows UTF-8 text up to 128 KiB, preserves the submitted text on failure and rejects empty instructions. These are editable instructions for AI, not executable code; product import validation still applies independently.
+
+
+## Existing products in ZIP imports
+
+Choose the conflict policy when uploading the ZIP; it is stored with that queue and shown above its progress. New products are added in every mode. Existing products are matched by `product_key` and language first, otherwise by exact `slug` and language (including the slug normally generated when omitted). Similar names are not fuzzy-matched.
+
+- **Přeskočit existující** (default): do not write a revision or store uploaded photos for a matched product.
+- **Aktualizovat existující**: keyed documents require the exact current `revision`. Lower **and higher** revisions are skipped with an explanation. Keyless documents explicitly update the exact URL match using its current revision at processing time; the final transaction still checks concurrent edits. Unmentioned fields are retained, supplied collections replace the whole collection.
+- **Vytvořit novou kopii**: ignore the source identity and revision for duplicates/keyed documents, assign a new key and suffixed slug, save as an unpublished draft and store supplied photos under the new key. Requires a complete new-product payload (name/category/price), not a partial patch. The original product is untouched.
+
+`revision: 5` means “based on revision 5”, not “force the resulting revision to 5”. A successful update creates revision 6. A keyed document with a missing product is skipped in skip/update mode and is never redirected to another product with a matching slug. Copies can explicitly be created from such complete documents.
+
+Expected duplicates/conflicts use a distinct `skipped` result. Invalid products use `error`. Both allow the queue to continue to later items; uncertain interrupted writes are still never retried automatically. For an already-uploaded queue, upload again to choose another policy. Older in-flight queues keep the update policy they originally used.

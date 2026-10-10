@@ -4,7 +4,7 @@
   if (!form) return;
   const button = form.querySelector('button');
   const message = form.querySelector('[data-import-status]');
-  const labels = {pending: 'Čeká', processing: 'Zpracovává se', success: 'Uloženo', error: 'Přeskočeno', interrupted: 'Přerušeno – ověř ručně'};
+  const labels = {pending: 'Čeká', processing: 'Zpracovává se', success: 'Uloženo', skipped: 'Přeskočeno', error: 'Chyba položky', interrupted: 'Přerušeno – ověř ručně'};
   let busy = false;
   const render = state => {
     const rows = document.getElementById('import-result-rows');

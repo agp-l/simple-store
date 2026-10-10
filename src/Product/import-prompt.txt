@@ -64,3 +64,9 @@ HROMADNÝ JSON / EXISTUJÍCÍ KATALOG:
 - Běžný import odmítne zastaralou revizi. Režim obnovy zálohy je ruční volba správce, nikdy jej nevyžaduj pro běžnou AI úpravu.
 - JSON obsahuje cesty k obrázkům, nikoli obrazová data. Zachovej existující image_path, gallery a obrazové bloky. Pro nové fotografie použij ZIP nebo následné ruční nahrání.
 - Jedna dávka nejvýše 32 MiB a 10 000 položek; každý dokument produktu nejvýše 128 KiB. Neplatná položka se přeskočí, ostatní lze importovat. Nové položky standardně nech published:false.
+
+ZIP A EXISTUJÍCÍ PRODUKTY:
+- Správce při nahrání volí Přeskočit existující / Aktualizovat existující / Vytvořit novou kopii. Volba není součástí product.json.
+- Identita je product_key + language; bez klíče se porovnává přesný slug ve stejném jazyce. Zachovej správnou adresu, pokud se má aktualizovat existující produkt.
+- revision je verze, ze které úprava vychází. Musí se přesně shodovat s aktuální revizí; nižší ani vyšší číslo nepřepíše produkt. Číslo revize nevymýšlej ani nezvyšuj ručně.
+- Pro novou kopii dodej kompletní údaje nového produktu a jeho fotografie, nikoli jen částečnou změnu ceny. Kopie bude koncept s vlastní adresou.
