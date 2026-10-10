@@ -7,6 +7,7 @@ use SimpleStore\Checkout\BankTransferPayment;
 use SimpleStore\Checkout\FioBankReconciler;
 use SimpleStore\Checkout\FioStatementClient;
 use SimpleStore\Checkout\OrderRepository;
+use SimpleStore\Admin\OrderControlRepository;
 use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Database\SchemaUpdater;
 
@@ -120,5 +121,18 @@ $db->query('UPDATE shop_fio_requests SET last_requested_at=UTC_TIMESTAMP() - INT
 if ($sync->sync()['matched'] !== 0 ||
     $orders->findById((int) $replacement['id'])['payment_status'] !== 'pending') {
     throw new RuntimeException('An old Fio movement was reused for a new order.');
+}
+$orders->markPaid((int) $replacement['id'], 1);
+(new OrderControlRepository($db))->correctPayment((int) $replacement['id'], 1,
+    'Bank returned the transfer', 'not_received');
+$rows = [[
+    'column22' => ['value' => 90003], 'column5' => ['value' => $order['variable_symbol']],
+    'column1' => ['value' => 1079], 'column14' => ['value' => 'CZK'],
+]];
+$db->query('UPDATE shop_fio_requests SET last_requested_at=UTC_TIMESTAMP() - INTERVAL 40 SECOND
+    WHERE token_hash=%s', hash('sha256', $token));
+if ($sync->sync()['matched'] !== 0 ||
+    $orders->findById((int) $replacement['id'])['payment_status'] !== 'pending') {
+    throw new RuntimeException('Fio ignored an explicit administrator payment correction.');
 }
 echo "Fio database tests passed.\n";

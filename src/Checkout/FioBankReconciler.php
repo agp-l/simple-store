@@ -12,6 +12,8 @@ use Throwable;
 /** Periodic Fio statement import. A unique movement may settle only one pending bank order. */
 final class FioBankReconciler
 {
+    private ?bool $hasFinancialEvents = null;
+
     public function __construct(
         private MeekroDB $db,
         private array $config,
@@ -114,6 +116,16 @@ final class FioBankReconciler
                 $this->db->commit();
                 return false;
             }
+            // A correction is an explicit instruction to leave this order unpaid.
+            // A historical positive movement may still be in the 89-day window,
+            // even after a bank reversal or a mistaken manual confirmation.
+            if ($this->hasFinancialEvents() && $this->db->queryFirstRow(
+                'SELECT id FROM shop_order_financial_events
+                 WHERE order_id=%i AND action=%s LIMIT 1', $orderId, 'payment_correction'
+            ) !== null) {
+                $this->db->commit();
+                return false;
+            }
             $this->db->query('INSERT INTO shop_fio_matches
                 (account_key, movement_id, order_id, amount_czk)
                 VALUES (%s, %s, %i, %i)', $account, $movement['id'], $orderId, $movement['amount']);
@@ -130,5 +142,17 @@ final class FioBankReconciler
             catch (Throwable $error) { error_log('Fio payment email for order ' . $orderId . ' failed.'); }
         }
         return true;
+    }
+
+    private function hasFinancialEvents(): bool
+    {
+        if ($this->hasFinancialEvents === null) {
+            $this->hasFinancialEvents = (int) $this->db->queryFirstField(
+                'SELECT COUNT(*) FROM information_schema.TABLES
+                 WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
+                'shop_order_financial_events'
+            ) === 1;
+        }
+        return $this->hasFinancialEvents;
     }
 }
