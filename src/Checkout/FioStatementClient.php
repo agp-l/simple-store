@@ -21,7 +21,7 @@ final class FioStatementClient
 
     public function fetch(string $token, string $from, string $to): array
     {
-        if (preg_match('/^[A-Za-z0-9]{20,128}$/D', $token) !== 1 ||
+        if (!self::validToken($token) ||
             preg_match('/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/D', $from) !== 1 ||
             preg_match('/^20[0-9]{2}-[0-9]{2}-[0-9]{2}$/D', $to) !== 1) {
             throw new RuntimeException('Neplatné nastavení tokenu nebo období Fio.');
@@ -30,9 +30,7 @@ final class FioStatementClient
         [$status, $body] = $this->transport === null
             ? $this->request($url) : ($this->transport)($url);
         if ($status !== 200) {
-            throw new RuntimeException($status === 409
-                ? 'Fio dovoluje požadavek se stejným tokenem nejvýše jednou za 30 sekund.'
-                : 'Fio nevrátilo výpis (HTTP ' . (int) $status . '). Zkontroluj token a přístup k účtu.');
+            throw new RuntimeException(self::httpError((int) $status));
         }
         if (!is_string($body) || strlen($body) > self::MAX_BODY_BYTES) {
             throw new RuntimeException('Výpis Fio je příliš velký nebo neplatný.');
@@ -48,6 +46,24 @@ final class FioStatementClient
             throw new RuntimeException('Fio nevrátilo platný seznam pohybů.');
         }
         return ['info' => $statement['info'], 'transactions' => $transactions];
+    }
+
+    /** Tokens generated in Fio internet banking have exactly 64 URL-safe characters. */
+    public static function validToken(string $token): bool
+    {
+        return preg_match('/^[A-Za-z0-9]{64}$/D', $token) === 1;
+    }
+
+    private static function httpError(int $status): string
+    {
+        return match ($status) {
+            404 => 'Fio nezná adresu požadavku (HTTP 404). Zkontroluj parametry volání API.',
+            409 => 'Fio dovoluje požadavek se stejným tokenem nejvýše jednou za 30 sekund (HTTP 409).',
+            413 => 'Výpis Fio obsahuje příliš mnoho pohybů (HTTP 413). Zkrať období stahování.',
+            422 => 'Fio odmítlo požadavek na starší historii bez autorizace (HTTP 422).',
+            500 => 'Fio odmítlo token (HTTP 500): podle dokumentace neexistuje nebo není aktivní. V internetbankingu v Nastavení → API zkontroluj dokončenou autorizaci a platnost tokenu. Po aktivaci vyčkej 5 minut; nový token ulož v nastavení plateb.',
+            default => 'Fio nevrátilo výpis (HTTP ' . $status . '). Zkus to znovu nebo ověř dostupnost API.',
+        };
     }
 
     private function request(string $url): array

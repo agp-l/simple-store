@@ -5,13 +5,15 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 
 use SimpleStore\Checkout\FioStatementClient;
 use SimpleStore\Checkout\FioTransferMatcher;
+use SimpleStore\Checkout\BankTransferPayment;
 
 $token = str_repeat('A', 64);
 $calls = [];
 $client = new FioStatementClient(static function (string $url) use (&$calls): array {
     $calls[] = $url;
     return [200, json_encode(['accountStatement' => [
-        'info' => ['accountId' => '123456789', 'bankId' => '2010', 'currency' => 'CZK'],
+        'info' => ['accountId' => '123456789', 'bankId' => '2010', 'currency' => 'CZK',
+            'iban' => BankTransferPayment::ibanForCzechAccount('123456789/2010')],
         'transactionList' => ['transaction' => [[
             'column22' => ['value' => 76543210], 'column5' => ['value' => '1234567890'],
             'column1' => ['value' => 1079.0], 'column14' => ['value' => 'CZK'],
@@ -36,6 +38,52 @@ if (!FioTransferMatcher::matchesOrder($order, $movement, ':123456789/2010') ||
         '{"account_display":"123456789/5500"}']), $movement, ':123456789/2010')) {
     throw new RuntimeException('Fio matching accepted a wrong account or amount.');
 }
+foreach (['123456789/2010', '123-123456789/2010'] as $account) {
+    $iban = BankTransferPayment::ibanForCzechAccount($account);
+    $info = ['accountId' => substr($iban, 8, 16), 'bankId' => '2010',
+        'currency' => 'CZK', 'iban' => $iban];
+    if (FioTransferMatcher::account($info, $account) !== FioTransferMatcher::canonicalAccount($account)) {
+        throw new RuntimeException('A 16-digit accountId or prefixed account was rejected.');
+    }
+    try {
+        FioTransferMatcher::account(array_replace($info, ['iban' =>
+            BankTransferPayment::ibanForCzechAccount('999999999/2010')]), $account);
+        throw new RuntimeException('A different IBAN was accepted.');
+    } catch (RuntimeException $expected) {
+        if (str_contains($expected->getMessage(), 'was accepted')) throw $expected;
+    }
+}
+
+foreach ([
+    404 => 'parametry',
+    409 => '30 sekund',
+    413 => 'pohybů',
+    422 => 'historii',
+    500 => 'není aktivní',
+] as $status => $explanation) {
+    $failure = new FioStatementClient(static fn(string $url): array => [$status, '']);
+    try {
+        $failure->fetch($token, '2026-10-01', '2026-10-10');
+        throw new RuntimeException('Undetected Fio HTTP error.');
+    } catch (RuntimeException $expected) {
+        if (!str_contains($expected->getMessage(), 'HTTP ' . $status) ||
+            !str_contains($expected->getMessage(), $explanation) ||
+            str_contains($expected->getMessage(), $token)) throw $expected;
+    }
+}
+if (FioStatementClient::validToken(str_repeat('A', 63)) ||
+    FioStatementClient::validToken(str_repeat('A', 65)) ||
+    FioStatementClient::validToken(str_repeat('A', 63) . '/')) {
+    throw new RuntimeException('Incorrect token lengths or unsafe tokens were accepted.');
+}
+try {
+    $client->fetch(str_repeat('A', 63), '2026-10-01', '2026-10-10');
+    throw new RuntimeException('Invalid Fio token was sent to the transport.');
+} catch (RuntimeException $expected) {
+    if (str_contains($expected->getMessage(), 'was sent to the transport')) throw $expected;
+}
+if (count($calls) !== 1) throw new RuntimeException('Fio sent an invalid token over HTTP.');
+
 foreach ([
     ['column1' => ['value' => -1079]], ['column1' => ['value' => 1079.50]],
     ['column14' => ['value' => 'EUR']], ['column5' => null], ['column22' => null],

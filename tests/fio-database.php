@@ -35,7 +35,8 @@ $rows = [];
 $client = new FioStatementClient(static function (string $url) use (&$accountId, &$rows, $token): array {
     if (!str_contains($url, '/periods/' . $token . '/')) throw new RuntimeException('Bad Fio endpoint.');
     return [200, json_encode(['accountStatement' => [
-        'info' => ['accountId' => $accountId, 'bankId' => '2010', 'currency' => 'CZK'],
+        'info' => ['accountId' => $accountId, 'bankId' => '2010', 'currency' => 'CZK',
+            'iban' => BankTransferPayment::ibanForCzechAccount($accountId . '/2010')],
         'transactionList' => ['transaction' => $rows],
     ]], JSON_THROW_ON_ERROR)];
 });

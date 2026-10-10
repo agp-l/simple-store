@@ -164,6 +164,18 @@ if ($fioSaved['fio_bank']['token'] !== str_repeat('T', 64) ||
     $fioSaved['fio_bank']['account_display'] !== '123456789/2010') {
     throw new RuntimeException('Fio token disappeared when saving payment settings again.');
 }
+try {
+    $repo->saveSection('payment', array_replace($input, [
+        'payment_area' => 'fio', 'fio_enabled' => '1',
+        'fio_account_display' => '123456789/2010', 'fio_token' => str_repeat('T', 63),
+    ]), '/simple-store/', $fioSaved);
+    throw new RuntimeException('Invalid Fio token was saved.');
+} catch (InvalidArgumentException $expected) {
+    if (!str_contains($expected->getMessage(), '64 znaků')) throw $expected;
+}
+if ($repo->load($fallback)['fio_bank']['token'] !== str_repeat('T', 64)) {
+    throw new RuntimeException('Rejected Fio settings changed the saved token.');
+}
 $fioCronKey = $repo->rotateFioCronKey($fioSaved);
 $withCron = $repo->load($fallback);
 if (strlen($fioCronKey) !== 64 || $withCron['fio_bank']['cron_key_hash'] !== hash('sha256', $fioCronKey) ||
