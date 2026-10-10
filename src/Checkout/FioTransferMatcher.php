@@ -49,6 +49,7 @@ final class FioTransferMatcher
             (!is_string($amount) && !is_int($amount) && !is_float($amount))) return null;
         // Fio reports CZK as a decimal. Never round a fractional bank movement up to
         // an integer order total, even when the fractional part is very small.
+        if (is_float($amount) && floor($amount) !== $amount) return null;
         if (preg_match('/^([1-9][0-9]{0,6})(?:\.0+)?$/D', (string) $amount, $whole) !== 1) return null;
         return ['id' => (string) $id, 'vs' => (string) $vs, 'amount' => (int) $whole[1]];
     }

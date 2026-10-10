@@ -22,6 +22,7 @@ final class CommerceTestReset
         'shop_sale_lines', 'shop_order_stock_reservations',
         'shop_packeta_cancelled_shipments', 'shop_packeta_shipments', 'shop_carrier_shipments',
         'shop_comgate_payments', 'shop_gopay_payments', 'shop_btcpay_payments',
+        'shop_fio_matches',
         'shop_order_admin_events', 'shop_order_financial_events', 'shop_orders',
         'shop_deleted_sale_lines', 'shop_deleted_shipments',
     ];

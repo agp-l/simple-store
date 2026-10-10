@@ -33,6 +33,10 @@ $db->insert('shop_orders', [
     'payment_method' => 'bank_transfer', 'payment_status' => 'pending',
 ]);
 $id = (int) $db->queryFirstField('SELECT id FROM shop_orders WHERE order_number=%s', $number);
+$db->insert('shop_fio_matches', [
+    'account_key' => ':123456789/2010', 'movement_id' => (string) random_int(100000000, 999999999),
+    'order_id' => $id, 'amount_czk' => 280,
+]);
 $db->insert('shop_order_stock_reservations', [
     'order_id' => $id, 'product_key' => $key, 'quantity' => 2, 'state' => 'reserved',
 ]);
@@ -40,6 +44,7 @@ $db->query('UPDATE shop_product_inventory SET available_quantity=%i WHERE produc
 $reset = new CommerceTestReset($db);
 $report = $reset->report();
 if ($report['database'] !== 'simple_store' || $report['tables']['shop_orders'] < 1 ||
+    $report['tables']['shop_fio_matches'] < 1 ||
     ($report['reservations']['reserved']['pieces'] ?? 0) < 2) {
     throw new RuntimeException('Test commerce preview omitted orders or reserved pieces.');
 }
@@ -50,6 +55,7 @@ try {
 $result = $reset->apply('simple_store');
 if ($result['before']['shop_product_revisions'] !== $result['after']['shop_product_revisions'] ||
     $result['after']['tables']['shop_orders'] !== 0 ||
+    $result['after']['tables']['shop_fio_matches'] !== 0 ||
     (int) $db->queryFirstField('SELECT available_quantity FROM shop_product_inventory
         WHERE product_key=%s', $key) !== 4 ||
     (int) $db->queryFirstField('SELECT COUNT(*) FROM shop_product_revisions

@@ -42,6 +42,11 @@ $client = new FioStatementClient(static function (string $url) use (&$accountId,
 });
 $sync = new FioBankReconciler($db, $config, $client);
 if (!$sync->installed()) throw new RuntimeException('Fio schema was not installed.');
+$lookup = $db->queryFirstRow('EXPLAIN SELECT id FROM shop_orders
+    WHERE variable_symbol=CONVERT(%s USING ascii) COLLATE ascii_bin', $order['variable_symbol']);
+if (!str_contains((string) ($lookup['possible_keys'] ?? ''), 'orders_variable_symbol')) {
+    throw new RuntimeException('The Fio lookup cannot use the variable-symbol index.');
+}
 try { $sync->sync(); } catch (RuntimeException $expected) { $wrongAccount = true; }
 if (!$wrongAccount || $orders->findById((int) $order['id'])['payment_status'] !== 'pending') {
     throw new RuntimeException('A different bank account was accepted.');
@@ -77,5 +82,43 @@ $db->query('UPDATE shop_fio_requests SET last_requested_at=UTC_TIMESTAMP() - INT
 if ($sync->sync()['matched'] !== 0 ||
     $orders->findById((int) $order['id'])['payment_status'] !== 'pending') {
     throw new RuntimeException('A corrected payment was automatically marked paid again.');
+}
+// Simulate an existing installation and apply the repeatable schema without
+// dropping the movement that was already matched.
+$db->query('ALTER TABLE shop_fio_matches
+    DROP FOREIGN KEY fio_match_detached_order_fk,
+    MODIFY COLUMN order_id BIGINT UNSIGNED NOT NULL,
+    ADD CONSTRAINT fio_match_order_fk FOREIGN KEY (order_id)
+        REFERENCES shop_orders(id) ON DELETE CASCADE');
+$db->query('UPDATE shop_schema_updates SET state=%s WHERE id=%i', 'failed', 1);
+(new SchemaUpdater($db, dirname(__DIR__) . '/database/schema.sql'))->apply();
+$deleteRule = $db->queryFirstField('SELECT DELETE_RULE FROM information_schema.REFERENTIAL_CONSTRAINTS
+    WHERE CONSTRAINT_SCHEMA=DATABASE() AND TABLE_NAME=%s AND CONSTRAINT_NAME=%s',
+    'shop_fio_matches', 'fio_match_detached_order_fk');
+if ($deleteRule !== 'SET NULL') {
+    throw new RuntimeException('The previous Fio foreign key was not upgraded.');
+}
+$db->query('DELETE FROM shop_orders WHERE id=%i', $order['id']);
+$used = $db->queryFirstRow('SELECT order_id, amount_czk FROM shop_fio_matches
+    WHERE movement_id=CONVERT(%s USING ascii) COLLATE ascii_bin', '90002');
+if ($used === null || $used['order_id'] !== null || (int) $used['amount_czk'] !== 1079) {
+    throw new RuntimeException('Deleting an order must retain its consumed Fio movement ID.');
+}
+$replacement = $orders->create(null, 'fio-replacement@example.test', [[
+    'product_key' => str_repeat('b', 32), 'language' => 'cs', 'slug' => 'stan',
+    'name' => 'Stan', 'quantity' => 1, 'unit_price_czk' => 1000,
+    'image_path' => '', 'options' => [],
+]], [
+    'method' => 'gls_home', 'label' => 'GLS domů', 'name' => 'Eva Nová',
+    'phone' => '123', 'street' => 'Polní 1', 'city' => 'Praha',
+    'postal_code' => '11000', 'country' => 'CZ',
+], 79, bin2hex(random_bytes(32)));
+$db->query('UPDATE shop_orders SET variable_symbol=%s WHERE id=%i',
+    $order['variable_symbol'], $replacement['id']);
+$db->query('UPDATE shop_fio_requests SET last_requested_at=UTC_TIMESTAMP() - INTERVAL 40 SECOND
+    WHERE token_hash=%s', hash('sha256', $token));
+if ($sync->sync()['matched'] !== 0 ||
+    $orders->findById((int) $replacement['id'])['payment_status'] !== 'pending') {
+    throw new RuntimeException('An old Fio movement was reused for a new order.');
 }
 echo "Fio database tests passed.\n";

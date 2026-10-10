@@ -166,17 +166,27 @@ CREATE TABLE IF NOT EXISTS shop_fio_requests (
   last_requested_at DATETIME NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Store only successfully matched movements; no unrelated personal-account data.
+-- Keep the movement ID after an order is deleted so the same bank payment cannot
+-- settle another order. Detached rows contain no customer or order identifier.
 CREATE TABLE IF NOT EXISTS shop_fio_matches (
   account_key VARCHAR(24) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   movement_id VARCHAR(20) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  order_id BIGINT UNSIGNED NOT NULL,
+  order_id BIGINT UNSIGNED NULL,
   amount_czk INT UNSIGNED NOT NULL,
   matched_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (account_key, movement_id),
   UNIQUE KEY fio_match_order (order_id),
-  CONSTRAINT fio_match_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE CASCADE
+  CONSTRAINT fio_match_detached_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Existing installations previously deleted the movement marker with the order.
+SET @fio_match_link_nullable = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_fio_matches' AND COLUMN_NAME='order_id' AND IS_NULLABLE='YES');
+SET @fio_match_link_upgrade = IF(@fio_match_link_nullable=0,
+  'ALTER TABLE shop_fio_matches DROP FOREIGN KEY fio_match_order_fk, MODIFY COLUMN order_id BIGINT UNSIGNED NULL, ADD CONSTRAINT fio_match_detached_order_fk FOREIGN KEY (order_id) REFERENCES shop_orders(id) ON DELETE SET NULL', 'SELECT 1');
+PREPARE fio_match_link_statement FROM @fio_match_link_upgrade;
+EXECUTE fio_match_link_statement;
+DEALLOCATE PREPARE fio_match_link_statement;
 
 -- A payment may be retried after cancellation. Keep every remote transaction so
 -- late notifications can still be reconciled against the original order.
