@@ -141,11 +141,24 @@ final class OrderReceiptController
             }
         }
         $orderUrl = $this->url->path('objednavka/' . $order['order_token']);
+        $publicBaseUrl = rtrim((string) ($this->shared['publicBaseUrl'] ?? ''), '/');
+        $orderShareUrl = $orderUrl;
+        // A configured origin supplies the full link without trusting request Host headers.
+        // The browser also resolves the local path for installations without mail settings.
+        if (filter_var($publicBaseUrl, FILTER_VALIDATE_URL) !== false &&
+            parse_url($publicBaseUrl, PHP_URL_SCHEME) === 'https' &&
+            parse_url($publicBaseUrl, PHP_URL_USER) === null &&
+            parse_url($publicBaseUrl, PHP_URL_PASS) === null &&
+            parse_url($publicBaseUrl, PHP_URL_QUERY) === null &&
+            parse_url($publicBaseUrl, PHP_URL_FRAGMENT) === null) {
+            $orderShareUrl = $publicBaseUrl . '/' . $this->url->getLanguage() . '/objednavka/' . $order['order_token'];
+        }
         $this->renderer->render('complete', array_replace($this->shared, [
             'title' => 'Objednávka ' . $order['order_number'] . ' — dobrodruzi.cz',
             'privatePage' => true, 'compactHeader' => true, 'order' => $order,
             'cartCount' => $this->cart->count(),
             'orderUrl' => $orderUrl,
+            'orderShareUrl' => $orderShareUrl,
             'invoiceUrl' => $invoice !== null ? $orderUrl . '?invoice=1' : '',
             'bankPayment' => ($order['payment_method'] ?? '') === 'bank_transfer'
                 ? BankTransferPayment::fromOrder($order)->details($order) : [],

@@ -53,6 +53,7 @@ $cartToken ??= '';
 <?php if ($page === 'shipping'): ?><script defer src="<?= $siteRoot ?>assets/gls-checkout.js?v=<?= filemtime(__DIR__ . '/../assets/gls-checkout.js') ?>"></script><?php endif; ?>
 <?php if ($page === 'shipping'): ?><script defer src="<?= $siteRoot ?>assets/balikovna-checkout.js?v=<?= filemtime(__DIR__ . '/../assets/balikovna-checkout.js') ?>"></script><?php endif; ?>
 <?php if ($page === 'complete' && !empty($bankPayment['spayd'])): ?><script type="module" src="<?= $siteRoot ?>assets/payment-qr.js?v=<?= filemtime(__DIR__ . '/../assets/payment-qr.js') ?>"></script><?php endif; ?>
+<?php if ($page === 'complete'): ?><script defer src="<?= $siteRoot ?>assets/order-link.js?v=<?= filemtime(__DIR__ . '/../assets/order-link.js') ?>"></script><?php endif; ?>
 <?php if ($page === 'catalog' || $page === 'blog'): ?><script defer src="<?= $siteRoot ?>assets/load-more.js"></script><?php endif; ?>
 <?php if ($page === 'product-record'): ?><script defer src="<?= $siteRoot ?>assets/product.js"></script><?php endif; ?>
 <?php if ($editMode): ?><script defer src="<?= $siteRoot ?>assets/inline-editor.js?v=<?= filemtime(__DIR__ . '/../assets/inline-editor.js') ?>"></script><?php endif; ?>

@@ -870,6 +870,28 @@
   font: 13px var(--font-body);
 }
 
+.checkout-return-link-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkout-return-link-controls input {
+  flex: 1 1 220px;
+  min-width: 0;
+  width: auto;
+}
+
+.checkout-copy-feedback {
+  font-weight: 400;
+  color: var(--muted);
+}
+
+.checkout-copy-feedback:empty {
+  display: none;
+}
+
 .checkout-qr {
   text-align: center;
 }

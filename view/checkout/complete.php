@@ -68,7 +68,7 @@ if ($testOrder) {
   <div class="checkout-heading"><span class="checkout-eyebrow"><?= $testOrder ? 'Místní test' : ($gopayRefund !== '' ? 'Stav platby' : ($orderCancelled ? 'Zrušená objednávka' : 'Objednávka přijata')) ?></span><h1><?= $testOrder ? 'Testovací objednávka vytvořena' : ($gopayRefund !== '' ? 'Stav objednávky' : ($orderCancelled ? 'Objednávka zrušena' : 'Děkujeme za objednávku')) ?></h1><p>Objednávka<?= $orderNumber !== '' ? ' č. ' . $checkoutEscape($orderNumber) : '' ?> <?= $paymentMessage ?></p></div>
   <?php if (($paymentNotice ?? '') !== ''): ?><p class="checkout-alert" role="alert"><?= $checkoutEscape($paymentNotice) ?></p><?php endif; ?>
   <div class="checkout-columns<?= $paymentPaid ? ' checkout-columns-paid' : '' ?>">
-    <?php if ($testOrder): ?><section class="checkout-panel"><h2>Jen pro testování</h2><p>Objednávku najdete v administraci mezi testovacími objednávkami. K placení ani expedici neslouží.</p><?php if ($orderUrl !== ''): ?><label class="checkout-return-link">Odkaz na objednávku <input type="text" readonly value="<?= $checkoutEscape($orderUrl) ?>"></label><?php endif; ?><a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a></section>
+    <?php if ($testOrder): ?><section class="checkout-panel"><h2>Jen pro testování</h2><p>Objednávku najdete v administraci mezi testovacími objednávkami. K placení ani expedici neslouží.</p><a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a></section>
     <?php elseif ($gopayRefund !== ''): ?>
     <section class="checkout-panel" aria-labelledby="checkout-refund-title">
       <h2 id="checkout-refund-title"><?= $gopayRefund === 'refunded' ? 'Platba vrácena' : 'Částečné vrácení platby' ?></h2>
@@ -96,7 +96,7 @@ if ($testOrder) {
       <p><?= in_array($onlineStatus, ['cancelled', 'canceled', 'timeouted', 'expired', 'invalid'], true) ? 'Platba byla zrušena nebo nebyla dokončena. Objednávku můžete zaplatit znovu.' : ($onlineStatus === 'rejected' ? 'Platební brána nepřijala poslední pokus o platbu. Můžete to zkusit znovu.' : ($onlineUncertain ? 'Stav posledního pokusu o platbu se ověřuje. Kontaktujte obchod, pokud se stav brzy neaktualizuje.' : 'Objednávka je uložená. Pokud jste platbu nedokončili, můžete se k ní vrátit.')) ?></p>
       <p><strong>Částka k úhradě: <?= $checkoutMoney($paymentAmount) ?></strong></p>
       <?php if ($onlineAvailable && !$onlineUncertain): ?><form method="post" action="<?= $checkoutEscape($orderUrl) ?>"><input type="hidden" name="csrf" value="<?= $checkoutEscape($cartToken) ?>"><input type="hidden" name="action" value="<?= $checkoutEscape($onlineAction) ?>"><button type="submit" class="checkout-primary">Přejít k online platbě</button></form><?php elseif (!$onlineAvailable): ?><p class="checkout-fineprint">Online platba je dočasně nedostupná. Kontaktujte prosím obchod a neprovádějte další platbu bez ověření objednávky.</p><?php endif; ?>
-      <?php if ($orderUrl !== ''): ?><p class="checkout-fineprint">Uložte si odkaz na objednávku pro pozdější kontrolu stavu. Potvrzení o přijetí objednávky může přijít také e-mailem.</p><label class="checkout-return-link">Odkaz na objednávku <input type="text" readonly value="<?= $checkoutEscape($orderUrl) ?>"></label><?php endif; ?>
+      <?php if ($orderUrl !== ''): ?><p class="checkout-fineprint">Uložte si odkaz na objednávku pro pozdější kontrolu stavu. Potvrzení o přijetí objednávky může přijít také e-mailem.</p><?php endif; ?>
       <a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a>
     </section>
     <?php elseif (!$paymentPaid): ?>
@@ -110,7 +110,7 @@ if ($testOrder) {
         <?php if (!empty($bankPayment['due_at'])): ?><div><dt>Splatnost (UTC)</dt><dd><?= $checkoutEscape($bankPayment['due_at']) ?></dd></div><?php endif; ?>
       </dl>
       <p class="checkout-fineprint">Uveďte variabilní symbol, abychom mohli platbu přiřadit k objednávce. Objednávku začneme vyřizovat po přijetí platby.</p>
-      <?php if ($orderUrl !== ''): ?><p class="checkout-fineprint">Uložte si odkaz na tuto stránku, abyste se mohli k platebním údajům vrátit. Potvrzení objednávky odesíláme e-mailem, pokud je poštovní služba obchodu nastavena.</p><label class="checkout-return-link">Odkaz na objednávku <input type="text" readonly value="<?= $checkoutEscape($orderUrl) ?>"></label><?php endif; ?>
+      <?php if ($orderUrl !== ''): ?><p class="checkout-fineprint">Uložte si odkaz na tuto stránku, abyste se mohli k platebním údajům vrátit. Potvrzení objednávky odesíláme e-mailem, pokud je poštovní služba obchodu nastavena.</p><?php endif; ?>
       <a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a>
     </section>
     <aside class="checkout-panel checkout-qr" aria-labelledby="checkout-qr-title"><h2 id="checkout-qr-title">Naskenovat QR platbu</h2>
@@ -125,6 +125,7 @@ if ($testOrder) {
     <?php if ($trackingNumber !== ''): ?><p>Číslo zásilky: <?= $checkoutEscape($trackingNumber) ?></p><?php endif; ?>
     <?php if ($trackingUrl !== ''): ?><p><a class="checkout-back" href="<?= $checkoutEscape($trackingUrl) ?>" target="_blank" rel="noopener noreferrer">Sledovat zásilku u dopravce →</a></p><?php endif; ?>
     <?php if ($fulfillmentStatus === 'ready_to_ship' && ($trackingNumber !== '' || $trackingUrl !== '')): ?><p class="checkout-fineprint">Pohyb zásilky se může zobrazit až po předání dopravci.</p><?php endif; ?>
+    <?php if ($orderUrl !== ''): ?><?php require __DIR__ . '/order-link.php'; ?><?php endif; ?>
     <?php if (!$testOrder && $orderUrl !== ''): ?><p><a class="checkout-back" href="<?= $checkoutEscape($siteRoot . 'support.php?order=' . rawurlencode((string) ($order['order_token'] ?? ''))) ?>">Reklamace a vrácení zboží →</a></p><?php endif; ?>
   </section>
   <?php if (isset($order['subtotal_czk'], $order['shipping_czk'], $order['total_czk'])): ?>

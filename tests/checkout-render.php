@@ -216,6 +216,7 @@ $gopayData['order'] = ['payment_method' => 'gopay', 'order_number' => 'DB-26-123
     'payment_status' => 'pending', 'total_czk' => 1099];
 $gopayData['gopayGatewayUrl'] = 'https://gw.sandbox.gopay.com/gw/v3/123?x=a&y=b';
 $gopayData['orderUrl'] = '/simple-store/cs/objednavka/private-token';
+$gopayData['orderShareUrl'] = 'https://shop.example.test/simple-store/cs/objednavka/private-token';
 ob_start();
 $renderer->render('complete', $gopayData);
 $gopayComplete = ob_get_clean();
@@ -223,11 +224,17 @@ if (!str_contains($gopayComplete, 'id="checkout-gopay-handoff" method="post"') |
     !str_contains($gopayComplete, 'action="https://gw.sandbox.gopay.com/gw/v3/123?x=a&amp;y=b"') ||
     !str_contains($gopayComplete, 'type="submit" class="checkout-primary"') ||
     !str_contains($gopayComplete, "getElementById('checkout-gopay-handoff').submit()") ||
-    str_contains($gopayComplete, 'Naskenovat QR platbu')) {
+    str_contains($gopayComplete, 'Naskenovat QR platbu') ||
+    !str_contains($gopayComplete, 'value="https://shop.example.test/simple-store/cs/objednavka/private-token"') ||
+    !str_contains($gopayComplete, 'data-order-path="/simple-store/cs/objednavka/private-token"') ||
+    !str_contains($gopayComplete, 'data-copy-order-link hidden>Kopírovat</button>') ||
+    substr_count($gopayComplete, 'id="checkout-order-link"') !== 1 ||
+    !str_contains($gopayComplete, 'assets/order-link.js')) {
     throw new RuntimeException('GoPay must hand off by POST and keep an escaped manual fallback.');
 }
 
 $shippedData = $bankData;
+$shippedData['orderUrl'] = '/simple-store/cs/objednavka/private-token';
 $shippedData['order'] = [
     'order_number' => 'DB-26-1234567890', 'payment_method' => 'bank_transfer',
     'payment_status' => 'paid', 'status' => 'shipped', 'subtotal_czk' => 1000,
@@ -248,6 +255,7 @@ if (!str_contains($shippedComplete, 'Stav vyřízení') ||
     !str_contains($shippedComplete, 'src="/simple-store/images/batoh.webp"') ||
     !str_contains($shippedComplete, '2 ks × 500 Kč / ks') ||
     !str_contains($shippedComplete, 'Barva: červená') ||
+    substr_count($shippedComplete, 'id="checkout-order-link"') !== 1 ||
     str_contains($shippedComplete, '<unsafe>')) {
     throw new RuntimeException('Private order page must show fulfillment and escaped tracking.');
 }
@@ -268,6 +276,7 @@ $renderer->render('complete', $shippedData);
 $cancelledComplete = ob_get_clean();
 if (!str_contains($cancelledComplete, 'Stav vyřízení') ||
     !str_contains($cancelledComplete, 'Objednávka zrušena') ||
+    substr_count($cancelledComplete, 'id="checkout-order-link"') !== 1 ||
     str_contains($cancelledComplete, 'Číslo zásilky:') ||
     str_contains($cancelledComplete, 'Údaje pro platbu') ||
     str_contains($cancelledComplete, 'Naskenovat QR platbu')) {
