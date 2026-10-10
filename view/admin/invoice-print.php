@@ -7,6 +7,19 @@ $printEscape = static fn (mixed $value): string => htmlspecialchars((string) $va
 $printMoney = static fn (mixed $value): string => number_format((int) $value, 0, ',', ' ') . ' Kč';
 $seller = $selectedInvoice['seller'];
 $buyer = $selectedInvoice['buyer'];
+$invoiceQr = '';
+if (($selectedInvoice['payment_method'] ?? '') === 'bank_transfer') {
+    try {
+        $invoiceQr = \SimpleStore\Checkout\BankTransferPayment::qrPayloadForAccount(
+            (string) ($selectedInvoice['bank_account'] ?? ''),
+            (int) ($selectedInvoice['total_czk'] ?? 0),
+            (string) ($selectedInvoice['variable_symbol'] ?? '')
+        );
+    } catch (\InvalidArgumentException $exception) {
+        // Historical invoices without a valid Czech account remain printable.
+    }
+}
+$invoiceAssetRoot = (string) ($printAssetBase ?? $basePath ?? '/');
 ?>
 <!doctype html>
 <html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -19,8 +32,10 @@ $buyer = $selectedInvoice['buyer'];
   th,td{text-align:left;border-bottom:1px solid #cbd5df;padding:.6rem .35rem}
   .money{text-align:right;white-space:nowrap}.total{text-align:right;font-size:1.35rem;font-weight:700}
   .toolbar{margin:1rem 0 2rem}.toolbar button{padding:.7rem 1.2rem;cursor:pointer}
+  .invoice-qr{display:flex;align-items:center;gap:1.5rem;margin:1rem 0 1.5rem;page-break-inside:avoid}
+  .invoice-qr svg{max-width:160px;height:auto}.invoice-qr p{max-width:360px}
   @media print{body{margin:0;max-width:none}.toolbar{display:none}@page{size:A4;margin:18mm}}
-  @media(max-width:580px){.columns{grid-template-columns:1fr}table{font-size:.82rem}}
+  @media(max-width:580px){.columns{grid-template-columns:1fr}.invoice-qr{flex-wrap:wrap}table{font-size:.82rem}}
 </style></head><body>
 <div class="toolbar"><button type="button" onclick="window.print()">Vytisknout / uložit jako PDF</button></div>
 <h1>Faktura <?= $printEscape($selectedInvoice['document_number']) ?></h1>
@@ -60,4 +75,9 @@ $buyer = $selectedInvoice['buyer'];
   <td class="money"><?= $printMoney($selectedInvoice['shipping_czk']) ?></td></tr>
 </tbody></table>
 <p class="total">Celkem: <?= $printMoney($selectedInvoice['total_czk']) ?></p>
+<?php if ($invoiceQr !== ''): ?>
+<div class="invoice-qr"><div data-qr-payload="<?= $printEscape($invoiceQr) ?>"></div>
+  <p><strong>QR platba pro účet na faktuře</strong><br>Uhrazeno. Kód uvádí původní platební údaje pro kontrolu; neplaťte znovu.</p></div>
+<script type="module" src="<?= $printEscape(rtrim($invoiceAssetRoot, '/') . '/assets/payment-qr.js?v=' . filemtime(__DIR__ . '/../../assets/payment-qr.js')) ?>"></script>
+<?php endif; ?>
 </body></html>

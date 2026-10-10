@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 $settingsTab ??= 'overview';
-$form += ['btc_prices_enabled' => '1', 'bank_transfer_enabled' => '1', 'fio_enabled' => '0',
+$form += ['btc_prices_enabled' => '1', 'bank_transfer_enabled' => '1', 'bank_source' => 'manual', 'fio_enabled' => '0',
     'fio_account_display' => '', 'comgate_enabled' => '0', 'comgate_test' => '1', 'comgate_merchant' => '',
     'comgate_return_base_url' => '', 'gopay_enabled' => '0', 'gopay_test' => '1',
     'gopay_goid' => '', 'gopay_client_id' => '', 'gopay_return_base_url' => '',
@@ -105,19 +105,20 @@ $btcpayDraftSecrets ??= [];
   <h2>Platby</h2><h3>Bankovní převod</h3>
   <label class="panel-check"><input type="checkbox" name="bank_transfer_enabled" value="1" <?= $form['bank_transfer_enabled'] === '1' ? 'checked' : '' ?>> Nabízet bankovní převod v pokladně</label>
   <p class="panel-help">Údaje účtu zůstanou uložené i po vypnutí. Stávající objednávky uchovávají účet použitý při jejich vytvoření. Lze nabízet jen BTCPay nebo jinou bránu; při vypnutí všech metod nebude možné dokončit objednávku.</p>
-  <label>Číslo účtu<input name="account_display" value="<?= $escape($form['account_display']) ?>" placeholder="číslo/kód banky" autocomplete="off"></label>
-  <label>IBAN (nepovinný, z čísla účtu se dopočítá)<input name="iban" value="<?= $escape($form['iban']) ?>" autocomplete="off"></label>
+  <label>Účet pro převod a QR platbu<select name="bank_source"><option value="manual" <?= $form['bank_source'] === 'manual' ? 'selected' : '' ?>>Jiná banka / účet bez napojení na API</option><option value="fio" <?= $form['bank_source'] === 'fio' ? 'selected' : '' ?>>Účet Fio banky (/2010)</option></select></label>
+  <label>Číslo účtu, na který má zákazník platit<input name="account_display" value="<?= $escape($form['account_display']) ?>" placeholder="číslo/kód banky" autocomplete="off"></label>
+  <p class="panel-help">QR kód na potvrzení objednávky i na faktuře se sestaví z tohoto čísla účtu, částky a variabilního symbolu. Funguje pro kteroukoli českou banku bez API. IBAN se z čísla účtu dopočítá automaticky; není třeba ho zadávat. Fio API níže slouží pouze k automatickému ověřování přijatých plateb.</p>
   <label>Jméno příjemce<input name="recipient" value="<?= $escape($form['recipient']) ?>" maxlength="120" autocomplete="off"></label>
   <label>Splatnost v dnech<input type="number" name="payment_due_days" value="<?= $escape($form['payment_due_days']) ?>" min="1" max="60" required></label>
-  <details class="panel-settings-details"><summary>Fio banka – ověřování bankovních převodů</summary><div class="panel-settings-fields">
+  <details class="panel-settings-details"<?= $settingsError !== '' ? ' open' : '' ?>><summary>Fio banka – ověřování bankovních převodů</summary><div class="panel-settings-fields">
   <label class="panel-check"><input type="checkbox" name="fio_enabled" value="1" <?= $form['fio_enabled'] === '1' ? 'checked' : '' ?>> Ověřovat přijaté převody přes Fio API</label>
   <label>Účet, ke kterému patří token<input name="fio_account_display" value="<?= $escape($form['fio_account_display']) ?>" maxlength="22" autocomplete="off" placeholder="číslo/2010"></label>
   <label>Token Fio pouze pro sledování účtu<input type="password" name="fio_token" value="<?= $escape($fioDraftToken ?? '') ?>" maxlength="512" autocomplete="new-password" placeholder="<?= !empty($fioTokenConfigured) ? 'Token je uložen; pro změnu zadej nový' : 'Vlož token vytvořený ve Fio internetbankingu' ?>"></label>
   <?php if (!empty($fioTokenConfigured)): ?><label class="panel-check"><input type="checkbox" name="fio_clear_token" value="1"> Odstranit uložený token</label><?php endif; ?>
-  <p class="panel-help">Fio kontroluje pouze převody na tento účet. S objednávkou se spáruje jen přesný variabilní symbol, celá částka v Kč a účet uložený při vytvoření objednávky. Samotný pohyb na účtu nepotvrdí platbu kartou přes Comgate nebo GoPay. Po nastavení spusť kontrolu v přehledu objednávek; pro pravidelné kontroly lze spustit CLI úlohu z cronu. Token se zde nikdy nevypisuje zpět.</p>
+  <p class="panel-help">Fio kontroluje pouze převody na tento účet. Pro automatické potvrzování nových plateb musí být stejný jako účet pro převod a QR platbu výše. Při platbě na jinou banku zůstává QR kód funkční, přijetí platby ale potvrď ručně. Token se zde nikdy nevypisuje zpět.</p>
   <?php if (!empty($fioAccountDifferent)): ?><p class="panel-help">Účet Fio se liší od účtu nabízeného zákazníkům. Kontrola Fio proto nebude potvrzovat nové převody na uvedený bankovní účet. Při zkoušení můžeš stále párovat starší objednávky vytvořené pro tento účet Fio.</p><?php endif; ?>
   </div></details>
-  <details class="panel-settings-details"><summary>Comgate – online platba</summary><div class="panel-settings-fields">
+  <details class="panel-settings-details"<?= $settingsError !== '' ? ' open' : '' ?>><summary>Comgate – online platba</summary><div class="panel-settings-fields">
   <label class="panel-check"><input type="checkbox" name="comgate_enabled" value="1" <?= $form['comgate_enabled'] === '1' ? 'checked' : '' ?>> Nabízet platbu přes Comgate (po vyplnění přístupových údajů)</label>
   <label class="panel-check"><input type="checkbox" name="comgate_test" value="1" <?= $form['comgate_test'] === '1' ? 'checked' : '' ?>> Testovací režim Comgate</label>
   <p class="panel-help">Testovací režim vyžaduje vlastní identifikátor obchodníka a tajný klíč Comgate. Vypni jej až po ověření testovací platby a schválení produkčního provozu.</p>
@@ -128,7 +129,7 @@ $btcpayDraftSecrets ??= [];
   <p class="panel-help">Prázdné pole ponechá uložený klíč beze změny. Klíč se znovu nezobrazuje ani se neposílá zákazníkovi. V Comgate nastav adresu pro PUSH oznámení na <code><?= $escape(($form['comgate_return_base_url'] !== '' ? rtrim($form['comgate_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/')) . '/comgate-callback.php') ?></code>. Návratové adresy pro zaplacenou, čekající a zrušenou platbu se předají API automaticky. Pro místní test přijímající oznámení použij veřejnou testovací doménu; Comgate se na localhost nedostane.</p>
   <?php if ($comgateSecretConfigured): ?><label class="panel-check"><input type="checkbox" name="comgate_clear_secret" value="1"> Odstranit uložený tajný klíč</label><?php endif; ?>
   </div></details>
-  <details class="panel-settings-details"><summary>GoPay – online platba</summary><div class="panel-settings-fields">
+  <details class="panel-settings-details"<?= $settingsError !== '' ? ' open' : '' ?>><summary>GoPay – online platba</summary><div class="panel-settings-fields">
   <label class="panel-check"><input type="checkbox" name="gopay_enabled" value="1" <?= $form['gopay_enabled'] === '1' ? 'checked' : '' ?>> Nabízet platbu přes GoPay (po vyplnění přístupových údajů)</label>
   <label class="panel-check"><input type="checkbox" name="gopay_test" value="1" <?= $form['gopay_test'] === '1' ? 'checked' : '' ?>> Testovací prostředí GoPay</label>
   <p class="panel-help">Testovací prostředí vyžaduje testovací GoID, Client ID a Client secret přidělené GoPay. Před ostrým provozem ověř testovací objednávku a potom vyplň produkční údaje a vypni testovací režim.</p>
