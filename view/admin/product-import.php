@@ -1,7 +1,9 @@
 <div class="panel-intro"><div><p class="panel-eyebrow">Katalog / import</p><h1>Import produktu z AI</h1>
 <p>Vlož jednu JSON zprávu, zkontroluj údaje a ulož. Bez klíče vznikne nový koncept; s klíčem a revizí upravíš existující produkt.</p></div></div>
 <?php if ($importError !== ''): ?><p class="panel-error" role="alert"><?= $escape($importError) ?></p><?php endif; ?>
+<?php require __DIR__ . "/product-import-zip.php"; ?>
 <section class="panel-panel">
+<h2>Jeden produkt jako JSON</h2>
 <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=product-import') ?>">
 <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
 <label for="product-json">JSON od AI (nejvýše 128 KiB)</label>
@@ -17,17 +19,16 @@
 <dt>Perex</dt><dd><?= $escape($importPreview['summary']) ?></dd>
 <dt>Popis</dt><dd><?= nl2br($escape($importPreview['description'])) ?></dd></dl>
 <details><summary>Všechny výsledné údaje</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere"><?= $escape(json_encode($importPreview, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></pre></details>
-<p>Uložení vytvoří novou revizi. Skladové kusy a soukromé dodavatelské odkazy se nemění; nastavíš je v detailu produktu.</p>
+<p>Uložení vytvoří novou revizi. Skladové kusy se nemění. Dodavatelské odkazy se změní pouze při uvedení suppliers v JSON.</p>
 <button class="panel-button" name="action" value="product-import-save"><?= isset($importData['product_key']) ? 'Uložit úpravy produktu' : 'Vytvořit produkt' ?></button>
 <?php endif; ?>
 </form></section>
 <section class="panel-panel"><h2>Podklady pro AI</h2>
-<p>Zkopíruj zadání níže a přidej název nebo adresu zdrojového produktu. Úpravu existujícího produktu začni tlačítkem „JSON pro AI“ v jeho detailu.</p>
-<textarea rows="9" readonly aria-label="Zadání pro AI">Vrať pouze JSON ve formátu simple-store.product.v1. Nevymýšlej parametry ani skladovou zásobu. Vytvoř vlastní český popis podle ověřeného zdroje. Perex summary má nejvýše 180 znaků. Cena price_czk je celé číslo v Kč. Při aktualizaci zachovej product_key, revision a language z exportu. Neuvedená pole se nemění. Kolekce se nahrazují celé.
-{"format":"simple-store.product.v1","language":"<?= $escape($language) ?>","product":{"name":"Název","category_path":"CESTA_ZE_SEZNAMU","price_czk":100,"brand":"Značka","summary":"Krátký perex","description":"Popis","published":false,"stock_status":"out_of_stock","gallery":[],"options":[{"name":"Barva","values":["Černá"]}],"specifications":[{"name":"Hmotnost","value":"100 g"}],"sections":[{"type":"text","heading":"Vlastnosti","body":"Vlastní text"}]}}
-Volitelné: slug (adresa), image_path (HTTPS obrázek nebo lokální cesta images/…), gallery (seznam cest). Bez image_path se použije neutrální náhled. Typy sections: text, list (položky oddělené \n), table (řádky Název | Hodnota), image (body obsahuje cestu obrázku). Stock_status: out_of_stock, in_stock, on_order. Obrázky jako URL se nestahují na disk.</textarea>
-<h3>Kategorie v jazyce <?= $escape($language) ?></h3>
-<ul><?php foreach ($importCategories as $row): ?><?php if ($categories->find($language, $row['path']) !== null): ?><li><?= $escape($row['title']) ?>: <code><?= $escape($row['path']) ?></code></li><?php endif; ?><?php endforeach; ?></ul>
-<p><a href="<?= $escape($adminUrl . '?section=product-import&example=flextail') ?>">Načíst ukázku Flextail ZERO Power 10000</a> — koncept s referenční cenou z Gramino. Před zveřejněním ověř vlastní cenu, kategorii a dostupnost.</p>
-<p>Fotografie můžeš po importu nahrát přes správu fotografií. HTTPS odkazy zůstávají externí; dostupnost pak závisí na cizím serveru.</p>
+<p>Zkopíruj celé zadání níže a doplň seznam produktů. Pro úpravu použij JSON pro AI z detailu produktu.</p>
+<textarea rows="22" readonly aria-label="Zadání pro AI"><?= $escape(file_get_contents(__DIR__ . '/../../src/Product/import-prompt.txt')) ?></textarea>
+<h3>Platné kategorie (<?= $escape($language) ?>)</h3>
+<p>AI předej i tento seznam. Cesty si nesmí vymýšlet.</p>
+<textarea rows="8" readonly aria-label="Kategorie pro AI"><?php foreach ($importCategories as $row): ?><?php if ($categories->find($language, $row['path']) !== null): ?><?= $escape($row['path'] . ' — ' . $row['title']) . "\n" ?><?php endif; ?><?php endforeach; ?></textarea>
+<p><a href="<?= $escape($adminUrl . '?section=product-import&example=flextail') ?>">Načíst JSON ukázku Flextail ZERO Power 10000</a> — koncept s referenční cenou z Gramino, bez fotografie. Odkaz na zdroj se uloží soukromě do dodavatelů.</p>
+<p>Nové externí adresy fotografií nejsou povolené. Použij ZIP s obrázky nebo po JSON importu fotografie nahraj v detailu. Dříve uložené externí fotografie zůstávají čitelné, ale pro novou revizi je nahraď lokálními soubory.</p>
 </section>

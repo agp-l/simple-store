@@ -60,7 +60,7 @@ final class ProductImport
             'spec_name' => [], 'spec_value' => [], 'section_type' => [], 'section_heading' => [], 'section_body' => [],
         ] : ProductInlineEditor::fromRevision($current);
         $product = $data['product'];
-        self::keys($product, array_merge(self::TEXT, ['price_czk', 'published', 'gallery', 'options', 'specifications', 'sections']));
+        self::keys($product, array_merge(self::TEXT, ['price_czk', 'published', 'gallery', 'options', 'specifications', 'sections', 'suppliers']));
         foreach (self::TEXT as $field) {
             if (!array_key_exists($field, $product)) continue;
             if (!is_string($product[$field])) throw new InvalidArgumentException($field . ' musí být text.');
@@ -120,11 +120,12 @@ final class ProductImport
                 }
             }
         }
+        self::suppliers($data);
         ProductDetails::fromForm($fields);
         return $fields;
     }
 
-    public static function export(array $row): string
+    public static function export(array $row, ?array $suppliers = null): string
     {
         $fields = ProductInlineEditor::fromRevision($row);
         $product = [];
@@ -132,9 +133,24 @@ final class ProductImport
         $product['price_czk'] = (int) $fields['price_czk'];
         $product['published'] = (bool) $fields['published'];
         $product = array_merge($product, ProductDetails::fromForm($fields));
+        if ($suppliers !== null) $product['suppliers'] = array_map(static fn (array $link): array => ['label' => $link['label'], 'url' => $link['url']], $suppliers);
         return json_encode(['format' => self::FORMAT, 'product_key' => $row['product_key'],
             'revision' => (int) $row['revision_number'], 'language' => $row['language'], 'product' => $product],
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);
+    }
+
+    public static function suppliers(array $data): ?array
+    {
+        if (!array_key_exists('suppliers', $data['product'])) return null;
+        $links = $data['product']['suppliers'];
+        self::list($links, 'suppliers');
+        foreach ($links as $link) {
+            if (!is_array($link)) throw new InvalidArgumentException('suppliers musí obsahovat objekty.');
+            self::keys($link, ['label', 'url']);
+            if (!is_string($link['label'] ?? null) || !is_string($link['url'] ?? null)) throw new InvalidArgumentException('Dodavatel potřebuje label a url.');
+            ProductSupplierLinkRepository::validate($link['label'], $link['url']);
+        }
+        return $links;
     }
 
     private static function keys(array $value, array $allowed): void

@@ -14,18 +14,14 @@ final class MediaAttachment
     public static function capacity(array $current, string $type, int $count,
         ?string $mode = null, ?int $index = null, array $paths = []): void
     {
-        if ($count < 1 || $count > 12) throw new InvalidArgumentException('Vyber 1 až 12 fotografií.');
+        if ($count < 1) throw new InvalidArgumentException('Vyber alespoň jednu fotografii.');
         if ($type === 'product') {
             $details = ProductDetails::decode($current['details_json'] ?? null, $current['sizes'] ?? '');
             $mode ??= 'main-image';
-            $gallery = count($details['gallery']);
             if ($mode === 'gallery-set') {
-                self::requireIndex($index, $gallery);
-                $gallery += $count - 1;
-            } elseif ($mode === 'gallery-add') {
-                $gallery += $count - ($current['image_path'] === 'images/batoh.webp' ? 1 : 0);
-            } elseif ($mode === 'main-image') {
-                $gallery += $count - 1 + ($current['image_path'] !== 'images/batoh.webp' ? 1 : 0);
+                self::requireIndex($index, count($details['gallery']));
+            } elseif (in_array($mode, ['gallery-add', 'main-image'], true)) {
+                return;
             } elseif ($mode === 'section-image' || $mode === 'section-add-image') {
                 if ($mode === 'section-image') self::requireImageSection($details['sections'], $index);
                 elseif ($index !== null) self::requireInsertAfter($index, count($details['sections']));
@@ -37,24 +33,6 @@ final class MediaAttachment
                 return;
             } else {
                 throw new InvalidArgumentException('Neznámé umístění fotografie.');
-            }
-            // An existing gallery image can be promoted even when the gallery is full.
-            if ($paths !== []) {
-                $promote = $mode === 'main-image' ||
-                    ($mode === 'gallery-add' && $current['image_path'] === 'images/batoh.webp');
-                $main = $promote ? $paths[0] : $current['image_path'];
-                $galleryPaths = $details['gallery'];
-                if ($mode === 'gallery-set') $galleryPaths[$index] = $paths[0];
-                elseif ($mode === 'main-image' && $current['image_path'] !== 'images/batoh.webp') {
-                    $galleryPaths[] = $current['image_path'];
-                }
-                $galleryPaths = array_merge($galleryPaths, array_slice($paths,
-                    ($promote || $mode === 'gallery-set') ? 1 : 0));
-                $gallery = count(array_unique(array_filter($galleryPaths,
-                    static fn (string $path): bool => $path !== $main)));
-            }
-            if ($gallery > 12) {
-                throw new InvalidArgumentException('Galerie může mít nejvýše 12 dalších fotografií. Některé nejdřív odeber.');
             }
             return;
         }
@@ -80,12 +58,12 @@ final class MediaAttachment
         $form = ProductInlineEditor::fromRevision($current);
         $gallery = $form['gallery'] === '' ? [] : explode("\n", $form['gallery']);
         // A new product needs its first real photo even when opened via "add to gallery".
-        if ($mode === 'gallery-add' && $form['image_path'] === 'images/batoh.webp') {
+        if ($mode === 'gallery-add' && in_array($form['image_path'], ['images/batoh.webp', 'images/product-placeholder.png'], true)) {
             $mode = 'main-image';
         }
         if ($mode === 'main-image') {
             $newMain = array_shift($paths);
-            if ($form['image_path'] !== 'images/batoh.webp' && $form['image_path'] !== $newMain) {
+            if (!in_array($form['image_path'], ['images/batoh.webp', 'images/product-placeholder.png'], true) && $form['image_path'] !== $newMain && ProductDetails::imagePath($form['image_path'])) {
                 $gallery[] = $form['image_path'];
             }
             $form['image_path'] = $newMain;

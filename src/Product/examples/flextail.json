@@ -11,7 +11,6 @@
     "stock_status": "out_of_stock",
     "summary": "Karbonová powerbanka s kapacitou 10 000 mAh a hmotností 145 g. Dva USB-C porty a tenké tělo pro cestování nalehko.",
     "description": "Záložní energie do batohu i příručního zavazadla. Flextail ZERO Power 10000 spojuje kapacitu 10 000 mAh s karbonovým tělem o tloušťce 9,9 mm. Připojíš telefon nebo další kompatibilní zařízení přes USB-C.",
-    "image_path": "https://gramino.cz/wp-content/uploads/2026/04/Flextail-ZERO-Power-10000-Power-Bank-7.jpg",
     "gallery": [],
     "options": [],
     "specifications": [
@@ -49,6 +48,12 @@
         "type": "text",
         "heading": "Energie na cesty",
         "body": "Dva výstupy USB-C umožňují připojit kompatibilní elektroniku. Skutečný počet dobití závisí na zařízení, použitém kabelu a ztrátách při nabíjení."
+      }
+    ],
+    "suppliers": [
+      {
+        "label": "Gramino",
+        "url": "https://gramino.cz/produkt/flextail-zero-power-10000-power-bank/"
       }
     ]
   }

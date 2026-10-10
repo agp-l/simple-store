@@ -10,7 +10,6 @@ use RuntimeException;
 /** Re-encode untrusted uploads and make three immutable sizes. No original upload is served. */
 final class MediaLibrary
 {
-    private const MAX_FILES = 12;
     private const MAX_BYTES = 12 * 1024 * 1024;
     private const MAX_PIXELS = 20000000;
 
@@ -44,9 +43,8 @@ final class MediaLibrary
     {
         MediaPath::directory($type, $key);
         if (!isset($files['name'], $files['tmp_name'], $files['error'], $files['size']) ||
-            !is_array($files['name']) || count($files['name']) < 1 ||
-            count($files['name']) > self::MAX_FILES) {
-            throw new InvalidArgumentException('Vyber 1 až 12 fotografií najednou.');
+            !is_array($files['name']) || count($files['name']) < 1) {
+            throw new InvalidArgumentException('Vyber alespoň jednu fotografii.');
         }
         $count = count($files['name']);
         foreach (['tmp_name', 'error', 'size'] as $field) {

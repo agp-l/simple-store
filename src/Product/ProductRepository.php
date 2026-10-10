@@ -251,7 +251,8 @@ final class ProductRepository
         }
     }
 
-    public function saveRevision(array $fields, ?string $key = null, ?int $expected = null): array
+    public function saveRevision(array $fields, ?string $key = null, ?int $expected = null,
+        ?array $suppliers = null, ?string $newProductKey = null): array
     {
         $language = (string) ($fields['language'] ?? '');
         $name = trim((string) ($fields['name'] ?? ''));
@@ -287,9 +288,9 @@ final class ProductRepository
         if ($this->categories === null || $this->categories->find($language, $categoryPath) === null) {
             throw new InvalidArgumentException('Vybraná kategorie v tomto jazyce neexistuje nebo není zapnutá.');
         }
-        // An HTTPS URL or a relative path inside images/ is safe to put in an escaped img src.
+        // New image references must point to the local media library.
         if (!ProductDetails::imagePath($image)) {
-            throw new InvalidArgumentException('Use an images/filename.webp path or an HTTPS image URL.');
+            throw new InvalidArgumentException('Vyber nahranou fotografii ve složce images/.');
         }
         if (strlen($image) > 1000) {
             throw new InvalidArgumentException('The image path is too long.');
@@ -306,9 +307,16 @@ final class ProductRepository
                 . 'ALTER TABLE shop_product_revisions ADD COLUMN details_json LONGTEXT NULL AFTER description;');
         }
 
-        $key ??= bin2hex(random_bytes(16));
+        $creating = $key === null;
+        if ($newProductKey !== null && (!$creating || preg_match('/^[a-f0-9]{32}$/D', $newProductKey) !== 1)) {
+            throw new InvalidArgumentException('Neplatná identita importovaného produktu.');
+        }
+        $key ??= $newProductKey ?? bin2hex(random_bytes(16));
         $this->db->startTransaction();
         try {
+            if ($creating && $this->db->queryFirstRow('SELECT product_key FROM shop_product_revisions WHERE product_key=%s LIMIT 1 FOR UPDATE', $key) !== null) {
+                throw new InvalidArgumentException('Produkt s tímto klíčem již existuje.');
+            }
             if ($expected === 0 && $this->db->queryFirstRow(
                 'SELECT product_key FROM shop_product_revisions WHERE product_key=%s LIMIT 1 FOR UPDATE', $key
             ) === null) {
@@ -348,6 +356,7 @@ final class ProductRepository
             ]);
             $id = $this->db->insertId();
             $this->stock?->ensure($key);
+            if ($suppliers !== null) (new ProductSupplierLinkRepository($this->db))->replace($key, $suppliers);
             if ($revision > $this->revisionLimit) {
                 $this->db->query(
                     'DELETE FROM shop_product_revisions WHERE product_key=%s AND language=%s

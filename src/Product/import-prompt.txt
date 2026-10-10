@@ -1,0 +1,56 @@
+Připrav podklady pro import do Simple Store. Zpracuji seznam produktů / URL, který doplním za toto zadání. Neprováděj SQL. Nevymýšlej parametry, skladové kusy, cenu ani zkušenosti s testováním výrobku. Napiš vlastní český text podle ověřených zdrojů, nekopíruj cizí marketingové odstavce. Pokud chybí cena nebo kategorie, vyžádej si je; cenu z cizího obchodu použij pouze jako výslovně označenou referenční cenu do konceptu. Zdrojové odkazy ukládej soukromě do suppliers, nikoli do veřejného popisu.
+
+VÝSTUP:
+A) Pokud chci jeden JSON: vrať jeden JSON objekt, bez komentářů. Bez fotografií vynech image_path a gallery; nahraji je později. Nevkládej URL fotografie.
+B) Pokud chci ZIP: vytvoř skutečný soubor ZIP. V jeho kořeni budou přímo složky produktů, bez společné nadřazené složky. Každý produkt: jeho-nazev/product.json a jeho-nazev/images/01-hlavni.jpg, 02-detail.webp atd. Povoleny JPG/JPEG, PNG, WebP. Použij originální fotografie daného výrobku, které smím používat, nikoli AI napodobeniny nebo screenshot stránky. Pokud fotografii nelze získat, nevymýšlej soubor ani URL; připrav produkt bez fotek a mimo ZIP vysvětli, co chybí. Názvy obrázků: písmena A–Z, číslice, pomlčka nebo podtržítko, bez mezer a diakritiky. Žádné další soubory uvnitř složky produktu. ZIP bez hesla, symlinků, vnořených archivů a cest ../. V product.json jsou cesty relativní k produktu: images/01-hlavni.jpg, nikoli název-produktu/images/… ani absolutní URL. Každá uvedená fotografie musí být skutečně přibalena.
+
+FORMÁT (příklad, hodnoty nahraď skutečnými):
+{
+  "format": "simple-store.product.v1",
+  "language": "cs",
+  "product": {
+    "name": "Název výrobku",
+    "slug": "nazev-vyrobku",
+    "brand": "Značka",
+    "category_path": "CESTA_ZE_SEZNAMU_KATEGORII",
+    "price_czk": 1990,
+    "published": false,
+    "stock_status": "out_of_stock",
+    "summary": "Krátký konkrétní perex do 180 znaků.",
+    "description": "Úvodní popis výrobku.",
+    "image_path": "images/01-hlavni.jpg",
+    "gallery": ["images/02-detail.webp"],
+    "options": [{"name": "Velikost", "values": ["42 EU", "43 EU"]}],
+    "specifications": [{"name": "Hmotnost", "value": "145 g"}],
+    "sections": [
+      {"type": "text", "heading": "Pro koho je výrobek", "body": "První odstavec s **tučným důrazem**.\n\nDruhý odstavec."},
+      {"type": "list", "heading": "Vlastnosti", "body": "První vlastnost\nDruhá vlastnost"},
+      {"type": "table", "heading": "Technické údaje", "body": "Vlastnost | Hodnota\nMateriál | Skutečný materiál"},
+      {"type": "image", "heading": "Popis záběru", "body": "images/02-detail.webp"}
+    ],
+    "suppliers": [{"label": "Gramino", "url": "https://gramino.cz/produkt/topo-athletic-pursuit-3-mens/"}]
+  }
+}
+
+PRAVIDLA A LIMITY:
+- Povinné: format přesně simple-store.product.v1, language (z podporovaných jazyků obchodu), product. Nový produkt navíc name, category_path a price_czk. Žádná neznámá pole ani null. Čísla a boolean piš jako JSON typy, ne řetězce.
+- Nové produkty nech published:false a stock_status:out_of_stock. Skutečnou zásobu nastavuje správce. Další platné stavy: in_stock, on_order. Cizí údaj „skladem“ není zásobou tohoto obchodu.
+- name do 255 znaků, brand do 120 znaků; summary do 180 znaků. price_czk celé koruny od 1 do 10 000 000. category_path přesně ze seznamu, který přiložím. Kategorie se importem nezakládají.
+- slug je volitelný; bez něj se vytvoří z názvu. Nejvýše 190 znaků, malá ASCII písmena/číslice oddělené pomlčkami. Musí být jedinečný v daném jazyce.
+- description do 65 535 bajtů UTF-8. Je to úvodní text, nikoli HTML. Strukturovaný delší obsah patří do sections.
+- options: nejvýše 8 skupin, name do 80 bajtů, 1–50 různých values, každá do 120 bajtů. Nevytvářej smyšlené varianty. Prázdné options:[] znamená výrobek bez voleb.
+- specifications: nejvýše 40 dvojic; name do 120 bajtů a value do 500 bajtů. Obě hodnoty musí být neprázdný text. Neznámé parametry vynech.
+- sections: nejvýše 30 bloků. type je text, list, table nebo image. heading je volitelný, do 255 bajtů. body je povinný neprázdný text do 30 000 bajtů.
+- text: prázdný řádek (\n\n v JSON) odděluje odstavce; \n dělá konec řádku. Podporován **tučný text** a [text odkazu](https://…). Nepoužívej HTML, markdown nadpisy #, kurzívu, markdown tabulky ani bloky kódu. Nadpis patří do heading. Formátování platí pro textové obsahové bloky; name, summary a parametry piš prostým textem.
+- list: každá položka na samostatném řádku, bez odrážkových znaků, pomlček a číslování.
+- table: každý řádek přesně dvě buňky oddělené jedním |; bez oddělovacího řádku --- a bez okrajových |.
+- image: body je cesta souboru, heading popis fotografie. Žádné HTTPS obrázky, data URI, SVG ani HTML img.
+- gallery nemá limit 12 obrázků. V ZIP bez image_path se u nového produktu první fotografie podle názvu použije jako hlavní. Bez gallery se zbývající přibalené fotografie vloží do galerie. Explicitní gallery určuje pořadí; [] galerii vyprázdní. Každá fotografie do 12 MiB a 20 megapixelů. Server vytvoří vlastní hlavní soubor 1800 px a varianty 960 a 240 px.
+- suppliers jsou soukromé dodavatelské/zdrojové odkazy. Každý má neprázdné label do 120 znaků a url HTTP/HTTPS do 1000 bajtů bez přihlašovacích údajů. Nevkládej sem URL obrázků, ale detail produktu u dodavatele. Podporováno více dodavatelů.
+- JSON nejvýše 128 KiB na produkt; ZIP nejvýše 128 MiB, rozbalená data 512 MiB, 200 produktů, 5000 souborů. To jsou ochranné limity balíčku, nikoli limit délky galerie. Hosting může mít nižší limit nahrávání; rozděl pak produkty do více ZIPů.
+
+ÚPRAVA EXISTUJÍCÍHO PRODUKTU:
+Dostaneš export z tlačítka JSON pro AI. Zachovej kořenové product_key, revision a language. Do product dej pouze změněná pole. Bez těchto identifikátorů vzniká nový produkt, ne aktualizace podle názvu. Vynechaná pole se nemění; dodané seznamy gallery/options/specifications/sections/suppliers se nahrazují celé, [] je vyprázdní. Dodavatelé jsou společné údaje napříč jazyky produktu. Při ZIP aktualizaci vynech nezměněná obrazová pole; každá uvedená cesta fotografie musí odpovídat souboru v tomto ZIP. Nelze odkazovat na externí obrázky. Neodhaduj číslo revize.
+
+PŘED ODEVZDÁNÍM:
+Ověř JSON parserem, že soubory jsou platné UTF-8 JSON, názvy cest a velikosti souborů sedí, všechny obrázky jdou skutečně otevřít, summary není delší než 180 znaků, cena i kategorie odpovídají zadání a text obsahuje jen doložené informace. Upozorni mimo importovaná data na neověřené informace. Nevkládej tento prompt ani README do složek produktů.

@@ -1,8 +1,14 @@
-# Import produktu z AI
+# Import produktů z AI: JSON a ZIP
 
-Administrace → **Import z AI**, také v liště nad katalogem. Vlož JSON → **Zkontrolovat a zobrazit náhled** → **Vytvořit produkt**. Formulář má i kopírovatelné zadání pro libovolnou AI, seznam skutečných kategorií a ukázku Flextail. Žádný API klíč ani SQL nejsou potřeba. Vyžaduje přihlášeného správce a CSRF token; není to veřejné API pro anonymní volání.
+V administraci otevři **Import z AI**, dostupný i nad katalogem. Nepotřebuje veřejné API ani další klíč: všechny akce vyžadují relaci správce a CSRF. SQL dodané AI se nikdy neprovádí. Databázová migrace není potřeba (používá existující produkty, sklad a tabulku dodavatelů).
 
-## Formát v1
+## Přesné zadání pro AI
+
+Celý aktuální prompt je v [`src/Product/import-prompt.txt`](../src/Product/import-prompt.txt). Stejný soubor administrace zobrazuje ke kopírování spolu se skutečným seznamem kategorií. Popisuje všechny podporované položky JSON, typy, limity, textové formátování, varianty, aktualizace i strukturu ZIP. Je to jediný zdroj zadání, aby dokumentace a formulář neobsahovaly různé formáty.
+
+## Jeden produkt jako JSON
+
+Vlož JSON → náhled → uložit. Nový produkt je výchozím nastavením koncept bez skladu. Bez obrázku se zobrazí neutrální náhled; fotky následně nahraj v detailu. Chyba ponechá JSON ve formuláři.
 
 ```json
 {
@@ -12,43 +18,62 @@ Administrace → **Import z AI**, také v liště nad katalogem. Vlož JSON → 
     "name": "Název produktu",
     "category_path": "vybaveni/powerbanky",
     "price_czk": 1960,
-    "brand": "Značka",
-    "summary": "Perex do 180 znaků.",
-    "description": "Vlastní popis produktu.",
     "published": false,
-    "stock_status": "out_of_stock",
-    "specifications": [{"name": "Hmotnost", "value": "145 g"}],
-    "sections": [{"type": "text", "heading": "Vlastnosti", "body": "Text"}]
+    "summary": "Perex do 180 znaků.",
+    "suppliers": [
+      {"label": "Gramino", "url": "https://gramino.cz/produkt/topo-athletic-pursuit-3-mens/"}
+    ]
   }
 }
 ```
 
-Povinné jsou format, language a product; pro nový produkt také name, category_path a price_czk (celé Kč, 1–10 000 000). Kategorie musí již existovat a být aktivní. Nový produkt je standardně koncept bez skladové zásoby. Prázdný/nevyplněný slug se odvodí z názvu; duplicitní adresa se odmítne. Ostatní dostupná pole:
+Odkaz v tomto minimálním příkladu demonstruje pole dodavatele; při skutečném importu musí odpovídat výrobku. Dodavatelé nejsou veřejnou součástí popisu. Zobrazují se ve stávající administraci produktu a objednávek.
 
-- `slug`, `brand`, `summary`, `description`: texty, stejné limity jako běžná editace.
-- `published`: JSON boolean, nikoli řetězec. `stock_status`: `out_of_stock`, `in_stock`, `on_order`.
-- `image_path`: HTTPS URL nebo podporovaná cesta v images/. Bez ní neutrální náhled.
-- `gallery`: až 12 adres obrázků.
-- `options`: až 8 objektů `{"name":"Barva","values":["Černá","Modrá"]}`.
-- `specifications`: až 40 objektů s `name` a `value`.
-- `sections`: až 30 objektů s `type`, volitelným `heading` a `body`. Typy: text, list (řádky oddělené `\n`), table (řádky `Název | Hodnota`), image (cesta obrázku v body).
+## ZIP s jedním nebo více produkty
 
-JSON má nejvýše 128 KiB. Neznámá pole a nesprávné datové typy se odmítají. Texty nejsou SQL ani spustitelný kód. Náhled nic neukládá. Uložení znovu provede validaci a používá transakční ProductRepository, stejné revize a ochranu souběžných změn jako editor. Chyba ponechá vstup ve formuláři.
+Příklad cest uvnitř ZIP:
 
-## Úprava existujícího produktu
+```text
+flextail-zero/product.json
+flextail-zero/images/01-hlavni.jpg
+flextail-zero/images/02-detail.webp
+topo-pursuit/product.json
+topo-pursuit/images/01-hlavni.png
+```
 
-V detailu jako správce klikni **JSON pro AI**. Export obsahuje `product_key` a `revision`. AI musí zachovat oba identifikátory a `language`. V product může poslat jen změněná pole. Vynechaná pole se zachovají; dodané seznamy se nahrazují celé, `[]` je vyprázdní. Import odmítne neaktuální revizi. Jazykový překlad novým klíčem automaticky nevytváří.
+Bez další společné nadřazené složky. V JSON se použije `images/01-hlavni.jpg`, nikoli celý název složky. Bez `image_path` se u nového produktu použije první fotografie podle názvu; bez `gallery` se ostatní fotografie přidají do galerie. Dodaná galerie určí přesné pořadí. Soubory jsou po načtení překódované standardní MediaLibrary na 1800, 960 a 240 px a uložené pod stabilním klíčem produktu. Nejsou pod veřejnými názvy z archivu. Žádný PHP ani jiný kód z archivu se nespouští.
 
-Skladové kusy, rezervace objednávek, výběr na titulní stránku a soukromé dodavatelské odkazy import nemění. Nastavují se v existujících ovládacích prvcích; AI nezná skutečný stav skladu. Samotné `in_stock` bez volných kusů nezpřístupní objednání.
+1. Nahraj ZIP. Uvidíš frontu složek.
+2. Spusť import. JavaScript posílá postupně jeden POST na produkt; bez JS každé kliknutí zpracuje jeden produkt.
+3. Sleduj tabulku: uloženo / přeskočeno s důvodem / čeká.
+4. Oprav pouze vadné složky a nahraj je v novém ZIP. Dokončené produkty se neopakují při obnovení stejné fronty.
 
-## Fotografie a ukázka
+Chyba fotografie nebo JSON přeskočí celý produkt. Nové soubory neúspěšného produktu se uklidí, databázová revize a dodavatelé se potvrzují společně. Dříve úspěšné produkty zůstanou. Přerušení běhu procesu nemusí umožnit určit výsledek posledního zápisu: taková položka se označí k ruční kontrole a neopakuje se automaticky, další produkty pokračují. Stav běží v soukromé dočasné složce navázané na relaci správce, ne ve veřejném webovém adresáři. Archiv se po dokončení odstraní; tlačítko ukončení odstraní i výsledek fronty. Staré dočasné balíčky se při novém uploadu čistí po 24 hodinách.
 
-Externí HTTPS adresy se pouze uloží, server nic nestahuje. Kdo chce vlastní soubory a miniatury, po importu použije Fotografie v detailu. Tím se používá již zavedené zpracování obrázků. Import neobsahuje stahování cizích URL do serverové sítě.
+### Limity hostingu a bezpečnost
 
-`src/Product/examples/flextail.json` je připravený koncept podle [Gramino](https://gramino.cz/produkt/flextail-zero-power-10000-power-bank/), ověřeno 2026-10-10. Referenční cena 1 960 Kč není automaticky potvrzená prodejní cena tohoto obchodu. Text je vlastní, fotografie je externí odkaz. Před zveřejněním zkontroluj kategorii, vlastní cenu, dostupnost a fotografie. Pouhé načtení ukázky nevytvoří záznam v databázi.
+Vyžaduje PHP ZipArchive a GD s dekodéry použitých obrázků. ZIP do 128 MiB, rozbalená data do 512 MiB, nejvýše 200 produktů / 5000 souborů. Jeden obrázek do 12 MiB / 20 Mpx, product.json do 128 KiB. Menší upload_max_filesize/post_max_size hostingu mají přednost a zobrazují se ve formuláři. **Limit 12 fotografií galerie byl odstraněn**, včetně původního aplikačního limitu dávky; klasické HTTP nahrávání stále respektuje PHP max_file_uploads. Limity 30 obsahových bloků produktu a 60 bloků stránky se nezměnily.
 
-## Implementace a ověření
+Nebezpečné cesty, duplicitní ZIP cesty a nadměrný archiv se odmítají před zpracováním. Symlinky, šifrované položky, chybějící soubory, vadný CRC, poškozené obrázky nebo neplatný produkt mají vlastní chybu. Nepoužívá se extractTo ani stahování externích URL.
 
-Formát: `src/Product/ProductImport.php`; ovládání: `src/Admin/product-import.php`; šablona: `view/admin/product-import.php`. POST na admin.php s akcí product-import-preview nebo product-import-save, JSON v poli json a platným csrf ze správní relace. Budoucí tokenové API může použít stejný převodník, ale musí mít vlastní autentizaci; hesla/tokeny se neposílají AI v JSON produktu.
+## Úpravy a dodavatelé
 
-`php tests/product-import.php` ověřuje výchozí koncept, ukázku, export/import bez změn, částečné změny, mazání kolekce, zastaralou revizi, chybné JSON i datové typy.
+**JSON pro AI** v detailu exportuje `product_key`, aktuální `revision`, `language` a aktuální dodavatele. Pro úpravu zachovej identifikátory; vynechaná pole se nemění. Seznamy gallery/options/specifications/sections/**suppliers** se nahrazují celé; `[]` je vyprázdní. Dodavatelé jsou společné údaje produktu napříč jazyky. Stará revize se odmítne, stejně jako duplicitní slug u nového produktu.
+
+ZIP úprava může nechat obrazová pole vynechaná. Uvedené cesty musí existovat v aktuálním ZIP. Nově přibalené obrázky bez explicitní gallery se přidají k dosavadní galerii; hlavní fotografie stávajícího produktu se změní jen explicitním image_path. Skladové kusy, rezervace a výběr na úvodní stránku import nemění.
+
+## Externí fotografie
+
+Nové HTTPS obrazové odkazy už nepřijímá JSON, ZIP, editor ani mediální API. Formulář ručního obrazového odkazu byl odstraněn. Staré snapshoty zůstávají čitelné, aby zmizení jedné externí fotografie neskrylo ostatní parametry a obsah. Před uložením nové revize takového produktu nahraj vlastní fotografie a odstraň staré externí reference. Tato změna neprovádí hromadné mazání existujících dat ani kopírování cizích obrázků.
+
+Ukázka Flextail (`src/Product/examples/flextail.json`) obsahuje soukromý zdroj Gramino a referenční cenu zjištěnou 2026-10-10; fotografie se již nehotlinkuje. Před zveřejněním ověř vlastní cenu, kategorii a dostupnost.
+
+## Třídy a testy
+
+- ProductImport: formát, převod, export, validace dodavatelů.
+- ProductZipArchive: validace archivu, bezpečné omezené čtení položek.
+- ProductZipJob: soukromá fronta, zámek, checkpoint a oddělené výsledky.
+- ProductPackageImporter: fotografie, mapování cest, revize a úklid chyb.
+- ProductRepository a ProductSupplierLinkRepository: společný transakční zápis produktu a dodavatelů.
+
+Testy: `tests/product-import.php`, `tests/product-import-database.php`, `tests/product-zip-database.php`, `tests/media-library.php`. ZIP testy běží na MySQL i MariaDB a ověřují úspěšný produkt mezi vadnými, 15 fotografií s miniaturami, odstranění fotek vadného produktu, dodavatele, rollback, neopakování hotové fronty a nebezpečné archivy.

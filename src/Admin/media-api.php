@@ -70,7 +70,7 @@ try {
         } elseif (($_POST['action'] ?? '') === 'media-attach') {
             $path = $_POST['path'] ?? null;
             if (!is_string($path) || !ProductDetails::imagePath(trim($path))) {
-                throw new InvalidArgumentException('Zadej cestu v images/ nebo HTTPS odkaz na obrázek.');
+                throw new InvalidArgumentException('Vyber fotografii nahranou ve složce images/.');
             }
             $paths = [trim($path)];
         } else {
