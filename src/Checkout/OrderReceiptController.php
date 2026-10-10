@@ -114,6 +114,7 @@ final class OrderReceiptController
                 return;
             }
             $selectedInvoice = $invoice;
+            $printAssetBase = $this->url->getBasePath();
             require __DIR__ . '/../../view/admin/invoice-print.php';
             return;
         }

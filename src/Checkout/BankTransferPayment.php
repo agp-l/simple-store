@@ -83,9 +83,19 @@ final class BankTransferPayment
             'amount_czk' => $amount,
             'variable_symbol' => $vs,
             'due_at' => $order['payment_due_at'] ?? null,
-            'spayd' => 'SPD*1.0*ACC:' . $saved->iban . '*AM:' . number_format($amount, 2, '.', '') .
-                '*CC:CZK*X-VS:' . $vs,
+            'spayd' => self::qrPayloadForAccount($saved->accountDisplay, $amount, $vs),
         ];
+    }
+
+    /** Build QR Platba from the account saved on the order or invoice, never today's settings. */
+    public static function qrPayloadForAccount(string $account, int $amount, string $variableSymbol): string
+    {
+        if ($amount < 1 || $amount > 9999999 ||
+            preg_match('/^[0-9]{1,10}$/D', $variableSymbol) !== 1) {
+            throw new InvalidArgumentException('Neplatná částka nebo variabilní symbol.');
+        }
+        return 'SPD*1.0*ACC:' . self::ibanForCzechAccount($account) .
+            '*AM:' . number_format($amount, 2, '.', '') . '*CC:CZK*X-VS:' . $variableSymbol;
     }
 
     private static function validatedIban(string $iban): string

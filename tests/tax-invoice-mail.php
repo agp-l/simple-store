@@ -232,9 +232,29 @@ ob_start();
 require dirname(__DIR__) . '/view/admin/invoice-print.php';
 $html = (string) ob_get_clean();
 if (!str_contains($html, '&lt;Stan&gt;') || str_contains($html, '<Stan>') ||
-    !str_contains($html, '990 Kč')) {
+    !str_contains($html, '990 Kč') || str_contains($html, 'data-qr-payload=')) {
     throw new RuntimeException('Printable invoice is not escaped or has the wrong amount.');
 }
+foreach (['123456789/2010' => 12, '1004823033/3030' => 13] as $account => $orderId) {
+    $db->orders[$orderId] = array_replace($db->orders[9], [
+        'id' => $orderId, 'order_number' => 'DB-BANK-' . $orderId,
+        'payment_details_json' => json_encode(['account_display' => $account], JSON_THROW_ON_ERROR),
+    ]);
+    $bankInvoice = $repository->issue($orderId, $seller, $buyer);
+    $selectedInvoice = $bankInvoice;
+    $printAssetBase = '/simple-store/';
+    ob_start();
+    require dirname(__DIR__) . '/view/admin/invoice-print.php';
+    $bankHtml = (string) ob_get_clean();
+    $expectedQr = \SimpleStore\Checkout\BankTransferPayment::qrPayloadForAccount($account, 990, '1234567890');
+    if ($bankInvoice['bank_account'] !== $account ||
+        !str_contains($bankHtml, 'data-qr-payload="' . $expectedQr . '"') ||
+        !str_contains($bankHtml, '/simple-store/assets/payment-qr.js') ||
+        !str_contains($bankHtml, 'neplaťte znovu')) {
+        throw new RuntimeException('Invoice QR did not use its original bank account and paid status.');
+    }
+}
+unset($printAssetBase);
 $db->orders[10] = array_replace($db->orders[9], [
     'id' => 10, 'order_number' => 'DB-COMGATE-2', 'payment_method' => 'comgate',
     'payment_details_json' => '{}', 'variable_symbol' => '1234567891',
@@ -273,7 +293,8 @@ ob_start();
 require dirname(__DIR__) . '/view/admin/invoice-print.php';
 $onlineHtml = (string) ob_get_clean();
 if (!str_contains($onlineHtml, 'online přes Comgate') ||
-    str_contains($onlineHtml, 'Účet:') || str_contains($onlineHtml, 'bankovním převodem')) {
+    str_contains($onlineHtml, 'Účet:') || str_contains($onlineHtml, 'bankovním převodem') ||
+    str_contains($onlineHtml, 'data-qr-payload=')) {
     throw new RuntimeException('Gateway invoice print misstates the payment method.');
 }
 $db->orders[11] = array_replace($db->orders[10], [

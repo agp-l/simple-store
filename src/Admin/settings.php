@@ -80,10 +80,11 @@ $form = [
     'shipping_price' => [],
     'shipping_enabled' => [],
     'account_display' => $settings['bank_transfer']['account_display'] ?? '',
+    'bank_source' => $settings['bank_transfer']['bank_source'] ??
+        (str_ends_with((string) ($settings['bank_transfer']['account_display'] ?? ''), '/2010') ? 'fio' : 'manual'),
     'bank_transfer_enabled' => ($settings['bank_transfer']['enabled'] ?? true) ? '1' : '0',
     'fio_enabled' => ($settings['fio_bank']['enabled'] ?? false) ? '1' : '0',
     'fio_account_display' => $settings['fio_bank']['account_display'] ?? '',
-    'iban' => $settings['bank_transfer']['iban'] ?? '',
     'recipient' => $settings['bank_transfer']['recipient'] ?? '',
     'payment_due_days' => (string) ($settings['bank_transfer']['payment_due_days'] ?? 7),
     'terms_url' => $settings['terms_url'] ?? '',

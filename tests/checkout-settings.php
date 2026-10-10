@@ -121,6 +121,38 @@ if ($btcOnly['bank_transfer']['enabled'] || $btcOnly['bank_transfer']['account_d
     !$btcOnly['btcpay']['enabled']) {
     throw new RuntimeException('BTC-only checkout must preserve bank details while disabling transfer.');
 }
+$fioCheckout = $repo->saveSection('payment', array_replace($input, [
+    'account_display' => '123456789/2010', 'bank_source' => 'fio',
+    'iban' => $saved['bank_transfer']['iban'], // The old form used to submit a stale IBAN.
+    'comgate_enabled' => '0', 'gopay_enabled' => '0', 'btcpay_enabled' => '0',
+]), '/simple-store/', $saved);
+if ($fioCheckout['bank_transfer']['iban'] !== BankTransferPayment::ibanForCzechAccount('123456789/2010') ||
+    $fioCheckout['bank_transfer']['bank_source'] !== 'fio' ||
+    $fioCheckout['comgate']['enabled'] || $fioCheckout['gopay']['enabled'] ||
+    $fioCheckout['btcpay']['enabled'] || $repo->load($fallback) != $fioCheckout) {
+    throw new RuntimeException('Changing the checkout bank account must replace the old IBAN and persist disabled gateways.');
+}
+$otherBank = $repo->saveSection('payment', array_replace($input, [
+    'account_display' => '1004823033/3030', 'bank_source' => 'manual',
+    'fio_enabled' => '0', 'comgate_enabled' => '0', 'gopay_enabled' => '0', 'btcpay_enabled' => '0',
+]), '/simple-store/', $fioCheckout);
+$order = ['payment_method' => 'bank_transfer', 'payment_details' => $otherBank['bank_transfer'],
+    'total_czk' => 590, 'variable_symbol' => '12345678'];
+$qr = BankTransferPayment::fromOrder($order)->details($order)['spayd'];
+if ($otherBank['bank_transfer']['account_display'] !== '1004823033/3030' ||
+    !str_contains($qr, '*ACC:' . BankTransferPayment::ibanForCzechAccount('1004823033/3030') . '*') ||
+    !str_contains($qr, '*AM:590.00*CC:CZK*X-VS:12345678')) {
+    throw new RuntimeException('The manual bank QR must use the bank code, amount and symbol saved on this order.');
+}
+$draft = $repo->saveSection('payment', array_replace($input, [
+    'bank_transfer_enabled' => '0', 'account_display' => '', 'recipient' => 'Test',
+    'bank_source' => 'manual', 'comgate_enabled' => '0', 'gopay_enabled' => '0',
+    'btcpay_enabled' => '0',
+]), '/simple-store/', $otherBank);
+if ($draft['bank_transfer']['enabled'] || $draft['bank_transfer']['account_display'] !== '' ||
+    $draft['bank_transfer']['recipient'] !== 'Test') {
+    throw new RuntimeException('Disabled bank transfer should allow saving incomplete account details.');
+}
 $fio = $repo->saveSection('payment', array_replace($input, [
     'fio_enabled' => '1', 'fio_account_display' => '123456789/2010',
     'fio_token' => str_repeat('T', 64),

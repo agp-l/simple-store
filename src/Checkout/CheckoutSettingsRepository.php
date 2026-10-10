@@ -80,7 +80,7 @@ final class CheckoutSettingsRepository
             'delivery' => ['shipping_price', 'shipping_enabled'],
             'carriers' => ['packeta_api_key', 'ppl_widget_key', 'packeta_sender',
                 'packeta_api_password', 'packeta_clear_password'],
-            'payment' => ['bank_transfer_enabled', 'account_display', 'iban', 'recipient', 'payment_due_days',
+            'payment' => ['bank_transfer_enabled', 'bank_source', 'account_display', 'recipient', 'payment_due_days',
                 'fio_enabled', 'fio_account_display', 'fio_token', 'fio_clear_token',
                 'comgate_enabled', 'comgate_test', 'comgate_merchant', 'comgate_return_base_url',
                 'comgate_secret', 'comgate_clear_secret', 'gopay_enabled', 'gopay_test',
@@ -98,11 +98,15 @@ final class CheckoutSettingsRepository
             'shipping_price' => [], 'shipping_enabled' => [],
             'btc_prices_enabled' => !empty($current['btc_prices_enabled']) ? '1' : '0',
             'account_display' => (string) ($current['bank_transfer']['account_display'] ?? ''),
+            'bank_source' => (string) ($current['bank_transfer']['bank_source'] ??
+                self::bankSource((string) ($current['bank_transfer']['account_display'] ?? ''))),
             'bank_transfer_enabled' => !empty($current['bank_transfer']['enabled']) ? '1' : '0',
             'fio_enabled' => !empty($current['fio_bank']['enabled']) ? '1' : '0',
             'fio_account_display' => (string) ($current['fio_bank']['account_display'] ?? ''),
             'fio_token' => '', 'fio_clear_token' => '',
-            'iban' => (string) ($current['bank_transfer']['iban'] ?? ''),
+            // Derive the IBAN from the active account on every save. A stored IBAN
+            // from the previous account must not block changing the account.
+            'iban' => '',
             'recipient' => (string) ($current['bank_transfer']['recipient'] ?? ''),
             'payment_due_days' => (string) ($current['bank_transfer']['payment_due_days'] ?? 7),
             'terms_url' => (string) ($current['terms_url'] ?? ''),
@@ -169,14 +173,24 @@ final class CheckoutSettingsRepository
         $account = self::value($input, 'account_display');
         $iban = self::value($input, 'iban');
         $recipient = self::value($input, 'recipient');
-        if ($account !== '' || $iban !== '' || $recipient !== '') {
-            if ($account === '' || $recipient === '') {
-                throw new InvalidArgumentException('Pro platbu převodem vyplň číslo účtu a příjemce.');
-            }
+        $bankEnabled = ($input['bank_transfer_enabled'] ?? null) === '1';
+        $bankSource = isset($input['bank_source']) ? self::value($input, 'bank_source') : '';
+        if ($bankSource === '') $bankSource = self::bankSource($account);
+        if (!in_array($bankSource, ['fio', 'manual'], true)) {
+            throw new InvalidArgumentException('Vyber způsob vedení účtu pro QR platbu.');
+        }
+        if ($bankSource === 'fio' && $account !== '' && !str_ends_with($account, '/2010')) {
+            throw new InvalidArgumentException('Pro účet Fio zadej číslo účtu končící /2010, nebo zvol jinou banku.');
+        }
+        if ($account !== '' && $recipient !== '') {
             $bank = new BankTransferPayment($iban, $account, $recipient);
             $bankSettings = $bank->snapshot();
         } else {
-            $bankSettings = ['iban' => '', 'account_display' => '', 'recipient' => ''];
+            if ($bankEnabled || $iban !== '') {
+                throw new InvalidArgumentException('Pro zapnutý bankovní převod vyplň číslo účtu a příjemce.');
+            }
+            $bankSettings = ['iban' => $account !== '' ? BankTransferPayment::ibanForCzechAccount($account) : '',
+                'account_display' => $account, 'recipient' => $recipient];
         }
         $dueDays = filter_var(self::value($input, 'payment_due_days'), FILTER_VALIDATE_INT,
             ['options' => ['min_range' => 1, 'max_range' => 60]]);
@@ -184,10 +198,8 @@ final class CheckoutSettingsRepository
             throw new InvalidArgumentException('Splatnost platby musí být 1 až 60 dní.');
         }
         $bankSettings['payment_due_days'] = $dueDays;
-        $bankSettings['enabled'] = ($input['bank_transfer_enabled'] ?? null) === '1';
-        if ($bankSettings['enabled'] && ($bankSettings['account_display'] ?? '') === '') {
-            throw new InvalidArgumentException('Pro zapnutý bankovní převod vyplň číslo účtu a příjemce.');
-        }
+        $bankSettings['enabled'] = $bankEnabled;
+        $bankSettings['bank_source'] = $bankSource;
         $fioEnabled = ($input['fio_enabled'] ?? null) === '1';
         $fioAccount = self::value($input, 'fio_account_display');
         if ($fioAccount !== '' && preg_match('/^(?:[0-9]{1,6}-)?[0-9]{1,10}\/2010$/D', $fioAccount) !== 1) {
@@ -197,6 +209,11 @@ final class CheckoutSettingsRepository
             (string) ($current['fio_bank']['token'] ?? ''), 'Token Fio');
         if ($fioEnabled && ($fioAccount === '' || $fioToken === '')) {
             throw new InvalidArgumentException('Pro ověřování převodů vyplň účet Fio a jeho token pouze pro čtení.');
+        }
+        if ($fioEnabled && $bankEnabled && $bankSource === 'fio' &&
+            FioTransferMatcher::canonicalAccount($account) !==
+            FioTransferMatcher::canonicalAccount($fioAccount)) {
+            throw new InvalidArgumentException('Pro ověřování nových plateb nastav stejný účet Fio pro QR platbu i pro API.');
         }
 
         $termsUrl = self::value($input, 'terms_url');
@@ -375,6 +392,11 @@ final class CheckoutSettingsRepository
             throw new InvalidArgumentException('Neplatné pole nastavení: ' . $key . '.');
         }
         return trim($value);
+    }
+
+    private static function bankSource(string $account): string
+    {
+        return str_ends_with(str_replace(' ', '', trim($account)), '/2010') ? 'fio' : 'manual';
     }
 
     private static function comgateReturnBaseUrl(string $url, string $basePath): string
