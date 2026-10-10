@@ -170,8 +170,12 @@ try {
         $btcpaySettings = $checkoutConfig['btcpay'] ?? [];
         if (is_array($btcpaySettings) && ($btcpaySettings['server_url'] ?? '') !== '' &&
             ($btcpaySettings['store_id'] ?? '') !== '' && ($btcpaySettings['api_key'] ?? '') !== '') {
-            $candidate = new BTCPayPaymentService($db, $btcpaySettings);
-            if ($candidate->installed()) $btcpay = $candidate;
+            try {
+                $candidate = new BTCPayPaymentService($db, $btcpaySettings);
+                if ($candidate->installed()) $btcpay = $candidate;
+            } catch (\RuntimeException $exception) {
+                // An unfinished disabled gateway must not take down the storefront.
+            }
         }
         $customerId = null;
         $customerProfile = [];

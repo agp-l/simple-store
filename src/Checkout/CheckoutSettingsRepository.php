@@ -94,6 +94,24 @@ final class CheckoutSettingsRepository
         if (!isset($fields[$section])) {
             throw new InvalidArgumentException('Neznámá část nastavení obchodu.');
         }
+        if ($section === 'payment' && isset($input['payment_area'])) {
+            $paymentAreas = [
+                'bank' => ['bank_transfer_enabled', 'bank_source', 'account_display', 'recipient', 'payment_due_days'],
+                'fio' => ['fio_enabled', 'fio_account_display', 'fio_token', 'fio_clear_token'],
+                'comgate' => ['comgate_enabled', 'comgate_test', 'comgate_merchant',
+                    'comgate_return_base_url', 'comgate_secret', 'comgate_clear_secret'],
+                'gopay' => ['gopay_enabled', 'gopay_test', 'gopay_goid', 'gopay_client_id',
+                    'gopay_return_base_url', 'gopay_client_secret', 'gopay_clear_secret'],
+                'btcpay' => ['btcpay_enabled', 'btcpay_server_url', 'btcpay_store_id',
+                    'btcpay_return_base_url', 'btcpay_api_key', 'btcpay_clear_api_key',
+                    'btcpay_webhook_secret', 'btcpay_clear_webhook_secret'],
+            ];
+            $area = $input['payment_area'];
+            if (!is_string($area) || !isset($paymentAreas[$area])) {
+                throw new InvalidArgumentException('Vyber platnou část nastavení plateb.');
+            }
+            $fields['payment'] = $paymentAreas[$area];
+        }
         $values = [
             'shipping_price' => [], 'shipping_enabled' => [],
             'btc_prices_enabled' => !empty($current['btc_prices_enabled']) ? '1' : '0',
@@ -210,11 +228,8 @@ final class CheckoutSettingsRepository
         if ($fioEnabled && ($fioAccount === '' || $fioToken === '')) {
             throw new InvalidArgumentException('Pro ověřování převodů vyplň účet Fio a jeho token pouze pro čtení.');
         }
-        if ($fioEnabled && $bankEnabled && $bankSource === 'fio' &&
-            FioTransferMatcher::canonicalAccount($account) !==
-            FioTransferMatcher::canonicalAccount($fioAccount)) {
-            throw new InvalidArgumentException('Pro ověřování nových plateb nastav stejný účet Fio pro QR platbu i pro API.');
-        }
+        // The Fio account can also reconcile older orders while a different
+        // bank receives new orders. Matching still checks the order snapshot.
 
         $termsUrl = self::value($input, 'terms_url');
         if ($termsUrl !== '' && (!str_starts_with($termsUrl, $basePath) ||
@@ -252,8 +267,8 @@ final class CheckoutSettingsRepository
             throw new InvalidArgumentException('Tajný klíč Comgate musí mít nejvýše 256 znaků bez mezer.');
         }
         $comgateEnabled = ($input['comgate_enabled'] ?? null) === '1';
-        $comgateReturnBaseUrl = self::comgateReturnBaseUrl(
-            self::value($input, 'comgate_return_base_url'), $basePath);
+        $comgateReturnBaseUrl = self::gatewayUrl(
+            self::value($input, 'comgate_return_base_url'), $basePath, 'Comgate', $comgateEnabled);
         if ($comgateEnabled && $comgateReturnBaseUrl === '') {
             throw new InvalidArgumentException('Před zapnutím Comgate vyplň veřejnou HTTPS adresu obchodu.');
         }
@@ -276,13 +291,15 @@ final class CheckoutSettingsRepository
             throw new InvalidArgumentException('Client secret GoPay musí mít nejvýše 256 znaků bez mezer.');
         }
         $gopayEnabled = ($input['gopay_enabled'] ?? null) === '1';
-        $gopayReturnBaseUrl = self::paymentReturnBaseUrl(
-            self::value($input, 'gopay_return_base_url'), $basePath, 'GoPay');
+        $gopayReturnBaseUrl = self::gatewayUrl(
+            self::value($input, 'gopay_return_base_url'), $basePath, 'GoPay', $gopayEnabled);
         if ($gopayEnabled && $gopayReturnBaseUrl === '') {
             throw new InvalidArgumentException('Před zapnutím GoPay vyplň veřejnou HTTPS adresu obchodu.');
         }
         $btcpayEnabled = ($input['btcpay_enabled'] ?? null) === '1';
-        $btcpayServerUrl = self::btcpayServerUrl(self::value($input, 'btcpay_server_url'));
+        $btcpayServerInput = self::value($input, 'btcpay_server_url');
+        $btcpayServerUrl = $btcpayEnabled ? self::btcpayServerUrl($btcpayServerInput) :
+            self::disabledGatewayUrl($btcpayServerInput);
         $btcpayStoreId = self::value($input, 'btcpay_store_id');
         if ($btcpayStoreId !== '' && preg_match('/^[A-Za-z0-9_-]{1,100}$/D', $btcpayStoreId) !== 1) {
             throw new InvalidArgumentException('ID obchodu BTCPay musí obsahovat nejvýše 100 znaků bez mezer.');
@@ -292,8 +309,8 @@ final class CheckoutSettingsRepository
         $btcpayWebhookSecret = self::retainedSecret($input, 'btcpay_webhook_secret',
             'btcpay_clear_webhook_secret', (string) ($current['btcpay']['webhook_secret'] ?? ''),
             'Tajný klíč webhooku BTCPay');
-        $btcpayReturnBaseUrl = self::paymentReturnBaseUrl(
-            self::value($input, 'btcpay_return_base_url'), $basePath, 'BTCPay', true);
+        $btcpayReturnBaseUrl = self::gatewayUrl(
+            self::value($input, 'btcpay_return_base_url'), $basePath, 'BTCPay', $btcpayEnabled, true);
         if ($btcpayEnabled && ($btcpayServerUrl === '' || $btcpayStoreId === '' || $btcpayApiKey === '' ||
             $btcpayWebhookSecret === '' || $btcpayReturnBaseUrl === '')) {
             throw new InvalidArgumentException('Před zapnutím BTCPay vyplň adresu serveru, ID obchodu, API klíč, tajný klíč webhooku a adresu obchodu. Pro místní test můžeš použít HTTP na localhostu.');
@@ -399,9 +416,20 @@ final class CheckoutSettingsRepository
         return str_ends_with(str_replace(' ', '', trim($account)), '/2010') ? 'fio' : 'manual';
     }
 
-    private static function comgateReturnBaseUrl(string $url, string $basePath): string
+    private static function gatewayUrl(string $url, string $basePath, string $provider,
+        bool $enabled, bool $allowLocal = false): string
     {
-        return self::paymentReturnBaseUrl($url, $basePath, 'Comgate');
+        return $enabled ? self::paymentReturnBaseUrl($url, $basePath, $provider, $allowLocal) :
+            self::disabledGatewayUrl($url);
+    }
+
+    /** Disabled integrations may keep an unfinished URL; enabling validates it before use. */
+    private static function disabledGatewayUrl(string $url): string
+    {
+        if (preg_match('/[\x00-\x1f\x7f]/', $url) === 1) {
+            throw new InvalidArgumentException('Adresa platební brány obsahuje nepovolené znaky.');
+        }
+        return $url;
     }
 
     private static function retainedSecret(array $input, string $field, string $clearField,
