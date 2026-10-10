@@ -7,7 +7,7 @@ use RuntimeException;
 use Throwable;
 
 /** A session-owned, private job checkpoint; one product per HTTP request, never replay an uncertain write. */
-final class ProductZipJob
+final class ProductImportJob
 {
     private string $directory;
     public function __construct(string $token)
@@ -35,20 +35,55 @@ final class ProductZipJob
         try {
             if (!copy($path, $job->directory . '/archive.zip')) throw new RuntimeException('ZIP nelze uložit.');
             chmod($job->directory . '/archive.zip', 0600);
-            $job->write(['created' => time(), 'items' => array_map(static fn (string $folder): array =>
+            $job->write(['kind' => 'zip', 'created' => time(), 'items' => array_map(static fn (string $folder): array =>
                 ['folder' => $folder, 'status' => 'pending', 'message' => '', 'new_key' => bin2hex(random_bytes(16))], $folders)]);
         } catch (Throwable $error) { $job->remove(); throw $error; }
         return $token;
     }
 
+    public static function fromItems(array $items): string
+    {
+        $token = bin2hex(random_bytes(24));
+        $job = new self($token);
+        if (!mkdir($job->directory, 0700)) throw new RuntimeException('Nelze připravit dočasnou složku importu.');
+        try {
+            foreach ($items as $index => &$item) {
+                $payload = json_encode($item, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+                $path = $job->directory . '/item-' . $index . '.json';
+                if (file_put_contents($path, $payload) !== strlen($payload)) throw new RuntimeException('Nelze uložit připravený produkt.');
+                chmod($path, 0600);
+                $item = array_intersect_key($item, array_flip(['folder', 'status', 'message']));
+                $item['payload'] = $index;
+            }
+            unset($item);
+            $job->write(['kind' => 'json', 'created' => time(), 'items' => $items]);
+        } catch (Throwable $error) { $job->remove(); throw $error; }
+        return $token;
+    }
+
+    public function stepJson(ProductBulkTransfer $transfer): array
+    {
+        if (($this->state()['kind'] ?? 'zip') !== 'json') throw new InvalidArgumentException('Neplatný typ importu.');
+        return $this->process(function (array $item) use ($transfer): array {
+            $payload = json_decode((string) file_get_contents($this->directory . '/item-' . (int) $item['payload'] . '.json'), true, 40, JSON_THROW_ON_ERROR);
+            return $transfer->import($payload);
+        });
+    }
+
     public function state(): array
     {
-        if (!is_file($this->directory . '/state.json')) throw new InvalidArgumentException('Import již není dostupný. Nahraj ZIP znovu.');
+        if (!is_file($this->directory . '/state.json')) throw new InvalidArgumentException('Import již není dostupný. Nahraj soubor znovu.');
         $state = json_decode((string) file_get_contents($this->directory . '/state.json'), true, 32, JSON_THROW_ON_ERROR);
         return $state;
     }
 
     public function step(ProductPackageImporter $importer): array
+    {
+        if (($this->state()['kind'] ?? 'zip') !== 'zip') throw new InvalidArgumentException('Neplatný typ importu.');
+        return $this->process(fn (array $item): array => $importer->import(new ProductZipArchive($this->directory . '/archive.zip'), $item['folder'], $item['new_key']));
+    }
+
+    private function process(callable $import): array
     {
         $this->state();
         $lock = fopen($this->directory . '/lock', 'c');
@@ -67,12 +102,12 @@ final class ProductZipJob
                 $item['status'] = 'processing';
                 $this->write($state);
                 try {
-                    $saved = $importer->import(new ProductZipArchive($this->directory . '/archive.zip'), $item['folder'], $item['new_key']);
+                    $saved = $import($item);
                     $item['status'] = 'success';
                     $item['saved'] = $saved;
                     $item['message'] = $saved['name'] . ' — uložena revize ' . $saved['revision_number'];
                 } catch (Throwable $error) {
-                    error_log('Product ZIP import: ' . $error->getMessage());
+                    error_log('Product import: ' . $error->getMessage());
                     $item['status'] = 'error';
                     $item['message'] = $error instanceof InvalidArgumentException ? $error->getMessage() : 'Produkt se nepodařilo uložit. Zkontroluj práva images/, PHP GD a databázi; podrobnosti jsou v serverovém logu.';
                 }
@@ -88,6 +123,7 @@ final class ProductZipJob
     public function remove(): void
     {
         foreach (['archive.zip', 'state.json', 'state.tmp', 'lock'] as $file) if (is_file($this->directory . '/' . $file)) @unlink($this->directory . '/' . $file);
+        foreach (glob($this->directory . '/item-*.json') ?: [] as $file) @unlink($file);
         if (is_dir($this->directory)) @rmdir($this->directory);
     }
 

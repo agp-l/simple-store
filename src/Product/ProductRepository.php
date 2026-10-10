@@ -252,7 +252,7 @@ final class ProductRepository
     }
 
     public function saveRevision(array $fields, ?string $key = null, ?int $expected = null,
-        ?array $suppliers = null, ?string $newProductKey = null): array
+        ?array $suppliers = null, ?string $newProductKey = null, ?array $inventory = null): array
     {
         $language = (string) ($fields['language'] ?? '');
         $name = trim((string) ($fields['name'] ?? ''));
@@ -356,6 +356,18 @@ final class ProductRepository
             ]);
             $id = $this->db->insertId();
             $this->stock?->ensure($key);
+            if ($inventory !== null) {
+                $quantity = $inventory['quantity'] ?? null;
+                $expectedQuantity = $inventory['expected_quantity'] ?? null;
+                if (!is_int($quantity) || $quantity < 0 || $quantity > 1000000 || !is_int($expectedQuantity) || $expectedQuantity < 0) {
+                    throw new InvalidArgumentException('Neplatný počet skladových kusů v importu.');
+                }
+                $available = $this->db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s FOR UPDATE', $key);
+                if ($available === null || (int) $available !== $expectedQuantity) {
+                    throw new InvalidArgumentException('Sklad se od přípravy importu změnil. Produkt nebyl upraven; připrav nový import.');
+                }
+                $this->db->query('UPDATE shop_product_inventory SET available_quantity=%i WHERE product_key=%s', $quantity, $key);
+            }
             if ($suppliers !== null) (new ProductSupplierLinkRepository($this->db))->replace($key, $suppliers);
             if ($revision > $this->revisionLimit) {
                 $this->db->query(

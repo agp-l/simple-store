@@ -340,4 +340,4 @@ Správce může trvale odstranit objednávku ze seznamu i po platbě nebo expedi
 
 ## Import produktů z AI
 
-Administrace → **Import z AI** přijímá JSON nebo ZIP se složkami produktů (`product.json` a `images/`), včetně variant, parametrů, obsahových bloků a soukromých dodavatelů. ZIP zpracuje produkty postupně a vadné přeskočí; fotografie ukládá do vlastní knihovny s miniaturami. Galerie nemá limit 12 obrázků. Detail produktu nabízí **JSON pro AI** pro bezpečnou úpravu aktuální revize. [Formát a postup](docs/product-import.md).
+Administrace → **Import a export** nabízí výběr produktů podle kategorií a jazyka, hromadný JSON export/import a obnovu produktových dat, stručný seznam názvů a adres pro AI i jednotlivý JSON nebo ZIP se složkami produktů (`product.json` a `images/`), včetně variant, parametrů, obsahových bloků a soukromých dodavatelů. ZIP zpracuje produkty postupně a vadné přeskočí; fotografie ukládá do vlastní knihovny s miniaturami. Galerie nemá limit 12 obrázků. Detail produktu nabízí **JSON pro AI** pro bezpečnou úpravu aktuální revize. [Formát a postup](docs/product-import.md).

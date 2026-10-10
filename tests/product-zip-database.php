@@ -12,7 +12,7 @@ use SimpleStore\Product\ProductRepository;
 use SimpleStore\Product\ProductStockRepository;
 use SimpleStore\Product\ProductSupplierLinkRepository;
 use SimpleStore\Product\ProductZipArchive;
-use SimpleStore\Product\ProductZipJob;
+use SimpleStore\Product\ProductImportJob;
 use SimpleStore\Product\ProductDetails;
 
 if (!class_exists(ZipArchive::class) || !extension_loaded('gd')) throw new RuntimeException('ZIP/GD required for package integration tests.');
@@ -48,7 +48,7 @@ $zip->addFromString('04-last/product.json', json_encode($last));
 $zip->close();
 $keys = []; $jobs = [];
 try {
-    $job = new ProductZipJob(ProductZipJob::fromFile($zipPath)); $jobs[] = $job;
+    $job = new ProductImportJob(ProductImportJob::fromFile($zipPath)); $jobs[] = $job;
     for ($i = 0; $i < 4; $i++) $state = $job->step($importer);
     $check(array_column($state['items'], 'status') === ['error', 'success', 'error', 'success'], 'One bad product blocked the rest.');
     foreach ($state['items'] as $item) if (isset($item['saved'])) $keys[] = $item['saved']['product_key'];
@@ -74,14 +74,14 @@ try {
     $zip = new ZipArchive(); $zip->open($root . '/update.zip', ZipArchive::CREATE);
     $zip->addFromString('01-update/product.json', json_encode($patch));
     $zip->addFromString('02-stale/product.json', json_encode($patch)); $zip->close();
-    $updateJob = new ProductZipJob(ProductZipJob::fromFile($root . '/update.zip')); $jobs[] = $updateJob;
+    $updateJob = new ProductImportJob(ProductImportJob::fromFile($root . '/update.zip')); $jobs[] = $updateJob;
     $updateJob->step($importer); $updateState = $updateJob->step($importer);
     $check(array_column($updateState['items'], 'status') === ['success', 'error'], 'ZIP update failed or stale revision was accepted.');
     $afterZip = $products->current($keys[0], 'cs');
     $check($afterZip['description'] === 'Updated by ZIP' && $afterZip['image_path'] === $good['image_path'] && $links->forProduct($keys[0])[0]['label'] === 'New', 'ZIP partial update lost photos or private suppliers.');
     // Simulate a process dying after the durable processing checkpoint.
-    $interruptedToken = ProductZipJob::fromFile($zipPath);
-    $interrupted = new ProductZipJob($interruptedToken); $jobs[] = $interrupted;
+    $interruptedToken = ProductImportJob::fromFile($zipPath);
+    $interrupted = new ProductImportJob($interruptedToken); $jobs[] = $interrupted;
     $checkpoint = $interrupted->state(); $checkpoint['items'][0]['status'] = 'processing';
     file_put_contents(sys_get_temp_dir() . '/simple-store-import-' . $interruptedToken . '/state.json', json_encode($checkpoint));
     $resumed = $interrupted->step($importer);

@@ -16,17 +16,23 @@ $language = $_GET['language'] ?? $site['default_language'];
 if (!is_string($language) || !in_array($language, $site['languages'], true)) $language = $site['default_language'];
 $categories = new CategoryRepository($db);
 $repository = new ProductRepository($db, $site['languages'], $categories, $site['revision_limit'], new ProductStockRepository($db));
+$importTab = $_GET['tab'] ?? (isset($_GET['key']) || isset($_GET['example']) ? 'single' : 'export');
+if (!is_string($importTab) || !in_array($importTab, ['export', 'bulk', 'single', 'zip', 'help'], true)) $importTab = 'export';
+if (str_starts_with((string) $action, 'product-zip-')) $importTab = 'zip';
+if (str_starts_with((string) $action, 'product-import-')) $importTab = 'single';
+if (str_starts_with((string) $action, 'product-bulk-')) $importTab = $action === 'product-bulk-export' ? 'export' : 'bulk';
+require __DIR__ . '/product-transfer.php';
 $zipState = null;
 $zipError = '';
 try {
     if ($method === 'POST' && in_array($action, ['product-zip-upload', 'product-zip-step', 'product-zip-clear'], true)) {
         if ($action === 'product-zip-upload') {
-            \SimpleStore\Product\ProductZipJob::expire();
-            $token = \SimpleStore\Product\ProductZipJob::upload($_FILES['package'] ?? []);
-            if (isset($_SESSION['product_zip_job'])) (new \SimpleStore\Product\ProductZipJob($_SESSION['product_zip_job']))->remove();
+            \SimpleStore\Product\ProductImportJob::expire();
+            $token = \SimpleStore\Product\ProductImportJob::upload($_FILES['package'] ?? []);
+            if (isset($_SESSION['product_zip_job'])) (new \SimpleStore\Product\ProductImportJob($_SESSION['product_zip_job']))->remove();
             $_SESSION['product_zip_job'] = $token;
         } else {
-            $job = new \SimpleStore\Product\ProductZipJob($_SESSION['product_zip_job'] ?? '');
+            $job = new \SimpleStore\Product\ProductImportJob($_SESSION['product_zip_job'] ?? '');
             if ($action === 'product-zip-clear') {
                 $job->remove();
                 unset($_SESSION['product_zip_job']);
@@ -36,7 +42,7 @@ try {
             }
         }
     }
-    if (isset($_SESSION['product_zip_job'])) $zipState = (new \SimpleStore\Product\ProductZipJob($_SESSION['product_zip_job']))->state();
+    if (isset($_SESSION['product_zip_job'])) $zipState = (new \SimpleStore\Product\ProductImportJob($_SESSION['product_zip_job']))->state();
 } catch (InvalidArgumentException | RuntimeException $exception) {
     $zipError = $exception->getMessage();
 }
@@ -48,7 +54,7 @@ if ($method === 'POST' && $action === 'product-zip-step' && ($_POST['ajax'] ?? '
     exit;
 }
 if ($method === 'POST' && $action === 'product-zip-upload' && $zipError === '') {
-    header('Location: ' . $adminUrl . '?section=product-import#zip-import', true, 303);
+    header('Location: ' . $adminUrl . '?section=product-import&tab=zip#zip-import', true, 303);
     exit;
 }
 try {

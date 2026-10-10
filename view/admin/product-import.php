@@ -1,8 +1,16 @@
-<div class="panel-intro"><div><p class="panel-eyebrow">Katalog / import</p><h1>Import produktu z AI</h1>
-<p>Vlož jednu JSON zprávu, zkontroluj údaje a ulož. Bez klíče vznikne nový koncept; s klíčem a revizí upravíš existující produkt.</p></div></div>
+<div class="panel-intro"><div><p class="panel-eyebrow">Katalog / data produktů</p><h1>Import a export produktů</h1>
+<p>Vyber produkty pro zálohu nebo AI. Upravená data nahraj zpět jako jeden JSON; nové fotografie lze přiložit v ZIP.</p></div></div>
+<nav class="product-transfer-tabs" aria-label="Import a export">
+<?php foreach (['export' => 'Export a seznam pro AI', 'bulk' => 'Hromadný JSON', 'single' => 'Jeden produkt', 'zip' => 'ZIP s fotografiemi', 'help' => 'Zadání pro AI'] as $tab => $label): ?>
+<a <?= $importTab === $tab ? 'aria-current="page"' : '' ?> href="<?= $escape($adminUrl . '?section=product-import&tab=' . $tab . '&language=' . $language) ?>"><?= $escape($label) ?></a>
+<?php endforeach; ?></nav>
 <?php if ($importError !== ''): ?><p class="panel-error" role="alert"><?= $escape($importError) ?></p><?php endif; ?>
-<?php require __DIR__ . "/product-import-zip.php"; ?>
-<section class="panel-panel">
+<?php if ($transferError !== ''): ?><p class="panel-error" role="alert"><?= $escape($transferError) ?></p><?php endif; ?>
+<?php if ($importTab === 'export') require __DIR__ . '/product-export.php'; ?>
+<?php if ($importTab === 'bulk') require __DIR__ . '/product-import-bulk.php'; ?>
+<?php if ($importTab === 'zip') require __DIR__ . '/product-import-zip.php'; ?>
+<link rel="stylesheet" href="<?= $escape($basePath . 'assets/product-transfer.css?v=' . filemtime(__DIR__ . '/../../assets/product-transfer.css')) ?>">
+<?php if ($importTab === 'single'): ?><section class="panel-panel">
 <h2>Jeden produkt jako JSON</h2>
 <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=product-import') ?>">
 <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
@@ -23,7 +31,8 @@
 <button class="panel-button" name="action" value="product-import-save"><?= isset($importData['product_key']) ? 'Uložit úpravy produktu' : 'Vytvořit produkt' ?></button>
 <?php endif; ?>
 </form></section>
-<section class="panel-panel"><h2>Podklady pro AI</h2>
+<?php endif; ?>
+<?php if ($importTab === 'help'): ?><section class="panel-panel"><h2>Podklady pro AI</h2>
 <p>Zkopíruj celé zadání níže a doplň seznam produktů. Pro úpravu použij JSON pro AI z detailu produktu.</p>
 <textarea rows="22" readonly aria-label="Zadání pro AI"><?= $escape(file_get_contents(__DIR__ . '/../../src/Product/import-prompt.txt')) ?></textarea>
 <h3>Platné kategorie (<?= $escape($language) ?>)</h3>
@@ -32,3 +41,5 @@
 <p><a href="<?= $escape($adminUrl . '?section=product-import&example=flextail') ?>">Načíst JSON ukázku Flextail ZERO Power 10000</a> — koncept s referenční cenou z Gramino, bez fotografie. Odkaz na zdroj se uloží soukromě do dodavatelů.</p>
 <p>Nové externí adresy fotografií nejsou povolené. Použij ZIP s obrázky nebo po JSON importu fotografie nahraj v detailu. Dříve uložené externí fotografie zůstávají čitelné, ale pro novou revizi je nahraď lokálními soubory.</p>
 </section>
+
+<?php endif; ?>

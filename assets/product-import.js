@@ -1,13 +1,13 @@
 (() => {
   'use strict';
-  const form = document.getElementById('zip-step-form');
+  const form = document.getElementById('import-step-form');
   if (!form) return;
   const button = form.querySelector('button');
-  const message = form.querySelector('[data-zip-status]');
+  const message = form.querySelector('[data-import-status]');
   const labels = {pending: 'Čeká', processing: 'Zpracovává se', success: 'Uloženo', error: 'Přeskočeno', interrupted: 'Přerušeno – ověř ručně'};
   let busy = false;
   const render = state => {
-    const rows = document.getElementById('zip-result-rows');
+    const rows = document.getElementById('import-result-rows');
     rows.replaceChildren();
     for (const item of state.items) {
       const row = document.createElement('tr');
@@ -25,7 +25,7 @@
       rows.append(row);
     }
     const pending = state.items.filter(item => ['pending', 'processing'].includes(item.status)).length;
-    document.getElementById('zip-progress').textContent = `Zpracováno ${state.items.length - pending} / ${state.items.length} produktů.`;
+    document.getElementById('import-progress').textContent = `Zpracováno ${state.items.length - pending} / ${state.items.length} produktů.`;
     return pending;
   };
   form.addEventListener('submit', async event => {

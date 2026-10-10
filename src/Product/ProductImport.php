@@ -132,7 +132,7 @@ final class ProductImport
         foreach (self::TEXT as $key) $product[$key] = $fields[$key];
         $product['price_czk'] = (int) $fields['price_czk'];
         $product['published'] = (bool) $fields['published'];
-        $product = array_merge($product, ProductDetails::fromForm($fields));
+        $product = array_merge($product, ProductDetails::decode($row['details_json'] ?? null, $row['sizes'] ?? ''));
         if ($suppliers !== null) $product['suppliers'] = array_map(static fn (array $link): array => ['label' => $link['label'], 'url' => $link['url']], $suppliers);
         return json_encode(['format' => self::FORMAT, 'product_key' => $row['product_key'],
             'revision' => (int) $row['revision_number'], 'language' => $row['language'], 'product' => $product],
