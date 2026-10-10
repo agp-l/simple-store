@@ -12,7 +12,8 @@ header('Cache-Control: private, no-store');
 header('Referrer-Policy: no-referrer');
 header('X-Robots-Tag: noindex, nofollow');
 header("Content-Security-Policy: default-src 'none'");
-if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'GET') {
+$method = $_SERVER['REQUEST_METHOD'] ?? '';
+if ($method !== 'GET' && $method !== 'HEAD') {
     http_response_code(405);
     exit;
 }
@@ -37,6 +38,12 @@ try {
     if (empty($settings['fio_bank']['enabled']) || strlen($expected) !== 64 ||
         !hash_equals($expected, hash('sha256', $key))) {
         http_response_code(403);
+        exit;
+    }
+    // Webglobe validates the URL with HEAD before saving the scheduled task.
+    // Authenticate the probe, but do not contact Fio or mark any orders paid.
+    if ($method === 'HEAD') {
+        http_response_code(200);
         exit;
     }
     $sender = (string) ((new TaxEvidenceRepository($db))->settings()['mail_from'] ?? '');
