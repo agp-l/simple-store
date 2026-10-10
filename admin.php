@@ -84,7 +84,7 @@ try {
     }
     if ($method === 'POST') {
         if (!$auth->validToken($_POST['csrf'] ?? null)) {
-            if (in_array($_POST['action'] ?? null, ['inline-product', 'inline-content', 'media-upload', 'media-attach', 'media-delete'], true)) {
+            if (in_array($_POST['action'] ?? null, ['inline-product', 'inline-content', 'media-upload', 'media-attach', 'media-delete', 'product-zip-step'], true)) {
                 header('Content-Type: application/json; charset=utf-8');
                 http_response_code(403);
                 echo json_encode(['error' => 'Platnost přihlášení vypršela. Znovu se přihlas.']);
@@ -149,7 +149,7 @@ try {
             header('Location: ' . $returnUrl, true, 303);
             exit;
         } elseif (!is_string($action) || !AdminActionPolicy::allows($action) || !$auth->signedIn()) {
-            if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach', 'media-delete'], true)) {
+            if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach', 'media-delete', 'product-zip-step'], true)) {
                 header('Content-Type: application/json; charset=utf-8');
                 http_response_code(403);
                 echo json_encode(['error' => 'Pro úpravu obsahu se přihlas do administrace.']);
@@ -288,7 +288,7 @@ try {
     require __DIR__ . '/src/Admin/contents.php';
 } catch (Throwable $exception) {
     error_log((string) $exception);
-    if ($method === 'POST' && in_array($_POST['action'] ?? null, ['inline-product', 'inline-content', 'media-upload', 'media-attach', 'media-delete'], true)) {
+    if ($method === 'POST' && in_array($_POST['action'] ?? null, ['inline-product', 'inline-content', 'media-upload', 'media-attach', 'media-delete', 'product-zip-step'], true)) {
         header('Content-Type: application/json; charset=utf-8');
         http_response_code(500);
         echo json_encode(['error' => $site['debug'] ? (string) $exception : 'Databázi se nepodařilo načíst.']);

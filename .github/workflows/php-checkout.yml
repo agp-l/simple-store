@@ -106,6 +106,8 @@ jobs:
         run: bash tests/admin-http.sh
       - name: Test payment QR
         run: node --test tests/payment-qr.mjs
+      - name: Test ZIP import browser requests
+        run: node --test tests/product-import-browser.mjs
       - name: Test customer order link copying
         run: node --test tests/order-link.mjs
       - name: Test PPL pickup selection
