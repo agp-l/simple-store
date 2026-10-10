@@ -331,7 +331,7 @@ final class OrderRepository
             'shop_orders', 'dispatch_shipping_json') > 0;
         $shippingField = $hasDispatchShipping
             ? 'COALESCE(dispatch_shipping_json, shipping_json)' : 'shipping_json';
-        $fields = 'SELECT id, order_number, status, customer_email, subtotal_czk, shipping_czk,
+        $fields = 'SELECT id, order_number, order_token, status, customer_email, subtotal_czk, shipping_czk,
                           total_czk, payment_method, payment_status, payment_due_at,
                           variable_symbol, created_at,
                           ' . $shippingField . ' AS shipping_json,

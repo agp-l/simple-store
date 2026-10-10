@@ -4,6 +4,15 @@ $orderTrackingReady ??= false;
 $orderManualTracking ??= ['number' => '', 'url' => ''];
 
 $orderMoney = static fn (mixed $amount): string => number_format((int) $amount, 0, ',', ' ') . ' Kč';
+$orderCustomerUrl = static function (array $value) use ($basePath, $site): string {
+    $token = (string) ($value['order_token'] ?? '');
+    if (preg_match('/^[a-f0-9]{64}$/D', $token) !== 1) return '';
+    $customerLanguage = (string) ($value['items'][0]['language'] ?? $site['default_language'] ?? 'cs');
+    if (!in_array($customerLanguage, $site['languages'] ?? ['cs'], true)) {
+        $customerLanguage = (string) ($site['default_language'] ?? 'cs');
+    }
+    return $basePath . rawurlencode($customerLanguage) . '/objednavka/' . $token;
+};
 $orderPaymentLabel = static fn (mixed $status): string => match ($status) {
     'paid' => 'Zaplaceno',
     'pending' => 'Čeká na platbu',

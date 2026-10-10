@@ -32,7 +32,8 @@ if (!str_contains($html, 'Kategorie a podkategorie') ||
     !str_contains($html, 'value="category-update"') ||
     !str_contains($html, 'aria-current="page"') ||
     substr_count($html, '<footer class="foot">') !== 1 ||
-    !str_contains($html, 'class="nav-band"')) {
+    !str_contains($html, 'class="nav-band"') ||
+    !str_contains($html, 'href="/shop/assets/favicon.svg"')) {
     throw new RuntimeException('Category administration must provide the new and edit controls.');
 }
 
@@ -123,6 +124,7 @@ $ordersPreviousUrl = '';
 $ordersNextUrl = '';
 $orderPage = ['items' => [], 'nextOffset' => null];
 $order = [
+    'order_token' => str_repeat('a', 64),
     'id' => 12, 'order_number' => 'DB-20260929-1', 'created_at' => '2026-09-29 11:00:00',
     'status' => 'awaiting_payment', 'payment_method' => 'bank_transfer',
     'payment_status' => 'pending', 'total_czk' => 1350, 'subtotal_czk' => 1250,
@@ -140,7 +142,9 @@ if (!str_contains($html, 'name="action" value="mark-order-paid"') ||
     !str_contains($html, 'name="action" value="set-order-status"') ||
     !str_contains($html, 'name="csrf" value="test-token"') ||
     !str_contains($html, 'bank_checked') || !str_contains($html, '&lt;img src=x onerror=alert(1)&gt;') ||
-    str_contains($html, '<img src=x onerror=alert(1)>')) {
+    str_contains($html, '<img src=x onerror=alert(1)>') ||
+    !str_contains($html, 'href="/shop/cs/objednavka/' . str_repeat('a', 64) . '"') ||
+    !str_contains($html, 'Zobrazit objednávku ↗')) {
     throw new RuntimeException('Order detail must require explicit bank verification and escape customer data.');
 }
 $linkedProductKey = str_repeat('a', 32);
@@ -385,7 +389,9 @@ if (!str_contains($html, 'DB-20260929-1') ||
     !str_contains($html, 'Platba vrácena') ||
     !str_contains($html, 'Eva &lt;script&gt;') ||
     str_contains($html, 'Eva <script>') ||
-    !str_contains($html, 'Objednávky')) {
+    !str_contains($html, 'Objednávky') ||
+    !str_contains($html, 'href="/shop/cs/objednavka/' . str_repeat('a', 64) . '"') ||
+    !str_contains($html, 'Zobrazit objednávku ↗')) {
     throw new RuntimeException('Admin order queue must display separate payment and fulfillment controls, invoices, filters and pagination.');
 }
 $refundStart = strpos($html, 'DB-20260929-GOPAY');

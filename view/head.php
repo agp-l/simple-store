@@ -2,6 +2,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#252927">
+  <link rel="icon" type="image/svg+xml" href="<?= $siteRoot ?>assets/favicon.svg">
   <title><?= htmlspecialchars($pageTitle, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></title>
   <meta name="description" content="<?= htmlspecialchars($pageDescription, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
   <?php if ($editMode || $contentEditMode || $privatePage): ?><meta name="robots" content="noindex, nofollow"><?php endif; ?>
