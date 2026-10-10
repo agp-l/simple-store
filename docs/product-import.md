@@ -72,7 +72,7 @@ Ukázka Flextail (`src/Product/examples/flextail.json`) obsahuje soukromý zdroj
 
 - ProductImport: formát, převod, export, validace dodavatelů.
 - ProductZipArchive: validace archivu, bezpečné omezené čtení položek.
-- ProductZipJob: soukromá fronta, zámek, checkpoint a oddělené výsledky.
+- ProductImportJob: soukromá fronta, zámek, checkpoint a oddělené výsledky.
 - ProductPackageImporter: fotografie, mapování cest, revize a úklid chyb.
 - ProductRepository a ProductSupplierLinkRepository: společný transakční zápis produktu a dodavatelů.
 

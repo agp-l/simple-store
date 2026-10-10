@@ -21,12 +21,12 @@ $zipError = '';
 try {
     if ($method === 'POST' && in_array($action, ['product-zip-upload', 'product-zip-step', 'product-zip-clear'], true)) {
         if ($action === 'product-zip-upload') {
-            \SimpleStore\Product\ProductZipJob::expire();
-            $token = \SimpleStore\Product\ProductZipJob::upload($_FILES['package'] ?? []);
-            if (isset($_SESSION['product_zip_job'])) (new \SimpleStore\Product\ProductZipJob($_SESSION['product_zip_job']))->remove();
+            \SimpleStore\Product\ProductImportJob::expire();
+            $token = \SimpleStore\Product\ProductImportJob::upload($_FILES['package'] ?? []);
+            if (isset($_SESSION['product_zip_job'])) (new \SimpleStore\Product\ProductImportJob($_SESSION['product_zip_job']))->remove();
             $_SESSION['product_zip_job'] = $token;
         } else {
-            $job = new \SimpleStore\Product\ProductZipJob($_SESSION['product_zip_job'] ?? '');
+            $job = new \SimpleStore\Product\ProductImportJob($_SESSION['product_zip_job'] ?? '');
             if ($action === 'product-zip-clear') {
                 $job->remove();
                 unset($_SESSION['product_zip_job']);
@@ -36,7 +36,7 @@ try {
             }
         }
     }
-    if (isset($_SESSION['product_zip_job'])) $zipState = (new \SimpleStore\Product\ProductZipJob($_SESSION['product_zip_job']))->state();
+    if (isset($_SESSION['product_zip_job'])) $zipState = (new \SimpleStore\Product\ProductImportJob($_SESSION['product_zip_job']))->state();
 } catch (InvalidArgumentException | RuntimeException $exception) {
     $zipError = $exception->getMessage();
 }
