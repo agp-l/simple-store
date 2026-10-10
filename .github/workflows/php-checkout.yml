@@ -96,6 +96,7 @@ jobs:
           php tests/admin-actions.php
           php tests/admin-auth.php
           php tests/password-reset-collation.php
+          php tests/product-import.php
           php tests/inline-editor.php
           php tests/content-editor.php
           php tests/content-deletion.php
@@ -158,6 +159,7 @@ jobs:
           php tests/stock-database.php
           php tests/shipping-database.php
           php tests/homepage-database.php
+          php tests/product-import-database.php
           php tests/supplier-links-database.php
           php tests/password-reset-database.php
           php tests/commerce-reset-database.php
@@ -197,6 +199,7 @@ jobs:
           php tests/flat-tax-advances-database.php
           php tests/shipping-database.php
           php tests/homepage-database.php
+          php tests/product-import-database.php
           php tests/supplier-links-database.php
           php tests/fio-database.php
           php tests/commerce-reset-database.php

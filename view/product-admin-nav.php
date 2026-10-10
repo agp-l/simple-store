@@ -39,6 +39,8 @@ $createToken = (string) ($adminCreate['csrf'] ?? $editToken ?? '');
         <?php endforeach; ?>
       </nav>
       <div class="product-admin-nav-tools">
+        <a href="<?= $escape($adminRoot . http_build_query(['section' => 'product-import', 'language' => $language])) ?>">Import z AI</a>
+        <?php if ($productAdminMode === 'product' && isset($product['product_key'])): ?><a href="<?= $escape($adminRoot . http_build_query(['section' => 'product-import', 'language' => $language, 'key' => $product['product_key']])) ?>">JSON pro AI</a><?php endif; ?>
         <span>Nastavení:</span>
         <a href="<?= $escape($categoryLink) ?>">Kategorie</a>
         <?php if ($newSubcategoryUrl !== ''): ?><a href="<?= $escape($newSubcategoryUrl) ?>">＋ Podkategorie</a><?php endif; ?>
