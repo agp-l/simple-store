@@ -191,7 +191,9 @@
         }
         finally { busy = false; }
       });
-      buttons.append(choose);
+      if (mode !== 'gallery-add' || !file.uses?.includes('gallery')) {
+        buttons.append(choose);
+      }
       for (const [label, path] of [['Velký', file.path], ['Karta', file.card], ['Miniatura', file.thumb]]) {
         const copy = document.createElement('button');
         copy.type = 'button';
