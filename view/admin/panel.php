@@ -21,7 +21,7 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
     $panelLinks = [
         ['key' => 'editor', 'label' => 'Stránky', 'icon' => '▤', 'href' => $adminUrl . '?section=contents'],
         ['key' => 'products', 'label' => 'Produkty', 'icon' => '▦', 'href' => $basePath . $site['default_language'] . '?manage=1#produkty'],
-        ['key' => 'product-import', 'label' => 'Import z AI', 'icon' => '＋', 'href' => $adminUrl . '?section=product-import'],
+        ['key' => 'product-import', 'label' => 'Import a export', 'icon' => '＋', 'href' => $adminUrl . '?section=product-import'],
         ['key' => 'orders', 'label' => 'Objednávky', 'icon' => '▣', 'href' => $adminUrl . '?section=orders'],
         ['key' => 'returns', 'label' => 'Reklamace a vrácení', 'icon' => '↩', 'href' => $adminUrl . '?section=returns'],
         ['key' => 'accounting', 'label' => 'Doklady a platby', 'icon' => '▤', 'href' => $adminUrl . '?section=accounting'],

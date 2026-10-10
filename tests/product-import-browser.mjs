@@ -20,7 +20,7 @@ function fixture(responses) {
   };
   const requests = [];
   vm.runInNewContext(script, {
-    document: {getElementById: id => ({'zip-step-form': form, 'zip-result-rows': rows, 'zip-progress': progress})[id], createElement: element},
+    document: {getElementById: id => ({'import-step-form': form, 'import-result-rows': rows, 'import-progress': progress})[id], createElement: element},
     FormData: class { constructor() {this.values = {action: 'product-zip-step', csrf: 'valid-token'};} set(k, v) {this.values[k] = v;} },
     fetch: async (url, options) => {requests.push({url, options}); return responses.shift();},
   });

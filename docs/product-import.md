@@ -77,3 +77,36 @@ Ukázka Flextail (`src/Product/examples/flextail.json`) obsahuje soukromý zdroj
 - ProductRepository a ProductSupplierLinkRepository: společný transakční zápis produktu a dodavatelů.
 
 Testy: `tests/product-import.php`, `tests/product-import-database.php`, `tests/product-zip-database.php`, `tests/media-library.php`. ZIP testy běží na MySQL i MariaDB a ověřují úspěšný produkt mezi vadnými, 15 fotografií s miniaturami, odstranění fotek vadného produktu, dodavatele, rollback, neopakování hotové fronty a nebezpečné archivy.
+
+## Hromadný export, zálohy a spolupráce s AI
+
+Administrace → **Import a export** → **Export a seznam pro AI** zobrazuje aktuální produkty včetně konceptů a překladů. Lze filtrovat jazyk, kategorii včetně podkategorií a název/adresu. Zaškrtávací výběr se odesílá v jediném JSON poli, takže jej PHP `max_input_vars` nezkrátí. Tlačítko exportu všech výsledků filtru funguje i bez JavaScriptu. Bez filtrů exportuje celý katalog.
+
+- **Úplný JSON**: identita, revize, jazyk, všechny podporované produktové údaje, dodavatelé a dostupné skladové kusy.
+- **Seznam pro AI (TXT)**: název, úplná adresa, kategorie a veřejný/koncept. Pro šetření tokenů jej používej jako přehled katalogu; pro skutečné úpravy exportuj JSON jen příslušných produktů.
+- Jde o zálohu aktuálních produktových dat. Fotografie jsou pouze jako cesty; jejich soubory, nastavení kategorií, historie revizí, objednávky a rezervace nejsou součástí JSON. Pro úplné zotavení webu zálohuj databázi a `images/`.
+
+```json
+{
+  "format": "simple-store.products.v1",
+  "products": [
+    {
+      "format": "simple-store.product.v1",
+      "language": "cs",
+      "product": {"name": "Nový batoh", "category_path": "batohy", "price_czk": 2500}
+    }
+  ]
+}
+```
+
+Každý prvek `products` používá formát jednoho produktu. Export přidává kořenové `exported_at` a u položky `stock_quantity`. Aktualizace přidává `product_key` a `revision`; mění jen uvedená pole. Export limitujeme na stejné množství jako import (32 MiB, 10 000 položek), aby nevznikl nepoužitelný soubor. Produkt zpracovává společný validátor s limitem 128 KiB.
+
+### Import a obnova
+
+Na kartě **Hromadný JSON** nahraj soubor nebo vlož text. **Připravit a zkontrolovat** nic nemění v katalogu; uloží soukromou frontu a vypíše jednotlivé operace/chyby. Potom stiskni **Spustit / pokračovat v importu**. Každý požadavek provede nanejvýš jeden produkt v transakci. Vadné položky ostatní neblokují. Obnovení stránky umožní pokračovat, nejistý přerušený zápis se automaticky neopakuje. Dokončená fronta se znovu neprovede.
+
+Běžný režim kontroluje revize z exportu. **Obnovit údaje ze zálohy** výslovně nahrazuje starší obsah jako novou revizi a dovede obnovit smazaný produkt pod původním klíčem; neodstraňuje ostatní produkty. Aktuální revize se zachytí při přípravě a ověří znovu při zápisu, takže další editace po přípravě není přepsána. Kategorie musí být aktivní, obrázky musí zůstat na webu a všechny údaje musí projít současnými validátory. Staré externí fotografie lze exportovat pro přehled, ale při importu je nutné je nahradit lokálními.
+
+Sklad je výchozím stavem chráněn: nepřepisuje se, dokud správce nezaškrtne samostatnou volbu. Při zaškrtnutí se kontroluje počet kusů zaznamenaný při přípravě. Změna skladu mezi přípravou a importem způsobí rollback celé položky (včetně nové revize a dodavatelů). Sklad i dodavatelé jsou společné všem jazykům produktu. Při exportu více překladů musí být jejich skladové hodnoty shodné; sklad se v dávce nastaví u prvního výskytu.
+
+`ProductBulkTransfer` drží formát a plán operací, `ProductImportJob` společnou frontu ZIP/JSON, `ProductRepository` atomický zápis. Všechny endpointy vyžadují správce a CSRF; exporty jsou `no-store`. Přehled produktů používá escapované hodnoty a běžné parametrizované SQL. Migrace databáze není potřeba.

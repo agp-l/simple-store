@@ -56,6 +56,7 @@ final class ProductBulkTransfer
         $documents = [];
         foreach ($rows as $row) {
             $document = json_decode(ProductImport::export($row, $suppliers[$row['product_key']] ?? []), true, 32, JSON_THROW_ON_ERROR);
+            if (strlen(json_encode($document, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)) > ProductImport::LIMIT) throw new InvalidArgumentException('Produkt ' . $row['name'] . ' přesahuje limit 128 KiB pro zpětný import. Zkrať jeho obsah.');
             $document['stock_quantity'] = (int) ($row['stock_quantity'] ?? 0);
             $documents[] = $document;
         }
@@ -99,6 +100,7 @@ final class ProductBulkTransfer
             $item = ['folder' => 'Položka ' . ($index + 1), 'status' => 'pending', 'message' => '', 'new_key' => bin2hex(random_bytes(16))];
             try {
                 if (!$document instanceof \stdClass) throw new InvalidArgumentException('Produkt musí být JSON objekt.');
+                if (is_string($document->product->name ?? null)) $item['folder'] = $document->product->name;
                 $quantity = $document->stock_quantity ?? null;
                 unset($document->stock_quantity);
                 $data = ProductImport::decode(json_encode($document, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
@@ -123,6 +125,13 @@ final class ProductBulkTransfer
                     }
                 }
                 $fields = ProductImport::fields($data, $current);
+                if ((new \SimpleStore\Category\CategoryRepository($this->db))->find($data['language'], $fields['category_path']) === null) throw new InvalidArgumentException('Kategorie produktu neexistuje nebo není zapnutá.');
+                $details = ProductDetails::fromForm($fields);
+                $images = array_merge([$fields['image_path']], $details['gallery']);
+                foreach ($details['sections'] as $section) if ($section['type'] === 'image') $images[] = $section['body'];
+                foreach (array_unique($images) as $image) {
+                    if (!is_file(dirname(__DIR__, 2) . '/' . $image)) throw new InvalidArgumentException('Na webu chybí fotografie: ' . $image . '. Nahraj ji před importem.');
+                }
                 $item['folder'] = $fields['name'] . ' (' . $data['language'] . ')';
                 $item['message'] = $current === null ? 'Vytvořit produkt' : ($restore ? 'Obnovit údaje zálohy jako novou revizi' : 'Upravit revizi ' . $data['revision']);
                 $item['data'] = $data;
