@@ -39,8 +39,8 @@
         message.textContent = 'Importuji další produkt. Tuto stránku ponech otevřenou…';
         const body = new FormData(form);
         body.set('ajax', '1');
-        const response = await fetch(form.action, {method: 'POST', body, credentials: 'same-origin', headers: {Accept: 'application/json'}});
-        if (!response.headers.get('content-type')?.includes('application/json')) throw new Error('Server nevrátil výsledek. Obnov stránku a zkontroluj průběh; může být potřeba nové přihlášení.');
+        const response = await fetch(form.getAttribute('action'), {method: 'POST', body, credentials: 'same-origin', headers: {Accept: 'application/json'}});
+        if (!response.headers.get('content-type')?.includes('application/json')) throw new Error(`Server vrátil neočekávanou odpověď (HTTP ${response.status}). Obnov stránku a zkontroluj průběh importu.`);
         const result = await response.json();
         if (!response.ok || result.error) throw new Error(result.error || 'Import se přerušil. Obnov stránku a pokračuj.');
         pending = render(result.state);
