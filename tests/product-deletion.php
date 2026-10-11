@@ -10,6 +10,8 @@ class MeekroDB
     public array $listings = [];
     public array $listingRows = [];
     public bool $failDelete = false;
+    public bool $relationsInstalled = false;
+    public function queryFirstField(string $sql, mixed ...$values): int { return $this->relationsInstalled ? 1 : 0; }
     public int $begun = 0;
     public int $committed = 0;
     public int $rolledBack = 0;
@@ -132,3 +134,9 @@ foreach ([['cs', null, '', 'invalid'], ['fr'], ['cs', '../elsewhere'],
 }
 
 echo "Product deletion and management tests passed.\n";
+
+$db = new MeekroDB(); $db->relationsInstalled = true;
+(new ProductRepository($db, ['cs']))->deleteProduct($key, 'cs', 3);
+if (count($db->deletions) !== 2 || !str_contains($db->deletions[0][0], 'DELETE FROM shop_product_relations') || $db->deletions[0][1] !== ['cs', $key, $key]) {
+    throw new RuntimeException('Deleting a product must clean up both ends of its language-scoped relationships.');
+}
