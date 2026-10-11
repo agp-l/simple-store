@@ -41,7 +41,6 @@ final class PageRenderer
         $categoryMenuRoot = $data['categoryMenuRoot'] ?? null;
         $currentCategory = $data['currentCategory'] ?? null;
         $canManageCatalog = (bool) ($data['canManageCatalog'] ?? false);
-        $productAdminMode = (string) ($data['productAdminMode'] ?? ($page === 'product-record' ? 'product' : 'catalog'));
         $managingCatalog = (bool) ($data['managingCatalog'] ?? false);
         $catalogVisibility = (string) ($data['catalogVisibility'] ?? 'all');
         $managementCategories = $data['managementCategories'] ?? [];
@@ -59,8 +58,6 @@ final class PageRenderer
         $adminPreview = $data['adminPreview'] ?? null;
         $privatePage = (bool) ($data['privatePage'] ?? false);
         $canManageMenu = (bool) ($data['canManageMenu'] ?? false);
-        $categoryAdminUrl = (string) ($data['categoryAdminUrl'] ?? '');
-        $newSubcategoryUrl = (string) ($data['newSubcategoryUrl'] ?? '');
         $menuAdminUrl = (string) ($data['menuAdminUrl'] ?? '');
         $categoryTrail = $data['categoryTrail'] ?? [];
         $categoryLabels = $data['categoryLabels'] ?? [];

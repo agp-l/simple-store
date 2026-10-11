@@ -236,12 +236,6 @@ try {
             ($categories->children($url->getLanguage(), $path) !== [] ? $path : CategoryPath::parent($path));
         $shared['currentCategory'] = $selected;
         $shared['canManageCatalog'] = $canEdit;
-        $categoryAdminParams = ['section' => 'categories', 'language' => $url->getLanguage()];
-        if ($path !== null) $categoryAdminParams['edit'] = $path;
-        $shared['categoryAdminUrl'] = $url->getBasePath() . 'admin.php?' . http_build_query($categoryAdminParams);
-        $shared['newSubcategoryUrl'] = $path === null ? '' : $url->getBasePath() . 'admin.php?' . http_build_query([
-            'section' => 'categories', 'language' => $url->getLanguage(), 'parent' => $path,
-        ]);
         $shared['categoryTrail'] = $path === null ? [] : $categories->trail($url->getLanguage(), $path);
         $shared['categoryMenuRoot'] = $menuRoot === '' ? null : $categories->find($url->getLanguage(), $menuRoot);
         $shared['categoryMenu'] = $path === null ? [] : $menus->links('category_tabs', $menuRoot);
@@ -296,8 +290,6 @@ try {
             $shared['privatePage'] = true;
         }
         $shared['homepageSelectionActive'] = $homepageSelectionActive;
-        $shared['productAdminMode'] = $managingCatalog ? 'manage' : ($homepageEditing ? 'selection' :
-            ($path === null && ($_GET['all'] ?? '') !== '1' ? 'home' : 'catalog'));
         $shared['homepageConfigured'] = $homepageKeys !== null;
         $shared['products'] = $batch['items'];
         $shared['managingCatalog'] = $managingCatalog;
@@ -369,11 +361,6 @@ try {
             'title' => $item === null ? 'Produkt nenalezen — dobrodruzi.cz' : $item['name'] . ' — dobrodruzi.cz',
             'description' => $item['summary'] ?? '', 'product' => $item,
             'canEditProduct' => $canEdit, 'editMode' => $editMode, 'stockReady' => $stockReady,
-            'productAdminMode' => 'product',
-            'categoryAdminUrl' => $item === null ? '' : $url->getBasePath() . 'admin.php?' . http_build_query([
-                'section' => 'categories', 'language' => $url->getLanguage(),
-                'edit' => CategoryPath::fromProduct($item),
-            ]),
             'supplierLinks' => $supplierLinks, 'supplierLinksReady' => $supplierLinksReady,
             'categoryTrail' => $item === null ? [] : $categories->trail(
                 $url->getLanguage(), CategoryPath::fromProduct($item)

@@ -106,8 +106,7 @@ ob_start();
 $renderer->render('product-record', $detailData + ['canEditProduct' => true]);
 $privateDetail = ob_get_clean();
 if (!str_contains($privateDetail, 'supplier.example.test/bota?size=42&amp;source=store') ||
-    !str_contains($privateDetail, 'aria-label="Správa produktů"') ||
-    !str_contains($privateDetail, 'href="/shop/cs?manage=1#produkty"') ||
+    str_contains($privateDetail, 'Katalog a organizace produktů') ||
     !str_contains($privateDetail, \SimpleStore\Rendering\Icon::render('edit') . ' Upravit produkt') ||
     !str_contains($privateDetail, 'name="action" value="product-supplier-link"') ||
     !str_contains($privateDetail, 'name="csrf" value="private-token"') ||
@@ -131,7 +130,7 @@ if (!str_contains($selectedHome, '<h2 id="section-title">Náš výběr vybavení
 ob_start();
 $renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
     'products' => [$product], 'homepageEditing' => true, 'homepageReady' => true,
-    'productAdminMode' => 'selection',
+    'adminCreate' => ['csrf' => 'home-csrf', 'language' => 'cs'],
     'homepageSelectionActive' => true, 'homepageConfigured' => true,
     'homepageKeys' => [$product['product_key']],
     'homepageSelected' => [$product + ['published' => 1]],
@@ -163,15 +162,17 @@ $draft = array_replace($product, ['published' => 0, 'product_key' => str_repeat(
 ob_start();
 $renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
     'products' => [$draft], 'managingCatalog' => true, 'canManageCatalog' => true,
-    'productAdminMode' => 'manage', 'adminCreate' => ['csrf' => 'catalog-token', 'language' => 'cs'],
+    'adminCreate' => ['csrf' => 'catalog-token', 'language' => 'cs'],
     'privatePage' => true, 'catalogVisibility' => 'draft',
     'searchAction' => '/shop/cs', 'nextUrl' => '/shop/cs?manage=1&offset=12']);
 $management = ob_get_clean();
 if (!str_contains($management, '/shop/cs/produkt/bota?edit=1') ||
-    !str_contains($management, 'href="/shop/cs?manage=1#produkty" aria-current="page"') ||
+    !str_contains($management, 'href="/shop/cs?manage=1"') ||
+    !str_contains($management, 'href="/shop/cs?homepage_edit=1#homepage-editor"') ||
+    !str_contains($management, 'Zobrazit zveřejněné produkty') ||
     !str_contains($management, 'name="action" value="create-product"') ||
-    !str_contains($management, 'href="/shop/admin.php?section=categories&amp;language=cs"') ||
-    !str_contains($management, 'href="/shop/admin.php?section=menus&amp;language=cs&amp;slot=primary"') ||
+    str_contains($management, 'href="/shop/admin.php?section=categories&amp;language=cs"') ||
+    str_contains($management, 'href="/shop/admin.php?section=menus&amp;language=cs&amp;slot=primary"') ||
     !str_contains($management, 'Skrytý koncept') ||
     !str_contains($management, 'name="robots" content="noindex, nofollow"') ||
     str_contains($management, 'name="action" value="add"') || str_contains($management, 'id="sort"')) {

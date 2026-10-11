@@ -127,9 +127,8 @@
   .site-admin-inner .site-admin-preview { margin-left: 0; }
   .content-admin-panel .inline-small, .site-admin-inner :is(button, a) { min-height: 44px; }
 }
-.content-admin-panel .editor-context-navigation { padding: 12px 20px; border-top: 1px solid #d6e4d2; }
-.content-admin-panel .editor-context-navigation > summary { cursor: pointer; color: #285e2b; font-weight: 650; }
-.content-admin-panel .product-admin-nav { margin: 12px 0 0; border: 0; background: transparent; }
-.content-admin-panel .product-admin-nav-tools { padding-inline: 0; }
 
-.product-admin-nav-tabs a { gap: 6px; }
+.catalog-context-actions { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 16px; }
+.catalog-context-actions a { display: inline-flex; align-items: center; gap: 6px; color: #285e2b; font: 650 13px/1.4 var(--font-body); text-underline-offset: 3px; }
+
+.site-admin-inner a[aria-current="page"] { background: #e5f1df; border-color: #568652; }

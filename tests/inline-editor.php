@@ -88,7 +88,8 @@ $checks = [
     'no_public_editor_config' => !str_contains($public, 'inline-editor-config'),
     'no_public_token' => !str_contains($public, 'test-token'),
     'edit_body' => str_contains($editor, 'data-edit-field="section_body"'),
-    'admin_navigation' => str_contains($editor, 'aria-label="Pohledy na produkty"') &&
+    'admin_navigation' => str_contains($editor, 'aria-label="Správa webu"') &&
+        !str_contains($editor, 'Katalog a organizace produktů') &&
         str_contains($editor, 'href="/shop/cs?homepage_edit=1#homepage-editor"'),
     'product_settings' => str_contains($editor, '<section class="product-admin-settings"') &&
         str_contains($editor, 'Nastavení produktu') && str_contains($editor, 'Volné: 12 ks') &&
