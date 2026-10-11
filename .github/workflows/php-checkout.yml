@@ -109,7 +109,7 @@ jobs:
       - name: Test media picker without external URL form
         run: node --test tests/media-picker-browser.mjs
       - name: Test ZIP import browser requests
-        run: node --test tests/product-import-browser.mjs tests/product-export-browser.mjs
+        run: node --test tests/product-import-browser.mjs tests/product-export-browser.mjs tests/product-gallery-browser.mjs
       - name: Test customer order link copying
         run: node --test tests/order-link.mjs
       - name: Test PPL pickup selection
