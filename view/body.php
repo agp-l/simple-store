@@ -87,11 +87,14 @@ if ($manualCategoryMenu) {
     </section>
     <div class="empty" id="empty" <?= $products !== [] ? 'hidden' : '' ?>><?= $searchTerm !== '' ? 'Pro zadaný výraz jsme nic nenašli.' : ($managingCatalog ? 'V tomto výběru zatím nejsou žádné produkty.' : ($homepageSelectionActive ? 'Vybrané produkty zatím nejsou zveřejněné. Prohlédněte si celé vybavení v kategoriích.' : 'Zatím tu nejsou zveřejněné produkty. Nabídku připravujeme.')) ?></div>
     <?php if ($nextUrl !== ''): ?><div class="load-more-wrap"><a class="load-more" data-load-more data-target="catalog" href="<?= $escape($nextUrl) ?>">Načíst další produkty</a></div><?php endif; ?>
-    <?php if (!$managingCatalog): ?><section class="category-panel" id="kategorie" aria-labelledby="category-title">
+    <?php if (!$managingCatalog): ?><section class="category-panel category-panel--stories" id="kategorie" aria-labelledby="category-title">
+      <?php require __DIR__ . '/catalog-posts.php'; ?>
+      <div class="category-panel-destinations">
       <div class="category-panel-copy">
         <h2 id="category-title">Kam dál?</h2>
         <p>Zvolte si směr a vyberte výbavu pro další cestu.</p>
       </div>
       <div class="category-list"><?php foreach ($primaryMenu as $link): ?><?php if (!isset($link['path']) && !$manualPrimaryMenu) continue; ?><a href="<?= $escape($link['href'] . (isset($link['path']) ? '#produkty' : '')) ?>"<?= !empty($link['newTab']) ? ' target="_blank" rel="noopener noreferrer"' : '' ?>><?= $escape($link['label']) ?></a><?php endforeach; ?></div>
+      </div>
     </section><?php endif; ?>
   </main>

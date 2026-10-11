@@ -341,3 +341,14 @@ Správce může trvale odstranit objednávku ze seznamu i po platbě nebo expedi
 ## Import produktů z AI
 
 Administrace → **Import a export** nabízí výběr produktů podle kategorií a jazyka, hromadný JSON export/import a obnovu produktových dat, stručný seznam názvů a adres pro AI i jednotlivý JSON nebo ZIP se složkami produktů (`product.json` a `images/`), včetně variant, parametrů, obsahových bloků a soukromých dodavatelů. ZIP zpracuje produkty postupně a vadné přeskočí; fotografie ukládá do vlastní knihovny s miniaturami. Galerie nemá limit 12 obrázků. Detail produktu nabízí **JSON pro AI** pro bezpečnou úpravu aktuální revize. [Formát a postup](docs/product-import.md).
+
+### Featured blog articles in the catalog
+
+The “Kam dál?” panel includes up to three published article cards above the category links.
+Until an administrator customizes the selection, it uses the three latest published posts.
+In the storefront article editor, use “Zobrazit v Kam dál?” to add an article. The panel's
+“Vybrat články do tohoto boxu” controls reorder or remove selected articles. Removing all
+articles leaves only the category links. Drafts and deleted articles are never shown publicly.
+Cards use the first image block as their cover and link to the article; the heading links to the blog.
+The language-specific selection is stored in `shop_catalog_post_selections`, created by the schema
+or on the first authenticated selection change. No manual migration is required for this feature.

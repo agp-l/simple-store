@@ -11,7 +11,7 @@ use SimpleStore\Product\HomepageProductSelection;
 $db = ConnectionFactory::create(['host' => '127.0.0.1', 'user' => 'root', 'password' => (string) getenv('MYSQL_TEST_PASSWORD'), 'database' => 'simple_store', 'port' => 3306]);
 $tips = new CategoryProductSelection($db);
 $catalog = new CatalogSelection(new ProductRepository($db));
-$keys = []; $prefix = 'selection-' . bin2hex(random_bytes(8));
+$postKeys = []; $keys = []; $prefix = 'selection-' . bin2hex(random_bytes(8));
 $category = 'test-' . bin2hex(random_bytes(6));
 $assert = static function (bool $ok, string $message): void { if (!$ok) throw new RuntimeException($message); };
 try {
@@ -87,8 +87,34 @@ try {
     $before = $home->keys('cs'); $after = array_reverse($before); $home->reorder('cs', $after, $before);
     $assert($home->keys('cs') === $after, 'Homepage drag order not persisted.');
     $home->change('cs', 'remove', $keys[0]); $home->change('cs', 'remove', $keys[1]);
+    // A separate test language keeps selection fixtures isolated from catalog content.
+    $posts = new \SimpleStore\Content\CatalogPostSelection($db, ['zz']);
+    foreach (range(0, 4) as $i) {
+        $key = bin2hex(random_bytes(16)); $postKeys[] = $key;
+        $db->insert('shop_content_revisions', ['document_key' => $key, 'active_document_key' => $key,
+            'language' => 'zz', 'revision_number' => 1, 'type' => 'post', 'slug' => $key, 'active_slug' => $key,
+            'title' => 'Story ' . $i, 'summary' => '', 'body' => '', 'published' => $i < 4 ? 1 : 0]);
+    }
+    $defaults = [$postKeys[3], $postKeys[2], $postKeys[1]];
+    $assert($posts->keys('zz') === $defaults, 'Default stories must be the latest published articles.');
+    try { $posts->change('zz', 'add', $postKeys[0], $defaults); throw new RuntimeException('Fourth card accepted.'); }
+    catch (InvalidArgumentException $expected) {}
+    $posts->change('zz', 'remove', $postKeys[1], $defaults);
+    $posts->change('zz', 'add', $postKeys[0], [$postKeys[3], $postKeys[2]]);
+    try { $posts->change('zz', 'remove', $postKeys[0], $defaults); throw new RuntimeException('Stale card selection accepted.'); }
+    catch (InvalidArgumentException $expected) {}
+    $posts->change('zz', 'up', $postKeys[0], [$postKeys[3], $postKeys[2], $postKeys[0]]);
+    $assert(array_column($posts->posts('zz'), 'document_key') === [$postKeys[3], $postKeys[0], $postKeys[2]], 'Story ordering failed.');
+    $db->query('UPDATE shop_content_revisions SET published=0 WHERE document_key=%s', $postKeys[3]);
+    $assert(array_column($posts->posts('zz'), 'document_key') === [$postKeys[0], $postKeys[2]], 'Hidden story leaked.');
+    foreach ($posts->keys('zz') as $key) $posts->change('zz', 'remove', $key, $posts->keys('zz'));
+    $assert($posts->posts('zz') === [], 'Explicit empty selection must not restore automatic picks.');
+    try { $posts->change('zz', 'add', $postKeys[4], []); throw new RuntimeException('Draft story accepted.'); }
+    catch (InvalidArgumentException $expected) {}
     echo "Catalog recommendations, pagination, ordering and weight tests passed.\n";
 } finally {
+    $db->query('DELETE FROM shop_catalog_post_selections WHERE language=%s', 'zz');
+    foreach ($postKeys as $key) $db->query('DELETE FROM shop_content_revisions WHERE document_key=%s', $key);
     $db->query('DELETE FROM shop_category_product_selections WHERE category_path=%s OR category_path LIKE %s', $category, $category . '/%');
     foreach ($keys as $key) $db->query('DELETE FROM shop_product_revisions WHERE product_key=%s', $key);
 }
