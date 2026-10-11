@@ -32,7 +32,7 @@ final class ProductVariantMerge
         $quantity = $this->quantity($source['product_key']);
         $variant = array_replace($variants[0], ['quantity' => $quantity, 'price_czk' => (int) $source['price_czk'], 'image_path' => $source['image_path'], 'stock_status' => $source['stock_status']]);
         ProductVariants::normalize(array_merge($state['items'], [$variant]));
-        return ['source_key' => $source['product_key'], 'source_name' => $source['name'], 'source_expected' => self::fingerprint($rows, $quantity),
+        return ['source_slug' => $slug, 'groups' => $groups, 'source_key' => $source['product_key'], 'source_name' => $source['name'], 'source_expected' => self::fingerprint($rows, $quantity),
             'target_expected' => $expected, 'variant' => $variant];
     }
 

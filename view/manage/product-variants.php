@@ -15,6 +15,7 @@ foreach ($details['options'] as $group) $variantGroups[] = $group['name'] . ': '
 ?>
 <section class="product-admin-settings variant-manager" id="product-variants" aria-labelledby="variant-heading">
   <div class="product-admin-settings-heading"><strong id="variant-heading"><?= \SimpleStore\Rendering\Icon::render('package') ?> Varianty a sklad</strong><span class="editor-chip"><?= $variantInventory['enabled'] ? 'Sklad po variantách' : 'Společný sklad produktu' ?> · <?= count($variantRows) ?> variant</span></div>
+  <?php if (($_GET['variants_saved'] ?? '') === '1' && $variantError === ''): ?><p class="inline-stock-notice" role="status">Varianty a sklad byly uloženy.</p><?php endif; ?>
   <?php if ($variantError !== ''): ?><p class="panel-error" role="alert"><?= $escape($variantError) ?></p><?php endif; ?>
   <?php if ($variantRows !== []): ?><p>Cena a fotografie mohou zůstat prázdné — použijí se údaje produktu. Vlastnosti varianty jsou stálé; jinou kombinaci přidej jako novou.</p>
   <div class="variant-table-wrap"><table class="variant-table"><thead><tr><th>Varianta</th><th>SKU</th><th>Volné kusy</th><th>Dostupnost</th><th>Cena Kč</th><th>Fotografie</th><th>Nabízet</th><th></th></tr></thead><tbody>

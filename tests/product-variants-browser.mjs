@@ -25,7 +25,9 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
       await page.goto('http://127.0.0.1:8765/' + publicPath);
       await page.locator('#variant-choice-0').waitFor();
       await page.locator('#variant-choice-0').selectOption('Modrá');
-      assert.equal(await page.locator('#variant-choice-1 option[value="S"]').isDisabled(), true);
+      await page.locator('.product-purchase').screenshot({ path: `/tmp/variant-screenshots/selection-${width}.png` });
+      assert.equal(await page.locator('#variant-choice-1 option[value="S"]').evaluate(option => option.disabled), true,
+        await page.locator('.variant-pickers').evaluate(root => JSON.stringify(Array.from(root.querySelectorAll('select')).map(select => ({value: select.value, options: Array.from(select.options).map(option => ({value: option.value, disabled: option.disabled}))})))));
       await page.locator('#variant-choice-1').selectOption('M');
       const selected = await page.locator('#product-variant').inputValue();
       assert.match(selected, /^[a-f0-9]{32}$/);

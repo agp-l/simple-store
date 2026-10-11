@@ -61,8 +61,13 @@ try {
         unset($_SESSION['variant_error'], $_SESSION['variant_form']);
     }
 } catch (InvalidArgumentException $error) {
+    if (isset($plan) && is_array($plan)) {
+        $_POST['source_slug'] = is_string($plan['source_slug'] ?? null) ? $plan['source_slug'] : '';
+        $_POST['merge_groups'] = is_string($plan['groups'] ?? null) ? $plan['groups'] : '';
+    }
     $_SESSION['variant_error'] = ['key' => $key, 'message' => $error->getMessage()];
     $_SESSION['variant_form'] = $_POST;
 }
-header('Location: ' . $basePath . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1#product-variants', true, 303);
+$notice = !isset($_SESSION['variant_error']) && ($operation ?? '') !== 'merge-preview' ? '&variants_saved=1' : '';
+header('Location: ' . $basePath . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1' . $notice . '#product-variants', true, 303);
 exit;
