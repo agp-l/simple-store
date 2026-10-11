@@ -27,11 +27,18 @@
         if (!response.ok || data.saved !== true) throw new Error(data.error || 'Pořadí nebylo potvrzeno. Obnov stránku.');
         saved = order;
         const catalog = document.getElementById('catalog');
-        if (catalog) {
+        if (catalog && list.dataset.scope === 'home') {
           const cards = new Map([...catalog.querySelectorAll('[data-product-key]')].map((card) => [card.dataset.productKey, card]));
           [...order].reverse().forEach((key) => { if (cards.has(key)) catalog.prepend(cards.get(key)); });
         }
         announce('Pořadí uloženo.');
+        if (catalog && list.dataset.scope !== 'home' && document.getElementById('sort')?.value === 'random') {
+          // A changed recommendation order invalidates pagination, including unloaded cards.
+          const next = new URL(location.href);
+          next.searchParams.delete('offset');
+          next.hash = 'produkty';
+          location.assign(next.href);
+        }
       } catch (error) {
         restore(); announce(error instanceof SyntaxError ? 'Server změnu nepotvrdil. Obnov stránku a zkontroluj přihlášení.' : error.message, true);
       } finally { busy = false; list.removeAttribute('aria-busy'); }

@@ -57,22 +57,20 @@ final class ProductRepository
             array_push($values, $search, $search, $search);
         }
         $order = match ($sort) {
-            'price-asc' => 'price_czk ASC, id DESC',
-            'price-desc' => 'price_czk DESC, id DESC',
-            'name' => 'name ASC, id DESC',
+            'price-asc' => 'price_czk ASC, product_key',
+            'price-desc' => 'price_czk DESC, product_key',
+            'name' => 'name ASC, product_key',
             default => 'id DESC',
         };
+        // Recommendations affect discovery only; explicit sorts always win.
         if ($sort === 'random') {
             $order = 'SHA2(CONCAT(product_key, %s), 256), product_key';
+            if ($tips !== []) {
+                $tipOrder = 'FIELD(product_key, ' . implode(',', array_fill(0, count($tips), '%s')) . ')';
+                $order = '(' . $tipOrder . '=0), ' . $tipOrder . ', ' . $order;
+                array_push($values, ...$tips, ...$tips);
+            }
             $values[] = $seed;
-        }
-        if ($tips !== []) {
-            $tipOrder = 'FIELD(product_key, ' . implode(',', array_fill(0, count($tips), '%s')) . ')';
-            $order = '(' . $tipOrder . '=0), ' . $tipOrder . ', ' . $order;
-            // ORDER BY placeholders must follow WHERE values and precede the seed.
-            if ($sort === 'random') array_pop($values);
-            array_push($values, ...$tips, ...$tips);
-            if ($sort === 'random') $values[] = $seed;
         }
         array_push($values, $limit + 1, $offset);
         $rows = $this->db->query(
