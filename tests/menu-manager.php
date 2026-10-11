@@ -16,6 +16,9 @@ class MeekroDB
 
     public function query(string $sql, mixed ...$values): array
     {
+        if (str_contains($sql, 'FROM shop_product_revisions')) {
+            return [['category' => 'obleceni', 'subcategory' => 'muzi/bundy', 'total' => 1]];
+        }
         if (str_contains($sql, 'FROM shop_catalog_categories')) {
             return [
                 ['path' => 'spani', 'title' => 'Spaní', 'sort_order' => 1],
