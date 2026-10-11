@@ -207,6 +207,9 @@ try {
     if ($method === 'POST' && in_array($_POST['action'] ?? '', ['product-selection', 'product-selection-order'], true)) {
         require __DIR__ . '/src/Admin/product-selection.php';
     }
+    if ($method === 'POST' && ($_POST['action'] ?? '') === 'product-variants') {
+        require __DIR__ . '/src/Admin/product-variants.php';
+    }
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'catalog-post') {
         require __DIR__ . '/src/Admin/catalog-post.php';
     }

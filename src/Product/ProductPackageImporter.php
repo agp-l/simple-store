@@ -26,6 +26,7 @@ final class ProductPackageImporter
         if (isset($data['product']['image_path'])) $references[] = $data['product']['image_path'];
         foreach ($data['product']['gallery'] ?? [] as $image) $references[] = $image;
         foreach ($data['product']['sections'] ?? [] as $section) if (($section['type'] ?? '') === 'image') $references[] = $section['body'] ?? '';
+        foreach ($data['product']['variants']['items'] ?? [] as $variant) if (($variant['image_path'] ?? '') !== '') $references[] = $variant['image_path'];
         foreach ($references as $image) {
             if (!is_string($image) || !in_array($image, $images, true)) throw new InvalidArgumentException('Fotografie chybí v ZIP images/: ' . (is_string($image) ? $image : 'neplatná cesta'));
         }
@@ -70,6 +71,10 @@ final class ProductPackageImporter
             if (($section['type'] ?? '') === 'image') $section['body'] = $paths[$section['body']] ?? $section['body'];
         }
         unset($section);
+        if (isset($data['product']['variants']['items'])) foreach ($data['product']['variants']['items'] as &$variant) {
+            if (($variant['image_path'] ?? '') !== '') $variant['image_path'] = $paths[$variant['image_path']] ?? $variant['image_path'];
+        }
+        unset($variant);
         return $data;
     }
 }

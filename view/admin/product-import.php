@@ -14,7 +14,7 @@
 <h2>Jeden produkt jako JSON</h2>
 <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=product-import') ?>">
 <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
-<label for="product-json">JSON od AI (nejvýše 128 KiB)</label>
+<label for="product-json">JSON od AI (nejvýše 1 MiB)</label>
 <textarea id="product-json" name="json" rows="18" spellcheck="false" required><?= $escape($importJson) ?></textarea>
 <p class="panel-help">Při chybě text zůstane ve formuláři. Neuvedená pole při úpravě zůstanou zachovaná. Seznamy gallery, options, specifications a sections se nahrazují celé; [] je vyprázdní.</p>
 <button class="panel-action panel-button" name="action" value="product-import-preview"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Zkontrolovat a zobrazit náhled</button>
@@ -27,7 +27,7 @@
 <dt>Perex</dt><dd><?= $escape($importPreview['summary']) ?></dd>
 <dt>Popis</dt><dd><?= nl2br($escape($importPreview['description'])) ?></dd></dl>
 <details><summary>Všechny výsledné údaje</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere"><?= $escape(json_encode($importPreview, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></pre></details>
-<p>Uložení vytvoří novou revizi. Skladové kusy se nemění. Dodavatelské odkazy se změní pouze při uvedení suppliers v JSON.</p>
+<p>Uložení vytvoří novou revizi. Uvedené variants mění i jejich sklad; bez variants se sklad nemění. Dodavatelské odkazy se změní pouze při uvedení suppliers v JSON.</p>
 <button class="panel-button panel-action" name="action" value="product-import-save"><?= \SimpleStore\Rendering\Icon::render('save') ?> <?= isset($importData['product_key']) ? 'Uložit úpravy produktu' : 'Vytvořit produkt' ?></button>
 <?php endif; ?>
 </form></section>

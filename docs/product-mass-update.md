@@ -14,7 +14,7 @@ commit or none do. Identical values are skipped. Content changes create revision
 with the existing retention limit; images, suppliers, prices and other fields are
 preserved. No schema migration is required.
 
-Quantity means **available to sell**, shared across variants and translations.
+Quantity means **available to sell**, shared across translations. For products using variant inventory, the chosen quantity and availability apply to every enabled variant separately; retired variants are left unchanged. The preview fingerprint includes variant configuration and stock.
 It does not reset existing order reservations. After a physical inventory, exclude
 pieces already reserved for orders. Cancelling an existing reserved order can
 subsequently return its pieces. In-stock products with zero pieces remain

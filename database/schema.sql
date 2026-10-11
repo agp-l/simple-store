@@ -1190,3 +1190,31 @@ CREATE TABLE IF NOT EXISTS shop_catalog_post_selections (
         language CHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
         document_keys_json TEXT NOT NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Variant inventory and order reservations.
+CREATE TABLE IF NOT EXISTS shop_product_variant_settings (
+            product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+            enabled TINYINT(1) NOT NULL DEFAULT 0, version INT UNSIGNED NOT NULL DEFAULT 0
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_product_variants (
+            product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+            variant_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+            choices_json TEXT NOT NULL, available_quantity INT UNSIGNED NOT NULL DEFAULT 0,
+            stock_status VARCHAR(20) NOT NULL DEFAULT 'in_stock', sku VARCHAR(100) NOT NULL DEFAULT '',
+            price_czk INT UNSIGNED DEFAULT NULL, image_path VARCHAR(1000) NOT NULL DEFAULT '',
+            enabled TINYINT(1) NOT NULL DEFAULT 1, position INT UNSIGNED NOT NULL DEFAULT 0,
+            PRIMARY KEY (product_key, variant_key)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_order_variant_reservations (
+            order_id BIGINT UNSIGNED NOT NULL, product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+            variant_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+            quantity INT UNSIGNED NOT NULL, state VARCHAR(12) NOT NULL,
+            PRIMARY KEY (order_id, product_key, variant_key), KEY variant_stock (product_key, variant_key)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shop_product_redirects (
+        language VARCHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+        source_slug VARCHAR(190) NOT NULL,
+        target_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+        PRIMARY KEY (language,source_slug), KEY target_product (target_key)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

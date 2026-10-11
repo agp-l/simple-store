@@ -14,9 +14,14 @@ $mediaLibraryUrl = $basePath . 'admin.php?' . http_build_query([
     'section' => 'media', 'type' => 'product', 'key' => $product['product_key'], 'language' => $language,
 ]);
 $details = ProductDetails::decode($product['details_json'] ?? null, $product['sizes'] ?? '');
+$galleryPaths = array_merge([$product['image_path']], $details['gallery']);
+foreach ($product['variant_inventory']['items'] ?? [] as $variant) if ($variant['enabled'] && $variant['image_path'] !== '') $galleryPaths[] = $variant['image_path'];
+$galleryPaths = array_values(array_unique($galleryPaths));
 $categoryPath = CategoryPath::fromProduct($product);
 $categoryLabel = $categoryLabels[$categoryPath] ?? $categoryLabels[explode('/', $categoryPath)[0]] ?? 'Vybavení';
 $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_stock' => 'Není skladem'];
+$variantMode = (bool) ($product['variant_inventory']['enabled'] ?? false);
+$offerPrice = $editing ? (int) $product['price_czk'] : (int) ($product['offer_price_czk'] ?? $product['price_czk']);
 $availability = $product['availability_status'] ?? $product['stock_status'];
 $editable = static function (string $field, string $value, ?int $index = null, string $operation = 'set') use ($editing, $escape): string {
     if (!$editing) return '';
@@ -35,10 +40,10 @@ $editable = static function (string $field, string $value, ?int $index = null, s
       <div class="detail-media">
         <div class="detail-gallery<?= $product['category'] === 'boty' ? ' detail-gallery--footwear' : '' ?>"><button type="button" class="detail-gallery-open" id="detail-image-open" aria-label="Zvětšit fotografii produktu"><img id="detail-image" src="<?= $escape($image) ?>" data-image-path="<?= $escape($product['image_path']) ?>" alt="<?= $escape($product['name']) ?>" width="1200" height="1200"><span class="detail-zoom-hint" aria-hidden="true">⤢ Zvětšit</span></button></div>
         <?php if ($editing): ?><div class="inline-image-actions"><button type="button" class="inline-small" data-editor-action="main-image">✎ Hlavní obrázek</button><button type="button" class="inline-small" data-editor-action="gallery-add">＋ Přidat fotografii</button></div><?php endif; ?>
-        <?php if ($details['gallery'] !== []): ?><div class="detail-thumbs" aria-label="Fotografie produktu">
-          <?php foreach (array_merge([$product['image_path']], $details['gallery']) as $i => $path): ?>
+        <?php if (count($galleryPaths) > 1): ?><div class="detail-thumbs" aria-label="Fotografie produktu">
+          <?php foreach ($galleryPaths as $i => $path): ?>
             <span class="inline-thumb"><button type="button" class="detail-thumb" data-gallery-image="<?= $escape($imageUrl($path)) ?>" aria-label="Zobrazit fotografii <?= $i + 1 ?>" aria-pressed="<?= $i === 0 ? 'true' : 'false' ?>"><img src="<?= $escape($imageUrl(MediaPath::variant($path, 'thumb'))) ?>" alt="" loading="lazy"></button>
-              <?php if ($editing && $i > 0): ?><button type="button" class="inline-tiny" data-editor-action="gallery-set" data-editor-index="<?= $i - 1 ?>" data-editor-value="<?= $escape($path) ?>" aria-label="Upravit fotografii <?= $i + 1 ?>">✎</button><button type="button" class="inline-tiny" data-editor-action="gallery-remove" data-editor-index="<?= $i - 1 ?>" aria-label="Odebrat fotografii <?= $i + 1 ?>">×</button><?php endif; ?>
+              <?php if ($editing && $i > 0 && isset($details['gallery'][$i - 1]) && $details['gallery'][$i - 1] === $path): ?><button type="button" class="inline-tiny" data-editor-action="gallery-set" data-editor-index="<?= $i - 1 ?>" data-editor-value="<?= $escape($path) ?>" aria-label="Upravit fotografii <?= $i + 1 ?>">✎</button><button type="button" class="inline-tiny" data-editor-action="gallery-remove" data-editor-index="<?= $i - 1 ?>" aria-label="Odebrat fotografii <?= $i + 1 ?>">×</button><?php endif; ?>
             </span>
           <?php endforeach; ?></div><?php endif; ?>
         <dialog class="detail-lightbox" id="detail-lightbox" aria-label="Zvětšená fotografie produktu"><button type="button" class="detail-lightbox-close" id="detail-lightbox-close" aria-label="Zavřít zvětšenou fotografii">× Zavřít</button><button type="button" class="detail-lightbox-arrow detail-lightbox-previous" id="detail-lightbox-previous" aria-label="Předchozí fotografie" hidden>‹</button><img id="detail-lightbox-image" alt="<?= $escape($product['name']) ?>"><button type="button" class="detail-lightbox-arrow detail-lightbox-next" id="detail-lightbox-next" aria-label="Další fotografie" hidden>›</button><span class="detail-lightbox-counter" id="detail-lightbox-counter" role="status" aria-live="polite" aria-atomic="true" hidden></span></dialog>
@@ -52,6 +57,9 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         <form method="post" action="<?= $escape($cartUrl) ?>" class="product-purchase">
           <input type="hidden" name="action" value="add"><input type="hidden" name="csrf" value="<?= $escape($cartToken) ?>">
           <input type="hidden" name="product_key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
+        <?php if ($product['variant_inventory']['enabled'] ?? false): ?>
+          <?php require __DIR__ . '/product-variant-picker.php'; ?>
+        <?php else: ?>
         <?php foreach ($details['options'] as $i => $group): ?>
           <div class="inline-option">
             <label class="field-label" for="product-option-<?= $i ?>"><span<?= $editable('option_name', $group['name'], $i, 'option.set') ?>><?= $escape($group['name']) ?></span></label>
@@ -64,7 +72,8 @@ $editable = static function (string $field, string $value, ?int $index = null, s
           </div>
         <?php endforeach; ?>
         <?php if ($editing): ?><button class="inline-small" type="button" data-editor-action="option-add">＋ Přidat výběr (barva, velikost…)</button><?php endif; ?>
-        <div class="detail-price"><div class="detail-prices"><strong><span<?= $editable('price_czk', (string) $product['price_czk']) ?>><?= number_format((int) $product['price_czk'], 0, ',', ' ') ?></span> Kč</strong><?php $btcPrice = $priceDisplay instanceof \SimpleStore\Pricing\BitcoinPriceDisplay ? $priceDisplay->bitcoin((int) $product['price_czk']) : null; ?><?php if ($btcPrice !== null): ?><small><?= $escape($btcPrice) ?></small><?php endif; ?></div><span class="stock <?= $availability === 'in_stock' ? '' : 'stock-wait' ?>"><span class="stock-dot" aria-hidden="true"></span><?= $escape($stockText[$availability] ?? '') ?></span></div>
+        <?php endif; ?>
+        <div class="detail-price"><div class="detail-prices"><?php if ($editing && $variantMode): ?><small>Výchozí cena variant</small><?php endif; ?><strong><span<?= !$editing ? ' data-variant-price' : '' ?><?= $editable('price_czk', (string) $product['price_czk']) ?>><?= !$editing && !empty($product['price_varies']) ? 'od ' : '' ?><?= number_format($offerPrice, 0, ',', ' ') ?></span> Kč</strong><?php $btcPrice = $priceDisplay instanceof \SimpleStore\Pricing\BitcoinPriceDisplay ? $priceDisplay->bitcoin($offerPrice) : null; ?><?php if ($btcPrice !== null): ?><small data-variant-btc><?= $escape($btcPrice) ?></small><?php endif; ?></div><span class="stock <?= $availability === 'in_stock' ? '' : 'stock-wait' ?>"><span class="stock-dot" aria-hidden="true"></span><span data-variant-stock><?= $escape($stockText[$availability] ?? '') ?></span></span></div>
         <div class="buy-row"><div class="quantity"><button type="button" id="minus" aria-label="Ubrat kus">−</button><input id="qty" type="number" name="quantity" min="1" max="99" value="1" aria-label="Počet kusů" required><button type="button" id="plus" aria-label="Přidat kus">＋</button></div>
           <button class="detail-add" type="submit" id="detail-add" <?= $availability === 'out_of_stock' || empty($product['published']) ? 'disabled' : '' ?>><?= empty($product['published']) ? 'Neveřejný koncept' : ($availability === 'out_of_stock' ? 'Není skladem' : 'Přidat do košíku') ?></button></div>
         </form>
@@ -113,6 +122,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         </tbody></table></div><?php if ($editing): ?><button class="inline-small" type="button" data-editor-action="spec-add">＋ Přidat parametr</button><?php endif; ?></aside><?php endif; ?>
       </div>
     <?php endif; ?>
+    <?php if ($variantMode && !$editing): ?><script defer src="<?= $escape($basePath . 'assets/product-variants.js?v=' . filemtime(__DIR__ . '/../assets/product-variants.js')) ?>"></script><?php endif; ?>
     <?php require __DIR__ . '/product-related.php'; ?>
     <?php if ($editing && $productHistory !== []): ?><details class="inline-history"><summary>Historie úprav (<?= count($productHistory) ?>)</summary><p>Načtení starší verze vytvoří další novou revizi.</p>
       <?php foreach ($productHistory as $revision): ?><div class="inline-revision"><span>Revize <?= (int) $revision['revision_number'] ?> · <?= $escape($revision['saved_at']) ?> · <?= $escape($revision['name']) ?></span>

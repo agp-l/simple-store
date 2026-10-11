@@ -144,7 +144,9 @@ final class CheckoutController
             if (!is_array($choices) || count($choices) > 8) {
                 throw new InvalidArgumentException('Neplatný výběr produktu.');
             }
-            $this->cartService->add($this->cart, $key, $language, array_values($choices), self::quantity());
+            $variant = $_POST['variant_key'] ?? '';
+            if (!is_string($variant)) throw new InvalidArgumentException('Vyber variantu produktu.');
+            $this->cartService->add($this->cart, $key, $language, array_values($choices), self::quantity(), $variant);
             return;
         }
         if ($action === 'update') {

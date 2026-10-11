@@ -6,6 +6,7 @@ namespace SimpleStore\Checkout;
 use InvalidArgumentException;
 use SimpleStore\Product\ProductDetails;
 use SimpleStore\Product\ProductRepository;
+use SimpleStore\Product\ProductVariantRepository;
 
 /** Resolve cart identities against current published products; browser prices are never accepted. */
 final class CartService
@@ -15,23 +16,28 @@ final class CartService
     }
 
     /** Form choices are indexed to match the product's current option-group order. */
-    public function add(CartSession $cart, string $key, string $language, array $choices, int $quantity = 1): string
+    public function add(CartSession $cart, string $key, string $language, array $choices, int $quantity = 1, string $variantKey = ''): string
     {
         $product = $this->publishedProduct($key, $language);
+        if ($product !== null && ($product['variant_inventory']['enabled'] ?? false)) {
+            $product = ProductVariantRepository::resolve($product, $variantKey);
+        } elseif ($variantKey !== '') {
+            throw new InvalidArgumentException('Produkt už nepoužívá vybranou variantu.');
+        }
         if ($product === null || !in_array($product['availability_status'] ?? $product['stock_status'] ?? '', ['in_stock', 'on_order'], true)) {
             throw new InvalidArgumentException('Tento produkt už není možné přidat do košíku.');
         }
         if (($product['stock_status'] ?? '') === 'in_stock' && isset($product['stock_quantity'])) {
             $alreadyInCart = 0;
             foreach ($cart->state()['items'] as $line) {
-                if (($line['key'] ?? null) === $key) $alreadyInCart += (int) ($line['quantity'] ?? 0);
+                if (($line['key'] ?? null) === $key && ($line['variant_key'] ?? '') === $variantKey) $alreadyInCart += (int) ($line['quantity'] ?? 0);
             }
             if ($alreadyInCart + $quantity > (int) $product['stock_quantity']) {
                 throw new InvalidArgumentException('Požadované množství produktu není skladem.');
             }
         }
-        $options = self::optionsFromForm($product, $choices);
-        return $cart->add($key, $language, $options, $quantity);
+        $options = $product['variant_choices'] ?? self::optionsFromForm($product, $choices);
+        return $cart->add($key, $language, $options, $quantity, $variantKey);
     }
 
     /**
@@ -44,7 +50,8 @@ final class CartService
         $quantityByKey = [];
         foreach ($stored as $line) {
             if (is_array($line) && is_string($line['key'] ?? null) && is_int($line['quantity'] ?? null)) {
-                $quantityByKey[$line['key']] = ($quantityByKey[$line['key']] ?? 0) + $line['quantity'];
+                $stockKey = $line['key'] . ':' . (is_string($line['variant_key'] ?? '') ? ($line['variant_key'] ?? '') : '');
+                $quantityByKey[$stockKey] = ($quantityByKey[$stockKey] ?? 0) + $line['quantity'];
             }
         }
         $items = [];
@@ -60,9 +67,11 @@ final class CartService
             $language = $line['language'] ?? '';
             $options = $line['options'] ?? [];
             $quantity = $line['quantity'] ?? 0;
+            $variantKey = $line['variant_key'] ?? '';
+            $stockKey = (is_string($key) ? $key : '') . ':' . (is_string($variantKey) ? $variantKey : '');
             try {
-                $identityValid = is_string($key) && is_string($language) && is_array($options) &&
-                    hash_equals($lineId, CartSession::lineId($key, $language, $options));
+                $identityValid = is_string($key) && is_string($language) && is_array($options) && is_string($variantKey) &&
+                    hash_equals($lineId, CartSession::lineId($key, $language, $options, $variantKey));
             } catch (InvalidArgumentException $error) {
                 $identityValid = false;
             }
@@ -73,6 +82,8 @@ final class CartService
             $count += $quantity;
             try {
                 $product = $this->publishedProduct($key, $language);
+                if ($product !== null && ($product['variant_inventory']['enabled'] ?? false)) $product = ProductVariantRepository::resolve($product, $variantKey);
+                elseif ($variantKey !== '') $product = null;
             } catch (InvalidArgumentException $error) {
                 $product = null;
             }
@@ -82,7 +93,7 @@ final class CartService
             } elseif (!in_array($product['availability_status'] ?? $product['stock_status'] ?? '', ['in_stock', 'on_order'], true)) {
                 $issue = 'Produkt momentálně není skladem.';
             } elseif (($product['stock_status'] ?? '') === 'in_stock' && isset($product['stock_quantity']) &&
-                ($quantityByKey[$key] ?? 0) > (int) $product['stock_quantity']) {
+                ($quantityByKey[$stockKey] ?? 0) > (int) $product['stock_quantity']) {
                 $issue = 'Požadované množství produktu není skladem.';
             } elseif (!self::validStoredOptions($product, $options)) {
                 $issue = 'Možnosti produktu se změnily. Odeber položku a vyber variantu znovu.';
@@ -98,6 +109,8 @@ final class CartService
             $items[] = [
                 'line_id' => $lineId,
                 'product_key' => $key,
+                'variant_key' => $variantKey,
+                'variant_sku' => $product['variant_sku'] ?? '',
                 'language' => $language,
                 'slug' => $product['slug'] ?? '',
                 'name' => $product['name'] ?? 'Nedostupný produkt',
@@ -151,6 +164,7 @@ final class CartService
 
     private static function validStoredOptions(array $product, array $selected): bool
     {
+        if (isset($product['variant_choices'])) return $product['variant_choices'] == $selected;
         $groups = ProductDetails::decode($product['details_json'] ?? null, $product['sizes'] ?? '')['options'];
         if (count($selected) !== count($groups)) return false;
         foreach ($groups as $group) {

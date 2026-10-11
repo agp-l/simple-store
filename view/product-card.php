@@ -15,9 +15,10 @@ $categoryHref = $categoryPath === '' ? $basePath . $language . '?all=1#produkty'
 $categoryLabel = $categoryLabels[$categoryPath] ?? $categoryLabels[explode('/', $categoryPath)[0]] ?? 'Vybavení';
 $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_stock' => 'Není skladem'];
 $availability = $product['availability_status'] ?? $product['stock_status'];
-$hasOptions = ProductDetails::decode($product['details_json'] ?? null, $product['sizes'] ?? '')['options'] !== [];
+$offerPrice = (int) ($product['offer_price_czk'] ?? $product['price_czk']);
+$hasOptions = ($product['variant_inventory']['enabled'] ?? false) || ProductDetails::decode($product['details_json'] ?? null, $product['sizes'] ?? '')['options'] !== [];
 ?>
-      <article class="product-card" data-product-key="<?= $escape($product['product_key']) ?>" data-price="<?= (int) $product['price_czk'] ?>" data-name="<?= $escape($product['name']) ?>">
+      <article class="product-card" data-product-key="<?= $escape($product['product_key']) ?>" data-price="<?= $offerPrice ?>" data-name="<?= $escape($product['name']) ?>">
         <div class="product-media">
           <a href="<?= $escape($productLink) ?>" aria-label="Zobrazit <?= $escape($product['name']) ?>">
             <img class="product-image" src="<?= $escape($productImage) ?>" alt="<?= $escape($product['name']) ?>" loading="lazy" decoding="async">
@@ -32,7 +33,7 @@ $hasOptions = ProductDetails::decode($product['details_json'] ?? null, $product[
           <?php if ($product['summary'] !== ''): ?><p class="product-summary"><?= $escape($product['summary']) ?></p><?php endif; ?>
           <div class="product-meta"><span class="stock <?= $availability === 'in_stock' ? '' : 'stock-wait' ?>"><span class="stock-dot" aria-hidden="true"></span><?= $escape($stockText[$availability] ?? '') ?></span><?php if (($managingCatalog ?? false) && isset($product['stock_quantity'])): ?> <small>Volné: <?= (int) $product['stock_quantity'] ?> ks</small><?php endif; ?></div>
           <?php if (isset($product['weight_grams'])): ?><small class="product-weight">Hmotnost: <?= $escape((string) $product['weight_grams']) ?> g</small><?php endif; ?>
-          <div class="product-action"><span class="product-prices"><strong><?= number_format((int) $product['price_czk'], 0, ',', ' ') ?> Kč</strong><?php $btcPrice = $priceDisplay instanceof \SimpleStore\Pricing\BitcoinPriceDisplay ? $priceDisplay->bitcoin((int) $product['price_czk']) : null; ?><?php if ($btcPrice !== null): ?><small><?= $escape($btcPrice) ?></small><?php endif; ?></span>
+          <div class="product-action"><span class="product-prices"><strong><?= !empty($product['price_varies']) ? 'od ' : '' ?><?= number_format($offerPrice, 0, ',', ' ') ?> Kč</strong><?php $btcPrice = $priceDisplay instanceof \SimpleStore\Pricing\BitcoinPriceDisplay ? $priceDisplay->bitcoin($offerPrice) : null; ?><?php if ($btcPrice !== null): ?><small><?= $escape($btcPrice) ?></small><?php endif; ?></span>
             <?php if ($managingCatalog ?? false): ?>
               <a class="add-button" href="<?= $escape($productLink) ?>">Upravit produkt →</a>
             <?php elseif ($hasOptions): ?>

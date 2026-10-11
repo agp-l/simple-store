@@ -52,7 +52,7 @@ Chyba fotografie nebo JSON přeskočí celý produkt. Nové soubory neúspěšn�
 
 ### Limity hostingu a bezpečnost
 
-Vyžaduje PHP ZipArchive a GD s dekodéry použitých obrázků. ZIP do 128 MiB, rozbalená data do 512 MiB, nejvýše 200 produktů / 5000 souborů. Jeden obrázek do 12 MiB / 20 Mpx, product.json do 128 KiB. Menší upload_max_filesize/post_max_size hostingu mají přednost a zobrazují se ve formuláři. **Limit 12 fotografií galerie byl odstraněn**, včetně původního aplikačního limitu dávky; klasické HTTP nahrávání stále respektuje PHP max_file_uploads. Limity 30 obsahových bloků produktu a 60 bloků stránky se nezměnily.
+Vyžaduje PHP ZipArchive a GD s dekodéry použitých obrázků. ZIP do 128 MiB, rozbalená data do 512 MiB, nejvýše 200 produktů / 5000 souborů. Jeden obrázek do 12 MiB / 20 Mpx, product.json do 1 MiB. Menší upload_max_filesize/post_max_size hostingu mají přednost a zobrazují se ve formuláři. **Limit 12 fotografií galerie byl odstraněn**, včetně původního aplikačního limitu dávky; klasické HTTP nahrávání stále respektuje PHP max_file_uploads. Limity 30 obsahových bloků produktu a 60 bloků stránky se nezměnily.
 
 Nebezpečné cesty, duplicitní ZIP cesty a nadměrný archiv se odmítají před zpracováním. Symlinky, šifrované položky, chybějící soubory, vadný CRC, poškozené obrázky nebo neplatný produkt mají vlastní chybu. Nepoužívá se extractTo ani stahování externích URL.
 
@@ -99,7 +99,7 @@ Administrace → **Import a export** → **Export a seznam pro AI** zobrazuje ak
 }
 ```
 
-Každý prvek `products` používá formát jednoho produktu. Export přidává kořenové `exported_at` a u položky `stock_quantity`. Aktualizace přidává `product_key` a `revision`; mění jen uvedená pole. Export limitujeme na stejné množství jako import (32 MiB, 10 000 položek), aby nevznikl nepoužitelný soubor. Produkt zpracovává společný validátor s limitem 128 KiB.
+Každý prvek `products` používá formát jednoho produktu. Export přidává kořenové `exported_at` a u položky `stock_quantity`. Aktualizace přidává `product_key` a `revision`; mění jen uvedená pole. Export limitujeme na stejné množství jako import (32 MiB, 10 000 položek), aby nevznikl nepoužitelný soubor. Produkt zpracovává společný validátor s limitem 1 MiB.
 
 ### Import a obnova
 
@@ -167,3 +167,7 @@ Example (replace the product key with an exported identity):
 Use `simple-store.product-relations.v1` for additive, bidirectional links with
 short explanatory notes. This is a separate export option and imports through
 the same bulk queue without changing product content. See [product-relations.md](product-relations.md).
+
+## Sklad jednotlivých variant
+
+Volitelné `product.variants` obsahuje kombinace s vlastní identitou, kusy, SKU, cenou a fotografií. Jeho vynechání zachová sklad. Export přidá `expected` pro kontrolu souběžných změn. Podrobnosti a pravidla obnovy skladu jsou v [Variantách produktu](product-variants.md).

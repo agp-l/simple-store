@@ -8,7 +8,7 @@ use MeekroDB;
 use RuntimeException;
 use Throwable;
 
-/** Sellable pieces are shared by every language and every variant of a product. */
+/** Sellable pieces are shared by every language; variant products use individual inventory rows. */
 final class ProductStockRepository
 {
     public function __construct(private MeekroDB $db)
@@ -47,11 +47,23 @@ final class ProductStockRepository
                 $quantities[$row['product_key']] = (int) $row['available_quantity'];
             }
         }
+        $variants = (new ProductVariantRepository($this->db))->snapshots($keys);
         foreach ($rows as &$row) {
             $quantity = $quantities[$row['product_key'] ?? ''] ?? 0;
             $row['stock_quantity'] = $quantity;
+            $row['variant_inventory'] = $variants[$row['product_key'] ?? ''] ?? ProductVariantRepository::empty();
             $row['availability_status'] = ($row['stock_status'] ?? '') === 'in_stock' && $quantity < 1
                 ? 'out_of_stock' : ($row['stock_status'] ?? 'out_of_stock');
+            if ($row['variant_inventory']['enabled']) {
+                $active = array_filter($row['variant_inventory']['items'], static fn (array $v): bool => $v['enabled']);
+                $row['stock_quantity'] = array_sum(array_column($active, 'quantity'));
+                $prices = array_map(static fn (array $v): int => $v['price_czk'] ?? (int) $row['price_czk'], $active);
+                $row['offer_price_czk'] = $prices === [] ? (int) $row['price_czk'] : min($prices);
+                $row['price_varies'] = $prices !== [] && min($prices) !== max($prices);
+                $states = array_map([ProductVariants::class, 'availability'], $active);
+                $row['availability_status'] = in_array('in_stock', $states, true) ? 'in_stock' : (in_array('on_order', $states, true) ? 'on_order' : 'out_of_stock');
+            }
+
         }
         unset($row);
         return $rows;
@@ -68,6 +80,7 @@ final class ProductStockRepository
             $this->ensure($key);
             $row = $this->db->queryFirstRow('SELECT available_quantity FROM shop_product_inventory
                 WHERE product_key=%s FOR UPDATE', $key);
+            if ((new ProductVariantRepository($this->db))->snapshot($key, true)['enabled']) throw new InvalidArgumentException('Tento produkt používá sklad jednotlivých variant.');
             if ($row === null || (int) $row['available_quantity'] !== $expected) {
                 throw new RuntimeException('Počet kusů se mezitím změnil. Obnov stránku a zkus úpravu znovu.');
             }
@@ -95,6 +108,8 @@ final class ProductStockRepository
             $stock = $this->db->queryFirstRow('SELECT available_quantity FROM shop_product_inventory
                 WHERE product_key=%s FOR UPDATE', $key);
             if ($stock === null) throw new InvalidArgumentException('Produkt ještě nemá nastavený sklad.');
+            $variantItems = array_values(array_filter($items, static fn (array $item): bool => $item['product_key'] === $key));
+            if ((new ProductVariantStock($this->db))->reserve($orderId, $key, $variantItems)) continue;
             $needsStock = false;
             foreach (array_keys($line['languages']) as $language) {
                 $product = $this->db->queryFirstRow('SELECT stock_status FROM shop_product_revisions
@@ -121,6 +136,8 @@ final class ProductStockRepository
     /** A cancelled or deleted unshipped order returns its reserved pieces once. */
     public function release(int $orderId): void
     {
+        $this->lockOrderInventory($orderId);
+        (new ProductVariantStock($this->db))->transition($orderId, 'reserved', 'released', 1);
         foreach ($this->db->query('SELECT product_key, quantity FROM shop_order_stock_reservations
             WHERE order_id=%i AND state=%s ORDER BY product_key FOR UPDATE', $orderId, 'reserved') as $row) {
             $this->db->query('UPDATE shop_product_inventory
@@ -134,6 +151,8 @@ final class ProductStockRepository
 
     public function consume(int $orderId): void
     {
+        $this->lockOrderInventory($orderId);
+        (new ProductVariantStock($this->db))->transition($orderId, 'reserved', 'consumed', 0);
         $this->db->query('UPDATE shop_order_stock_reservations SET state=%s
             WHERE order_id=%i AND state=%s', 'consumed', $orderId, 'reserved');
     }
@@ -141,6 +160,8 @@ final class ProductStockRepository
     /** An exceptional reopening has to reclaim the released stock first. */
     public function reopen(int $orderId): void
     {
+        $this->lockOrderInventory($orderId);
+        (new ProductVariantStock($this->db))->transition($orderId, 'released', 'reserved', -1);
         foreach ($this->db->query('SELECT product_key, quantity FROM shop_order_stock_reservations
             WHERE order_id=%i AND state=%s ORDER BY product_key FOR UPDATE', $orderId, 'released') as $row) {
             $stock = $this->db->queryFirstRow('SELECT available_quantity FROM shop_product_inventory
@@ -158,7 +179,17 @@ final class ProductStockRepository
 
     public function forget(int $orderId): void
     {
+        (new ProductVariantStock($this->db))->forget($orderId);
         $this->db->query('DELETE FROM shop_order_stock_reservations WHERE order_id=%i', $orderId);
+    }
+
+    /** Lock both ledgers' products in one order before touching either ledger. */
+    private function lockOrderInventory(int $orderId): void
+    {
+        if (!(new ProductVariantRepository($this->db))->installed()) return;
+        $keys = array_column($this->db->query('SELECT product_key FROM shop_order_stock_reservations WHERE order_id=%i
+            UNION SELECT product_key FROM shop_order_variant_reservations WHERE order_id=%i ORDER BY product_key', $orderId, $orderId), 'product_key');
+        foreach ($keys as $key) $this->db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s FOR UPDATE', $key);
     }
 
     private static function validKey(string $key): void

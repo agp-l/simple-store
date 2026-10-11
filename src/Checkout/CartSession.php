@@ -56,12 +56,12 @@ final class CartSession
     }
 
     /** Store identities only. Names and prices must be looked up on every read. */
-    public function add(string $key, string $language, array $options, int $quantity = 1): string
+    public function add(string $key, string $language, array $options, int $quantity = 1, string $variantKey = ''): string
     {
         self::validQuantity($quantity);
         $options = self::normalizeOptions($options);
-        $lineId = self::lineId($key, $language, $options);
-        $this->access(static function (array &$session) use ($lineId, $key, $language, $options, $quantity): void {
+        $lineId = self::lineId($key, $language, $options, $variantKey);
+        $this->access(static function (array &$session) use ($lineId, $key, $language, $options, $quantity, $variantKey): void {
             $items = &$session['checkout_items'];
             $current = (int) ($items[$lineId]['quantity'] ?? 0);
             $next = $current + $quantity;
@@ -69,7 +69,7 @@ final class CartSession
                 array_sum(array_column($items, 'quantity')) + $quantity > self::MAX_UNITS) {
                 throw new InvalidArgumentException('Košík je plný nebo je požadovaný počet kusů příliš vysoký.');
             }
-            $items[$lineId] = compact('key', 'language', 'options') + ['quantity' => $next];
+            $items[$lineId] = compact('key', 'language', 'options') + ['quantity' => $next, 'variant_key' => $variantKey];
             $session['checkout_key'] = bin2hex(random_bytes(32));
         });
         return $lineId;
@@ -145,15 +145,16 @@ final class CartSession
     }
 
     /** Stable identity across form submissions and reordered option groups. */
-    public static function lineId(string $key, string $language, array $options): string
+    public static function lineId(string $key, string $language, array $options, string $variantKey = ''): string
     {
+        if ($variantKey !== '' && preg_match('/^[a-f0-9]{32}$/D', $variantKey) !== 1) throw new InvalidArgumentException('Neplatná varianta.');
         if (preg_match('/^[a-f0-9]{32}$/D', $key) !== 1 ||
             preg_match('/^[a-z]{2}$/D', $language) !== 1) {
             throw new InvalidArgumentException('Neplatný identifikátor produktu.');
         }
         $options = self::normalizeOptions($options);
         return hash('sha256', $language . "\0" . $key . "\0" .
-            json_encode($options, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+            json_encode($options, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . ($variantKey === '' ? '' : "\0" . $variantKey));
     }
 
     /** @return array<string|int, string> */

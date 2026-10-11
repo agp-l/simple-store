@@ -25,7 +25,7 @@ final class AdminActionPolicy
 
     private const OTHER = [
         'product-prompt-save', 'product-bulk-export', 'product-bulk-prepare', 'product-bulk-step', 'product-bulk-clear', 'product-zip-upload', 'product-zip-step', 'product-zip-clear', 'product-import-preview', 'product-import-save', 'create-content', 'create-translation', 'inline-content', 'create-product',
-        'inline-product', 'set-product-stock', 'category-create', 'category-update',
+        'inline-product', 'product-variants', 'set-product-stock', 'category-create', 'category-update',
         'menu-slot', 'menu-item-save', 'menu-item-remove', 'page-menu',
         'media-upload', 'media-attach', 'media-delete', 'delete-product',
         'delete-content', 'homepage-product', 'product-selection', 'product-selection-order', 'product-supplier-link', 'product-relation', 'catalog-post',

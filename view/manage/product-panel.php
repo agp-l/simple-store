@@ -22,17 +22,18 @@
       <?php if (($_GET['stock_saved'] ?? '') === '1'): ?><p class="inline-stock-notice" role="status">Počet kusů skladem byl uložen.</p><?php endif; ?>
       <section class="product-admin-settings" aria-labelledby="product-settings-title"><div class="product-admin-settings-heading"><strong id="product-settings-title"><?= \SimpleStore\Rendering\Icon::render('settings') ?> Nastavení produktu</strong><div class="editor-chips" aria-label="Přehled produktu">
         <span class="editor-chip editor-chip--category"><?= \SimpleStore\Rendering\Icon::render('folder') ?> <?= $escape($categoryLabel) ?></span>
-        <span class="editor-chip editor-chip--<?= ['in_stock' => 'available', 'on_order' => 'waiting', 'out_of_stock' => 'empty'][$product['stock_status']] ?? 'waiting' ?>"><?= \SimpleStore\Rendering\Icon::render(['in_stock' => 'check', 'on_order' => 'clock', 'out_of_stock' => 'cancel'][$product['stock_status']] ?? 'clock') ?> <?= $escape($stockText[$product['stock_status']] ?? '') ?></span>
+        <span class="editor-chip editor-chip--<?= ['in_stock' => 'available', 'on_order' => 'waiting', 'out_of_stock' => 'empty'][$availability] ?? 'waiting' ?>"><?= \SimpleStore\Rendering\Icon::render(['in_stock' => 'check', 'on_order' => 'clock', 'out_of_stock' => 'cancel'][$availability] ?? 'clock') ?> <?= $escape($stockText[$availability] ?? '') ?></span>
         <?php if ($stockReady ?? false): ?><span class="editor-chip editor-chip--<?= (int) ($product['stock_quantity'] ?? 0) > 0 ? 'quantity' : 'empty' ?>"><?= \SimpleStore\Rendering\Icon::render('package') ?> Volné: <?= (int) ($product['stock_quantity'] ?? 0) ?> ks</span><?php endif; ?>
       </div></div>
       <div class="inline-settings" aria-label="Nastavení produktu">
         <label><?= \SimpleStore\Rendering\Icon::render('folder') ?> Kategorie <select data-editor-select="category_path">
           <?php foreach ($editorCategories as $option): ?><option value="<?= $escape($option['path']) ?>" <?= $categoryPath === $option['path'] ? 'selected' : '' ?>><?= $escape($option['title']) ?></option><?php endforeach; ?>
         </select></label>
-        <label>Dostupnost <select data-editor-select="stock_status">
+        <?php if (!($product['variant_inventory']['enabled'] ?? false)): ?><label>Dostupnost <select data-editor-select="stock_status">
           <?php foreach ($stockText as $code => $text): ?><option value="<?= $code ?>" <?= $product['stock_status'] === $code ? 'selected' : '' ?>><?= $escape($text) ?></option><?php endforeach; ?>
-        </select></label>
-        <?php if ($stockReady ?? false): ?>
+        </select></label><?php endif; ?>
+        <?php if (($product['variant_inventory']['enabled'] ?? false)): ?><a class="inline-small" href="#product-variants">Upravit sklad variant ↓</a>
+        <?php elseif ($stockReady ?? false): ?>
           <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>" class="inline-stock-form">
             <input type="hidden" name="action" value="set-product-stock"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>">
             <input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
@@ -46,6 +47,7 @@
       </section>
     <?php endif; ?>
     <?php require __DIR__ . '/product-suppliers.php'; ?>
+    <?php require __DIR__ . '/product-variants.php'; ?>
     <?php require __DIR__ . '/product-selection.php'; ?>
     <?php require __DIR__ . '/product-relations.php'; ?>
   </div>
