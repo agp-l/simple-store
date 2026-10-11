@@ -160,6 +160,8 @@ final class OrderRepository
                 'unit_price_czk' => $price,
                 'image_path' => $image,
                 'options' => $options,
+                'variant_key' => (string) ($item['variant_key'] ?? ''),
+                'variant_sku' => (string) ($item['variant_sku'] ?? ''),
             ];
         }
         $itemsJson = self::json($snapshots, 262144);
