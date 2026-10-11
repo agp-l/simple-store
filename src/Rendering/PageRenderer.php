@@ -46,6 +46,11 @@ final class PageRenderer
         $managementCategories = $data['managementCategories'] ?? [];
         $categoryTipsScope = (string) ($data['categoryTipsScope'] ?? '');
         $categoryTipsSelected = $data['categoryTipsSelected'] ?? [];
+        $relatedProducts = $data['relatedProducts'] ?? [];
+        $relationAdmin = $data['relationAdmin'] ?? [];
+        $relationCandidates = $data['relationCandidates'] ?? [];
+        $relationSearch = $data['relationSearch'] ?? '';
+        $relationMore = $data['relationMore'] ?? false;
         $selectionTargets = $data['selectionTargets'] ?? [];
         $maxWeight = $data['maxWeight'] ?? null;
         $homepageEditing = (bool) ($data['homepageEditing'] ?? false);

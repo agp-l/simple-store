@@ -113,6 +113,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         </tbody></table></div><?php if ($editing): ?><button class="inline-small" type="button" data-editor-action="spec-add">＋ Přidat parametr</button><?php endif; ?></aside><?php endif; ?>
       </div>
     <?php endif; ?>
+    <?php require __DIR__ . '/product-related.php'; ?>
     <?php if ($editing && $productHistory !== []): ?><details class="inline-history"><summary>Historie úprav (<?= count($productHistory) ?>)</summary><p>Načtení starší verze vytvoří další novou revizi.</p>
       <?php foreach ($productHistory as $revision): ?><div class="inline-revision"><span>Revize <?= (int) $revision['revision_number'] ?> · <?= $escape($revision['saved_at']) ?> · <?= $escape($revision['name']) ?></span>
         <?php if ($revision['active_product_key'] === null): ?><button class="inline-small" type="button" data-editor-action="restore" data-editor-value="<?= (int) $revision['revision_number'] ?>">Obnovit jako novou revizi</button><?php else: ?><small>Aktuální</small><?php endif; ?>

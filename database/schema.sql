@@ -1174,3 +1174,13 @@ CREATE TABLE IF NOT EXISTS shop_category_product_selections (
   product_keys_json LONGTEXT NOT NULL,
   PRIMARY KEY (language, category_path)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE IF NOT EXISTS shop_product_relations (
+        language CHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+        product_a CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+        product_b CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+        note VARCHAR(500) NOT NULL DEFAULT '',
+        PRIMARY KEY (language, product_a, product_b),
+        KEY product_relation_reverse (language, product_b)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
