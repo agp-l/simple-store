@@ -1,7 +1,7 @@
 # Optional desktop product-card effects
 
 The experimental storefront enhancement adds a pointer-following tilt (maximum
-4 degrees), a green border and a subtle green/amber light reflection over product
+4 degrees), a green border and a subtle neutral white light reflection over product
 photos. It is an independent implementation inspired by the Halloween cards at
 https://github.mn/agp-l/halloween, without copying their assets or application code.
 

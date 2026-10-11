@@ -17,7 +17,7 @@
     pointer-events: none;
     border-radius: inherit;
     background:
-      radial-gradient(ellipse at var(--card-light-x, 50%) var(--card-light-y, 50%), rgba(225, 192, 31, .14), rgba(189, 225, 141, .08) 35%, transparent 68%),
+      radial-gradient(ellipse at var(--card-light-x, 50%) var(--card-light-y, 50%), rgba(255, 255, 255, .14), rgba(255, 255, 255, .04) 35%, transparent 68%),
       linear-gradient(125deg, transparent 25%, rgba(255, 255, 255, .24) 45%, transparent 65%);
   }
 }
