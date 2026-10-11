@@ -45,9 +45,6 @@
     <?php endif; ?>
     <?php require __DIR__ . '/product-suppliers.php'; ?>
   </div>
-  <details class="editor-context-navigation"><summary><?= \SimpleStore\Rendering\Icon::render('list') ?> Katalog a organizace produktů</summary>
-    <?php require __DIR__ . '/../product-admin-nav.php'; ?>
-  </details>
   <?php if ($editing): ?>
       <details class="inline-delete-product"><summary><?= \SimpleStore\Rendering\Icon::render('delete') ?> Odstranit produkt</summary>
         <p>Smazání odstraní produkt a všechny jeho revize v tomto jazyce. Nahrané obrázky zůstanou na disku, protože mohou mít zkopírované odkazy.</p>
