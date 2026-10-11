@@ -98,6 +98,18 @@ try {
     $assert($folders->findForAdmin('cs', $category . '/stany') !== null, 'Hidden category unavailable for assignment.');
     $assert($folders->productCount('cs', $category) === 26, 'Hidden descendants must count toward their parent.');
     $assert(array_column($folders->trail('cs', $category . '/stany'), 'path') === [$category], 'Hidden product breadcrumb must use its visible ancestor.');
+    $draft = (new ProductRepository($db, ['cs'], $folders))->saveRevision(
+        \SimpleStore\Product\ProductInlineEditor::starter('cs', $category . '/stany')
+    );
+    $keys[] = $draft['product_key'];
+    $assert((new ProductRepository($db))->current($draft['product_key'], 'cs') !== null, 'Saving a product into a hidden folder failed.');
+    $menu = new \SimpleStore\Navigation\MenuManager(
+        new \SimpleStore\Content\ContentRepository($db), $folders,
+        new \SimpleStore\Navigation\UrlManager('/cs', '/index.php', ['cs'], 'cs'),
+        ['test' => ['source' => 'categories', 'parent' => $category],
+         'manual' => ['source' => 'manual', 'items' => [['label' => 'Hidden', 'category' => $category . '/stany'], ['label' => 'Empty', 'category' => $category . '/empty']]]]
+    );
+    $assert($menu->links('test') === [] && $menu->links('manual') === [], 'Hidden and empty folders leaked through a menu source.');
     $folders->create('cs', $category . '/stany', 'child', 'Child of hidden folder', 1);
     $folders->update('cs', $category . '/stany', 'Hidden tents', 1, true);
     $assert($folders->visibility('cs', $category . '/stany') === 'visible', 'Reenabled populated category did not appear.');
