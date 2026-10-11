@@ -754,10 +754,7 @@
   border-top: 1px solid var(--line);
 }
 
-.panel-create-content:last-child .panel-button {
-  border-color: #c9aa15;
-  background: var(--sun);
-}
+
 
 .panel-translate {
   display: flex;

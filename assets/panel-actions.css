@@ -59,10 +59,11 @@
 .panel-area .panel-icon-link { text-underline-offset: .2em; }
 .panel-area :is(.panel-order-tabs, .panel-settings-nav, .panel-accounting-nav) a > .panel-icon { margin-inline-end: .35rem; }
 .panel-sidebar nav .panel-icon { width: 19px; height: 19px; }
-.panel-area .panel-order-quick-status .panel-action,
-.panel-area .panel-order-quick .panel-action { min-height: 36px; padding: 7px 9px; font-size: 12px; }
+.panel-area :where(.panel-order-quick-status, .panel-order-quick) .panel-action { min-height: 36px; padding: 7px 9px; font-size: 12px; }
 @media (max-width: 640px) {
   .panel-area :is(.panel-action, .panel-button) { min-height: 44px; }
 }
 
 .panel-order-filters a { align-items: center; gap: .4rem; }
+
+.panel-area :is(.panel-action, .panel-button)[hidden] { display: none; }
