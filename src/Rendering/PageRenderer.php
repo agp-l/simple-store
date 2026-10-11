@@ -44,6 +44,10 @@ final class PageRenderer
         $managingCatalog = (bool) ($data['managingCatalog'] ?? false);
         $catalogVisibility = (string) ($data['catalogVisibility'] ?? 'all');
         $managementCategories = $data['managementCategories'] ?? [];
+        $categoryTipsScope = (string) ($data['categoryTipsScope'] ?? '');
+        $categoryTipsSelected = $data['categoryTipsSelected'] ?? [];
+        $selectionTargets = $data['selectionTargets'] ?? [];
+        $maxWeight = $data['maxWeight'] ?? null;
         $homepageEditing = (bool) ($data['homepageEditing'] ?? false);
         $homepageReady = (bool) ($data['homepageReady'] ?? false);
         $homepageSelectionActive = (bool) ($data['homepageSelectionActive'] ?? false);

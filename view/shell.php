@@ -65,5 +65,6 @@ $productCardEffects = $page === 'catalog'
 <?php if ($contentEditMode): ?><script defer src="<?= $siteRoot ?>assets/content-editor.js?v=<?= filemtime(__DIR__ . '/../assets/content-editor.js') ?>"></script><?php endif; ?>
 <?php if ($editMode || $contentEditMode || ($mediaManager ?? false)): ?><script defer src="<?= $siteRoot ?>assets/media-manager.js?v=<?= filemtime(__DIR__ . '/../assets/media-manager.js') ?>"></script><?php endif; ?>
 <?php if ($productCardEffects): ?><script defer src="<?= $siteRoot ?>assets/product-card-effects.js?v=<?= filemtime(__DIR__ . '/../assets/product-card-effects.js') ?>"></script><?php endif; ?>
+<?php if (($homepageEditing ?? false) || ($categoryTipsScope ?? '') !== ''): ?><script defer src="<?= $siteRoot ?>assets/product-selection.js?v=<?= filemtime(__DIR__ . '/../assets/product-selection.js') ?>"></script><?php endif; ?>
 </body>
 </html>

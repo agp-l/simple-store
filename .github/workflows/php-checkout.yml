@@ -167,6 +167,7 @@ jobs:
           php tests/product-zip-database.php
           php tests/product-bulk-database.php
           php tests/product-mass-database.php
+          php tests/catalog-selection-database.php
           php tests/product-prompt-database.php
           php tests/supplier-links-database.php
           php tests/password-reset-database.php
@@ -211,6 +212,7 @@ jobs:
           php tests/product-zip-database.php
           php tests/product-bulk-database.php
           php tests/product-mass-database.php
+          php tests/catalog-selection-database.php
           php tests/product-prompt-database.php
           php tests/supplier-links-database.php
           php tests/fio-database.php

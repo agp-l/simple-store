@@ -27,6 +27,7 @@ if ($manualCategoryMenu) {
       <?php if ($categoryTrail === []): ?><span aria-hidden="true">/</span><span>Vybavení do přírody</span><?php endif; ?>
     </nav>
     <?php if ($homepageEditing): ?><?php require __DIR__ . '/homepage-editor.php'; ?><?php endif; ?>
+    <?php require __DIR__ . '/manage/category-picks.php'; ?>
     <div class="section-heading">
       <div>
         <h2 id="section-title"><?= $managingCatalog ? 'Správa produktů' : $escape($homepageSelectionActive ? $siteCopy['catalog_home_title'] : ($currentCategory['title'] ?? $siteCopy['catalog_title'])) ?></h2>
@@ -63,12 +64,23 @@ if ($manualCategoryMenu) {
       <?php endif; ?>
       <?php if (!$managingCatalog && !$homepageSelectionActive): ?><label class="sort-wrap">Řadit podle
         <select id="sort" aria-label="Řadit produkty">
+          <option value="random" <?= $sortChoice === 'random' ? 'selected' : '' ?>>Náhodné produkty</option>
           <option value="default" <?= $sortChoice === 'default' ? 'selected' : '' ?>>Nejnovější</option>
           <option value="price-asc" <?= $sortChoice === 'price-asc' ? 'selected' : '' ?>>Od nejlevnějšího</option>
           <option value="price-desc" <?= $sortChoice === 'price-desc' ? 'selected' : '' ?>>Od nejdražšího</option>
           <option value="name" <?= $sortChoice === 'name' ? 'selected' : '' ?>>Podle názvu</option>
         </select></label><?php endif; ?>
     </div>
+    <?php if (!$managingCatalog && !$homepageSelectionActive): ?>
+    <form method="get" action="<?= $escape($searchAction) ?>" class="catalog-weight-filter">
+      <input type="hidden" name="sort" value="<?= $escape($sortChoice) ?>">
+      <input type="hidden" name="search" value="<?= $escape($searchTerm) ?>">
+      <input type="hidden" name="all" value="1">
+      <label>Hmotnost do (g)<input type="number" name="max_weight" min="1" max="1000000" value="<?= $escape($maxWeight ?? '') ?>" placeholder="Bez omezení"></label>
+      <button type="submit">Filtrovat</button>
+      <small>Filtr zahrnuje pouze produkty s jednoznačně uvedenou hmotností.</small>
+    </form>
+    <?php endif; ?>
     <section class="catalog" id="catalog" aria-label="Nabídka produktů">
       <?php if ($products !== []): ?>
         <?php foreach ($products as $product): require __DIR__ . '/product-card.php'; endforeach; ?>

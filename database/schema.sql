@@ -1166,3 +1166,11 @@ SET @after_sales_order_number_upgrade = IF(@after_sales_order_number_index=0,
 PREPARE after_sales_order_number_statement FROM @after_sales_order_number_upgrade;
 EXECUTE after_sales_order_number_statement;
 DEALLOCATE PREPARE after_sales_order_number_statement;
+
+-- Ordered recommendations for each category and language.
+CREATE TABLE IF NOT EXISTS shop_category_product_selections (
+  language CHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  category_path VARCHAR(500) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  product_keys_json LONGTEXT NOT NULL,
+  PRIMARY KEY (language, category_path)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -36,7 +36,9 @@ final class ProductRepository
         string $search = '',
         string $sort = 'default',
         int $offset = 0,
-        int $limit = 12
+        int $limit = 12,
+        string $seed = '',
+        array $tips = []
     ): array
     {
         if ($offset < 0 || $offset > 100000 || $limit < 1 || $limit > 48) {
@@ -60,6 +62,18 @@ final class ProductRepository
             'name' => 'name ASC, id DESC',
             default => 'id DESC',
         };
+        if ($sort === 'random') {
+            $order = 'SHA2(CONCAT(product_key, %s), 256), product_key';
+            $values[] = $seed;
+        }
+        if ($tips !== []) {
+            $tipOrder = 'FIELD(product_key, ' . implode(',', array_fill(0, count($tips), '%s')) . ')';
+            $order = '(' . $tipOrder . '=0), ' . $tipOrder . ', ' . $order;
+            // ORDER BY placeholders must follow WHERE values and precede the seed.
+            if ($sort === 'random') array_pop($values);
+            array_push($values, ...$tips, ...$tips);
+            if ($sort === 'random') $values[] = $seed;
+        }
         array_push($values, $limit + 1, $offset);
         $rows = $this->db->query(
             'SELECT product_key, slug, name, brand, summary, details_json, category, subcategory,
