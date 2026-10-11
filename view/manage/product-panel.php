@@ -45,8 +45,8 @@
       </div>
       </section>
     <?php endif; ?>
-    <?php require __DIR__ . '/product-selection.php'; ?>
     <?php require __DIR__ . '/product-suppliers.php'; ?>
+    <?php require __DIR__ . '/product-selection.php'; ?>
   </div>
   <?php if ($editing): ?>
       <details class="inline-delete-product"><summary><?= \SimpleStore\Rendering\Icon::render('delete') ?> Odstranit produkt</summary>

@@ -2,6 +2,7 @@
   'use strict';
   document.querySelectorAll('[data-product-selection]').forEach((list) => {
     let dragged = null;
+    let pointer = null;
     let busy = false;
     const keys = () => [...list.children].map((item) => item.dataset.key);
     let saved = keys();
@@ -38,31 +39,13 @@
     [...list.children].forEach((item) => {
       const handle = item.querySelector('.selection-drag');
       if (!handle) return;
-      let pointer = null;
       handle.addEventListener('pointerdown', (event) => {
         if (busy || dragged || event.button !== 0) return;
         event.preventDefault();
         pointer = event.pointerId; dragged = item;
-        handle.setPointerCapture(pointer); handle.focus(); item.classList.add('is-dragging');
+        // Capture belongs to the stationary list, never to a row moved in the DOM.
+        list.setPointerCapture(pointer); handle.focus(); item.classList.add('is-dragging');
       });
-      handle.addEventListener('pointermove', (event) => {
-        if (pointer !== event.pointerId || dragged !== item) return;
-        const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('li[data-key]');
-        if (!target || target === item || target.parentElement !== list) return;
-        const rect = target.getBoundingClientRect();
-        list.insertBefore(item, event.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
-      });
-      handle.addEventListener('pointerup', (event) => {
-        if (pointer !== event.pointerId) return;
-        pointer = null; dragged = null; item.classList.remove('is-dragging');
-        handle.releasePointerCapture(event.pointerId); save();
-      });
-      const cancel = () => {
-        if (pointer === null) return;
-        pointer = null; dragged = null; item.classList.remove('is-dragging'); restore();
-      };
-      handle.addEventListener('pointercancel', cancel);
-      handle.addEventListener('lostpointercapture', cancel);
       handle.addEventListener('keydown', (event) => {
         if (busy || !event.altKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
         event.preventDefault();
@@ -70,6 +53,30 @@
         if (event.key === 'ArrowDown' && item.nextElementSibling) list.insertBefore(item.nextElementSibling, item);
         handle.focus(); save();
       });
+    });
+    list.addEventListener('pointermove', (event) => {
+      if (pointer !== event.pointerId || !dragged) return;
+      const target = document.elementFromPoint(event.clientX, event.clientY)?.closest('li[data-key]');
+      if (!target || target === dragged || target.parentElement !== list) return;
+      const rect = target.getBoundingClientRect();
+      list.insertBefore(dragged, event.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
+    });
+    list.addEventListener('pointerup', (event) => {
+      if (pointer !== event.pointerId || !dragged) return;
+      pointer = null; dragged.classList.remove('is-dragging'); dragged = null;
+      list.releasePointerCapture(event.pointerId); save();
+    });
+    const cancel = () => {
+      if (pointer === null) return;
+      const captured = pointer;
+      pointer = null;
+      if (dragged) dragged.classList.remove('is-dragging');
+      dragged = null; restore();
+      if (list.hasPointerCapture(captured)) list.releasePointerCapture(captured);
+    };
+    list.addEventListener('pointercancel', cancel);
+    list.addEventListener('lostpointercapture', (event) => {
+      if (event.target === list && event.pointerId === pointer) cancel();
     });
   });
 })();
