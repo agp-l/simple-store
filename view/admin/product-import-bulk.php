@@ -10,7 +10,7 @@
 <label><input type="checkbox" name="include_stock" value="1" <?= $bulkStock ? 'checked' : '' ?>> Přepsat také skladové počty uvedené v stock_quantity</label>
 <p class="panel-help">Bez zaškrtnutí se skladové kusy existujících produktů nemění. Změní-li se sklad po přípravě, položka se neuloží. Kategorie i soubory obrázků musí na tomto webu existovat; JSON obsahuje jen cesty k fotografiím. Historie objednávek ani skladové rezervace se neobnovují.</p>
 <p class="panel-help">Nejvýše 32 MiB a 10 000 položek v jedné dávce; každý produkt do 128 KiB. Limity hostingu: upload_max_filesize <?= $escape(ini_get('upload_max_filesize')) ?>, post_max_size <?= $escape(ini_get('post_max_size')) ?>.</p>
-<button class="panel-button">Připravit a zkontrolovat<?= $bulkState !== null ? ' novou frontu' : '' ?></button>
+<button class="panel-button panel-action"><?= \SimpleStore\Rendering\Icon::render('check') ?> Připravit a zkontrolovat<?= $bulkState !== null ? ' novou frontu' : '' ?></button>
 </form>
 <?php
 $importState = $bulkState;

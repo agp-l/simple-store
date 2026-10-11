@@ -2,7 +2,7 @@
 <p>Vyber produkty pro zálohu nebo AI. Upravená data nahraj zpět jako jeden JSON; nové fotografie lze přiložit v ZIP.</p></div></div>
 <nav class="panel-order-tabs product-transfer-tabs" aria-label="Import a export">
 <?php foreach (['export' => 'Export a seznam pro AI', 'bulk' => 'Hromadný JSON', 'single' => 'Jeden produkt', 'zip' => 'ZIP s fotografiemi', 'help' => 'Zadání pro AI'] as $tab => $label): ?>
-<a <?= $importTab === $tab ? 'aria-current="page"' : '' ?> href="<?= $escape($adminUrl . '?section=product-import&tab=' . $tab . '&language=' . $language) ?>"><span class="product-transfer-icon" aria-hidden="true"><?= ['export' => '↓', 'bulk' => '⇄', 'single' => '＋', 'zip' => '▧', 'help' => '✎'][$tab] ?></span><span><?= $escape($label) ?></span></a>
+<a <?= $importTab === $tab ? 'aria-current="page"' : '' ?> href="<?= $escape($adminUrl . '?section=product-import&tab=' . $tab . '&language=' . $language) ?>"><?= \SimpleStore\Rendering\Icon::render(['export' => 'download', 'bulk' => 'list', 'single' => 'plus', 'zip' => 'package', 'help' => 'edit'][$tab]) ?><span><?= $escape($label) ?></span></a>
 <?php endforeach; ?></nav>
 <?php if ($importError !== ''): ?><p class="panel-error" role="alert"><?= $escape($importError) ?></p><?php endif; ?>
 <?php if ($transferError !== ''): ?><p class="panel-error" role="alert"><?= $escape($transferError) ?></p><?php endif; ?>
@@ -17,7 +17,7 @@
 <label for="product-json">JSON od AI (nejvýše 128 KiB)</label>
 <textarea id="product-json" name="json" rows="18" spellcheck="false" required><?= $escape($importJson) ?></textarea>
 <p class="panel-help">Při chybě text zůstane ve formuláři. Neuvedená pole při úpravě zůstanou zachovaná. Seznamy gallery, options, specifications a sections se nahrazují celé; [] je vyprázdní.</p>
-<button class="panel-button" name="action" value="product-import-preview">Zkontrolovat a zobrazit náhled</button>
+<button class="panel-action panel-button" name="action" value="product-import-preview"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Zkontrolovat a zobrazit náhled</button>
 <?php if ($importPreview !== null): ?>
 <h2><?= $escape($importPreview['name']) ?></h2>
 <dl><dt>Cena</dt><dd><?= $escape($importPreview['price_czk']) ?> Kč</dd>
@@ -28,7 +28,7 @@
 <dt>Popis</dt><dd><?= nl2br($escape($importPreview['description'])) ?></dd></dl>
 <details><summary>Všechny výsledné údaje</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere"><?= $escape(json_encode($importPreview, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></pre></details>
 <p>Uložení vytvoří novou revizi. Skladové kusy se nemění. Dodavatelské odkazy se změní pouze při uvedení suppliers v JSON.</p>
-<button class="panel-button" name="action" value="product-import-save"><?= isset($importData['product_key']) ? 'Uložit úpravy produktu' : 'Vytvořit produkt' ?></button>
+<button class="panel-button panel-action" name="action" value="product-import-save"><?= \SimpleStore\Rendering\Icon::render('save') ?> <?= isset($importData['product_key']) ? 'Uložit úpravy produktu' : 'Vytvořit produkt' ?></button>
 <?php endif; ?>
 </form></section>
 <?php endif; ?>
@@ -41,14 +41,14 @@
 <label for="ai-product-prompt">Text zadání</label>
 <textarea id="ai-product-prompt" name="ai_prompt" rows="26" spellcheck="false" required aria-describedby="ai-product-prompt-help"><?= $escape($aiPrompt) ?></textarea>
 <p class="panel-help" id="ai-product-prompt-help">Zkopíruj celé zadání do AI a doplň seznam produktů. Můžeš upravit například styl popisu nebo pravidla cen; zachovej popis JSON a ZIP formátu, aby šel výsledek importovat. Nejvýše 128 KiB.</p>
-<div class="panel-form-actions"><button class="panel-button"><span aria-hidden="true">✓</span>&nbsp; Uložit zadání</button></div>
+<div class="panel-form-actions"><button class="panel-button panel-action"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit zadání</button></div>
 </form>
 </section>
 <section class="panel-panel product-prompt-panel"><h2>Platné kategorie (<?= $escape($language) ?>)</h2>
 <p>AI předej i tento seznam. Cesty si nesmí vymýšlet; seznam se vytváří z aktuálních kategorií obchodu.</p>
 <div class="panel-form"><label for="ai-product-categories">Kategorie pro AI</label>
 <textarea id="ai-product-categories" rows="8" readonly><?php foreach ($importCategories as $row): ?><?php if ($categories->find($language, $row['path']) !== null): ?><?= $escape($row['path'] . ' — ' . $row['title']) . "\n" ?><?php endif; ?><?php endforeach; ?></textarea></div>
-<p><a href="<?= $escape($adminUrl . '?section=product-import&example=flextail') ?>">Načíst JSON ukázku Flextail ZERO Power 10000</a> — koncept s referenční cenou z Gramino, bez fotografie. Odkaz na zdroj se uloží soukromě do dodavatelů.</p>
+<p><a href="<?= $escape($adminUrl . '?section=product-import&example=flextail') ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Načíst JSON ukázku Flextail ZERO Power 10000</a> — koncept s referenční cenou z Gramino, bez fotografie. Odkaz na zdroj se uloží soukromě do dodavatelů.</p>
 <p>Nové externí adresy fotografií nejsou povolené. Použij ZIP s obrázky nebo po JSON importu fotografie nahraj v detailu. Dříve uložené externí fotografie zůstávají čitelné, ale pro novou revizi je nahraď lokálními soubory.</p>
 </section>
 <?php endif; ?>

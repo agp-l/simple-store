@@ -64,7 +64,7 @@ $btcpayWebhookSecretConfigured ??= false;
     <label>Úvodní text patičky<input name="footer_intro" value="<?= $escape($siteCopyValues['footer_intro']) ?>" maxlength="200" required></label>
     <label>Krátký závěr patičky<input name="footer_closing" value="<?= $escape($siteCopyValues['footer_closing']) ?>" maxlength="200" required></label>
   </section>
-  <div class="panel-settings-save"><button class="panel-button" type="submit">Uložit texty</button></div>
+  <div class="panel-settings-save"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit texty</button></div>
 </form>
 <?php else: ?>
 <?php if ($settingsTab !== 'payment'): ?>
@@ -127,7 +127,7 @@ $btcpayWebhookSecretConfigured ??= false;
   <p class="panel-help">QR kód na potvrzení objednávky i na faktuře se sestaví z tohoto čísla účtu, částky a variabilního symbolu. Funguje pro kteroukoli českou banku bez API. IBAN se z čísla účtu dopočítá automaticky; není třeba ho zadávat. Fio API níže slouží pouze k automatickému ověřování přijatých plateb.</p>
   <label>Jméno příjemce<input name="recipient" value="<?= $escape($form['recipient']) ?>" maxlength="120" autocomplete="off"></label>
   <label>Splatnost v dnech<input type="number" name="payment_due_days" value="<?= $escape($form['payment_due_days']) ?>" min="1" max="60" required></label>
-  <div class="panel-settings-save"><button class="panel-button" type="submit">Uložit bankovní převod</button></div></form>
+  <div class="panel-settings-save"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit bankovní převod</button></div></form>
   <?php endif; ?>
   <?php if ($paymentArea === 'fio'): ?>
   <form class="panel-form panel-settings-form" method="post" novalidate action="<?= $escape($adminUrl . '?section=settings&tab=payment#settings-fio') ?>">
@@ -142,7 +142,7 @@ $btcpayWebhookSecretConfigured ??= false;
   <p class="panel-help">Token má přesně 64 znaků. V internetbankingu Fio otevři Nastavení → API, dokonči jeho autorizaci a po schválení počkej 5 minut. Stačí právo „Sledování účtu“. Používej pro obchod vlastní token: další aplikace se stejným tokenem může vyvolat limit HTTP 409. Pokud Fio vrátí HTTP 500, ověř jeho aktivní stav a platnost. <a href="https://www.fio.cz/docs/cz/API_Bankovnictvi.pdf" target="_blank" rel="noopener noreferrer">Dokumentace Fio ↗</a></p>
   <p class="panel-help">Automaticky se páruje jedna příchozí platba v Kč přesně ve výši objednávky za posledních 89 dní. Rozdělené platby, přeplatky, vratky a storna zkontroluj ve výpisu ručně.</p>
   <?php if (!empty($fioAccountDifferent)): ?><p class="panel-help">Účet Fio se liší od účtu nabízeného zákazníkům. Kontrola Fio proto nebude potvrzovat nové převody na uvedený bankovní účet. Při zkoušení můžeš stále párovat starší objednávky vytvořené pro tento účet Fio.</p><?php endif; ?>
-  <div class="panel-settings-save"><button class="panel-button" type="submit">Uložit Fio</button></div>
+  <div class="panel-settings-save"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit Fio</button></div>
   </div></details></form>
   <?php endif; ?>
   <?php if ($paymentArea === 'comgate'): ?>
@@ -159,7 +159,7 @@ $btcpayWebhookSecretConfigured ??= false;
   <label>Tajný klíč API (secret)<input type="password" name="comgate_secret" value="<?= $escape($paymentDraftSecrets['comgate_secret'] ?? '') ?>" maxlength="256" autocomplete="new-password" placeholder="<?= $comgateSecretConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'Tajný klíč z klientského portálu' ?>"></label>
   <p class="panel-help">Prázdné pole ponechá uložený klíč beze změny. Klíč se znovu nezobrazuje ani se neposílá zákazníkovi. V Comgate nastav adresu pro PUSH oznámení na <code><?= $escape(($form['comgate_return_base_url'] !== '' ? rtrim($form['comgate_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/')) . '/comgate-callback.php') ?></code>. Návratové adresy pro zaplacenou, čekající a zrušenou platbu se předají API automaticky. Pro místní test přijímající oznámení použij veřejnou testovací doménu; Comgate se na localhost nedostane.</p>
   <?php if ($comgateSecretConfigured): ?><label class="panel-check"><input type="checkbox" name="comgate_clear_secret" value="1" <?= $settingsError !== '' && $paymentArea === 'comgate' && ($_POST['comgate_clear_secret'] ?? null) === '1' ? 'checked' : '' ?>> Odstranit uložený tajný klíč</label><?php endif; ?>
-  <div class="panel-settings-save"><button class="panel-button" type="submit">Uložit Comgate</button></div>
+  <div class="panel-settings-save"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit Comgate</button></div>
   </div></details></form>
   <?php endif; ?>
   <?php if ($paymentArea === 'gopay'): ?>
@@ -177,7 +177,7 @@ $btcpayWebhookSecretConfigured ??= false;
   <label>Client secret<input type="password" name="gopay_client_secret" value="<?= $escape($paymentDraftSecrets['gopay_client_secret'] ?? '') ?>" maxlength="256" autocomplete="new-password" placeholder="<?= $gopaySecretConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'Client secret od GoPay' ?>"></label>
   <p class="panel-help">Prázdné pole ponechá uložený klíč beze změny. Tajný klíč se zde znovu nevypisuje. GoPay zavolá URL oznámení <code><?= $escape(($form['gopay_return_base_url'] !== '' ? rtrim($form['gopay_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/')) . '/gopay-callback.php') ?></code> a zákazníka vrátí přes <code>gopay-return.php</code>. Místní localhost GoPay nemůže zavolat.</p>
   <?php if ($gopaySecretConfigured): ?><label class="panel-check"><input type="checkbox" name="gopay_clear_secret" value="1" <?= $settingsError !== '' && $paymentArea === 'gopay' && ($_POST['gopay_clear_secret'] ?? null) === '1' ? 'checked' : '' ?>> Odstranit uložený Client secret</label><?php endif; ?>
-  <div class="panel-settings-save"><button class="panel-button" type="submit">Uložit GoPay</button></div>
+  <div class="panel-settings-save"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit GoPay</button></div>
   </div></details></form>
   <?php endif; ?>
   <?php if ($paymentArea === 'btcpay'): ?>
@@ -196,7 +196,7 @@ $btcpayWebhookSecretConfigured ??= false;
   <label>Tajný klíč webhooku<input type="password" name="btcpay_webhook_secret" value="<?= $escape($paymentDraftSecrets['btcpay_webhook_secret'] ?? '') ?>" maxlength="512" autocomplete="new-password" placeholder="<?= $btcpayWebhookSecretConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'Secret z nastavení webhooku v BTCPay' ?>"></label>
   <?php if ($btcpayWebhookSecretConfigured): ?><label class="panel-check"><input type="checkbox" name="btcpay_clear_webhook_secret" value="1" <?= $settingsError !== '' && $paymentArea === 'btcpay' && ($_POST['btcpay_clear_webhook_secret'] ?? null) === '1' ? 'checked' : '' ?>> Odstranit uložený tajný klíč webhooku</label><?php endif; ?>
   <p class="panel-help">V BTCPay v nastavení tohoto obchodu založ webhook pro události faktur. Jeho URL nastav na <code><?= $escape(($form['btcpay_return_base_url'] !== '' ? rtrim($form['btcpay_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/')) . '/btcpay-callback.php') ?></code>. Secret webhooku zkopíruj sem. Prázdná pole s klíči ponechají uložené hodnoty beze změny; uložené klíče se znovu nevypisují. Pokud uložení selže, právě zadané klíče zůstanou pouze v tomto formuláři.</p>
-  <div class="panel-settings-save"><button class="panel-button" type="submit">Uložit BTCPay</button></div>
+  <div class="panel-settings-save"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit BTCPay</button></div>
   </div></details></form>
   <?php endif; ?>
   </section>
@@ -209,7 +209,7 @@ $btcpayWebhookSecretConfigured ??= false;
   </section>
 <?php endif; ?>
 <?php if ($settingsTab !== 'payment'): ?>
-  <div class="panel-settings-save"><button class="panel-button" type="submit">Uložit tuto oblast</button></div>
+  <div class="panel-settings-save"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit tuto oblast</button></div>
 </form>
 <?php endif; ?>
 <?php if ($settingsTab === 'payment' && $paymentArea === 'fio' && !empty($settings['fio_bank']['enabled'])): ?>

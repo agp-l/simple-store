@@ -38,12 +38,12 @@ $mailSettingsUrl = $adminUrl . '?section=settings&tab=mail';
           <label class="panel-check"><input type="checkbox" name="templates[<?= $escape($code) ?>][enabled]" value="1" <?= $template['enabled'] ? 'checked' : '' ?>> Posílat při této události</label>
           <label>Předmět<input name="templates[<?= $escape($code) ?>][subject]" value="<?= $escape($template['subject']) ?>" maxlength="190" required></label>
           <label>Úvodní text<textarea name="templates[<?= $escape($code) ?>][message]" rows="3" maxlength="5000" required><?= $escape($template['message']) ?></textarea></label>
-          <a class="panel-text-link" href="<?= $escape($mailSettingsUrl . '&preview=' . $code) ?>">Náhled uložené šablony →</a>
+          <a class="panel-icon-link panel-text-link" href="<?= $escape($mailSettingsUrl . '&preview=' . $code) ?>"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Náhled uložené šablony</a>
         </div>
       </details>
     <?php endforeach; ?>
   </section>
-  <div class="panel-settings-save"><button class="panel-button" type="submit" <?= !$mailSettingsReady ? 'disabled' : '' ?>>Uložit nastavení e-mailů</button></div>
+  <div class="panel-settings-save"><button class="panel-action panel-button" type="submit" <?= !$mailSettingsReady ? 'disabled' : '' ?>><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit nastavení e-mailů</button></div>
 </form>
 <?php if ($mailPreview !== null): ?>
   <section class="panel-panel panel-settings-block" id="mail-preview"><h2>Náhled: <?= $escape($mailTemplates[$previewCode]['label']) ?></h2>
@@ -57,6 +57,6 @@ $mailSettingsUrl = $adminUrl . '?section=settings&tab=mail';
   <form class="panel-form" method="post" action="<?= $escape($mailSettingsUrl) ?>">
     <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="mail-test">
     <label>E-mail příjemce testu<input type="email" name="test_recipient" maxlength="254" required></label>
-    <button class="panel-button" type="submit" <?= !$mailSettingsReady ? 'disabled' : '' ?>>Odeslat testovací e-mail</button>
+    <button class="panel-action panel-button" type="submit" <?= !$mailSettingsReady ? 'disabled' : '' ?>><?= \SimpleStore\Rendering\Icon::render('mail') ?> Odeslat testovací e-mail</button>
   </form>
 </section>

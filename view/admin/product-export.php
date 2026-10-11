@@ -8,8 +8,8 @@ $exportCategories = [];
 foreach ($site['languages'] as $lang) foreach ($categories->allForAdmin($lang) as $category) $exportCategories[$category['path']] = $category['path'] . ' — ' . $category['title'];
 foreach ($exportCategories as $path => $label): ?><option value="<?= $escape($path) ?>" <?= $exportCategory === $path ? 'selected' : '' ?>><?= $escape($label) ?></option><?php endforeach; ?></select></label>
 <label>Název nebo adresa<input name="export_search" value="<?= $escape($exportSearch) ?>" maxlength="200" type="search"></label>
-<button class="panel-button">Zobrazit produkty</button>
-<a href="<?= $escape($adminUrl . '?section=product-import&tab=export') ?>">Zrušit filtry</a>
+<button class="panel-action panel-button"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit produkty</button>
+<a href="<?= $escape($adminUrl . '?section=product-import&tab=export') ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('filter') ?> Zrušit filtry</a>
 </form>
 <p>Ve výběru je <?= count($exportRows) ?> položek včetně konceptů. Každý překlad je samostatný řádek.</p>
 <form method="post" action="<?= $escape($adminUrl . '?section=product-import&tab=export') ?>" id="product-export-form" class="panel-form">
@@ -17,8 +17,8 @@ foreach ($exportCategories as $path => $label): ?><option value="<?= $escape($pa
 <input type="hidden" name="export_language" value="<?= $escape($exportLanguage) ?>"><input type="hidden" name="export_category" value="<?= $escape($exportCategory) ?>"><input type="hidden" name="export_search" value="<?= $escape($exportSearch) ?>"><input type="hidden" name="selected_json" value="[]">
 <div class="product-transfer-actions">
 <label>Formát<select name="export_format"><option value="json">Úplný JSON — záloha a hromadné úpravy</option><option value="names">Seznam pro AI — názvy, adresy a kategorie (TXT)</option></select></label>
-<button class="panel-button" name="export_scope" value="selected" data-export-selected disabled>Exportovat zaškrtnuté (<span data-selection-count>0</span>)</button>
-<button class="panel-button" name="export_scope" value="filtered" <?= $exportRows === [] ? 'disabled' : '' ?>>Exportovat vše podle filtru (<?= count($exportRows) ?>)</button>
+<button class="panel-button panel-action" name="export_scope" value="selected" data-export-selected disabled><?= \SimpleStore\Rendering\Icon::render('download') ?> Exportovat zaškrtnuté (<span data-selection-count>0</span>)</button>
+<button class="panel-action panel-button" name="export_scope" value="filtered" <?= $exportRows === [] ? 'disabled' : '' ?>><?= \SimpleStore\Rendering\Icon::render('download') ?> Exportovat vše podle filtru (<?= count($exportRows) ?>)</button>
 </div>
 <p class="panel-help">Pro všechny produkty nech filtry prázdné. JSON obsahuje aktuální texty, ceny, varianty, bloky, dodavatele, sklad a cesty k fotografiím. Neobsahuje soubory fotografií, historii revizí ani nastavení kategorií. Pro úplnou zálohu webu zálohuj také databázi a složku images/.</p>
 <noscript><p>Bez JavaScriptu použij export všeho podle filtru. Jednotlivý výběr vyžaduje JavaScript.</p></noscript>

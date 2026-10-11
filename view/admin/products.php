@@ -29,7 +29,7 @@
             <?php else: ?>
               <label>Jazyk <select name="language"><?php foreach ($site['languages'] as $code): ?><option value="<?= $escape($code) ?>"><?= $escape($code) ?></option><?php endforeach; ?></select></label>
             <?php endif; ?>
-            <button class="panel-button" type="submit" <?= $productSchemaReady ? '' : 'disabled' ?>>+ Vytvořit produkt</button>
+            <button class="panel-action panel-button" type="submit" <?= $productSchemaReady ? '' : 'disabled' ?>><?= \SimpleStore\Rendering\Icon::render('plus') ?> Vytvořit produkt</button>
           </form>
         </section>
       </div>

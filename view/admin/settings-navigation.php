@@ -6,6 +6,6 @@ $settingsLinks = ['overview' => 'Přehled', 'appearance' => 'Texty webu', 'deliv
 ?>
 <nav class="panel-settings-nav" aria-label="Oblasti nastavení obchodu">
   <?php foreach ($settingsLinks as $key => $label): ?>
-    <a href="<?= $escape($adminUrl . '?section=settings&tab=' . $key) ?>" <?= $settingsTab === $key ? 'aria-current="page"' : '' ?>><?= $escape($label) ?></a>
+    <a href="<?= $escape($adminUrl . '?section=settings&tab=' . $key) ?>" <?= $settingsTab === $key ? 'aria-current="page"' : '' ?>><?= \SimpleStore\Rendering\Icon::render(['overview' => 'list', 'appearance' => 'edit', 'delivery' => 'package', 'carriers' => 'package', 'payment' => 'card', 'prices' => 'card', 'mail' => 'mail', 'legal' => 'document'][$key]) ?> <?= $escape($label) ?></a>
   <?php endforeach; ?>
 </nav>

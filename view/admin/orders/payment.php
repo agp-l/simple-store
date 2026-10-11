@@ -23,7 +23,7 @@
         <strong>Faktura</strong>
         <?php if ($orderInvoice !== null): ?>
           <span>Číslo <?= $escape($orderInvoice['document_number']) ?></span>
-          <div class="panel-order-head-actions"><a class="panel-button" href="<?= $escape($invoiceDetailUrl . '&print=1') ?>" target="_blank" rel="noopener noreferrer">Zobrazit fakturu ↗</a><a class="panel-text-link" href="<?= $escape($invoiceDetailUrl) ?>">Detail a odeslání</a></div>
+          <div class="panel-order-head-actions"><a class="panel-icon-link panel-button" href="<?= $escape($invoiceDetailUrl . '&print=1') ?>" target="_blank" rel="noopener noreferrer"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit fakturu</a><a class="panel-icon-link panel-text-link" href="<?= $escape($invoiceDetailUrl) ?>"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Detail a odeslání</a></div>
         <?php else: ?><span>Dosud nevystavena</span><?php endif; ?>
       </div>
       <?php if ($goPayPayment && $goPayState !== null && in_array($goPayState['status'] ?? '', ['creating', 'uncertain'], true)): ?>
@@ -38,7 +38,7 @@
           <input type="hidden" name="action" value="mark-order-paid">
           <input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
           <label><input type="checkbox" name="bank_checked" value="1" required> Ověřil/a jsem na bankovním výpisu částku a variabilní symbol této objednávky.</label>
-          <button class="panel-button" type="submit">Označit platbu jako přijatou</button>
+          <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('check') ?> Označit platbu jako přijatou</button>
         </form>
       <?php endif; ?>
       <?php if ($onlineGateway && !empty($order['provider_reference'])): ?>
@@ -47,19 +47,19 @@
             <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
             <input type="hidden" name="action" value="<?= $btcpayPayment ? 'btcpay-refresh' : ($goPayPayment ? 'gopay-refresh' : 'comgate-refresh') ?>">
             <input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
-            <button class="panel-button" type="submit">Ověřit stav u <?= $gatewayName ?></button>
+            <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Ověřit stav u <?= $gatewayName ?></button>
           </form>
         <?php else: ?><p class="panel-help">Pro opětovné ověření stavu u <?= $gatewayName ?> vyplň přihlašovací údaje v <a href="<?= $escape($adminUrl . '?section=settings') ?>">nastavení obchodu</a>.</p><?php endif; ?>
       <?php endif; ?>
       <?php if ($bankTransfer && $paid && $orderControlsReady): ?>
         <details class="panel-order-accordion panel-order-controls" aria-label="Oprava platby">
-          <summary>Opravit chybně potvrzenou platbu</summary>
+          <summary><?= \SimpleStore\Rendering\Icon::render('edit') ?> Opravit chybně potvrzenou platbu</summary>
           <p class="panel-help">Vrátí stav na „Čeká na platbu“. Bankovní pohyb se tím nemění. Původní potvrzení, částka a důvod zůstanou v účetních zásazích.</p>
           <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
             <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="correct-order-payment"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="confirmation" value="not_received">
             <label>Důvod opravy <textarea name="reason" minlength="8" maxlength="190" required placeholder="Například platba označena jako přijatá omylem"></textarea></label>
             <label class="panel-check"><input type="checkbox" name="verified" value="1" required> Ověřil/a jsem výpis a opravuji ručně potvrzený stav platby.</label>
-            <button class="panel-button" type="submit">Vrátit platbu na čekající</button>
+            <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Vrátit platbu na čekající</button>
           </form>
         </details>
       <?php endif; ?>
@@ -77,7 +77,7 @@
               <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="tax-link-payment"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
               <label>Datum připsání<input type="date" name="entry_date" required></label>
               <label>Bankovní reference<input name="reference" maxlength="100" value="<?= $escape($order['variable_symbol'] ?? '') ?>"></label>
-              <button class="panel-button" type="submit">Zapsat příjem <?= $orderMoney($order['total_czk']) ?></button>
+              <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Zapsat příjem <?= $orderMoney($order['total_czk']) ?></button>
             </form>
           <?php endif; ?>
           <?php elseif ($btcpayPayment): ?>
@@ -98,7 +98,7 @@
               <label>Město<input name="buyer_city" value="<?= $escape($shipping['city'] ?? '') ?>" maxlength="100"></label>
               <label>PSČ<input name="buyer_postal_code" value="<?= $escape($shipping['postal_code'] ?? '') ?>" maxlength="6"></label>
               <label>IČO odběratele (volitelné)<input name="buyer_ico" maxlength="8"></label>
-              <button class="panel-button" type="submit">Vystavit a připravit e-mail s fakturou</button>
+              <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('plus') ?> Vystavit a připravit e-mail s fakturou</button>
               <p class="panel-help">Zkontroluj fakturační údaje. Tiskový doklad lze uložit jako PDF v prohlížeči.</p>
             </form>
           <?php else: ?><p class="panel-help">Před vystavením faktury doplň <a href="<?= $escape($adminUrl . '?section=accounting&tab=settings') ?>">údaje OSVČ</a> a aktualizuj SQL tabulky.</p><?php endif; ?>

@@ -7,6 +7,8 @@
   --line: #dde4da;
   --surface: #fff;
   --soft: #f1f5ee;
+  --action-radius: 6px;
+  --danger: #963e32;
   font-family: Inter, system-ui, -apple-system, sans-serif;
   color: var(--ink);
   background: #f4f6f2;
@@ -339,12 +341,7 @@
   position: relative;
 }
 
-.panel-document-delete summary {
-  cursor: pointer;
-  padding: 9px 12px;
-  color: #80372d;
-  font-size: 13px;
-}
+
 
 .panel-document-delete[open] {
   flex-basis: 100%;
@@ -899,14 +896,7 @@
   margin-top: 18px;
 }
 
-.panel-remove-form button {
-  padding: 8px 11px;
-  border: 1px solid #e4c5bf;
-  border-radius: 5px;
-  background: #fff;
-  color: #8c4236;
-  font-size: 12px;
-}
+
 
 .panel-remove-form span {
   color: var(--muted);

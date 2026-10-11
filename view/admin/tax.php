@@ -17,7 +17,7 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
 <form class="panel-search" method="get" action="<?= $escape($adminUrl) ?>">
   <input type="hidden" name="section" value="accounting"><input type="hidden" name="tab" value="<?= $escape($accountingTab) ?>">
   <label>Rok evidence<input type="number" name="year" min="2000" max="2100" value="<?= (int) $taxYear ?>"></label>
-  <button class="panel-button" type="submit">Zobrazit rok</button>
+  <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit rok</button>
 </form>
 <?php endif; ?>
 <?php if ($taxReady): ?>
@@ -39,7 +39,7 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
           <div><dt>Režim pro vybraný rok</dt><dd>Paušální daň · pásmo <?= (int) ($taxYearMode['flat_tax_band'] ?? 1) ?></dd></div>
         <?php endif; ?>
       </dl>
-      <p class="panel-help">Součet zahrnuje jen zapsané peněžní pohyby. Není to součet všech uhrazených objednávek, výpočet daně ani přehled za všechny tvoje činnosti. Chybějící, vrácené a nesprávně zařazené platby ověř podle zdrojových dokladů.<?php if (!($taxYearMode['saved'] ?? false)): ?> Pro tento rok zatím není uložený vlastní režim; zobrazuje se starší obecná volba. <a href="<?= $escape($taxUrl . '&tab=settings&year=' . $taxYear) ?>">Potvrdit režim roku</a>.<?php endif; ?></p>
+      <p class="panel-help">Součet zahrnuje jen zapsané peněžní pohyby. Není to součet všech uhrazených objednávek, výpočet daně ani přehled za všechny tvoje činnosti. Chybějící, vrácené a nesprávně zařazené platby ověř podle zdrojových dokladů.<?php if (!($taxYearMode['saved'] ?? false)): ?> Pro tento rok zatím není uložený vlastní režim; zobrazuje se starší obecná volba. <a href="<?= $escape($taxUrl . '&tab=settings&year=' . $taxYear) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('check') ?> Potvrdit režim roku</a>.<?php endif; ?></p>
       <?php if ($selectedMethod === 'flat_tax' && !($taxYearMode['flat_tax_confirmed'] ?? false)): ?><p class="panel-notice">Paušální režim je zatím jen naplánovaný. Potvrď v <a href="<?= $escape($taxUrl . '&tab=settings&year=' . $taxYear) ?>">nastavení roku</a>, že vstup byl skutečně oznámen finančnímu úřadu. E-shop tvou účast neumí ověřit.</p><?php endif; ?>
       <?php if (!\SimpleStore\Accounting\TaxEvidenceRepository::invoiceReady($taxSettings)): ?><p class="panel-notice">Pro vystavování dokladů doplň <a href="<?= $escape($taxUrl . '&tab=settings') ?>">údaje podnikatele</a>.</p><?php endif; ?>
     </section>
@@ -93,17 +93,17 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
           <label>Protistrana<input name="counterparty" maxlength="190" value="<?= $escape($taxEditEntry['counterparty']) ?>"></label>
           <label>Doklad / reference<input name="reference" maxlength="100" value="<?= $escape($taxEditEntry['reference']) ?>"></label>
           <label>Důvod opravy<textarea name="reason" minlength="8" maxlength="190" required></textarea></label>
-          <button class="panel-button" type="submit">Uložit opravu</button>
+          <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit opravu</button>
         </form>
         <form class="panel-form" method="post" action="<?= $escape($taxUrl) ?>">
           <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="tax-void-entry"><input type="hidden" name="id" value="<?= (int) $taxEditEntry['id'] ?>">
           <label>Důvod vyřazení chybného záznamu<textarea name="reason" minlength="8" maxlength="190" required></textarea></label>
           <label class="panel-check"><input type="checkbox" name="confirmed" value="1" required> Potvrzuji, že tento zápis nemá být v peněžním deníku.</label>
-          <button class="panel-button" type="submit">Vyřadit chybný zápis</button>
+          <button class="panel-button panel-action panel-action--danger" type="submit"><?= \SimpleStore\Rendering\Icon::render('delete') ?> Vyřadit chybný zápis</button>
         </form>
       </section>
     <?php endif; ?>
-    <section class="panel-panel"><div class="panel-panel-head"><h2>Peněžní deník <?= (int) $taxYear ?></h2><a class="panel-button" href="<?= $escape($taxUrl . '&tab=money&year=' . $taxYear . '&download=ledger') ?>">Stáhnout CSV</a></div>
+    <section class="panel-panel"><div class="panel-panel-head"><h2>Peněžní deník <?= (int) $taxYear ?></h2><a class="panel-icon-link panel-button" href="<?= $escape($taxUrl . '&tab=money&year=' . $taxYear . '&download=ledger') ?>"><?= \SimpleStore\Rendering\Icon::render('download') ?> Stáhnout CSV</a></div>
       <?php if ($taxEntries === []): ?><p class="panel-empty">Zatím tu nejsou peněžní pohyby.</p><?php endif; ?>
       <div class="panel-table-wrap"><table class="panel-table"><thead><tr><th>Datum</th><th>Účet / doklad</th><th>Popis / protistrana</th><th>Zařazení</th><th>Částka</th><th>Úprava</th></tr></thead><tbody>
       <?php foreach ($taxEntries as $entry): ?><tr><td><?= $escape($entry['entry_date']) ?></td>
@@ -111,11 +111,11 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
         <td><strong><?= $escape($entry['description']) ?></strong><br><small><?= $escape($entry['counterparty']) ?><?php if ($entry['order_id'] !== null): ?> · <a href="<?= $escape($adminUrl . '?section=orders&id=' . (int) $entry['order_id']) ?>">Objednávka #<?= (int) $entry['order_id'] ?></a><?php endif; ?></small></td>
         <td><?= $escape($taxKind[$entry['tax_kind']] ?? $entry['tax_kind']) ?></td>
         <td class="panel-table-money"><?= $entry['direction'] === 'income' ? '+' : '−' ?><?= $taxMoney($entry['amount_czk']) ?></td>
-        <td><a href="<?= $escape($taxUrl . '&tab=money&year=' . $taxYear . '&edit_entry=' . (int) $entry['id']) ?>">Opravit</a></td></tr><?php endforeach; ?>
+        <td><a href="<?= $escape($taxUrl . '&tab=money&year=' . $taxYear . '&edit_entry=' . (int) $entry['id']) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('edit') ?> Opravit</a></td></tr><?php endforeach; ?>
       </tbody></table></div>
       <nav class="panel-quick panel-order-pages" aria-label="Stránky peněžního deníku">
-        <?php if ($taxEntriesPreviousUrl !== ''): ?><a href="<?= $escape($taxEntriesPreviousUrl) ?>">← Předchozí</a><?php endif; ?>
-        <?php if ($taxEntriesNextUrl !== ''): ?><a href="<?= $escape($taxEntriesNextUrl) ?>">Další →</a><?php endif; ?>
+        <?php if ($taxEntriesPreviousUrl !== ''): ?><a href="<?= $escape($taxEntriesPreviousUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-left') ?> Předchozí</a><?php endif; ?>
+        <?php if ($taxEntriesNextUrl !== ''): ?><a href="<?= $escape($taxEntriesNextUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?> Další</a><?php endif; ?>
       </nav>
       <p class="panel-help">Zobrazuje se 50 pohybů na stránku. Export CSV zahrnuje celý vybraný rok.</p>
     </section>
@@ -133,7 +133,7 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
         <label>Popis<input name="description" maxlength="255" required></label>
         <label>Protistrana<input name="counterparty" maxlength="190"></label>
         <label>Číslo dokladu<input name="reference" maxlength="100"></label>
-        <button class="panel-button" type="submit">Přidat záznam</button>
+        <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('plus') ?> Přidat záznam</button>
       </form>
     </section>
     <section class="panel-panel"><h2>Objednávky čekající na platbu</h2>
@@ -148,14 +148,14 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
       <?php foreach ($taxBalances as $balance): ?>
         <div class="panel-order-row"><span><strong><?= $escape($balanceKind[$balance['kind']] ?? $balance['kind']) ?></strong><small><?= $escape($balance['opened_on']) ?> · <?= $escape($balance['reference']) ?></small></span>
           <span><?= $escape($balance['description']) ?> · <?= $escape($balance['counterparty']) ?></span><strong><?= $taxMoney($balance['amount_czk']) ?></strong>
-          <?php if ($balance['closed_on'] === null): ?><form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="balances"><input type="hidden" name="action" value="tax-close-balance"><input type="hidden" name="id" value="<?= (int) $balance['id'] ?>"><input type="date" name="closed_on" value="<?= $escape($today) ?>" required><button class="panel-button" type="submit">Uzavřít</button></form><?php else: ?>Uzavřeno <?= $escape($balance['closed_on']) ?><?php endif; ?></div>
+          <?php if ($balance['closed_on'] === null): ?><form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="balances"><input type="hidden" name="action" value="tax-close-balance"><input type="hidden" name="id" value="<?= (int) $balance['id'] ?>"><input type="date" name="closed_on" value="<?= $escape($today) ?>" required><button class="panel-button panel-action" type="submit"><?= \SimpleStore\Rendering\Icon::render('check') ?> Uzavřít</button></form><?php else: ?>Uzavřeno <?= $escape($balance['closed_on']) ?><?php endif; ?></div>
       <?php endforeach; ?>
     </section>
   <?php elseif ($accountingTab === 'stock'): ?>
     <section class="panel-panel"><div class="panel-panel-head"><h2>Sklad produktů a starší podklady</h2><div><a class="panel-button" href="<?= $escape($taxUrl . '&tab=stock&year=' . $taxYear . '&download=stock') ?>">Skladové pohyby CSV</a> <a class="panel-button" href="<?= $escape($taxUrl . '&tab=stock&year=' . $taxYear . '&download=sales') ?>">Prodané kusy CSV</a></div></div>
       <p class="panel-notice">Údaj „Volné kusy v e-shopu“ se čte ze skutečného skladu produktů. Starý ruční přehled níže není propojený s tímto skladem; jeho rozdíl proto <strong>není aktuální dostupnost</strong>. Počet kusů nastavuj na <a href="<?= $escape($adminUrl . '?section=products') ?>">kartě produktu</a>. Historické záznamy a CSV zde zůstávají ke kontrole.</p>
       <p class="panel-help">U skutečných výdajů si k nákupu uchovej dodavatelský doklad a na konci roku fyzicky zjisti skutečný stav zásob. Tento přehled sám neprokazuje hodnotu inventury.</p>
-      <form method="get" action="<?= $escape($adminUrl) ?>" class="panel-search"><input type="hidden" name="section" value="accounting"><input type="hidden" name="tab" value="stock"><label>Najít produkt<input name="search" value="<?= $escape($_GET['search'] ?? '') ?>"></label><button class="panel-button" type="submit">Hledat</button></form>
+      <form method="get" action="<?= $escape($adminUrl) ?>" class="panel-search"><input type="hidden" name="section" value="accounting"><input type="hidden" name="tab" value="stock"><label>Najít produkt<input name="search" value="<?= $escape($_GET['search'] ?? '') ?>"></label><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('search') ?> Hledat</button></form>
       <div class="panel-order-list">
         <?php foreach ($taxProducts as $product): ?>
           <div class="panel-order-row"><span><strong><?= $escape($product['name']) ?></strong><small><?= $escape($product['product_key']) ?></small></span>
@@ -185,17 +185,17 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
         <a class="panel-order-row" href="<?= $escape($taxUrl . '&tab=invoices&year=' . $taxYear . '&invoice_id=' . (int) $row['id']) ?>"><strong><?= $escape($row['document_number']) ?></strong><span><?= $escape($row['order_number']) ?> · <?= $escape($row['issue_date']) ?></span><strong><?= $taxMoney($row['total_czk']) ?></strong><span><?= $row['emailed_at'] !== null ? 'Odesláno e-mailem' : 'E-mail čeká' ?></span></a>
       <?php endforeach; ?></div>
       <nav class="panel-quick panel-order-pages" aria-label="Stránky vystavených faktur">
-        <?php if ($invoicePreviousUrl !== ''): ?><a href="<?= $escape($invoicePreviousUrl) ?>">← Předchozí</a><?php endif; ?>
-        <?php if ($invoiceNextUrl !== ''): ?><a href="<?= $escape($invoiceNextUrl) ?>">Další →</a><?php endif; ?>
+        <?php if ($invoicePreviousUrl !== ''): ?><a href="<?= $escape($invoicePreviousUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-left') ?> Předchozí</a><?php endif; ?>
+        <?php if ($invoiceNextUrl !== ''): ?><a href="<?= $escape($invoiceNextUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?> Další</a><?php endif; ?>
       </nav>
     </section>
     <?php if ($selectedInvoice !== null): ?>
       <section class="panel-panel"><h2>Faktura <?= $escape($selectedInvoice['document_number']) ?></h2>
-        <p><a class="panel-button" href="<?= $escape($taxUrl . '&invoice_id=' . (int) $selectedInvoice['id'] . '&print=1') ?>" target="_blank" rel="noopener noreferrer">Tisk / uložit jako PDF</a> <?php if ($selectedInvoice['order_id'] !== null): ?><a href="<?= $escape($adminUrl . '?section=orders&id=' . (int) $selectedInvoice['order_id']) ?>">Objednávka</a><?php else: ?><span class="panel-help">Objednávka byla smazána; vydaný doklad zůstává uchován.</span><?php endif; ?></p>
-        <form class="panel-form" method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="invoices"><input type="hidden" name="action" value="invoice-renumber"><input type="hidden" name="id" value="<?= (int) $selectedInvoice['id'] ?>"><label>Opravené číslo dokladu<input name="document_number" value="<?= $escape($selectedInvoice['document_number']) ?>" maxlength="40" required></label><label>Důvod opravy<input name="reason" minlength="8" maxlength="190" required></label><button class="panel-button" type="submit">Opravit číslo</button></form>
+        <p><a class="panel-icon-link panel-button" href="<?= $escape($taxUrl . '&invoice_id=' . (int) $selectedInvoice['id'] . '&print=1') ?>" target="_blank" rel="noopener noreferrer"><?= \SimpleStore\Rendering\Icon::render('document') ?> Tisk / uložit jako PDF</a> <?php if ($selectedInvoice['order_id'] !== null): ?><a href="<?= $escape($adminUrl . '?section=orders&id=' . (int) $selectedInvoice['order_id']) ?>">Objednávka</a><?php else: ?><span class="panel-help">Objednávka byla smazána; vydaný doklad zůstává uchován.</span><?php endif; ?></p>
+        <form class="panel-form" method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="invoices"><input type="hidden" name="action" value="invoice-renumber"><input type="hidden" name="id" value="<?= (int) $selectedInvoice['id'] ?>"><label>Opravené číslo dokladu<input name="document_number" value="<?= $escape($selectedInvoice['document_number']) ?>" maxlength="40" required></label><label>Důvod opravy<input name="reason" minlength="8" maxlength="190" required></label><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('edit') ?> Opravit číslo</button></form>
         <p class="panel-help">Pokud už zákazník dostal původní doklad, opravu s ním sladíš; dříve odeslaný e-mail se zpětně nemění.</p>
         <?php foreach ($invoiceHistory as $change): ?><p><?= $escape($change['old_number']) ?> → <?= $escape($change['new_number']) ?> · <?= $escape($change['created_at']) ?> UTC · <?= $escape($change['reason']) ?></p><?php endforeach; ?>
-        <?php if ($selectedInvoice['emailed_at'] === null): ?><form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="mail"><input type="hidden" name="action" value="invoice-email"><input type="hidden" name="id" value="<?= (int) $selectedInvoice['id'] ?>"><button class="panel-button" type="submit">Odeslat fakturu e-mailem</button></form><?php endif; ?>
+        <?php if ($selectedInvoice['emailed_at'] === null): ?><form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="mail"><input type="hidden" name="action" value="invoice-email"><input type="hidden" name="id" value="<?= (int) $selectedInvoice['id'] ?>"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('mail') ?> Odeslat fakturu e-mailem</button></form><?php endif; ?>
       </section>
     <?php endif; ?>
   <?php elseif ($accountingTab === 'mail'): ?>
@@ -211,11 +211,11 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
             <?php if ($row['state'] === 'failed' && $row['next_attempt_at'] !== null && (int) $row['attempts'] < \SimpleStore\Accounting\OrderMailQueue::MAX_AUTO_ATTEMPTS): ?><br>Další pokus po <?= $escape($row['next_attempt_at']) ?> UTC.<?php endif; ?>
           </span>
           <?php if (in_array($row['state'], ['queued', 'failed'], true)): ?>
-            <form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="mail"><input type="hidden" name="action" value="mail-retry"><input type="hidden" name="id" value="<?= (int) $row['id'] ?>"><button class="panel-button" type="submit">Zkusit odeslat</button></form>
+            <form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="mail"><input type="hidden" name="action" value="mail-retry"><input type="hidden" name="id" value="<?= (int) $row['id'] ?>"><button class="panel-button panel-action" type="submit"><?= \SimpleStore\Rendering\Icon::render('mail') ?> Zkusit odeslat</button></form>
           <?php elseif ($row['state'] === 'sending' && !empty($row['stale_sending'])): ?>
             <div><p class="panel-error">Výsledek pokusu není jistý. Ověř přijetí v logu poštovního serveru.</p>
-              <form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="mail"><input type="hidden" name="action" value="mail-reconcile"><input type="hidden" name="id" value="<?= (int) $row['id'] ?>"><input type="hidden" name="outcome" value="accepted"><label><input type="checkbox" name="mail_checked" value="1" required> Server zprávu přijal; další odeslání by bylo duplicitní.</label><button class="panel-button" type="submit">Označit jako přijatou</button></form>
-              <form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="mail"><input type="hidden" name="action" value="mail-reconcile"><input type="hidden" name="id" value="<?= (int) $row['id'] ?>"><input type="hidden" name="outcome" value="not_accepted"><label><input type="checkbox" name="mail_checked" value="1" required> Server zprávu nepřijal; opakování je bezpečné.</label><button class="panel-button" type="submit">Povolit nový pokus</button></form>
+              <form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="mail"><input type="hidden" name="action" value="mail-reconcile"><input type="hidden" name="id" value="<?= (int) $row['id'] ?>"><input type="hidden" name="outcome" value="accepted"><label><input type="checkbox" name="mail_checked" value="1" required> Server zprávu přijal; další odeslání by bylo duplicitní.</label><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('check') ?> Označit jako přijatou</button></form>
+              <form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="mail"><input type="hidden" name="action" value="mail-reconcile"><input type="hidden" name="id" value="<?= (int) $row['id'] ?>"><input type="hidden" name="outcome" value="not_accepted"><label><input type="checkbox" name="mail_checked" value="1" required> Server zprávu nepřijal; opakování je bezpečné.</label><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Povolit nový pokus</button></form>
             </div>
           <?php endif; ?>
         </div>
@@ -232,12 +232,12 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
         <p class="panel-help">Pro s.r.o. není tato evidence OSVČ účetnictvím společnosti. Údaj změň podle skutečného prodávajícího.</p>
         <?php foreach (['name'=>'Jméno a příjmení podnikatele', 'ico'=>'IČO', 'street'=>'Ulice a číslo sídla', 'city'=>'Město', 'postal_code'=>'PSČ', 'email'=>'Kontaktní e-mail', 'phone'=>'Telefon', 'bank_account'=>'Číslo účtu na faktuře'] as $key=>$label): ?><label><?= $escape($label) ?><input name="<?= $key ?>" value="<?= $escape($taxSettings[$key] ?? '') ?>" maxlength="<?= $key === 'ico' ? 8 : 254 ?>"></label><?php endforeach; ?>
         <p class="panel-help">Odesílání zákaznických zpráv a jejich obsah najdeš v <a href="<?= $escape($adminUrl . '?section=settings&tab=mail') ?>">nastavení obchodu → E-maily</a>.</p>
-        <button class="panel-button" type="submit">Uložit údaje prodávajícího</button>
+        <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit údaje prodávajícího</button>
       </form>
     </section>
     <section class="panel-panel"><h2>Režim pro rok <?= (int) $taxYear ?></h2>
       <p>Každý rok má vlastní volbu. Nastavení v e-shopu <strong>není oznámením finančnímu úřadu</strong> ani ověřením splnění podmínek. <a href="<?= $escape($taxUrl . '&tab=guide&year=' . $taxYear) ?>">Jak vybrat režim a pásmo →</a></p>
-      <form class="panel-search" method="get" action="<?= $escape($adminUrl) ?>"><input type="hidden" name="section" value="accounting"><input type="hidden" name="tab" value="settings"><label>Rok<input type="number" name="year" min="2000" max="2100" value="<?= (int) $taxYear ?>" required></label><button class="panel-button" type="submit">Zobrazit rok</button></form>
+      <form class="panel-search" method="get" action="<?= $escape($adminUrl) ?>"><input type="hidden" name="section" value="accounting"><input type="hidden" name="tab" value="settings"><label>Rok<input type="number" name="year" min="2000" max="2100" value="<?= (int) $taxYear ?>" required></label><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit rok</button></form>
       <?php if (!($taxYearRegimeReady ?? false)): ?>
         <p class="panel-error">Roční volby ještě nemají tabulku. <a href="<?= $escape($adminUrl . '?section=database') ?>">Aktualizuj SQL tabulky</a>; původní nastavení zůstává zachováno.</p>
       <?php elseif (($taxSettings['legal_form'] ?? 'sole_trader') === 'company'): ?>
@@ -255,7 +255,7 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
           <label>Pásmo (jen u paušální daně)<select name="flat_tax_band"><?php foreach ([1 => 'I. pásmo', 2 => 'II. pásmo', 3 => 'III. pásmo'] as $band => $label): ?><option value="<?= $band ?>" <?= (int) ($taxYearMode['flat_tax_band'] ?? 1) === $band ? 'selected' : '' ?>><?= $escape($label) ?></option><?php endforeach; ?></select></label>
           <label class="panel-check"><input type="checkbox" name="flat_tax_confirmed" value="1" <?= ($taxYearMode['flat_tax_confirmed'] ?? false) ? 'checked' : '' ?>> Potvrzuji, že jsem pro tento rok skutečně oznámil vstup do paušálního režimu nebo v něm pokračuji. E-shop to neověřuje.</label>
           <p class="panel-help">Při paušální dani se procentní výdaje neuplatňují; druh činnosti slouží k posouzení pásma. Systém nevidí ostatní příjmy, zaměstnání ani DPH a nepočítá nárok nebo výslednou daň. Změna režimu v průběhu roku může vyžadovat samostatné posouzení.</p>
-          <button class="panel-button" type="submit">Uložit režim roku <?= (int) $taxYear ?></button>
+          <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit režim roku <?= (int) $taxYear ?></button>
         </form>
       <?php endif; ?>
     </section>

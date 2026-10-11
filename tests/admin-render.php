@@ -144,7 +144,7 @@ if (!str_contains($html, 'name="action" value="mark-order-paid"') ||
     !str_contains($html, 'bank_checked') || !str_contains($html, '&lt;img src=x onerror=alert(1)&gt;') ||
     str_contains($html, '<img src=x onerror=alert(1)>') ||
     !str_contains($html, 'href="/shop/cs/objednavka/' . str_repeat('a', 64) . '"') ||
-    !str_contains($html, 'Zobrazit objednávku ↗')) {
+    !str_contains($html, 'Zobrazit objednávku')) {
     throw new RuntimeException('Order detail must require explicit bank verification and escape customer data.');
 }
 $linkedProductKey = str_repeat('a', 32);
@@ -391,7 +391,7 @@ if (!str_contains($html, 'DB-20260929-1') ||
     str_contains($html, 'Eva <script>') ||
     !str_contains($html, 'Objednávky') ||
     !str_contains($html, 'href="/shop/cs/objednavka/' . str_repeat('a', 64) . '"') ||
-    !str_contains($html, 'Zobrazit objednávku ↗')) {
+    !str_contains($html, 'Zobrazit objednávku')) {
     throw new RuntimeException('Admin order queue must display separate payment and fulfillment controls, invoices, filters and pagination.');
 }
 $refundStart = strpos($html, 'DB-20260929-GOPAY');
@@ -533,7 +533,7 @@ $previousUrl = $nextUrl = '';
 ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
-if (!str_contains($html, '✎ Upravit') || !str_contains($html, '▣ Smazat') ||
+if (!str_contains($html, \SimpleStore\Rendering\Icon::render('edit') . ' Upravit') || !str_contains($html, \SimpleStore\Rendering\Icon::render('delete') . ' Smazat') ||
     !str_contains($html, 'name="action" value="delete-content"') ||
     !str_contains($html, 'name="revision" value="3"') ||
     !str_contains($html, 'name="type" value="page"') ||

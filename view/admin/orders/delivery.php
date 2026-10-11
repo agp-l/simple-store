@@ -1,8 +1,8 @@
       <section class="panel-panel">
         <div class="panel-panel-head"><h2>Doručení a kontakt</h2>
           <div class="panel-order-head-actions" aria-label="Kopírovat údaje pro expedici">
-            <button class="panel-order-copy" type="button" data-order-copy="<?= $escape($deliveryCopy) ?>">Kopírovat adresu</button>
-            <button class="panel-order-copy" type="button" data-order-copy="<?= $escape($carrierCopy) ?>">Kopírovat pro dopravce</button>
+            <button class="panel-action panel-order-copy" type="button" data-order-copy="<?= $escape($deliveryCopy) ?>"><?= \SimpleStore\Rendering\Icon::render('copy') ?> Kopírovat adresu</button>
+            <button class="panel-action panel-order-copy" type="button" data-order-copy="<?= $escape($carrierCopy) ?>"><?= \SimpleStore\Rendering\Icon::render('copy') ?> Kopírovat pro dopravce</button>
           </div>
         </div>
   <p class="panel-order-copy-feedback" role="status" aria-live="polite"></p>
@@ -24,13 +24,13 @@
               <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="save-order-tracking"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
               <label>Číslo zásilky<input name="tracking_number" maxlength="100" value="<?= $escape($orderManualTracking['number']) ?>" placeholder="Číslo přidělené dopravcem"></label>
               <label>Veřejný odkaz pro sledování<input type="url" name="tracking_url" maxlength="1000" value="<?= $escape($orderManualTracking['url']) ?>" placeholder="https://..."></label>
-              <button class="panel-button" type="submit">Uložit sledování</button>
+              <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit sledování</button>
             </form>
           </details>
         <?php endif; ?>
         <?php if ($shippingChangeReady && $shippingChangeOptions !== []): ?>
           <details class="panel-order-accordion" <?= $shippingEntered !== [] ? 'open' : '' ?>>
-            <summary>Změnit skutečného dopravce</summary>
+            <summary><?= \SimpleStore\Rendering\Icon::render('edit') ?> Změnit skutečného dopravce</summary>
             <p class="panel-help">Změna se týká expedice. Původní cena dopravy, objednávka a vystavený doklad zůstávají stejné.</p>
             <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
               <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="change-order-shipping"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="expected_method" value="<?= $escape($shipping['method'] ?? '') ?>">
@@ -46,7 +46,7 @@
               <?php endif; ?>
               <label>Důvod změny <input name="reason" value="<?= $escape($shippingFormValue('reason')) ?>" minlength="8" maxlength="190" required placeholder="Například přesměrování na jiného dopravce"></label>
               <?php if ($carrierShipment !== null && ($carrierShipment['status'] ?? '') === 'draft'): ?><label class="panel-check"><input type="checkbox" name="draft_not_submitted" value="1" <?= $shippingFormValue('draft_not_submitted') === '1' ? 'checked' : '' ?> required> Potvrzuji, že podklady dosud nebyly importovány k dopravci; uložený koncept se smaže.</label><?php endif; ?>
-              <button class="panel-button" type="submit">Uložit dopravce pro expedici</button>
+              <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit dopravce pro expedici</button>
             </form>
           </details>
         <?php endif; ?>

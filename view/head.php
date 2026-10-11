@@ -18,5 +18,6 @@
   <?php if ($panelStylesheet): ?>
     <link rel="stylesheet" href="<?= $siteRoot ?>assets/panel.css?v=<?= filemtime(__DIR__ . '/../assets/panel.css') ?>">
     <link rel="stylesheet" href="<?= $siteRoot ?>assets/panel-orders.css?v=<?= filemtime(__DIR__ . '/../assets/panel-orders.css') ?>">
+    <link rel="stylesheet" href="<?= $siteRoot ?>assets/panel-actions.css?v=<?= filemtime(__DIR__ . '/../assets/panel-actions.css') ?>">
   <?php endif; ?>
 </head>

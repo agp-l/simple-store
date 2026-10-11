@@ -32,17 +32,17 @@
               <?php if ($packetaConfigured && $packetaShipment['method'] === 'zasilkovna_home' && !$packetaShipment['courier_number']): ?>
                 <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="packeta-courier"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
-                  <button class="panel-button" type="submit">Vyžádat číslo dopravce pro HD</button>
+                  <button class="panel-button panel-action" type="submit"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Vyžádat číslo dopravce pro HD</button>
                 </form>
               <?php elseif ($packetaConfigured): ?>
-                <p><a class="panel-button" href="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id'] . '&packeta_label=1') ?>">Stáhnout štítek PDF</a></p>
+                <p><a class="panel-icon-link panel-button" href="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id'] . '&packeta_label=1') ?>"><?= \SimpleStore\Rendering\Icon::render('download') ?> Stáhnout štítek PDF</a></p>
               <?php endif; ?>
               <?php if ($packetaTrackingUrl !== null): ?><p><a class="panel-text-link" href="<?= $escape($packetaTrackingUrl) ?>" target="_blank" rel="noopener noreferrer">Sledovat zásilku u Zásilkovny →</a></p><?php endif; ?>
               <?php if ($packetaCancelReady && $packetaConfigured && !in_array($order['status'], ['shipped', 'completed', 'cancelled', 'test'], true)): ?>
                 <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="packeta-cancel"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                   <label class="panel-check"><input type="checkbox" name="packeta_cancel_confirmed" value="1" required> Potvrzuji, že balík ještě nebyl fyzicky předán dopravci. Storno ruší zásilku u Zásilkovny, nikoli objednávku nebo platbu.</label>
-                  <button class="panel-button" type="submit">Stornovat zásilku u Zásilkovny</button>
+                  <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('cancel') ?> Stornovat zásilku u Zásilkovny</button>
                 </form>
               <?php elseif (!$packetaCancelReady): ?><p class="panel-help">Pro možnost storna <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
               <p class="panel-help">Samotné vytvoření čísla ještě neznamená, že je balík fyzicky odeslaný.</p>
@@ -52,12 +52,12 @@
                 <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="packeta-cancel-confirmed"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                   <label class="panel-check"><input type="checkbox" name="packeta_cancel_checked" value="1" required> Ověřil/a jsem v klientské sekci, že je zásilka stornovaná.</label>
-                  <button class="panel-button" type="submit">Potvrdit storno a povolit nové podání</button>
+                  <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('check') ?> Potvrdit storno a povolit nové podání</button>
                 </form>
                 <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="packeta-cancel-not-done"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                   <label class="panel-check"><input type="checkbox" name="packeta_cancel_checked" value="1" required> Ověřil/a jsem v klientské sekci, že zásilka zůstala aktivní.</label>
-                  <button class="panel-button" type="submit">Ponechat aktivní zásilku</button>
+                  <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('check') ?> Ponechat aktivní zásilku</button>
                 </form>
               <?php else: ?><p class="panel-help">Storno ještě probíhá. Po minutě obnov stránku.</p><?php endif; ?>
             <?php elseif ($packetaShipment !== null && in_array($packetaShipment['status'], ['submitting', 'uncertain'], true)): ?>
@@ -67,14 +67,14 @@
                 <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="packeta-reconcile"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                 <label>Nalezené číslo zásilky<input name="packeta_barcode" placeholder="Z1234567890" pattern="Z[0-9]{1,20}" required></label>
                 <label><input type="checkbox" name="packeta_checked" value="1" required> Ověřil/a jsem, že tato zásilka patří k objednávce.</label>
-                <button class="panel-button" type="submit">Uložit nalezenou zásilku</button>
+                <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit nalezenou zásilku</button>
               </form>
               <?php else: ?><p class="panel-help">Podání ještě probíhá. Pro kontrolu po minutě obnov stránku.</p><?php endif; ?>
               <?php if (strtotime((string) $packetaShipment['updated_at'] . ' UTC') <= time() - 60): ?>
                 <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="packeta-retry"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                   <label><input type="checkbox" name="packeta_not_created" value="1" required> Ověřil/a jsem v klientské sekci, že zásilka nevznikla.</label>
-                  <button class="panel-button" type="submit">Povolit nový pokus</button>
+                  <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Povolit nový pokus</button>
                 </form>
               <?php endif; ?>
             <?php else: ?>
@@ -106,7 +106,7 @@
                     (string) ($_POST['id'] ?? '') === (string) $order['id'] ?
                     array_filter($_POST, 'is_string') : [];
                 ?>
-                <details class="panel-order-accordion panel-order-edit-draft" <?= $entered !== [] ? 'open' : '' ?>><summary>Zkontrolovat údaje a vytvořit zásilku</summary>
+                <details class="panel-order-accordion panel-order-edit-draft" <?= $entered !== [] ? 'open' : '' ?>><summary><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Zkontrolovat údaje a vytvořit zásilku</summary>
                 <p class="panel-help">Zkontroluj údaje příjemce a hmotnost již zabaleného balíku. API použije číslo objednávky <?= $escape($order['order_number']) ?> a platbu bez dobírky. Případné opravy kontaktu a adresy níže se uloží k zásilce; původní objednávka zůstane v historii.</p>
                 <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="packeta-create"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
@@ -125,7 +125,7 @@
                     <label>ID výdejního místa Zásilkovny<input name="pickup_point_id" value="<?= $escape($entered['pickup_point_id'] ?? $shipping['pickup_code'] ?? '') ?>" maxlength="80" required></label>
                     <p class="panel-help">Původní místo: <?= $escape($shipping['pickup_point'] ?? '') ?> (ID <?= $escape($shipping['pickup_code'] ?? '') ?>). Pokud se místo mění, zadej ID nového místa z klientské sekce Zásilkovny. Před podáním ho server ověří; původní objednávka se nemění.</p>
                   <?php endif; ?>
-                  <button class="panel-button" type="submit">Vytvořit zásilku u Zásilkovny</button>
+                  <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('plus') ?> Vytvořit zásilku u Zásilkovny</button>
                 </form>
                 </details>
               <?php endif; ?>

@@ -2,9 +2,9 @@
         <div><p class="panel-eyebrow">Obsah webu</p><h1>Stránky</h1>
           <p>Spravuj publikované stránky i koncepty. Články a jejich rozpracované verze najdeš přímo v blogu.</p></div>
         <div class="panel-quick">
-          <form method="post" action="<?= $escape($adminUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="create-content"><input type="hidden" name="type" value="page"><input type="hidden" name="language" value="<?= $escape($site['default_language']) ?>"><button class="panel-button" type="submit">＋ Nová stránka</button></form>
-          <a href="<?= $escape($basePath . $site['default_language']) ?>">Na web ↗</a>
-          <a href="<?= $escape($basePath . $site['default_language'] . '/blog') ?>">Blog ↗</a>
+          <form method="post" action="<?= $escape($adminUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="create-content"><input type="hidden" name="type" value="page"><input type="hidden" name="language" value="<?= $escape($site['default_language']) ?>"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('plus') ?> Nová stránka</button></form>
+          <a href="<?= $escape($basePath . $site['default_language']) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('external') ?> Na web</a>
+          <a href="<?= $escape($basePath . $site['default_language'] . '/blog') ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('external') ?> Blog</a>
         </div>
       </div>
       <section class="panel-panel panel-list" aria-labelledby="panel-list-title">
@@ -32,8 +32,8 @@
               </select>
             </label>
           <?php endif; ?>
-          <div class="panel-form-actions"><button class="panel-button" type="submit">Zobrazit</button>
-            <a href="<?= $escape($adminUrl . '?section=contents') ?>">Zrušit filtry</a></div>
+          <div class="panel-form-actions"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit</button>
+            <a href="<?= $escape($adminUrl . '?section=contents') ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('filter') ?> Zrušit filtry</a></div>
         </form>
         <h2>Výsledky <span><?= count($documents) ?> na stránce</span></h2>
         <?php if ($documents === []): ?><p class="panel-empty">Žádná stránka neodpovídá filtrům.</p><?php endif; ?>
@@ -46,8 +46,8 @@
               <small><?= $document['published'] ? 'Publikováno' : 'Koncept' ?><?= $document['published'] && empty($document['visible_in_menu']) ? ' · mimo menu' : '' ?> · revize <?= (int) $document['revision_number'] ?></small>
             </div>
             <div class="panel-document-actions">
-              <a class="panel-button" href="<?= $escape($link) ?>" aria-label="Upravit <?= $escape($document['title']) ?>">✎ Upravit</a>
-              <details class="panel-document-delete"><summary aria-label="Smazat <?= $escape($document['title']) ?>">▣ Smazat</summary>
+              <a class="panel-icon-link panel-button" href="<?= $escape($link) ?>" aria-label="Upravit <?= $escape($document['title']) ?>"><?= \SimpleStore\Rendering\Icon::render('edit') ?> Upravit</a>
+              <details class="panel-document-delete"><summary aria-label="Smazat <?= $escape($document['title']) ?>" class="panel-action panel-action--danger"><?= \SimpleStore\Rendering\Icon::render('delete') ?> Smazat</summary>
                 <form method="post" action="<?= $escape($adminUrl) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
                   <input type="hidden" name="action" value="delete-content">
@@ -57,7 +57,7 @@
                   <input type="hidden" name="revision" value="<?= (int) $document['revision_number'] ?>">
                   <p>Odstranit tuto stránku a její aktuální verzi?</p>
                   <label class="panel-check"><input type="checkbox" name="confirm" value="1" required> Potvrzuji smazání stránky</label>
-                  <button type="submit" class="panel-button">Smazat stránku</button>
+                  <button type="submit" class="panel-action panel-action--danger panel-button"><?= \SimpleStore\Rendering\Icon::render('delete') ?> Smazat stránku</button>
                 </form>
               </details>
             </div>
@@ -68,14 +68,14 @@
               <input type="hidden" name="action" value="create-translation"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
               <input type="hidden" name="key" value="<?= $escape($document['document_key']) ?>"><input type="hidden" name="source_language" value="<?= $escape($document['language']) ?>">
               <label>Nový překlad <select name="language"><?php foreach ($missingLanguages as $code): ?><option value="<?= $escape($code) ?>"><?= $escape($code) ?></option><?php endforeach; ?></select></label>
-              <button type="submit">Vytvořit</button>
+              <button type="submit" class="panel-action"><?= \SimpleStore\Rendering\Icon::render('plus') ?> Vytvořit</button>
             </form>
           <?php endif; ?>
         <?php endforeach; ?>
         <?php if ($previousUrl !== '' || $nextUrl !== ''): ?>
           <nav class="panel-quick" aria-label="Další obsah">
-            <?php if ($previousUrl !== ''): ?><a href="<?= $escape($previousUrl) ?>">← Předchozí</a><?php endif; ?>
-            <?php if ($nextUrl !== ''): ?><a href="<?= $escape($nextUrl) ?>">Další →</a><?php endif; ?>
+            <?php if ($previousUrl !== ''): ?><a href="<?= $escape($previousUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-left') ?> Předchozí</a><?php endif; ?>
+            <?php if ($nextUrl !== ''): ?><a href="<?= $escape($nextUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?> Další</a><?php endif; ?>
           </nav>
         <?php endif; ?>
       </section>

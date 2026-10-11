@@ -19,18 +19,18 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
     $panelLogoutUrl = $adminUrl;
     $panelCurrent = $screen;
     $panelLinks = [
-        ['key' => 'editor', 'label' => 'Stránky', 'icon' => '▤', 'href' => $adminUrl . '?section=contents'],
-        ['key' => 'products', 'label' => 'Produkty', 'icon' => '▦', 'href' => $basePath . $site['default_language'] . '?manage=1#produkty'],
-        ['key' => 'product-import', 'label' => 'Import a export', 'icon' => '＋', 'href' => $adminUrl . '?section=product-import'],
-        ['key' => 'orders', 'label' => 'Objednávky', 'icon' => '▣', 'href' => $adminUrl . '?section=orders'],
-        ['key' => 'returns', 'label' => 'Reklamace a vrácení', 'icon' => '↩', 'href' => $adminUrl . '?section=returns'],
-        ['key' => 'accounting', 'label' => 'Doklady a platby', 'icon' => '▤', 'href' => $adminUrl . '?section=accounting'],
-        ['key' => 'users', 'label' => 'Zákazníci', 'icon' => '♙', 'href' => $adminUrl . '?section=users'],
-        ['key' => 'settings', 'label' => 'Nastavení obchodu', 'icon' => '⚙', 'href' => $adminUrl . '?section=settings'],
-        ['key' => 'database', 'label' => 'Databáze', 'icon' => '▤', 'href' => $adminUrl . '?section=database'],
-        ['key' => 'media', 'label' => 'Fotografie', 'icon' => '▧', 'href' => $adminUrl . '?section=media'],
-        ['key' => 'categories', 'label' => 'Kategorie', 'icon' => '⌁', 'href' => $adminUrl . '?section=categories'],
-        ['key' => 'menus', 'label' => 'Menu', 'icon' => '☷', 'href' => $adminUrl . '?section=menus'],
+        ['key' => 'editor', 'label' => 'Stránky', 'icon_name' => 'document', 'href' => $adminUrl . '?section=contents'],
+        ['key' => 'products', 'label' => 'Produkty', 'icon_name' => 'package', 'href' => $basePath . $site['default_language'] . '?manage=1#produkty'],
+        ['key' => 'product-import', 'label' => 'Import a export', 'icon_name' => 'upload', 'href' => $adminUrl . '?section=product-import'],
+        ['key' => 'orders', 'label' => 'Objednávky', 'icon_name' => 'package', 'href' => $adminUrl . '?section=orders'],
+        ['key' => 'returns', 'label' => 'Reklamace a vrácení', 'icon_name' => 'refresh', 'href' => $adminUrl . '?section=returns'],
+        ['key' => 'accounting', 'label' => 'Doklady a platby', 'icon_name' => 'document', 'href' => $adminUrl . '?section=accounting'],
+        ['key' => 'users', 'label' => 'Zákazníci', 'icon_name' => 'users', 'href' => $adminUrl . '?section=users'],
+        ['key' => 'settings', 'label' => 'Nastavení obchodu', 'icon_name' => 'settings', 'href' => $adminUrl . '?section=settings'],
+        ['key' => 'database', 'label' => 'Databáze', 'icon_name' => 'database', 'href' => $adminUrl . '?section=database'],
+        ['key' => 'media', 'label' => 'Fotografie', 'icon_name' => 'image', 'href' => $adminUrl . '?section=media'],
+        ['key' => 'categories', 'label' => 'Kategorie', 'icon_name' => 'folder', 'href' => $adminUrl . '?section=categories'],
+        ['key' => 'menus', 'label' => 'Menu', 'icon_name' => 'list', 'href' => $adminUrl . '?section=menus'],
     ];
     require __DIR__ . '/../panel/sidebar.php';
     ?>
@@ -44,7 +44,7 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
         <p>Nejdřív importuj <code>database/schema.sql</code>, pak v kořeni projektu spusť <code>php tools/admin.php create --email=tvuj@email.cz</code>. Příkaz jednou vypíše přístupové heslo; ulož si ho. Pokud už účet existoval v souboru, můžeš jej převést příkazem <code>php tools/admin.php --migrate --email=tvuj@email.cz</code>.</p>
       </section>
     <?php elseif ($screen === 'forbidden'): ?>
-      <section class="panel-panel panel-centered"><h1>Přístup odepřen</h1><p role="alert"><?= $escape($error) ?></p><p><a href="<?= $escape($adminUrl) ?>">Přejít do administrace</a></p></section>
+      <section class="panel-panel panel-centered"><h1>Přístup odepřen</h1><p role="alert"><?= $escape($error) ?></p><p><a href="<?= $escape($adminUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?> Přejít do administrace</a></p></section>
     <?php elseif ($screen === 'error'): ?>
       <section class="panel-panel panel-centered"><h1>Administraci se nepodařilo načíst</h1><p class="panel-error"><?= $escape($error) ?></p></section>
     <?php elseif ($screen === 'login'): ?>
@@ -55,7 +55,7 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
           <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
           <label>E-mail správce<input type="email" name="email" maxlength="254" autocomplete="username" required autofocus></label>
           <label>Heslo<input type="password" name="password" autocomplete="current-password" required></label>
-          <button class="panel-button" name="action" value="login">Přihlásit se</button>
+          <button class="panel-action panel-button" name="action" value="login"><?= \SimpleStore\Rendering\Icon::render('lock') ?> Přihlásit se</button>
         </form>
         <p><a href="<?= $escape($adminUrl . '?mode=forgot') ?>">Zapomenuté heslo?</a></p>
       </section>
@@ -65,8 +65,8 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
         <?php if (($_GET['sent'] ?? '') === '1'): ?><p class="panel-notice" role="status">Odkaz jsme odeslali na nastavený e-mail správce.</p><?php endif; ?>
         <form method="post" action="<?= $escape($adminUrl . '?mode=forgot') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="reset-request">
           <p>Obnovovací odkaz pošleme na e-mail správce nastavený u obchodu. Další zprávu lze poslat nejdříve za pět minut.</p>
-          <button class="panel-button" type="submit">Poslat odkaz</button></form>
-        <p><a href="<?= $escape($adminUrl) ?>">Zpět na přihlášení</a></p>
+          <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('mail') ?> Poslat odkaz</button></form>
+        <p><a href="<?= $escape($adminUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-left') ?> Zpět na přihlášení</a></p>
         <p>Pokud nemáš přístup k e-mailu, na serveru lze spustit <code>php tools/admin.php --reset</code>.</p>
       </section>
     <?php elseif ($screen === 'reset-complete'): ?>
@@ -77,8 +77,8 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
           <?php if ($resetToken !== ''): ?><form method="post" action="<?= $escape($adminUrl . '?mode=reset') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="reset-complete"><input type="hidden" name="token" value="<?= $escape($resetToken) ?>">
             <label>Nové heslo<input type="password" name="password" minlength="10" maxlength="72" autocomplete="new-password" required></label>
             <label>Potvrdit nové heslo<input type="password" name="password_confirm" minlength="10" maxlength="72" autocomplete="new-password" required></label>
-            <button class="panel-button" type="submit">Změnit heslo</button></form><?php endif; ?>
-        <?php endif; ?><p><a href="<?= $escape($adminUrl) ?>">Přihlásit se</a></p>
+            <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('edit') ?> Změnit heslo</button></form><?php endif; ?>
+        <?php endif; ?><p><a href="<?= $escape($adminUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('lock') ?> Přihlásit se</a></p>
       </section>
     <?php elseif ($screen === 'product-import'): ?>
       <?php require __DIR__ . '/product-import.php'; ?>
