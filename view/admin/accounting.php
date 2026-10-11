@@ -33,7 +33,7 @@ $accountingYearMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'
 </div>
 <nav class="panel-accounting-nav" aria-label="Evidence podnikání">
   <?php foreach (['overview', 'money', 'invoices', 'guide', 'settings'] as $key): ?>
-    <a href="<?= $escape($adminUrl . '?section=accounting&tab=' . $key . '&year=' . $taxYear) ?>" <?= $accountingTab === $key ? 'aria-current="page"' : '' ?>><?= $escape($accountingTitles[$key]) ?></a>
+    <a href="<?= $escape($adminUrl . '?section=accounting&tab=' . $key . '&year=' . $taxYear) ?>" <?= $accountingTab === $key ? 'aria-current="page"' : '' ?>><?= \SimpleStore\Rendering\Icon::render(['overview' => 'list', 'money' => 'card', 'invoices' => 'document', 'guide' => 'book', 'settings' => 'settings'][$key]) ?> <?= $escape($accountingTitles[$key]) ?></a>
   <?php endforeach; ?>
 </nav>
 <?php if ($accountingTab === 'overview' && in_array($accountingYearMethod, ['actual', 'percentage'], true)): ?>

@@ -96,7 +96,7 @@
                   <?php foreach ($menuItems as $item): ?><option value="<?= $escape($item['id']) ?>" <?= ($selectedItem['parent_id'] ?? '') === $item['id'] ? 'selected' : '' ?>><?= $escape(str_repeat('— ', (int) $item['depth']) . $item['label']) ?></option><?php endforeach; ?>
                 </select></label>
                 <label>Pořadí (nižší číslo dříve) <input type="number" name="sort_order" min="0" max="65535" value="<?= (int) ($selectedItem['sort_order'] ?? (count($menuItems) * 10)) ?>" required></label>
-                <button class="panel-button" type="submit" <?= $menuReady ? '' : 'disabled' ?>><?= $selectedItem === null ? '＋ Přidat odkaz' : 'Uložit odkaz' ?></button>
+                <button class="panel-button" type="submit" <?= $menuReady ? '' : 'disabled' ?>><?= \SimpleStore\Rendering\Icon::render($selectedItem === null ? 'plus' : 'save') ?> <?= $selectedItem === null ? 'Přidat odkaz' : 'Uložit odkaz' ?></button>
               </form>
               <?php if ($selectedItem !== null): ?><form class="panel-remove-form" method="post" action="<?= $escape($adminUrl . '?section=menus') ?>">
                 <input type="hidden" name="action" value="menu-item-remove"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">

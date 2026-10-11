@@ -290,25 +290,6 @@
   background: var(--soft);
 }
 
-.panel-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 43px;
-  padding: 10px 16px;
-  border: 1px solid #569d53;
-  border-radius: 6px;
-  background: var(--forest);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 500;
-  text-decoration: none;
-}
-
-.panel-button:hover:not(:disabled) {
-  background: #83bf7d;
-}
-
 .panel-document {
   display: grid;
   gap: 7px;

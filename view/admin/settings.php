@@ -222,7 +222,7 @@ $btcpayWebhookSecretConfigured ??= false;
     <p class="panel-help">V administraci Webglobe vyber hosting této domény → Web → Cron a vlož celou HTTPS adresu včetně klíče; nastav interval 10 minut. Webglobe před uložením kontroluje adresu metodou HEAD. Pokud hlásí, že skript neexistuje, ověř, že je po nasazení soubor fio-cron.php v kořeni webu vedle index.php. Klíč obsahuje jen oprávnění spustit kontrolu; bankovní token v adrese není. Pokud se adresa dostane k někomu dalšímu, vytvoř nový klíč a v plánu vyměň adresu.</p>
     <form method="post" action="<?= $escape($adminUrl . '?section=settings&tab=payment&area=fio') ?>">
       <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="fio-cron-rotate"><input type="hidden" name="tab" value="payment">
-      <button class="panel-button" type="submit"><?= !empty($settings['fio_bank']['cron_key_hash']) ? 'Vyměnit klíč pro Cron' : 'Vytvořit klíč pro Cron' ?></button>
+      <button class="panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('lock') ?> <?= !empty($settings['fio_bank']['cron_key_hash']) ? 'Vyměnit klíč pro Cron' : 'Vytvořit klíč pro Cron' ?></button>
     </form>
   </section>
 <?php endif; ?>

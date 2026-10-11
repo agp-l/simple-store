@@ -7,6 +7,8 @@ namespace SimpleStore\Rendering;
 final class Icon
 {
     private const PATHS = [
+        'clock' => 'M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18 M12 7v5l3 2',
+        'truck' => 'M2 4h12v13H2V4z M14 9h4l4 5v3h-8 M5 17a2 2 0 1 0 0 4 2 2 0 0 0 0-4 M18 17a2 2 0 1 0 0 4 2 2 0 0 0 0-4',
         'edit' => 'M16 3l5 5-12 12H4v-5L16 3z M13 6l5 5',
         'eye' => 'M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12 M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6',
         'delete' => 'M3 6h18 M9 6V3h6v3 M5 6l1 15h12l1-15 M10 10v7 M14 10v7',

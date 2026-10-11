@@ -11,7 +11,7 @@
   ?>
   <nav class="panel-quick panel-order-filters" aria-label="Filtrovat objednávky">
     <?php foreach (['all' => 'Všechny', 'pending' => 'Čeká na platbu', 'overdue' => 'Po splatnosti', 'paid' => 'Zaplaceno', 'processing' => 'Připravuje se', 'ready_to_ship' => 'Připraveno', 'shipped' => 'Předáno dopravci', 'completed' => 'Dokončeno', 'cancelled' => 'Zrušeno', 'test' => 'Testovací'] as $filter => $label): ?>
-      <a href="<?= $escape($orderBaseUrl . '&status=' . $filter . '&payment=' . rawurlencode($paymentFilter) . '&q=' . rawurlencode($orderSearch)) ?>" <?= $statusFilter === $filter ? 'aria-current="page"' : '' ?>><?= $escape($label) ?></a>
+      <a href="<?= $escape($orderBaseUrl . '&status=' . $filter . '&payment=' . rawurlencode($paymentFilter) . '&q=' . rawurlencode($orderSearch)) ?>" <?= $statusFilter === $filter ? 'aria-current="page"' : '' ?>><?= \SimpleStore\Rendering\Icon::render(['all' => 'list', 'pending' => 'clock', 'overdue' => 'clock', 'paid' => 'check', 'processing' => 'settings', 'ready_to_ship' => 'package', 'shipped' => 'truck', 'completed' => 'check', 'cancelled' => 'cancel', 'test' => 'settings'][$filter]) ?> <?= $escape($label) ?></a>
     <?php endforeach; ?>
   </nav>
   <form class="panel-order-search" method="get" action="<?= $escape($adminUrl) ?>" role="search">
