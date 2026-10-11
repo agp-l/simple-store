@@ -64,7 +64,7 @@
   gap: 10px;
   max-width: 100%;
   margin-top: 13px;
-  overflow-x: auto;
+  flex-wrap: wrap;
   padding-bottom: 4px;
 }
 
@@ -104,7 +104,7 @@
   max-width: none;
   max-height: none;
   margin: 0;
-  padding: 62px clamp(16px, 4vw, 48px) 28px;
+  padding: 62px clamp(54px, 7vw, 90px) 48px;
   border: 0;
   background: rgba(18, 23, 20, .97);
   color: #fff;
@@ -419,3 +419,24 @@
     min-width: 185px;
   }
 }
+
+/* Keep gallery controls reachable on narrow screens without covering the photo. */
+.detail-lightbox-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 52px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, .55);
+  border-radius: 5px;
+  background: rgba(18, 23, 20, .8);
+  color: #fff;
+  font: 32px/1 var(--font-body);
+  cursor: pointer;
+}
+.detail-lightbox-arrow:hover { background: #fff; color: var(--ink); }
+.detail-lightbox-previous { left: max(6px, env(safe-area-inset-left)); }
+.detail-lightbox-next { right: max(6px, env(safe-area-inset-right)); }
+.detail-lightbox-counter { position: absolute; bottom: 14px; font: 700 14px var(--font-body); }
+.detail-lightbox button:focus-visible { outline: 3px solid var(--amber); outline-offset: 3px; }
