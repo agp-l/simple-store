@@ -30,7 +30,7 @@ $titles = [
       <?php endif; ?>
       <nav class="product-admin-nav-tabs" aria-label="Pohledy na produkty">
         <?php foreach ($views as $mode => [$label, $href]): ?>
-          <a href="<?= $escape($href) ?>" <?= $productAdminMode === $mode ? 'aria-current="page"' : '' ?>><?= $escape($label) ?></a>
+          <a href="<?= $escape($href) ?>" <?= $productAdminMode === $mode ? 'aria-current="page"' : '' ?>><?= \SimpleStore\Rendering\Icon::render(['home' => 'eye', 'manage' => 'package', 'selection' => 'check', 'catalog' => 'list'][$mode]) ?> <?= $escape($label) ?></a>
         <?php endforeach; ?>
       </nav>
       <div class="product-admin-nav-tools">

@@ -1,14 +1,12 @@
   <main class="wrap cms-content" id="produkty">
     <?php if ($canManageContent && ($_GET['deleted'] ?? '') === '1'): ?><p class="catalog-manage-notice" role="status">Článek byl odstraněn.</p><?php endif; ?>
+    <?php if ($canManageContent): ?><?php require __DIR__ . '/manage/blog-panel.php'; ?><?php endif; ?>
     <nav class="breadcrumbs" aria-label="Drobečková navigace"><a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">Úvod</a><span aria-hidden="true">/</span><span>Blog</span></nav>
     <div class="cms-article">
       <p class="cms-eyebrow">Příběhy na cestu</p>
       <h1>Blog</h1>
       <?php if ($canManageContent): ?>
-        <section class="content-admin-panel" aria-label="Správa blogu"><div class="inline-toolbar">
-          <div><strong><?= \SimpleStore\Rendering\Icon::render('book') ?> Správa blogu</strong><p>Články upravíš přímo na jejich stránce. Nový článek vytvoříš nahoře v liště Správa webu.</p></div>
-          <a class="inline-small" href="<?= htmlspecialchars($siteRoot . $language . '/blog?manage=1', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?= \SimpleStore\Rendering\Icon::render('list') ?> Články a koncepty</a>
-        </div></section>
+
         <?php if ($draftPosts !== []): ?>
           <section class="inline-history" aria-labelledby="draft-posts-title">
             <h2 id="draft-posts-title">Rozepsané články</h2>

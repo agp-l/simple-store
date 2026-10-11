@@ -130,3 +130,5 @@
 .content-admin-panel .editor-context-navigation > summary { cursor: pointer; color: #285e2b; font-weight: 650; }
 .content-admin-panel .product-admin-nav { margin: 12px 0 0; border: 0; background: transparent; }
 .content-admin-panel .product-admin-nav-tools { padding-inline: 0; }
+
+.product-admin-nav-tabs a { gap: 6px; }
