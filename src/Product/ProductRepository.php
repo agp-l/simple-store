@@ -248,6 +248,7 @@ final class ProductRepository
 
         $this->db->startTransaction();
         try {
+            if ((new ProductVariantRepository($this->db))->installed()) $this->db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s FOR UPDATE', $key);
             $current = $this->db->queryFirstRow(
                 'SELECT revision_number FROM shop_product_revisions WHERE product_key=%s AND language=%s
                  AND active_product_key IS NOT NULL LIMIT 1 FOR UPDATE', $key, $language
@@ -337,6 +338,10 @@ final class ProductRepository
         if (isset($fields['variant_inventory'])) $variantRepository->install();
         $this->db->startTransaction();
         try {
+            if ($this->stock !== null || $variantRepository->installed()) {
+                (new ProductStockRepository($this->db))->ensure($key);
+                $this->db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s FOR UPDATE', $key);
+            }
             if ($creating && $this->db->queryFirstRow('SELECT product_key FROM shop_product_revisions WHERE product_key=%s LIMIT 1 FOR UPDATE', $key) !== null) {
                 throw new InvalidArgumentException('Produkt s tímto klíčem již existuje.');
             }

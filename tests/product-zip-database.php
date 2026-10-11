@@ -134,6 +134,32 @@ try {
     try { (new ProductZipArchive($root . '/symlink.zip'))->images('product'); throw new LogicException('Symlink accepted.'); } catch (InvalidArgumentException $expected) {}
     $check(!ProductDetails::imagePath('https://example.org/photo.png'), 'External image still accepted.');
     echo "ZIP products: partial success, 15 photos, supplier transaction, idempotent steps and unsafe archives passed.\n";
+    // Variant photos are remapped with the package and copies never duplicate physical stock.
+    $variantDoc = $data;
+    $variantDoc['product']['slug'] = $slug . '-variants';
+    $variantDoc['product']['variants'] = ['enabled' => true, 'items' => [
+        ['choices' => ['Velikost' => 'M'], 'quantity' => 4, 'image_path' => 'images/blue.png'],
+    ]];
+    $variantZip = $root . '/variants.zip';
+    $zip = new ZipArchive(); $zip->open($variantZip, ZipArchive::CREATE);
+    $zip->addFromString('product/product.json', json_encode($variantDoc));
+    $zip->addFromString('product/images/blue.png', $png); $zip->close();
+    $variantKey = bin2hex(random_bytes(16)); $keys[] = $variantKey;
+    $importer->import(new ProductZipArchive($variantZip), 'product', $variantKey);
+    $variantRow = $products->current($variantKey, 'cs');
+    $check($variantRow['variant_inventory']['items'][0]['quantity'] === 4 &&
+        is_file($root . '/' . $variantRow['variant_inventory']['items'][0]['image_path']), 'Variant ZIP lost image or stock.');
+    $variantDoc = ProductImport::decode(ProductImport::export($variantRow));
+    $variantDoc['product']['image_path'] = 'images/blue.png';
+    $variantDoc['product']['variants']['items'][0]['image_path'] = 'images/blue.png';
+    $copyZip = $root . '/variant-copy.zip';
+    $zip = new ZipArchive(); $zip->open($copyZip, ZipArchive::CREATE);
+    $zip->addFromString('product/product.json', json_encode($variantDoc));
+    $zip->addFromString('product/images/blue.png', $png); $zip->close();
+    $copyKey = bin2hex(random_bytes(16)); $keys[] = $copyKey;
+    $importer->import(new ProductZipArchive($copyZip), 'product', $copyKey, 'copy');
+    $copyRow = $products->current($copyKey, 'cs');
+    $check($copyRow['variant_inventory']['items'][0]['quantity'] === 0 && !(bool) $copyRow['published'], 'ZIP copy duplicated stock or publication.');
 } finally {
     foreach ($jobs as $job) $job->remove();
     foreach ($keys as $key) {

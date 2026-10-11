@@ -1,4 +1,4 @@
-.variant-manager { margin-top: 18px; }
+.variant-manager { margin-top: 18px; min-width: 0; max-width: 100%; }
 .variant-manager p { font-size: 13px; line-height: 1.6; color: var(--muted); }
 .variant-table-wrap { overflow-x: auto; margin: 18px 0; }
 .variant-table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -21,3 +21,7 @@
 .variant-create input:not([type=checkbox]) { box-sizing: border-box; width: 100%; display: block; margin-top: 7px; border: 1px solid var(--line); border-radius: 5px; padding: 8px; font: inherit; }
 .variant-merge-preview { background: var(--moss); border-left: 3px solid var(--pine); padding: 12px 16px; margin-top: 12px; }
 .variant-pickers { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 12px; }
+
+.product-purchase [hidden] { display: none; }
+.variant-pickers .field-label { margin: 12px 0 0; }
+.variant-pickers select { display: block; margin-top: 7px; }

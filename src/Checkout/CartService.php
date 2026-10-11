@@ -68,7 +68,7 @@ final class CartService
             $options = $line['options'] ?? [];
             $quantity = $line['quantity'] ?? 0;
             $variantKey = $line['variant_key'] ?? '';
-            $stockKey = $key . ':' . (is_string($variantKey) ? $variantKey : '');
+            $stockKey = (is_string($key) ? $key : '') . ':' . (is_string($variantKey) ? $variantKey : '');
             try {
                 $identityValid = is_string($key) && is_string($language) && is_array($options) && is_string($variantKey) &&
                     hash_equals($lineId, CartSession::lineId($key, $language, $options, $variantKey));

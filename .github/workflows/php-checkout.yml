@@ -221,3 +221,28 @@ jobs:
           php tests/fio-database.php
           php tests/commerce-reset-database.php
           php tests/table-prefix-database.php
+
+  variant-browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: none
+          coverage: none
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser test tools
+        run: |
+          npm install --no-save --package-lock=false playwright@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Verify variant UI on desktop and mobile
+        run: node --test tests/product-variants-browser.mjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: variant-ui-screenshots
+          path: /tmp/variant-screenshots/
+          retention-days: 7

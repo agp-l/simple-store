@@ -136,6 +136,7 @@ final class ProductStockRepository
     /** A cancelled or deleted unshipped order returns its reserved pieces once. */
     public function release(int $orderId): void
     {
+        $this->lockOrderInventory($orderId);
         (new ProductVariantStock($this->db))->transition($orderId, 'reserved', 'released', 1);
         foreach ($this->db->query('SELECT product_key, quantity FROM shop_order_stock_reservations
             WHERE order_id=%i AND state=%s ORDER BY product_key FOR UPDATE', $orderId, 'reserved') as $row) {
@@ -150,6 +151,7 @@ final class ProductStockRepository
 
     public function consume(int $orderId): void
     {
+        $this->lockOrderInventory($orderId);
         (new ProductVariantStock($this->db))->transition($orderId, 'reserved', 'consumed', 0);
         $this->db->query('UPDATE shop_order_stock_reservations SET state=%s
             WHERE order_id=%i AND state=%s', 'consumed', $orderId, 'reserved');
@@ -158,6 +160,7 @@ final class ProductStockRepository
     /** An exceptional reopening has to reclaim the released stock first. */
     public function reopen(int $orderId): void
     {
+        $this->lockOrderInventory($orderId);
         (new ProductVariantStock($this->db))->transition($orderId, 'released', 'reserved', -1);
         foreach ($this->db->query('SELECT product_key, quantity FROM shop_order_stock_reservations
             WHERE order_id=%i AND state=%s ORDER BY product_key FOR UPDATE', $orderId, 'released') as $row) {
@@ -178,6 +181,15 @@ final class ProductStockRepository
     {
         (new ProductVariantStock($this->db))->forget($orderId);
         $this->db->query('DELETE FROM shop_order_stock_reservations WHERE order_id=%i', $orderId);
+    }
+
+    /** Lock both ledgers' products in one order before touching either ledger. */
+    private function lockOrderInventory(int $orderId): void
+    {
+        if (!(new ProductVariantRepository($this->db))->installed()) return;
+        $keys = array_column($this->db->query('SELECT product_key FROM shop_order_stock_reservations WHERE order_id=%i
+            UNION SELECT product_key FROM shop_order_variant_reservations WHERE order_id=%i ORDER BY product_key', $orderId, $orderId), 'product_key');
+        foreach ($keys as $key) $this->db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s FOR UPDATE', $key);
     }
 
     private static function validKey(string $key): void

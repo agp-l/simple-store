@@ -41,6 +41,10 @@ $db->insert('shop_order_stock_reservations', [
     'order_id' => $id, 'product_key' => $key, 'quantity' => 2, 'state' => 'reserved',
 ]);
 $db->query('UPDATE shop_product_inventory SET available_quantity=%i WHERE product_key=%s', 2, $key);
+$variantId = bin2hex(random_bytes(16));
+$db->insert('shop_product_variant_settings', ['product_key' => $key, 'enabled' => 0, 'version' => 1]);
+$db->insert('shop_product_variants', ['product_key' => $key, 'variant_key' => $variantId, 'choices_json' => '{"Size":"S"}', 'available_quantity' => 2]);
+$db->insert('shop_order_variant_reservations', ['order_id' => $id, 'product_key' => $key, 'variant_key' => $variantId, 'quantity' => 1, 'state' => 'reserved']);
 $reset = new CommerceTestReset($db);
 $report = $reset->report();
 if ($report['database'] !== 'simple_store' || $report['tables']['shop_orders'] < 1 ||
@@ -54,6 +58,8 @@ try {
 } catch (RuntimeException $expected) {}
 $result = $reset->apply('simple_store');
 if ($result['before']['shop_product_revisions'] !== $result['after']['shop_product_revisions'] ||
+    $result['after']['tables']['shop_order_variant_reservations'] !== 0 ||
+    (int) $db->queryFirstField('SELECT available_quantity FROM shop_product_variants WHERE product_key=%s AND variant_key=%s', $key, $variantId) !== 3 ||
     $result['after']['tables']['shop_orders'] !== 0 ||
     $result['after']['tables']['shop_fio_matches'] !== 0 ||
     (int) $db->queryFirstField('SELECT available_quantity FROM shop_product_inventory

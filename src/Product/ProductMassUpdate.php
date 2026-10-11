@@ -107,6 +107,12 @@ final class ProductMassUpdate
 
     private function rows(bool $lock = false): array
     {
+        if ($lock) {
+            foreach ($this->db->query('SELECT DISTINCT product_key FROM shop_product_revisions WHERE active_product_key IS NOT NULL ORDER BY product_key') as $identity) {
+                (new ProductStockRepository($this->db))->ensure($identity['product_key']);
+                $this->db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s FOR UPDATE', $identity['product_key']);
+            }
+        }
         $rows = $this->db->query('SELECT r.*, COALESCE(i.available_quantity, 0) AS available_quantity
             FROM shop_product_revisions r LEFT JOIN shop_product_inventory i ON i.product_key=r.product_key
             WHERE r.active_product_key IS NOT NULL ORDER BY r.product_key, r.language' . ($lock ? ' FOR UPDATE' : ''));

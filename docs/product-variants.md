@@ -1,0 +1,63 @@
+# Varianty produktu a samostatný sklad
+
+Jeden produkt má společný název, popis, kategorii, galerii a výchozí cenu. Každá skutečně prodávaná kombinace vlastností má vlastní stabilní identitu, volné kusy, dostupnost, SKU a případně jinou cenu či fotografii. Názvy vlastností nejsou pevně dané: může jít o velikost, barvu, délku, objem nebo jejich kombinace. Varianty a sklad jsou společné pro překlady produktu.
+
+## Použití v administraci
+
+1. Otevři produkt k úpravě → **Varianty a sklad → Vytvořit varianty**.
+2. Zapiš například `Velikost: S | M | L` a na další řádek `Barva: Modrá | Červená`. Vznikne šest kombinací. Pro jednu kombinaci napiš u každé vlastnosti jednu hodnotu. Nevyráběj kombinace, které dodavatel neprodává; lze je také vypnout sloupcem **Nabízet**.
+3. Při prvním přepnutí potvrď převod režimu. Systém neví, kterým velikostem patří původních deset kusů: společný počet proto vynuluje a nové kombinace založí s nulou. Skutečné kusy rozděl podle inventury.
+4. Vyplň tabulku a stiskni **Uložit celou tabulku variant**. S JavaScriptem uloží celou tabulku také tlačítko na řádku. Bez JavaScriptu funguje uložení každého řádku zvlášť. Při konfliktu nebo chybě zůstanou zadané hodnoty ve formuláři; konflikt vyžaduje nový stav skladu, nepřepisuje se potichu.
+5. Prázdná cena a volba fotografie **Společná** přebírají údaje hlavního produktu. Stav **Skladem** s nulou kusů je zákazníkovi nedostupný. **Na objednávku** dovoluje nákup bez lokální rezervace, stejně jako u jednoduchých produktů.
+
+Zákazník vidí dostupnost, nikoli počet kusů. Výběr barvy a velikosti ukazuje jen nabízené kombinace; nemožné nebo vyprodané kombinace nelze objednat. PHP kontroluje identitu a cenu znovu při objednávce. Bez JavaScriptu funguje jeden úplný seznam kombinací s cenami. Katalog uvádí nejnižší variantní cenu (při různých cenách „od“) a podle této ceny také řadí.
+
+Změna popisu ani obnova jeho starší revize nemění sklad variant. Vyřazená varianta zůstává interně dostupná pro historické rezervace; její původní vlastnosti se nepřepisují. Jinou kombinaci vytvoř nově. Změna režimu skladu není možná, dokud zde objednávka rezervuje lokální kusy: nejdřív ji vyřiď, stornuj nebo předej externímu dodavateli. Po návratu ke společnému skladu nastav jeho skutečný počet; uložené zásoby variant se automaticky nesčítají.
+
+Hromadné nastavení skladu v **Nastavení → Produkty** nastaví zadaný počet a dostupnost každé nabízené variantě zvlášť. Vyřazené kombinace nezmění. Počet znamená volné kusy bez právě rezervovaných objednávek.
+
+## Převod duplicitně založených velikostí
+
+U hlavního produktu nejdřív vytvoř varianty pro kusy, které už v něm vedeš. Pak otevři **Převést samostatný produkt na variantu**, zadej slug převáděného produktu a přesně jednu kombinaci vlastností. Náhled ukáže název, kusy a cenu. Teprve potvrzení převede volné kusy, fotografii, cenu a soukromé dodavatelské odkazy.
+
+Původní produkt se skryje ve všech jazycích a jeho obsah zůstane zachovaný jako koncept. Jeho veřejné adresy přesměrují na hlavní produkt, pokud je cílový překlad zveřejněný. Objednávky a jejich uložené položky se nemění. Opakované odeslání stejného převodu se odmítne. Zdroj nesmí mít vlastní sklad variant ani nevyřízené lokální rezervace. Před převodem ověř, že jde skutečně o tentýž výrobek; systém to neodhaduje podle podobnosti názvů.
+
+Zachování konceptu umožňuje opravu omylu: ručně vrať správné kusy mezi původním produktem a variantou a původní produkt znovu zveřejni. Přesměrování platí pouze, pokud se původní veřejný produkt nenašel; po jeho zveřejnění se neuplatní. Není zde automatická reverzace již prodaných kusů.
+
+## JSON a ZIP
+
+Volitelné `product.variants`:
+
+```json
+{
+  "enabled": true,
+  "items": [
+    {
+      "choices": {"Velikost": "S", "Barva": "Modrá"},
+      "quantity": 3,
+      "stock_status": "in_stock",
+      "sku": "BUNDA-MODRA-S",
+      "price_czk": null,
+      "image_path": "",
+      "enabled": true
+    }
+  ]
+}
+```
+
+U nového produktu lze vynechat `items[].id` i `variants.expected`; systém je vytvoří. Pro aktualizaci zachovej stabilní `id` a `expected` z čerstvého exportu. `expected` hlídá také změny skladu z objednávek, zatímco kořenové `revision` hlídá společný obsah. Vynechané `variants` nic nemění. Při jejich dodání seznam nahrazuje aktivní definice; vynechaná stará identita se vyřadí, nikoli fyzicky smaže. Prázdný seznam znamená produkt bez nabízených variant.
+
+Jednotlivý JSON a ZIP zapisují výslovně uvedené skladové počty variant. Hromadný JSON je přepíše pouze s volbou **Přepsat také skladové počty**; jinak uchová stávající kusy a nové varianty mají nulu. Režim obnovy zálohy načte aktuální očekávanou verzi při přípravě importu, následné souběžné změny ale stále odmítne. Záloha více jazyků zapíše shodný společný sklad pouze jednou. ZIP kopie začíná vždy s nulou kusů, aby nekopírovala fyzickou zásobu.
+
+Fotografie varianty v ZIP používá `images/soubor.jpg` a musí být přibalena. Po importu odkazuje na soubor v knihovně. Fotografie používaná variantou je chráněná před smazáním. Nejvýše 1 000 variant, 1–8 vlastností, 1 MiB JSON na produkt, 32 MiB hromadný JSON; hosting může mít menší limit POST.
+
+## Implementace a ověření
+
+- `ProductVariants`: nezávislá validace, generování kombinací a dostupnost.
+- `ProductVariantRepository`: verzované definice a sklad, zápisy v transakci.
+- `ProductVariantStock`: konkrétní rezervace a jejich vrácení/spotřebování.
+- `ProductVariantForm` a `ProductVariantMerge`: vstup z formuláře a potvrzovaný převod duplicit.
+- Tabulky `shop_product_variant_settings`, `shop_product_variants`, `shop_order_variant_reservations`, `shop_product_redirects`; schema aktualizace pouze přidává tabulky. První oprávněné uložení je vytvoří také samo. Nasazení nemění existující produktové záznamy ani jejich režim skladu.
+- Objednávka uchovává `variant_key`, SKU, volby, skutečnou cenu a fotografii ve svém snímku. Storno či smazání neodeslané objednávky vrátí rezervaci přesně jednou. Odeslané kusy se pouhým smazáním objednávky nevracejí. Převod na externího dodavatele uvolní lokální rezervaci, návrat ji musí znovu získat.
+- Inventární řádek hlavního produktu slouží jako společný zámek pro nákup i úpravy variant. U více produktů se zámky získávají podle klíče. Konflikty verze jsou viditelné, nikdy se nepřebíjí posledním zápisem.
+- Testy: `tests/product-variants.php`, `tests/product-variants-database.php` (MySQL i MariaDB), `tests/product-variants-browser.mjs` (Chromium, desktop, mobil a bez JS).

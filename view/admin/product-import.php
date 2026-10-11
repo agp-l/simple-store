@@ -27,7 +27,7 @@
 <dt>Perex</dt><dd><?= $escape($importPreview['summary']) ?></dd>
 <dt>Popis</dt><dd><?= nl2br($escape($importPreview['description'])) ?></dd></dl>
 <details><summary>Všechny výsledné údaje</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere"><?= $escape(json_encode($importPreview, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></pre></details>
-<p>Uložení vytvoří novou revizi. Skladové kusy se nemění. Dodavatelské odkazy se změní pouze při uvedení suppliers v JSON.</p>
+<p>Uložení vytvoří novou revizi. Uvedené variants mění i jejich sklad; bez variants se sklad nemění. Dodavatelské odkazy se změní pouze při uvedení suppliers v JSON.</p>
 <button class="panel-button panel-action" name="action" value="product-import-save"><?= \SimpleStore\Rendering\Icon::render('save') ?> <?= isset($importData['product_key']) ? 'Uložit úpravy produktu' : 'Vytvořit produkt' ?></button>
 <?php endif; ?>
 </form></section>

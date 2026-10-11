@@ -19,7 +19,7 @@ final class CommerceTestReset
         'shop_flat_tax_advances', 'shop_tax_entry_events', 'shop_tax_entries',
         'shop_tax_balances', 'shop_tax_year_regimes',
         'shop_mail_outbox', 'shop_order_legal_snapshots', 'shop_order_tracking',
-        'shop_sale_lines', 'shop_order_stock_reservations',
+        'shop_sale_lines', 'shop_order_variant_reservations', 'shop_order_stock_reservations',
         'shop_packeta_cancelled_shipments', 'shop_packeta_shipments', 'shop_carrier_shipments',
         'shop_comgate_payments', 'shop_gopay_payments', 'shop_btcpay_payments',
         'shop_fio_matches',
@@ -42,11 +42,13 @@ final class CommerceTestReset
             if ($this->exists($table)) $counts[$table] = (int) $this->db->queryFirstField('SELECT COUNT(*) FROM ' . $table);
         }
         $inventory = [];
-        if ($this->exists('shop_order_stock_reservations')) {
+        foreach (['shop_order_stock_reservations', 'shop_order_variant_reservations'] as $table) {
+            if (!$this->exists($table)) continue;
             foreach ($this->db->query('SELECT state, COUNT(*) AS rows_count, COALESCE(SUM(quantity),0) AS pieces
-                FROM shop_order_stock_reservations GROUP BY state') as $row) {
+                FROM ' . $table . ' GROUP BY state') as $row) {
                 $inventory[(string) $row['state']] = [
-                    'rows' => (int) $row['rows_count'], 'pieces' => (int) $row['pieces'],
+                    'rows' => ($inventory[$row['state']]['rows'] ?? 0) + (int) $row['rows_count'],
+                    'pieces' => ($inventory[$row['state']]['pieces'] ?? 0) + (int) $row['pieces'],
                 ];
             }
         }
