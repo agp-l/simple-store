@@ -34,6 +34,7 @@ try {
         $assert((int) $row['revision_number'] === 2 && (int) $row['published'] === 1 && $row['stock_status'] === 'in_stock', 'Language was not updated with a revision.');
         $assert($row['description'] === 'Keep this text' && (int) $row['price_czk'] === 987 && $row['image_path'] === 'images/test.webp', 'Other product data changed.');
     }
+    $assert((int) $db->queryFirstField('SELECT COUNT(*) FROM shop_product_revisions WHERE product_key=%s AND revision_number=1 AND published=0 AND stock_status=%s', $key, 'out_of_stock') === 2, 'Original revisions were changed or removed.');
     $assert((int) $db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s', $key) === 10, 'Shared quantity is incorrect.');
     $assert($service->apply($service->preview($preview['choices'])) === 0, 'Same values created redundant changes.');
     $service->apply($service->preview(['quantity' => '0']));

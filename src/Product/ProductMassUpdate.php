@@ -79,8 +79,10 @@ final class ProductMassUpdate
                 $row['stock_status'] = $status;
                 $row['published'] = $published;
                 $this->db->insert('shop_product_revisions', $row);
-                $this->db->query('DELETE FROM shop_product_revisions WHERE product_key=%s AND language=%s AND active_product_key IS NULL AND revision_number<=%i',
-                    $key, $row['language'], $row['revision_number'] - max(1, $this->revisionLimit));
+                if ($row['revision_number'] > max(1, $this->revisionLimit)) {
+                    $this->db->query('DELETE FROM shop_product_revisions WHERE product_key=%s AND language=%s AND active_product_key IS NULL AND revision_number<=%i',
+                        $key, $row['language'], $row['revision_number'] - max(1, $this->revisionLimit));
+                }
                 $changed[$key] = true;
             }
             $this->db->commit();
