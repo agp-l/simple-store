@@ -8,7 +8,8 @@ final class ProductWeight
     public static function grams(?string $json): ?float
     {
         $data = json_decode($json ?? '', true);
-        foreach (($data['specifications'] ?? []) as $spec) {
+        $specifications = is_array($data) && is_array($data['specifications'] ?? null) ? $data['specifications'] : [];
+        foreach ($specifications as $spec) {
             if (!is_array($spec) || !is_string($spec['name'] ?? null) || !is_string($spec['value'] ?? null)) continue;
             if (!preg_match('/^(hmotnost|váha|weight)(\s*\(g\)|\s*\(kg\))?$/iuD', trim($spec['name']))) continue;
             $value = str_replace(["\u{00a0}", "\u{202f}"], ' ', trim($spec['value']));
