@@ -7,6 +7,8 @@ $panelDescription = 'Správa obchodu Dobrodruzi';
 $panelHeroTitle = in_array($screen, ['product-import', 'editor', 'products', 'categories', 'menus', 'media', 'orders', 'returns', 'accounting', 'settings', 'users', 'database'], true)
     ? 'Správa obchodu' : 'Vstup do administrace';
 $panelHeroSubtitle = 'Obsah, produkty a navigace na jednom místě.';
+$adminCreate = in_array($screen, ['product-import', 'editor', 'products', 'categories', 'menus', 'media', 'orders', 'returns', 'accounting', 'settings', 'users', 'database'], true) && ($csrf ?? '') !== ''
+    ? ['csrf' => $csrf, 'language' => $site['default_language']] : null;
 $bodyView = __DIR__ . '/panel.php';
 $mediaManager = $screen === 'media';
 require __DIR__ . '/../panel/layout.php';

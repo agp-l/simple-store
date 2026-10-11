@@ -121,7 +121,7 @@ try {
         'return_to' => (string) ($_SERVER['REQUEST_URI'] ?? $url->path()),
     ] : null;
     $shared['canManageMenu'] = $contentRoute && $canEdit;
-    $shared['adminCreate'] = $contentRoute && $canEdit
+    $shared['adminCreate'] = $canEdit
         ? ['csrf' => $auth->token(), 'language' => $url->getLanguage()] : null;
     $shared['menuAdminUrl'] = $url->getBasePath() . 'admin.php?' . http_build_query([
         'section' => 'menus', 'language' => $url->getLanguage(), 'slot' => 'primary',

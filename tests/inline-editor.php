@@ -73,7 +73,7 @@ $renderer->render('product-record', $data);
 $public = ob_get_clean();
 ob_start();
 $renderer->render('product-record', $data + [
-    'canEditProduct' => true, 'editMode' => true,
+    'canEditProduct' => true, 'adminCreate' => ['csrf' => 'test-token', 'language' => 'cs'], 'editMode' => true,
     'stockReady' => true,
     'editToken' => 'test-token',
     'editorCategories' => [['path' => 'boty', 'title' => 'Boty']],
@@ -98,6 +98,8 @@ $checks = [
         str_contains($editor, '<output data-summary-counter></output>') &&
         !str_contains($editor, 'data-edit-field="summary"') &&
         str_contains($editor, 'Perex na kartě'),
+    'unified_product_panel' => substr_count($editor, 'class="content-admin-panel"') === 1 &&
+        strpos($editor, 'id="supplier-links"') < strpos($editor, 'class="product-detail"'),
     'single_create_product' => substr_count($editor, 'value="create-product"') === 1,
     'compact_edit_body' => $compactEditableBodies,
     'add_section' => str_contains($editor, 'data-editor-action="section-add"'),

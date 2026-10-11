@@ -1708,3 +1708,13 @@ main {
     transition: none
   }
 }
+
+/* Shared decorative icons for public editing and private panels. */
+.panel-icon {
+  display: inline-block;
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: 0 0 1.125rem;
+  vertical-align: -.2em;
+  pointer-events: none;
+}

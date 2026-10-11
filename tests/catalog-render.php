@@ -108,10 +108,11 @@ $privateDetail = ob_get_clean();
 if (!str_contains($privateDetail, 'supplier.example.test/bota?size=42&amp;source=store') ||
     !str_contains($privateDetail, 'aria-label="Správa produktů"') ||
     !str_contains($privateDetail, 'href="/shop/cs?manage=1#produkty"') ||
-    !str_contains($privateDetail, '✎ Upravit produkt') ||
+    !str_contains($privateDetail, \SimpleStore\Rendering\Icon::render('edit') . ' Upravit produkt') ||
     !str_contains($privateDetail, 'name="action" value="product-supplier-link"') ||
     !str_contains($privateDetail, 'name="csrf" value="private-token"') ||
-    !str_contains($privateDetail, 'Jen pro správce')) {
+    !str_contains($privateDetail, 'Jen pro správce') ||
+    strpos($privateDetail, 'id="supplier-links"') > strpos($privateDetail, 'class="product-detail"')) {
     throw new RuntimeException('Administrators must see and edit the private supplier links on product pages.');
 }
 

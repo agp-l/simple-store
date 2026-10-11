@@ -20,30 +20,25 @@ $views = [
 $titles = [
     'home' => 'Úvodní stránka', 'manage' => 'Produkty a koncepty',
     'selection' => 'Výběr na úvodní stránku', 'catalog' => 'Veřejný katalog',
-    'product' => 'Detail produktu',
+    'product' => 'Produkt',
 ];
-$createToken = (string) ($adminCreate['csrf'] ?? $editToken ?? '');
 ?>
     <section class="product-admin-nav" aria-label="Správa produktů">
-      <div class="product-admin-nav-head">
-        <div><span>Správa produktů</span><strong><?= $escape($titles[$productAdminMode] ?? 'Katalog') ?></strong></div>
-        <?php if ($createToken !== ''): ?><form method="post" action="<?= $escape($basePath . 'admin.php') ?>">
-          <input type="hidden" name="csrf" value="<?= $escape($createToken) ?>">
-          <input type="hidden" name="language" value="<?= $escape($language) ?>">
-          <button type="submit" name="action" value="create-product">＋ Nový produkt</button>
-        </form><?php endif; ?>
+      <?php if ($productAdminMode !== 'product'): ?><div class="product-admin-nav-head">
+        <div><span><?= \SimpleStore\Rendering\Icon::render('package') ?> Správa produktů</span><strong><?= $escape($titles[$productAdminMode] ?? 'Katalog') ?></strong></div>
       </div>
+      <?php endif; ?>
       <nav class="product-admin-nav-tabs" aria-label="Pohledy na produkty">
         <?php foreach ($views as $mode => [$label, $href]): ?>
           <a href="<?= $escape($href) ?>" <?= $productAdminMode === $mode ? 'aria-current="page"' : '' ?>><?= $escape($label) ?></a>
         <?php endforeach; ?>
       </nav>
       <div class="product-admin-nav-tools">
-        <a href="<?= $escape($adminRoot . http_build_query(['section' => 'product-import', 'language' => $language])) ?>">Import a export</a>
-        <?php if ($productAdminMode === 'product' && isset($product['product_key'])): ?><a href="<?= $escape($adminRoot . http_build_query(['section' => 'product-import', 'language' => $language, 'key' => $product['product_key']])) ?>">JSON pro AI</a><?php endif; ?>
+        <a href="<?= $escape($adminRoot . http_build_query(['section' => 'product-import', 'language' => $language])) ?>"><?= \SimpleStore\Rendering\Icon::render('upload') ?> Import a export</a>
+        <?php if ($productAdminMode === 'product' && isset($product['product_key'])): ?><a href="<?= $escape($adminRoot . http_build_query(['section' => 'product-import', 'language' => $language, 'key' => $product['product_key']])) ?>"><?= \SimpleStore\Rendering\Icon::render('document') ?> JSON pro AI</a><?php endif; ?>
         <span>Nastavení:</span>
-        <a href="<?= $escape($categoryLink) ?>">Kategorie</a>
-        <?php if ($newSubcategoryUrl !== ''): ?><a href="<?= $escape($newSubcategoryUrl) ?>">＋ Podkategorie</a><?php endif; ?>
-        <a href="<?= $escape($menuLink) ?>">Menu</a>
+        <a href="<?= $escape($categoryLink) ?>"><?= \SimpleStore\Rendering\Icon::render('folder') ?> Kategorie</a>
+        <?php if ($newSubcategoryUrl !== ''): ?><a href="<?= $escape($newSubcategoryUrl) ?>"><?= \SimpleStore\Rendering\Icon::render('plus') ?> Podkategorie</a><?php endif; ?>
+        <a href="<?= $escape($menuLink) ?>"><?= \SimpleStore\Rendering\Icon::render('list') ?> Menu</a>
       </div>
     </section>

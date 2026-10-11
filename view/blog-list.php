@@ -5,16 +5,10 @@
       <p class="cms-eyebrow">Příběhy na cestu</p>
       <h1>Blog</h1>
       <?php if ($canManageContent): ?>
-        <div class="inline-toolbar">
-          <div><strong>Správa blogu</strong><p>Články upravíš přímo na jejich stránce.</p></div>
-          <form method="post" action="<?= htmlspecialchars($siteRoot . 'admin.php', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
-            <input type="hidden" name="action" value="create-content">
-            <input type="hidden" name="type" value="post">
-            <input type="hidden" name="language" value="<?= htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
-            <input type="hidden" name="csrf" value="<?= htmlspecialchars($adminCsrf, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
-            <button type="submit" class="inline-small">＋ Nový článek</button>
-          </form>
-        </div>
+        <section class="content-admin-panel" aria-label="Správa blogu"><div class="inline-toolbar">
+          <div><strong><?= \SimpleStore\Rendering\Icon::render('book') ?> Správa blogu</strong><p>Články upravíš přímo na jejich stránce. Nový článek vytvoříš nahoře v liště Správa webu.</p></div>
+          <a class="inline-small" href="<?= htmlspecialchars($siteRoot . $language . '/blog?manage=1', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?= \SimpleStore\Rendering\Icon::render('list') ?> Články a koncepty</a>
+        </div></section>
         <?php if ($draftPosts !== []): ?>
           <section class="inline-history" aria-labelledby="draft-posts-title">
             <h2 id="draft-posts-title">Rozepsané články</h2>

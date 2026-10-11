@@ -20,4 +20,5 @@
     <link rel="stylesheet" href="<?= $siteRoot ?>assets/panel-orders.css?v=<?= filemtime(__DIR__ . '/../assets/panel-orders.css') ?>">
     <link rel="stylesheet" href="<?= $siteRoot ?>assets/panel-actions.css?v=<?= filemtime(__DIR__ . '/../assets/panel-actions.css') ?>">
   <?php endif; ?>
+  <link rel="stylesheet" href="<?= $siteRoot ?>assets/editor-panel.css?v=<?= filemtime(__DIR__ . '/../assets/editor-panel.css') ?>">
 </head>
