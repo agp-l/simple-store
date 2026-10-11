@@ -48,6 +48,30 @@ final class ProductRelationRepository
             WHERE r.language=%s AND (r.product_a=%s OR r.product_b=%s)' . ($includeHidden ? '' : ' AND p.published=1') . ' ORDER BY p.name, p.product_key', $key, $language, $key, $key);
     }
 
+    /** Export each pair once, even when both ends are selected. */
+    public function exportDocuments(array $rows): array
+    {
+        $selected = []; $documents = [];
+        foreach ($rows as $row) $selected[$row['language']][$row['product_key']] = $row;
+        if (!$this->installed()) return [];
+        foreach ($selected as $language => $products) {
+            $keys = array_keys($products);
+            $holders = implode(',', array_fill(0, count($keys), '%s'));
+            $pairs = $this->db->query('SELECT r.* FROM shop_product_relations r
+                JOIN shop_product_revisions a ON a.product_key=r.product_a AND a.language=r.language AND a.active_product_key IS NOT NULL
+                JOIN shop_product_revisions b ON b.product_key=r.product_b AND b.language=r.language AND b.active_product_key IS NOT NULL
+                WHERE r.language=%s AND (r.product_a IN (' . $holders . ') OR r.product_b IN (' . $holders . ')) ORDER BY r.product_a,r.product_b', $language, ...array_merge($keys, $keys));
+            foreach ($pairs as $pair) {
+                $key = isset($products[$pair['product_a']]) ? $pair['product_a'] : $pair['product_b'];
+                $target = $key === $pair['product_a'] ? $pair['product_b'] : $pair['product_a'];
+                $id = $language . ':' . $key;
+                if (!isset($documents[$id])) $documents[$id] = ['product_key' => $key, 'language' => $language, 'name' => $products[$key]['name'], 'related' => []];
+                $documents[$id]['related'][] = ['product_key' => $target, 'note' => $pair['note']];
+            }
+        }
+        return array_values($documents);
+    }
+
     /** All requested edges for one source are atomic and preserve unrelated edges. */
     public function apply(string $language, string $key, array $links, bool $remove = false): void
     {
@@ -62,7 +86,8 @@ final class ProductRelationRepository
             foreach ($links as $link) {
                 [$a, $b] = $this->pair($language, $key, $link['product_key'], $link['note']);
                 $old = $this->db->queryFirstField('SELECT note FROM shop_product_relations WHERE language=%s AND product_a=%s AND product_b=%s FOR UPDATE', $language, $a, $b);
-                if ($old !== $link['expected'] && (!$remove && $old !== $link['note'] || $remove && $old !== null)) throw new InvalidArgumentException('Propojení se mezitím změnilo. Obnov stránku nebo připrav import znovu.');
+                $alreadyApplied = $remove ? $old === null : $old === $link['note'];
+                if ($old !== $link['expected'] && !$alreadyApplied) throw new InvalidArgumentException('Propojení se mezitím změnilo. Obnov stránku nebo připrav import znovu.');
                 if ($remove) $this->db->query('DELETE FROM shop_product_relations WHERE language=%s AND product_a=%s AND product_b=%s', $language, $a, $b);
                 else $this->db->query('INSERT INTO shop_product_relations (language,product_a,product_b,note) VALUES (%s,%s,%s,%s) ON DUPLICATE KEY UPDATE note=VALUES(note)', $language, $a, $b, $link['note']);
             }

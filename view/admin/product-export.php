@@ -16,7 +16,7 @@ foreach ($exportCategories as $path => $label): ?><option value="<?= $escape($pa
 <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="product-bulk-export">
 <input type="hidden" name="export_language" value="<?= $escape($exportLanguage) ?>"><input type="hidden" name="export_category" value="<?= $escape($exportCategory) ?>"><input type="hidden" name="export_search" value="<?= $escape($exportSearch) ?>"><input type="hidden" name="selected_json" value="[]">
 <div class="product-transfer-actions">
-<label>Formát<select name="export_format"><option value="json">Úplný JSON — záloha a hromadné úpravy</option><option value="names">Přehled pro AI a dodavatelé — stručný JSON</option></select></label>
+<label>Formát<select name="export_format"><option value="json">Úplný JSON — záloha a hromadné úpravy</option><option value="names">Přehled pro AI a dodavatelé — stručný JSON</option><option value="relations">Související produkty — propojení a poznámky (JSON)</option></select></label>
 <button class="panel-button panel-action" name="export_scope" value="selected" data-export-selected disabled><?= \SimpleStore\Rendering\Icon::render('download') ?> Exportovat zaškrtnuté (<span data-selection-count>0</span>)</button>
 <button class="panel-action panel-button" name="export_scope" value="filtered" <?= $exportRows === [] ? 'disabled' : '' ?>><?= \SimpleStore\Rendering\Icon::render('download') ?> Exportovat vše podle filtru (<?= count($exportRows) ?>)</button>
 </div>

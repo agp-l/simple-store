@@ -161,3 +161,9 @@ Example (replace the product key with an exported identity):
    "suppliers":[{"label":"Another supplier","url":"https://example.com/product"}]}
 ]}
 ```
+
+## Related products
+
+Use `simple-store.product-relations.v1` for additive, bidirectional links with
+short explanatory notes. This is a separate export option and imports through
+the same bulk queue without changing product content. See [product-relations.md](product-relations.md).

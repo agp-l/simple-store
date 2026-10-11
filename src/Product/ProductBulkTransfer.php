@@ -71,6 +71,16 @@ final class ProductBulkTransfer
         return (new ProductSupplierTransfer($this->db, $this->products, $this->languages))->export($rows, $baseUrl);
     }
 
+    public function exportRelations(array $rows): string
+    {
+        if (count($rows) > self::COUNT_LIMIT) throw new InvalidArgumentException('Vyber nejvýše 10 000 produktů.');
+        $documents = (new ProductRelationRepository($this->db, $this->languages))->exportDocuments($rows);
+        if ($documents === []) throw new InvalidArgumentException('Vybrané produkty nemají žádná propojení.');
+        $json = json_encode(['format' => ProductRelationTransfer::FORMAT, 'products' => $documents], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        if (strlen($json) > self::LIMIT) throw new InvalidArgumentException('Export přesahuje 32 MiB. Rozděl jej podle kategorií.');
+        return $json;
+    }
+
     public static function decode(string $json, ?string &$format = null): array
     {
         if (strlen($json) > self::LIMIT) throw new InvalidArgumentException('Hromadný JSON může mít nejvýše 32 MiB.');
