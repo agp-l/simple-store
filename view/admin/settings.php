@@ -25,6 +25,7 @@ $btcpayWebhookSecretConfigured ??= false;
 <?php if ($settingsTab === 'overview'): ?>
 <div class="panel-settings-overview">
   <?php foreach ([
+      ['products', 'Hromadná úprava produktů', 'Společný počet kusů, dostupnost a zveřejnění všech produktů.'],
       ['appearance', 'Texty webu', 'Hlavička, výpis produktů a patička.'],
       ['delivery', 'Doprava', 'Ceník a dostupnost výdejních míst i doručení na adresu.'],
       ['carriers', 'Dopravci', 'Widgety výdejních míst a údaje pro podávání zásilek.'],
@@ -36,6 +37,8 @@ $btcpayWebhookSecretConfigured ??= false;
     <a class="panel-settings-card" href="<?= $escape($adminUrl . '?section=settings&tab=' . $key) ?>"><strong><?= $escape($title) ?> →</strong><span><?= $escape($description) ?></span></a>
   <?php endforeach; ?>
 </div>
+<?php elseif ($settingsTab === 'products'): ?>
+<?php require __DIR__ . '/settings-products.php'; ?>
 <?php elseif ($settingsTab === 'mail'): ?>
 <?php require __DIR__ . '/settings-mail.php'; ?>
 <?php elseif ($settingsTab === 'appearance'): ?>

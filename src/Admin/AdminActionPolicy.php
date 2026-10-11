@@ -29,7 +29,7 @@ final class AdminActionPolicy
         'menu-slot', 'menu-item-save', 'menu-item-remove', 'page-menu',
         'media-upload', 'media-attach', 'media-delete', 'delete-product',
         'delete-content', 'homepage-product', 'product-supplier-link',
-        'save-checkout-settings', 'fio-cron-rotate', 'save-site-copy',
+        'products-mass-preview', 'products-mass-apply', 'save-checkout-settings', 'fio-cron-rotate', 'save-site-copy',
         'save-mail-settings', 'mail-test', 'customer-create', 'customer-update',
         'customer-active', 'customer-password', 'schema-apply',
         'table-prefix-migrate', 'table-prefix-cleanup',

@@ -11,10 +11,14 @@ use SimpleStore\Content\SiteCopyRepository;
 // admin.php has already verified the administrator session and form token.
 $screen = 'settings';
 $settingsError = '';
-$settingsTabs = ['overview', 'appearance', 'delivery', 'carriers', 'payment', 'prices', 'mail', 'legal'];
+$settingsTabs = ['overview', 'products', 'appearance', 'delivery', 'carriers', 'payment', 'prices', 'mail', 'legal'];
 $requestedTab = $_POST['tab'] ?? $_GET['tab'] ?? 'overview';
 $settingsTab = is_string($requestedTab) && in_array($requestedTab, $settingsTabs, true)
     ? $requestedTab : 'overview';
+if ($settingsTab === 'products') {
+    require __DIR__ . '/settings-products.php';
+    return;
+}
 $requestedPaymentArea = $_POST['payment_area'] ?? $_GET['area'] ?? '';
 $paymentArea = $settingsTab === 'payment' && is_string($requestedPaymentArea) &&
     in_array($requestedPaymentArea, ['bank', 'fio', 'comgate', 'gopay', 'btcpay'], true)
