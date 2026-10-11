@@ -139,7 +139,7 @@ final class ProductBulkTransfer
                     }
                 }
                 $fields = ProductImport::fields($data, $current);
-                if ((new \SimpleStore\Category\CategoryRepository($this->db))->find($data['language'], $fields['category_path']) === null) throw new InvalidArgumentException('Kategorie produktu neexistuje nebo není zapnutá.');
+                if ((new \SimpleStore\Category\CategoryRepository($this->db))->findForAdmin($data['language'], $fields['category_path']) === null) throw new InvalidArgumentException('Kategorie produktu neexistuje.');
                 $details = ProductDetails::fromForm($fields);
                 $images = array_merge([$fields['image_path']], $details['gallery']);
                 foreach ($details['sections'] as $section) if ($section['type'] === 'image') $images[] = $section['body'];

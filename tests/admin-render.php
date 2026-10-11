@@ -14,6 +14,7 @@ $categoryRows = [['path' => 'spani', 'title' => 'Spaní', 'sort_order' => 1, 'en
 $selectedCategory = $categoryRows[0];
 $newParent = 'spani';
 $categories = new class {
+    public function visibility(string $language, string $path): string { return 'visible'; }
     public function find(string $language, string $path): ?array
     {
         return $path === 'spani' ? ['path' => $path] : null;

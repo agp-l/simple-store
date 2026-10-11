@@ -352,3 +352,15 @@ articles leaves only the category links. Drafts and deleted articles are never s
 Cards use the first image block as their cover and link to the article; the heading links to the blog.
 The language-specific selection is stored in `shop_catalog_post_selections`, created by the schema
 or on the first authenticated selection change. No manual migration is required for this feature.
+
+### Category visibility and empty folders
+
+“Zobrazovat na webu” controls category navigation, not the products assigned to it.
+Hidden folders remain selectable in the product editor, bulk JSON/ZIP import and category administration.
+Published products in hidden folders remain in the parent catalog and the full catalog; their links
+and breadcrumbs use the nearest visible ancestor. Hiding a parent also hides its navigation subtree.
+Empty subcategories are automatically omitted from generated and category-targeted manual menus.
+Counts include current published products in every descendant, regardless of stock or folder visibility.
+This never changes the saved visibility switch: enabled folders reappear after a product is published,
+while manually hidden folders stay hidden. Root sections are not automatically hidden for emptiness.
+The category administrator shows an eye icon and distinguishes manual hiding from automatic empty hiding.

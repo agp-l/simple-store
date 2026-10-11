@@ -19,6 +19,9 @@ class MeekroDB
 
     public function query(string $sql, mixed ...$args): array
     {
+        if (str_contains($sql, 'SELECT path, title, sort_order FROM shop_catalog_categories')) {
+            return [['path' => 'boty', 'title' => 'Boty', 'sort_order' => 1]];
+        }
         if (str_contains($sql, 'SELECT slot, source, parent_path')) {
             $rows = [];
             foreach ($this->menus as $row) {
@@ -86,6 +89,7 @@ $menus->removeItem('cs', 'primary', $first);
 if ($menus->settings('cs')['primary']['items'][0]['category'] !== 'boty') {
     throw new RuntimeException('Removing a menu parent must keep its child.');
 }
+$menus->removeItem('cs', 'primary', $second);
 $menus->saveSlot('cs', 'primary', 'categories', '', false);
 if ($menus->settings('cs')['primary']['source'] !== 'categories' ||
     $menus->settings('cs')['primary']['parent'] !== '') {

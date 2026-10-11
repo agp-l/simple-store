@@ -61,6 +61,7 @@ final class MenuManager
         $links = [];
         $current = $this->url->categoryPath();
         foreach ($rows as $row) {
+            if ($this->categories->visibility($this->url->getLanguage(), $row['path']) !== 'visible') continue;
             $link = $this->item($row['title'], $this->url->category($row['path']),
                 $current !== null && CategoryPath::contains($row['path'], $current),
                 $this->categoryLinks($row['children']));
@@ -84,6 +85,7 @@ final class MenuManager
                 $href = $external;
                 $active = false;
             } elseif (is_string($category)) {
+                if ($this->categories->visibility($this->url->getLanguage(), $category) !== 'visible') continue;
                 $href = $this->url->category($category);
                 $active = $this->url->categoryPath() !== null &&
                     CategoryPath::contains($category, $this->url->categoryPath());

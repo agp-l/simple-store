@@ -47,6 +47,6 @@ $selectedPath = $_GET['edit'] ?? null;
 $selectedCategory = $categoryReady && is_string($selectedPath)
     ? $categories->findForAdmin($language, $selectedPath) : null;
 $newParent = $_GET['parent'] ?? '';
-if (!is_string($newParent) || ($newParent !== '' && $categories->find($language, $newParent) === null)) {
+if (!is_string($newParent) || ($newParent !== '' && $categories->findForAdmin($language, $newParent) === null)) {
     $newParent = '';
 }

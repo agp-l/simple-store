@@ -300,8 +300,8 @@ final class ProductRepository
             !in_array($stock, self::STOCK, true)) {
             throw new InvalidArgumentException('Invalid product details. Check the name, category, price and slug.');
         }
-        if ($this->categories === null || $this->categories->find($language, $categoryPath) === null) {
-            throw new InvalidArgumentException('Vybraná kategorie v tomto jazyce neexistuje nebo není zapnutá.');
+        if ($this->categories === null || $this->categories->findForAdmin($language, $categoryPath) === null) {
+            throw new InvalidArgumentException('Vybraná kategorie v tomto jazyce neexistuje.');
         }
         // New image references must point to the local media library.
         if (!ProductDetails::imagePath($image)) {

@@ -19,7 +19,7 @@ $language = $_POST['language'] ?? null;
 if (!$productSchemaReady || !is_string($language) || !in_array($language, $site['languages'], true)) {
     throw new InvalidArgumentException('Nejdřív aktualizuj SQL tabulky v sekci Databáze a vyber platný jazyk.');
 }
-$category = $categories->find($language, 'batohy') ?? $categories->children($language)[0] ?? null;
+$category = $categories->findForAdmin($language, 'batohy') ?? $categories->allForAdmin($language)[0] ?? null;
 if ($category === null) {
     throw new InvalidArgumentException('Nejdříve založte alespoň jednu kategorii v tomto jazyce.');
 }

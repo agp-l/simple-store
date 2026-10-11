@@ -10,6 +10,8 @@ $productImage = str_starts_with($cardPath, 'images/')
     ? $basePath . $cardPath : $cardPath;
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $categoryPath = CategoryPath::fromProduct($product);
+while ($categoryPath !== '' && !isset($categoryLabels[$categoryPath])) $categoryPath = CategoryPath::parent($categoryPath);
+$categoryHref = $categoryPath === '' ? $basePath . $language . '?all=1#produkty' : $basePath . $language . '/kategorie-produktu/' . $categoryPath;
 $categoryLabel = $categoryLabels[$categoryPath] ?? $categoryLabels[explode('/', $categoryPath)[0]] ?? 'Vybavení';
 $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_stock' => 'Není skladem'];
 $availability = $product['availability_status'] ?? $product['stock_status'];
@@ -20,7 +22,7 @@ $hasOptions = ProductDetails::decode($product['details_json'] ?? null, $product[
           <a href="<?= $escape($productLink) ?>" aria-label="Zobrazit <?= $escape($product['name']) ?>">
             <img class="product-image" src="<?= $escape($productImage) ?>" alt="<?= $escape($product['name']) ?>" loading="lazy" decoding="async">
           </a>
-          <a class="media-label" href="<?= $escape($basePath . $language . '/kategorie-produktu/' . $categoryPath) ?>" aria-label="Prohlédnout kategorii <?= $escape($categoryLabel) ?>"><?= $escape($categoryLabel) ?></a>
+          <a class="media-label" href="<?= $escape($categoryHref) ?>" aria-label="Prohlédnout kategorii <?= $escape($categoryLabel) ?>"><?= $escape($categoryLabel) ?></a>
           <?php if ($managingCatalog ?? false): ?><span class="manage-product-state <?= $product['published'] ? 'is-public' : '' ?>"><?= $product['published'] ? 'Zveřejněný' : 'Skrytý koncept' ?></span><?php endif; ?>
         </div>
         <div class="product-body">
