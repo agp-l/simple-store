@@ -62,25 +62,24 @@ if ($manualCategoryMenu) {
           <?php endforeach; ?>
         </nav>
       <?php endif; ?>
-      <?php if (!$managingCatalog && !$homepageSelectionActive): ?><label class="sort-wrap">Řadit podle
-        <select id="sort" aria-label="Řadit produkty">
-          <option value="random" <?= $sortChoice === 'random' ? 'selected' : '' ?>>Náhodné produkty</option>
-          <option value="default" <?= $sortChoice === 'default' ? 'selected' : '' ?>>Nejnovější</option>
-          <option value="price-asc" <?= $sortChoice === 'price-asc' ? 'selected' : '' ?>>Od nejlevnějšího</option>
-          <option value="price-desc" <?= $sortChoice === 'price-desc' ? 'selected' : '' ?>>Od nejdražšího</option>
-          <option value="name" <?= $sortChoice === 'name' ? 'selected' : '' ?>>Podle názvu</option>
-        </select></label><?php endif; ?>
+      <?php if (!$managingCatalog && !$homepageSelectionActive): ?>
+      <form method="get" action="<?= $escape($searchAction) ?>#produkty" class="catalog-controls">
+        <input type="hidden" name="search" value="<?= $escape($searchTerm) ?>">
+        <input type="hidden" name="all" value="1">
+        <label class="sort-wrap">Řadit podle
+          <select id="sort" name="sort" aria-label="Řadit produkty">
+            <?php foreach (['random' => 'Náhodné produkty', 'default' => 'Nejnovější', 'price-asc' => 'Od nejlevnějšího', 'price-desc' => 'Od nejdražšího', 'weight-asc' => 'Od nejlehčího', 'weight-desc' => 'Od nejtěžšího', 'name' => 'Podle názvu'] as $value => $label): ?>
+            <option value="<?= $value ?>" <?= $sortChoice === $value ? 'selected' : '' ?>><?= $label ?></option>
+            <?php endforeach; ?>
+          </select>
+        </label>
+        <label class="sort-wrap catalog-weight-limit">Hmotnost do
+          <span class="catalog-weight-input"><input aria-label="Maximální hmotnost v gramech" type="number" name="max_weight" min="1" max="1000000" value="<?= $escape($maxWeight ?? '') ?>" placeholder="Bez omezení"><span>g</span></span>
+        </label>
+        <button type="submit">Použít</button>
+      </form>
+      <?php endif; ?>
     </div>
-    <?php if (!$managingCatalog && !$homepageSelectionActive): ?>
-    <form method="get" action="<?= $escape($searchAction) ?>" class="catalog-weight-filter">
-      <input type="hidden" name="sort" value="<?= $escape($sortChoice) ?>">
-      <input type="hidden" name="search" value="<?= $escape($searchTerm) ?>">
-      <input type="hidden" name="all" value="1">
-      <label>Hmotnost do (g)<input type="number" name="max_weight" min="1" max="1000000" value="<?= $escape($maxWeight ?? '') ?>" placeholder="Bez omezení"></label>
-      <button type="submit">Filtrovat</button>
-      <small>Filtr zahrnuje pouze produkty s jednoznačně uvedenou hmotností.</small>
-    </form>
-    <?php endif; ?>
     <section class="catalog" id="catalog" aria-label="Nabídka produktů">
       <?php if ($products !== []): ?>
         <?php foreach ($products as $product): require __DIR__ . '/product-card.php'; endforeach; ?>

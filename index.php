@@ -251,7 +251,7 @@ try {
         }
         $search = trim($rawSearch);
         $sort = $_GET['sort'] ?? 'random';
-        if (!is_string($sort) || !in_array($sort, ['default', 'random', 'price-asc', 'price-desc', 'name'], true)) {
+        if (!is_string($sort) || !in_array($sort, ['default', 'random', 'price-asc', 'price-desc', 'weight-asc', 'weight-desc', 'name'], true)) {
             $sort = 'random';
         }
         $seed = $_GET['seed'] ?? bin2hex(random_bytes(8));

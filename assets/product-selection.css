@@ -1,9 +1,7 @@
 .product-tip { display: inline-flex; align-items: center; gap: .3rem; border-radius: 20px; padding: .25rem .65rem; background: var(--lime); color: var(--pine); font-weight: 700; font-size: .75rem; }
 .product-body > .product-tip { align-self: flex-start; margin-bottom: .5rem; }
-.catalog-weight-filter, .selection-add-form { display: flex; align-items: end; gap: .6rem; flex-wrap: wrap; }
-.catalog-weight-filter label, .selection-add-form label { display: grid; gap: .3rem; }
-.catalog-weight-filter input { max-width: 140px; padding: .5rem; border: 1px solid var(--line); border-radius: 6px; }
-.catalog-weight-filter button { padding: .5rem .8rem; border: 1px solid var(--forest); border-radius: 6px; background: var(--moss); cursor: pointer; }
+.selection-add-form { display: flex; align-items: end; gap: .6rem; flex-wrap: wrap; }
+.selection-add-form label { display: grid; gap: .3rem; }
 .selection-drag { cursor: grab; touch-action: none; font-size: 1.4rem; padding: .35rem .65rem; border: 1px solid var(--line); background: var(--moss); border-radius: 6px; }
 [data-product-selection] .is-dragging { opacity: .5; }
 [data-product-selection][aria-busy="true"] { opacity: .65; pointer-events: none; }
@@ -26,4 +24,22 @@
 .selection-add-form select:focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }
 @media (max-width: 600px) {
   .selection-add-form label { flex-basis: 100%; max-width: none; }
+}
+
+.catalog-controls { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 12px 20px; margin-left: auto; }
+.catalog-controls .sort-wrap { margin-left: 0; }
+.catalog-controls select, .catalog-weight-input, .catalog-controls > button { height: 38px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--ink); font: inherit; font-size: 13px; }
+.catalog-weight-input { display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; }
+.catalog-weight-input input { width: 110px; min-width: 0; padding: 0; border: 0; background: transparent; color: inherit; font: inherit; }
+.catalog-weight-input > span { color: var(--muted); font-size: 12px; }
+.catalog-controls > button { padding: 0 14px; background: var(--moss); font-weight: 600; cursor: pointer; }
+.catalog-controls > button:hover { border-color: var(--forest); }
+.catalog-controls select:focus-visible, .catalog-controls > button:focus-visible, .catalog-weight-input:focus-within { outline: 2px solid var(--forest); outline-offset: 2px; }
+.catalog-weight-input input:focus { outline: 0; }
+@media (max-width: 700px) {
+  .catalog-controls { width: 100%; justify-content: flex-start; gap: 10px; }
+  .catalog-controls .sort-wrap { display: grid; gap: 6px; white-space: normal; flex: 1 1 150px; }
+  .catalog-controls select { min-width: 0; width: 100%; }
+  .catalog-weight-input input { width: 100%; }
+  .catalog-controls > button { align-self: end; }
 }

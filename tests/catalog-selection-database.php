@@ -42,6 +42,20 @@ try {
         $offset = $page['nextOffset'];
     } while ($offset !== null);
     $assert(count($seen) === 26 && count(array_unique($seen)) === 26 && !in_array($keys[25], $seen, true), 'Random pagination duplicated or leaked products.');
+    foreach (['weight-asc', 'weight-desc'] as $weightSort) {
+        $weighted = []; $cursor = 0;
+        do {
+            $weightPage = $catalog->page('cs', $category, '', $weightSort, $cursor, '0123456789abcdef', $picks, null);
+            array_push($weighted, ...array_column($weightPage['items'], 'product_key'));
+            $cursor = $weightPage['nextOffset'];
+        } while ($cursor !== null);
+        $expectedKeys = array_slice($keys, 0, 25);
+        if ($weightSort === 'weight-desc') $expectedKeys = array_reverse($expectedKeys);
+        $expectedKeys[] = $keys[26];
+        $assert($weighted === $expectedKeys, 'Whole-catalog weight order or unknown-last pagination failed.');
+    }
+    $weightLimited = $catalog->page('cs', $category, '', 'weight-desc', 0, '0123456789abcdef', $picks, 2000);
+    $assert(array_column($weightLimited['items'], 'product_key') === [$keys[1], $keys[0]], 'Weight sorting ignored the weight limit.');
     $repeat = $catalog->page('cs', $category, '', 'random', 0, '0123456789abcdef', $picks, null);
     $assert(array_column($repeat['items'], 'product_key') === array_slice($seen, 0, 12), 'Seed not stable.');
     $filtered = $catalog->page('cs', $category, '', 'price-asc', 0, '0123456789abcdef', $picks, 2000);

@@ -29,6 +29,7 @@
     document.getElementById('empty').hidden = count !== 0;
   }
   sort?.addEventListener('change', () => {
+    if (sort.form) { sort.form.requestSubmit(); return; }
     const next = new URL(location.href);
     next.searchParams.delete('offset');
     next.searchParams.set('sort', sort.value);
