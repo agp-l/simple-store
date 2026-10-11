@@ -266,7 +266,7 @@ try {
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }
-    if (in_array($action, ['save-checkout-settings', 'fio-cron-rotate', 'save-site-copy', 'save-mail-settings', 'mail-test'], true) ||
+    if (in_array($action, ['products-mass-preview', 'products-mass-apply', 'save-checkout-settings', 'fio-cron-rotate', 'save-site-copy', 'save-mail-settings', 'mail-test'], true) ||
         ($method !== 'POST' && $section === 'settings')) {
         require __DIR__ . '/src/Admin/settings.php';
         require __DIR__ . '/view/admin/layout.php';
