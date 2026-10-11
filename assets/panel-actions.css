@@ -1,12 +1,5 @@
 /* Shared panel action geometry. Variants change emphasis, never icon shape. */
-.panel-icon {
-  display: inline-block;
-  width: 1.125rem;
-  height: 1.125rem;
-  flex: 0 0 1.125rem;
-  vertical-align: -.2em;
-  pointer-events: none;
-}
+
 .panel-area :is(.panel-action, .panel-button) {
   display: inline-flex;
   align-items: center;

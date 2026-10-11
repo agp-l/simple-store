@@ -27,55 +27,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
 };
 ?>
   <main class="wrap detail-page<?= $editing ? ' is-editing' : '' ?>" id="produkty">
-    <?php if ($canEdit): ?><?php require __DIR__ . '/product-admin-nav.php'; ?><?php endif; ?>
-    <?php if ($canEdit && !$editing): ?>
-      <div class="product-admin-read"><span>Produkt prohlížíš bez úprav.</span><a href="<?= $escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1') ?>">✎ Upravit produkt</a></div>
-    <?php endif; ?>
-    <?php if ($editing): ?>
-      <div class="inline-toolbar product-edit-toolbar" id="inline-toolbar">
-        <div><strong>Úprava produktu <span class="product-edit-state<?= !empty($product['published']) ? ' is-public' : '' ?>"><?= !empty($product['published']) ? 'Zveřejněný' : 'Skrytý koncept' ?></span></strong><p>Klikni do textu; úprava se uloží při opuštění pole.</p></div>
-        <span class="inline-status" id="inline-status" role="status" aria-live="polite">Revize <?= (int) $product['revision_number'] ?></span>
-        <div class="product-edit-toolbar-actions">
-          <button type="button" class="inline-small" data-editor-action="publish" data-value="<?= $product['published'] ? '0' : '1' ?>"><?= $product['published'] ? 'Skrýt produkt' : 'Publikovat produkt' ?></button>
-          <button type="button" class="inline-small" data-editor-action="media-library">▧ Fotografie</button>
-          <a href="<?= $escape($mediaLibraryUrl) ?>">Knihovna fotografií ↗</a>
-          <?php if ($product['published']): ?><a href="<?= $escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug'])) ?>">Zobrazit bez úprav ↗</a><?php endif; ?>
-        </div>
-      </div>
-      <?php if (($_GET['stock_saved'] ?? '') === '1'): ?><p class="inline-stock-notice" role="status">Počet kusů skladem byl uložen.</p><?php endif; ?>
-      <section class="product-admin-settings" aria-labelledby="product-settings-title"><div class="product-admin-settings-heading"><strong id="product-settings-title">Nastavení produktu</strong><span><?= $escape($categoryLabel) ?> · <?= $escape($stockText[$product['stock_status']] ?? '') ?><?= ($stockReady ?? false) ? ' · Volné: ' . (int) ($product['stock_quantity'] ?? 0) . ' ks' : '' ?></span></div>
-      <div class="inline-settings" aria-label="Nastavení produktu">
-        <label>Kategorie <select data-editor-select="category_path">
-          <?php foreach ($editorCategories as $option): ?><option value="<?= $escape($option['path']) ?>" <?= $categoryPath === $option['path'] ? 'selected' : '' ?>><?= $escape($option['title']) ?></option><?php endforeach; ?>
-        </select></label>
-        <label>Dostupnost <select data-editor-select="stock_status">
-          <?php foreach ($stockText as $code => $text): ?><option value="<?= $code ?>" <?= $product['stock_status'] === $code ? 'selected' : '' ?>><?= $escape($text) ?></option><?php endforeach; ?>
-        </select></label>
-        <?php if ($stockReady ?? false): ?>
-          <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>" class="inline-stock-form">
-            <input type="hidden" name="action" value="set-product-stock"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>">
-            <input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
-            <input type="hidden" name="expected" value="<?= (int) ($product['stock_quantity'] ?? 0) ?>">
-            <label>Volné kusy skladem <input type="number" name="quantity" min="0" max="1000000" value="<?= (int) ($product['stock_quantity'] ?? 0) ?>" required inputmode="numeric"></label>
-            <button type="submit" class="inline-small">Uložit sklad</button>
-          </form>
-        <?php else: ?><a href="<?= $escape($siteRoot . 'admin.php?section=database') ?>">Pro počet kusů aktualizuj SQL tabulky ↗</a><?php endif; ?>
-        <label>Adresa produktu <span class="inline-address-prefix">/<?= $escape($language) ?>/produkt/</span><input type="text" data-editor-input="slug" value="<?= $escape($product['slug']) ?>" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="190" required spellcheck="false" autocomplete="off"></label>
-      </div>
-      <p class="inline-stock-note">Počet je společný pro všechny varianty a jazyky. Zákazníci vidí jen dostupnost. „Na objednávku“ umožňuje objednání i bez kusů skladem.</p>
-      <p class="inline-stock-note">Při prvním přejmenování nového produktu se adresa vytvoří podle názvu. U zveřejněného produktu změna adresy zneplatní dosavadní odkaz.</p>
-      </section>
-      <details class="inline-delete-product"><summary>Odstranit produkt</summary>
-        <p>Smazání odstraní produkt a všechny jeho revize v tomto jazyce. Nahrané obrázky zůstanou na disku, protože mohou mít zkopírované odkazy.</p>
-        <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>">
-          <input type="hidden" name="action" value="delete-product"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>">
-          <input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
-          <input type="hidden" name="revision" value="<?= (int) $product['revision_number'] ?>">
-          <label><input type="checkbox" name="confirm" value="1" required> Rozumím, že revize produktu už nepůjdou obnovit.</label>
-          <button type="submit" class="inline-small">Smazat produkt</button>
-        </form>
-      </details>
-    <?php endif; ?>
+    <?php require __DIR__ . '/manage/product-panel.php'; ?>
     <nav class="breadcrumbs" aria-label="Drobečková navigace"><a href="<?= $escape($siteRoot . $language) ?>">Úvod</a>
       <?php foreach ($categoryTrail as $crumb): ?><span>/</span><a href="<?= $escape($siteRoot . $language . '/kategorie-produktu/' . $crumb['path']) ?>"><?= $escape($crumb['title']) ?></a><?php endforeach; ?>
       <span>/</span><span><?= $escape($product['name']) ?></span></nav>
@@ -118,52 +70,6 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         </form>
       </div>
     </div>
-    <?php if ($canEdit): ?>
-      <section class="supplier-links" id="supplier-links" aria-label="Soukromé odkazy na dodavatele">
-        <h2>Dodavatelé <small>Jen pro správce</small></h2>
-        <?php if (!$supplierLinksReady): ?>
-          <p>Pro odkazy na dodavatele nejprve <a href="<?= $escape($siteRoot . 'admin.php?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
-        <?php else: ?>
-          <?php if (($_GET['supplier_saved'] ?? '') === '1'): ?><p class="inline-stock-notice" role="status">Odkazy na dodavatele byly aktualizovány.</p><?php endif; ?>
-          <?php if (isset($_GET['supplier_error']) && is_string($_GET['supplier_error']) && $_GET['supplier_error'] !== 'missing'): ?><p class="supplier-error" role="alert"><?= $escape($_GET['supplier_error']) ?></p><?php endif; ?>
-          <?php if ($supplierLinks === []): ?><p>Pro tento produkt zatím nejsou uložené odkazy.</p><?php endif; ?>
-          <ul class="supplier-list">
-            <?php foreach ($supplierLinks as $supplier): ?>
-              <li>
-                <a href="<?= $escape($supplier['url']) ?>" target="_blank" rel="noopener noreferrer"><?= $escape($supplier['label']) ?> ↗</a>
-                <span><?= $escape($supplier['url']) ?></span>
-                <details><summary>Upravit nebo odstranit</summary>
-                  <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>" class="supplier-form">
-                    <input type="hidden" name="action" value="product-supplier-link"><input type="hidden" name="operation" value="save">
-                    <input type="hidden" name="csrf" value="<?= $escape($editToken) ?>"><input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>">
-                    <input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="id" value="<?= (int) $supplier['id'] ?>">
-                    <label>Název dodavatele <input name="label" maxlength="120" required value="<?= $escape($supplier['label']) ?>"></label>
-                    <label>Webová adresa <input type="url" name="url" maxlength="1000" required value="<?= $escape($supplier['url']) ?>"></label>
-                    <button type="submit" class="inline-small">Uložit odkaz</button>
-                  </form>
-                  <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>">
-                    <input type="hidden" name="action" value="product-supplier-link"><input type="hidden" name="operation" value="remove">
-                    <input type="hidden" name="csrf" value="<?= $escape($editToken) ?>"><input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>">
-                    <input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="id" value="<?= (int) $supplier['id'] ?>">
-                    <button type="submit" class="inline-small">Odstranit odkaz</button>
-                  </form>
-                </details>
-              </li>
-            <?php endforeach; ?>
-          </ul>
-          <details class="supplier-add"><summary>＋ Přidat odkaz na dodavatele</summary>
-            <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>" class="supplier-form">
-              <input type="hidden" name="action" value="product-supplier-link"><input type="hidden" name="operation" value="save">
-              <input type="hidden" name="csrf" value="<?= $escape($editToken) ?>"><input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>">
-              <input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="id" value="0">
-              <label>Název dodavatele <input name="label" maxlength="120" placeholder="Např. Velkoobchod obuv" required></label>
-              <label>Webová adresa <input type="url" name="url" maxlength="1000" placeholder="https://..." required></label>
-              <button type="submit" class="inline-small">Přidat odkaz</button>
-            </form>
-          </details>
-        <?php endif; ?>
-      </section>
-    <?php endif; ?>
     <?php if ($editing || $product['description'] !== '' || $details['sections'] !== [] || $details['specifications'] !== []): ?>
       <div class="product-extra<?= !$editing && $product['description'] === '' && $details['sections'] === [] ? ' specs-only' : '' ?>">
         <?php if ($editing || $product['description'] !== '' || $details['sections'] !== []): ?><section class="story" aria-label="Popis produktu"><h2>O produktu</h2>
