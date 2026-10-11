@@ -4,13 +4,19 @@ import vm from 'node:vm';
 
 const classes = () => ({add() {}, remove() {}, toggle() {}});
 const status = {textContent: '', classList: classes()};
-const list = {children: [], dataset: {scope: 'spani', language: 'cs', csrf: 'token', endpoint: '/admin.php'},
+const listHandlers = {};
+let capturedPointer = null;
+const list = {addEventListener: (name, fn) => listHandlers[name] = fn,
+  setPointerCapture: id => capturedPointer = id,
+  releasePointerCapture: () => capturedPointer = null,
+  hasPointerCapture: id => capturedPointer === id,
+  children: [], dataset: {scope: 'spani', language: 'cs', csrf: 'token', endpoint: '/admin.php'},
   parentElement: {querySelector: () => status}, setAttribute() {}, removeAttribute() {},
   append(item) { this.children = this.children.filter(x => x !== item); this.children.push(item); },
   insertBefore(item, target) { this.children = this.children.filter(x => x !== item); const i = this.children.indexOf(target); this.children.splice(i < 0 ? this.children.length : i, 0, item); }};
 const item = (key) => {
   const handlers = {};
-  const handle = {addEventListener: (name, fn) => handlers[name] = fn, focus() {}, setPointerCapture() {}, releasePointerCapture() {}};
+  const handle = {addEventListener: (name, fn) => handlers[name] = fn, focus() {}, setPointerCapture() { throw new Error('Capture must not belong to a moving row.'); }, releasePointerCapture() {}};
   const row = {dataset: {key}, parentElement: list, classList: classes(), handlers, querySelector: () => handle,
     closest: () => row, getBoundingClientRect: () => ({top: 0, height: 100}),
     get previousElementSibling() { return list.children[list.children.indexOf(row) - 1]; },
@@ -36,13 +42,16 @@ assert.deepEqual(list.children, [b, a], 'Failed save did not restore acknowledge
 assert.equal(status.textContent, 'Conflict');
 responseOK = true;
 b.handlers.pointerdown({button: 0, pointerId: 1, preventDefault() {}});
-b.handlers.pointermove({pointerId: 1, clientX: 0, clientY: 80});
+assert.equal(capturedPointer, 1, 'The stationary list must retain capture across row moves.');
+listHandlers.pointermove({pointerId: 1, clientX: 0, clientY: 80});
 assert.deepEqual(list.children, [a, b]);
-b.handlers.pointercancel();
+listHandlers.lostpointercapture({target: b, pointerId: 1});
+assert.deepEqual(list.children, [a, b], 'A descendant capture event must not cancel the list drag.');
+listHandlers.pointercancel();
 assert.deepEqual(list.children, [b, a], 'Cancelled drag persisted a new order.');
 assert.equal(requests, 2);
 b.handlers.pointerdown({button: 0, pointerId: 2, preventDefault() {}});
-b.handlers.pointermove({pointerId: 2, clientX: 0, clientY: 80});
-b.handlers.pointerup({pointerId: 2}); await settle();
+listHandlers.pointermove({pointerId: 2, clientX: 0, clientY: 80});
+listHandlers.pointerup({pointerId: 2}); await settle();
 assert.deepEqual(list.children, [a, b]); assert.equal(requests, 3);
 console.log('Product selection pointer, keyboard, persistence and failure recovery tests passed.');
