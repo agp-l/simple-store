@@ -59,7 +59,7 @@ HROMADNÝ JSON / EXISTUJÍCÍ KATALOG:
 - Pro více produktů vrať jediný objekt {"format":"simple-store.products.v1","products":[...]}.
 - Každý prvek products je celý samostatný objekt simple-store.product.v1 popsaný výše, včetně language a product. Nesmí to být jen obsah product.
 - Při úpravě zachovej product_key a revision z čerstvého exportu. Do product vlož pouze měněná pole; neuvedená pole a dodavatelé zůstanou beze změny. Kolekce nahrazuješ celé, nikoli po jednotlivých položkách. Původní produkt v dávce neopakuj.
-- Pro nový produkt vynech product_key a revision; dodej povinné name, category_path, price_czk. Nezakládej znovu produkt ze seznamu existujících produktů. Seznam názvů a adres TXT není importovatelný; pro aktualizaci si vyžádej úplný JSON export vybraných produktů.
+- Pro nový produkt vynech product_key a revision; dodej povinné name, category_path, price_czk. Nezakládej znovu produkt ze seznamu existujících produktů. Stručný přehled JSON lze importovat pouze pro aktualizaci dodavatelů (viz níže); pro úpravy popisů a cen si vyžádej úplný JSON export vybraných produktů.
 - Export může obsahovat exported_at na kořeni dávky a stock_quantity vedle product v jednotlivých položkách. Skladové počty si nevymýšlej ani neměň. Import skladu se zapíná samostatně v administraci. product_key ani revision neodvozuj z adresy nebo názvu.
 - Běžný import odmítne zastaralou revizi. Režim obnovy zálohy je ruční volba správce, nikdy jej nevyžaduj pro běžnou AI úpravu.
 - JSON obsahuje cesty k obrázkům, nikoli obrazová data. Zachovej existující image_path, gallery a obrazové bloky. Pro nové fotografie použij ZIP nebo následné ruční nahrání.

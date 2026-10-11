@@ -83,7 +83,7 @@ Testy: `tests/product-import.php`, `tests/product-import-database.php`, `tests/p
 Administrace → **Import a export** → **Export a seznam pro AI** zobrazuje aktuální produkty včetně konceptů a překladů. Lze filtrovat jazyk, kategorii včetně podkategorií a název/adresu. Zaškrtávací výběr se odesílá v jediném JSON poli, takže jej PHP `max_input_vars` nezkrátí. Tlačítko exportu všech výsledků filtru funguje i bez JavaScriptu. Bez filtrů exportuje celý katalog.
 
 - **Úplný JSON**: identita, revize, jazyk, všechny podporované produktové údaje, dodavatelé a dostupné skladové kusy.
-- **Seznam pro AI (TXT)**: název, úplná adresa, kategorie a veřejný/koncept. Pro šetření tokenů jej používej jako přehled katalogu; pro skutečné úpravy exportuj JSON jen příslušných produktů.
+- **Přehled pro AI a dodavatelé (JSON)**: identita, název, úplná adresa, kategorie, veřejný/koncept a dodavatelské odkazy. Slouží jako stručný přehled i pro import pouze dodavatelů; podrobnosti níže.
 - Jde o zálohu aktuálních produktových dat. Fotografie jsou pouze jako cesty; jejich soubory, nastavení kategorií, historie revizí, objednávky a rezervace nejsou součástí JSON. Pro úplné zotavení webu zálohuj databázi a `images/`.
 
 ```json
