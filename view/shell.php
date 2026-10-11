@@ -33,6 +33,11 @@ $adminPreview ??= null;
 $cartUrl ??= $basePath . $language . '/kosik';
 $cartCount ??= 0;
 $cartToken ??= '';
+$productCardEffects = $page === 'catalog'
+    && !$panelStylesheet
+    && !($managingCatalog ?? false)
+    && !($homepageEditing ?? false)
+    && (require __DIR__ . '/../config/product-card-effects.php')['enabled'];
 ?>
 <!doctype html>
 <html lang="<?= htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
@@ -59,5 +64,6 @@ $cartToken ??= '';
 <?php if ($editMode): ?><script defer src="<?= $siteRoot ?>assets/inline-editor.js?v=<?= filemtime(__DIR__ . '/../assets/inline-editor.js') ?>"></script><?php endif; ?>
 <?php if ($contentEditMode): ?><script defer src="<?= $siteRoot ?>assets/content-editor.js?v=<?= filemtime(__DIR__ . '/../assets/content-editor.js') ?>"></script><?php endif; ?>
 <?php if ($editMode || $contentEditMode || ($mediaManager ?? false)): ?><script defer src="<?= $siteRoot ?>assets/media-manager.js?v=<?= filemtime(__DIR__ . '/../assets/media-manager.js') ?>"></script><?php endif; ?>
+<?php if ($productCardEffects): ?><script defer src="<?= $siteRoot ?>assets/product-card-effects.js?v=<?= filemtime(__DIR__ . '/../assets/product-card-effects.js') ?>"></script><?php endif; ?>
 </body>
 </html>
