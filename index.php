@@ -250,21 +250,30 @@ try {
             exit;
         }
         $search = trim($rawSearch);
-        $sort = $_GET['sort'] ?? 'default';
-        if (!is_string($sort) || !in_array($sort, ['default', 'price-asc', 'price-desc', 'name'], true)) {
-            $sort = 'default';
+        $sort = $_GET['sort'] ?? 'random';
+        if (!is_string($sort) || !in_array($sort, ['default', 'random', 'price-asc', 'price-desc', 'name'], true)) {
+            $sort = 'random';
         }
+        $seed = $_GET['seed'] ?? bin2hex(random_bytes(8));
+        $maxWeightInput = $_GET['max_weight'] ?? '';
+        $maxWeight = $maxWeightInput === '' ? null : filter_var($maxWeightInput, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 1000000]]);
+        if (!is_string($seed) || !preg_match('/^[a-f0-9]{16}$/D', $seed) || $maxWeight === false) {
+            $renderer->render('not-found', $shared, 400); exit;
+        }
+        $tipStore = new \SimpleStore\Product\CategoryProductSelection($db, $site['languages']);
+        $tipKeys = $path === null ? [] : $tipStore->keys($url->getLanguage(), $path);
+        $shared['maxWeight'] = $maxWeight;
         $repository = new ProductRepository($db, $site['languages'], null, 50, $productStock);
         $homepage = $route['name'] === 'catalog' ? new HomepageProductSelection($db, $site['languages']) : null;
         $homepageKeys = $homepage?->keys($url->getLanguage());
         $homepageSelectionActive = $homepageKeys !== null && !$managingCatalog &&
-            $search === '' && $sort === 'default' && $offset === 0 && ($_GET['all'] ?? '') !== '1';
+            $search === '' && in_array($sort, ['default', 'random'], true) && $maxWeight === null && $offset === 0 && ($_GET['all'] ?? '') !== '1';
         $batch = !$hasProducts ? ['items' => [], 'nextOffset' => null] :
             ($homepageSelectionActive
                 ? ['items' => $homepage->products($url->getLanguage(), $homepageKeys, $productStock), 'nextOffset' => null]
                 : ($managingCatalog
                     ? $repository->managementPage($url->getLanguage(), $path, $search, $visibility, $offset)
-                    : $repository->publishedPage($url->getLanguage(), $path, $search, $sort, $offset)));
+                    : (new \SimpleStore\Product\CatalogSelection($repository))->page($url->getLanguage(), $path, $search, $sort, $offset, $seed, $tipKeys, $maxWeight)));
         if ($homepageEditing) {
             $pick = $_GET['pick'] ?? '';
             $pickOffset = filter_var($_GET['pick_offset'] ?? 0, FILTER_VALIDATE_INT,
@@ -289,6 +298,11 @@ try {
             $shared['adminCsrf'] = $auth->token();
             $shared['privatePage'] = true;
         }
+        if ($canEdit && $path !== null) {
+            $shared['categoryTipsScope'] = $path;
+            $shared['categoryTipsSelected'] = (new HomepageProductSelection($db, $site['languages']))->products($url->getLanguage(), $tipKeys, null, true);
+            $shared['adminCsrf'] = $auth->token();
+        }
         $shared['homepageSelectionActive'] = $homepageSelectionActive;
         $shared['homepageConfigured'] = $homepageKeys !== null;
         $shared['products'] = $batch['items'];
@@ -302,7 +316,7 @@ try {
         $shared['searchAction'] = $path === null ? $url->path() : $url->category($path);
         $nextUrl = $batch['nextOffset'] === null ? '' : $shared['searchAction'] . '?' . http_build_query(
             array_filter(['manage' => $managingCatalog ? '1' : '', 'visibility' => $managingCatalog && $visibility !== 'all' ? $visibility : '',
-                'search' => $search, 'sort' => !$managingCatalog && $sort !== 'default' ? $sort : '',
+                'search' => $search, 'sort' => !$managingCatalog ? $sort : '', 'seed' => $seed, 'max_weight' => $maxWeight ?? '', 'all' => ($_GET['all'] ?? '') === '1' ? '1' : '',
                 'offset' => $batch['nextOffset']], static fn (mixed $value): bool => $value !== '')
         );
         $shared['nextUrl'] = $nextUrl;
@@ -338,6 +352,12 @@ try {
         $supplierLinks = [];
         $supplierLinksReady = false;
         if ($canEdit && $item !== null) {
+            $selectionHome = new HomepageProductSelection($db, $site['languages']);
+            $selectionTips = new \SimpleStore\Product\CategoryProductSelection($db, $site['languages']);
+            $shared['selectionTargets'] = [['scope' => 'home', 'label' => 'Úvodní stránka', 'selected' => in_array($item['product_key'], $selectionHome->keys($url->getLanguage()) ?? [], true)]];
+            foreach ($categories->trail($url->getLanguage(), CategoryPath::fromProduct($item)) as $tipCategory) {
+                $shared['selectionTargets'][] = ['scope' => $tipCategory['path'], 'label' => 'Náš tip — ' . $tipCategory['title'], 'selected' => in_array($item['product_key'], $selectionTips->keys($url->getLanguage(), $tipCategory['path']), true)];
+            }
             $supplierRepository = new ProductSupplierLinkRepository($db);
             $supplierLinksReady = $supplierRepository->installed();
             if ($supplierLinksReady) $supplierLinks = $supplierRepository->forProduct($item['product_key']);

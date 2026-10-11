@@ -31,8 +31,8 @@
   sort?.addEventListener('change', () => {
     const next = new URL(location.href);
     next.searchParams.delete('offset');
-    if (sort.value === 'default') next.searchParams.delete('sort');
-    else next.searchParams.set('sort', sort.value);
+    next.searchParams.set('sort', sort.value);
+    next.searchParams.set('all', '1');
     next.hash = 'produkty';
     location.assign(next.href);
   });

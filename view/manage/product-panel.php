@@ -45,6 +45,7 @@
       </div>
       </section>
     <?php endif; ?>
+    <?php require __DIR__ . '/product-selection.php'; ?>
     <?php require __DIR__ . '/product-suppliers.php'; ?>
   </div>
   <?php if ($editing): ?>

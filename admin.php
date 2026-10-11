@@ -204,6 +204,9 @@ try {
         require __DIR__ . '/src/Admin/delete-content.php';
         exit;
     }
+    if ($method === 'POST' && in_array($_POST['action'] ?? '', ['product-selection', 'product-selection-order'], true)) {
+        require __DIR__ . '/src/Admin/product-selection.php';
+    }
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'homepage-product') {
         require __DIR__ . '/src/Admin/homepage-products.php';
         exit;

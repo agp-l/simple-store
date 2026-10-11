@@ -28,7 +28,7 @@ final class AdminActionPolicy
         'inline-product', 'set-product-stock', 'category-create', 'category-update',
         'menu-slot', 'menu-item-save', 'menu-item-remove', 'page-menu',
         'media-upload', 'media-attach', 'media-delete', 'delete-product',
-        'delete-content', 'homepage-product', 'product-supplier-link',
+        'delete-content', 'homepage-product', 'product-selection', 'product-selection-order', 'product-supplier-link',
         'products-mass-preview', 'products-mass-apply', 'save-checkout-settings', 'fio-cron-rotate', 'save-site-copy',
         'save-mail-settings', 'mail-test', 'customer-create', 'customer-update',
         'customer-active', 'customer-password', 'schema-apply',

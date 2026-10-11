@@ -1,0 +1,12 @@
+.product-tip { display: inline-flex; align-items: center; gap: .3rem; border-radius: 20px; padding: .25rem .65rem; background: var(--lime); color: var(--pine); font-weight: 700; font-size: .75rem; }
+.product-body > .product-tip { align-self: flex-start; margin-bottom: .5rem; }
+.catalog-weight-filter, .selection-add-form { display: flex; align-items: end; gap: .6rem; flex-wrap: wrap; }
+.catalog-weight-filter label, .selection-add-form label { display: grid; gap: .3rem; }
+.catalog-weight-filter input { max-width: 140px; padding: .5rem; border: 1px solid var(--line); border-radius: 6px; }
+.catalog-weight-filter button { padding: .5rem .8rem; border: 1px solid var(--forest); border-radius: 6px; background: var(--moss); cursor: pointer; }
+.selection-drag { cursor: grab; touch-action: none; font-size: 1.4rem; padding: .35rem .65rem; border: 1px solid var(--line); background: var(--moss); border-radius: 6px; }
+[data-product-selection] .is-dragging { opacity: .5; }
+[data-product-selection][aria-busy="true"] { opacity: .65; pointer-events: none; }
+.selection-order-status { min-height: 1.4em; }
+.selection-order-status.is-error { color: #a32121; }
+.product-weight { color: var(--muted); font-size: .8rem; }

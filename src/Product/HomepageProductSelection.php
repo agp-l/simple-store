@@ -108,6 +108,19 @@ final class HomepageProductSelection
         }
     }
 
+    public function reorder(string $language, array $order, array $expected): void
+    {
+        $this->validateLanguage($language);
+        $this->db->startTransaction();
+        try {
+            $row = $this->db->queryFirstRow('SELECT product_keys_json FROM shop_homepage_selections WHERE language=%s FOR UPDATE', $language);
+            if ($row === null) throw new InvalidArgumentException('Výběr neexistuje. Obnov stránku.');
+            $keys = SelectionOrder::validate(self::decode((string) $row['product_keys_json']), $order, $expected);
+            $this->db->query('UPDATE shop_homepage_selections SET product_keys_json=%s, updated_at=UTC_TIMESTAMP() WHERE language=%s', json_encode($keys, JSON_THROW_ON_ERROR), $language);
+            $this->db->commit();
+        } catch (Throwable $error) { $this->db->rollback(); throw $error; }
+    }
+
     private function validateLanguage(string $language): void
     {
         if (!in_array($language, $this->languages, true)) throw new InvalidArgumentException('Neplatný jazyk.');

@@ -7,7 +7,7 @@ $editUrl = $homeUrl . '?homepage_edit=1#homepage-editor';
 <section class="homepage-editor" id="homepage-editor" aria-labelledby="homepage-editor-title">
   <div class="homepage-editor-heading"><div><p class="panel-eyebrow">Správa úvodní stránky</p>
     <h2 id="homepage-editor-title">Vybrané produkty</h2>
-    <p>Vyber konkrétní zveřejněné zboží a seřaď ho. Změny se ukládají hned. Kategorie a hledání dál zobrazují celý katalog.</p>
+    <p>Vyber konkrétní zveřejněné zboží a seřaď ho přetažením za úchyt ⠿. Změny se ukládají hned. Kategorie a hledání dál zobrazují celý katalog.</p>
   </div></div>
   <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="homepage-editor-notice" role="status">Výběr na úvodní stránce byl uložen.</p><?php endif; ?>
   <?php if (is_string($_GET['homepage_error'] ?? null)): ?><p class="homepage-editor-error" role="alert"><?= $escape($_GET['homepage_error']) ?></p><?php endif; ?>
@@ -16,25 +16,23 @@ $editUrl = $homeUrl . '?homepage_edit=1#homepage-editor';
   <?php else: ?>
     <?php if (!$homepageConfigured): ?><p class="homepage-editor-notice">Zatím se zobrazuje automatický výpis katalogu. Přidej první produkt a úvodní stránka začne používat tvůj výběr.</p>
     <?php elseif ($homepageSelected === []): ?><p class="homepage-editor-notice">Výběr je prázdný. Přidej produkt níže, nebo vrať automatický výpis.</p><?php endif; ?>
-    <?php if ($homepageSelected !== []): ?><ol class="homepage-picks">
+    <?php if ($homepageSelected !== []): ?><ol class="homepage-picks" data-product-selection data-scope="home" data-language="<?= $escape($language) ?>" data-csrf="<?= $escape($adminCsrf) ?>" data-endpoint="<?= $escape($siteRoot . 'admin.php') ?>">
       <?php foreach ($homepageSelected as $i => $selected): ?>
         <?php $isPublic = !empty($selected['published']); ?>
-        <li><div class="homepage-pick-info"><strong><?= $escape($selected['name']) ?></strong>
+        <li data-key="<?= $escape($selected['product_key']) ?>"><button type="button" class="selection-drag" aria-label="Přesunout <?= $escape($selected['name']) ?>" title="Přetáhni nebo použij Alt + šipku nahoru/dolů">⠿</button><div class="homepage-pick-info"><strong><?= $escape($selected['name']) ?></strong>
           <small><?= $isPublic ? 'Zobrazuje se zákazníkům' : 'Skrytý nebo odstraněný – zákazníkům se neukazuje' ?></small></div>
-          <?php foreach (['up' => '↑', 'down' => '↓', 'remove' => 'Odebrat'] as $operation => $label): ?>
-            <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>">
-              <input type="hidden" name="csrf" value="<?= $escape($adminCsrf) ?>">
-              <input type="hidden" name="action" value="homepage-product">
-              <input type="hidden" name="language" value="<?= $escape($language) ?>">
-              <input type="hidden" name="operation" value="<?= $operation ?>">
-              <input type="hidden" name="key" value="<?= $escape($selected['product_key']) ?>">
-              <input type="hidden" name="pick" value="<?= $escape($homepagePick) ?>">
-              <button type="submit" <?= ($operation === 'up' && $i === 0) || ($operation === 'down' && $i === count($homepageSelected) - 1) ? 'disabled' : '' ?> aria-label="<?= $escape($operation === 'up' ? 'Posunout ' . $selected['name'] . ' nahoru' : ($operation === 'down' ? 'Posunout ' . $selected['name'] . ' dolů' : 'Odebrat ' . $selected['name'])) ?>"><?= $label ?></button>
-            </form>
-          <?php endforeach; ?>
+          <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>">
+            <input type="hidden" name="csrf" value="<?= $escape($adminCsrf) ?>">
+            <input type="hidden" name="action" value="homepage-product">
+            <input type="hidden" name="language" value="<?= $escape($language) ?>">
+            <input type="hidden" name="operation" value="remove">
+            <input type="hidden" name="key" value="<?= $escape($selected['product_key']) ?>">
+            <input type="hidden" name="pick" value="<?= $escape($homepagePick) ?>">
+            <button type="submit" aria-label="Odebrat <?= $escape($selected['name']) ?>">Odebrat</button>
+          </form>
         </li>
       <?php endforeach; ?>
-    </ol><?php endif; ?>
+    </ol><p class="selection-order-status" role="status" aria-live="polite"></p><?php endif; ?>
     <?php if ($homepageConfigured): ?><form class="homepage-reset" method="post" action="<?= $escape($siteRoot . 'admin.php') ?>">
       <input type="hidden" name="csrf" value="<?= $escape($adminCsrf) ?>"><input type="hidden" name="action" value="homepage-product">
       <input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="operation" value="reset">
