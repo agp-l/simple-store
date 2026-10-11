@@ -73,6 +73,7 @@ final class ProductVariants
     /** Each line is Name: value | value; generate only on an explicit administrator request. */
     public static function generate(string $text): array
     {
+        if (strlen($text) > 16000 || preg_match('//u', $text) !== 1) throw new InvalidArgumentException('Vlastnosti musí být platný text do 16 000 bajtů.');
         $groups = [];
         foreach (preg_split('/\R/u', trim($text)) as $line) {
             if (trim($line) === '') continue;

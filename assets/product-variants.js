@@ -50,5 +50,6 @@
   selectors.forEach(select => select.addEventListener('change', refresh));
   picker.before(container); picker.hidden = true; picker.required = false;
   const label = document.querySelector('label[for="product-variant"]'); if (label) label.hidden = true;
+  const note = document.querySelector('.variant-purchase-note'); if (note) note.hidden = true;
   refresh();
 })();

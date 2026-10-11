@@ -25,3 +25,21 @@
 .product-purchase [hidden] { display: none; }
 .variant-pickers .field-label { margin: 12px 0 0; }
 .variant-pickers select { display: block; margin-top: 7px; }
+
+.editor-panel-sections > .variant-manager { grid-column: 1 / -1; border-top: 1px solid var(--line); }
+.variant-table .inline-small { white-space: nowrap; }
+.variant-table td:last-child { min-width: 90px; }
+@media (max-width: 700px) {
+  .variant-table-wrap { overflow: visible; }
+  .variant-table, .variant-table tbody { display: block; }
+  .variant-table thead { display: none; }
+  .variant-table tr { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 14px; margin-bottom: 12px; background: white; border: 1px solid var(--line); border-radius: 6px; }
+  .variant-table th[scope=row] { grid-column: 1 / -1; min-width: 0; padding: 0 0 10px; }
+  .variant-table td { display: flex; flex-direction: column; gap: 5px; min-width: 0; padding: 0; border: 0; }
+  .variant-table td::before { content: attr(data-label); font-size: 12px; font-weight: 600; }
+  .variant-table td:last-child { grid-column: 1 / -1; }
+  .variant-table td:last-child::before { display: none; }
+  .variant-table input:not([type=checkbox]), .variant-table select { width: 100%; max-width: none; min-width: 0; }
+  .variant-table input[type=checkbox] { align-self: flex-start; width: 22px; height: 22px; }
+  .variant-table td:last-child .inline-small { width: 100%; }
+}

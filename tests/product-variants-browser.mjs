@@ -31,12 +31,16 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
       await page.locator('#variant-choice-1').selectOption('M');
       const selected = await page.locator('#product-variant').inputValue();
       assert.match(selected, /^[a-f0-9]{32}$/);
+      assert.equal(await page.locator('.product-purchase').evaluate(form => new FormData(form).get('variant_key')), selected);
       assert.match(await page.locator('[data-variant-price]').textContent(), /2\s*490/);
       await page.locator('#variant-choice-1').selectOption('L');
       assert.match(await page.locator('[data-variant-price]').textContent(), /2\s*490/);
       await page.locator('#variant-choice-0').selectOption('Červená');
       assert.match(await page.locator('[data-variant-price]').textContent(), /2\s*890/);
       assert.ok(await page.locator('.product-purchase').evaluate(form => form.checkValidity()));
+      await page.locator('#variant-choice-0').selectOption('Modrá');
+      await page.locator('#variant-choice-1').focus(); await page.keyboard.press('Home'); await page.keyboard.press('ArrowDown');
+      assert.equal(await page.locator('#variant-choice-1').inputValue(), 'M');
       await page.locator('.product-purchase').screenshot({ path: `/tmp/variant-screenshots/customer-${width}.png` });
       await page.goto('http://127.0.0.1:8765/' + adminPath);
       const rows = page.locator('[data-variant-row]');
@@ -48,6 +52,7 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
         assert.equal(data[0].quantity, '3'); assert.equal(data[1].quantity, '5');
         await route.fulfill({ body: '<p>Saved fixture</p>', contentType: 'text/html' });
       });
+      if (width > 960) assert.ok(await page.locator('#product-variants').evaluate(panel => panel.getBoundingClientRect().width > 1000), 'Variant table must span the editing panel');
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
       assert.ok(overflow <= 1, `Entire page overflows by ${overflow}px at ${width}px`);
       await page.locator('#product-variants').screenshot({ path: `/tmp/variant-screenshots/admin-${width}.png` });
