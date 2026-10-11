@@ -5,7 +5,7 @@
     <?php endif; ?>
     <?php if ($editing): ?>
       <div class="inline-toolbar product-edit-toolbar" id="inline-toolbar">
-        <div><strong><?= \SimpleStore\Rendering\Icon::render('package') ?> Úprava produktu <span class="product-edit-state<?= !empty($product['published']) ? ' is-public' : '' ?>"><?= !empty($product['published']) ? 'Zveřejněný' : 'Skrytý koncept' ?></span></strong><p>Klikni do textu; úprava se uloží při opuštění pole.</p></div>
+        <div><strong><?= \SimpleStore\Rendering\Icon::render('package') ?> Úprava produktu <span class="product-edit-state<?= !empty($product['published']) ? ' is-public' : '' ?>"><?= !empty($product['published']) ? 'Zveřejněný' : 'Skrytý koncept' ?></span></strong></div>
         <span class="inline-status" id="inline-status" role="status" aria-live="polite">Revize <?= (int) $product['revision_number'] ?></span>
         <div class="product-edit-toolbar-actions">
           <button type="button" class="inline-small" data-editor-action="publish" data-value="<?= $product['published'] ? '0' : '1' ?>"><?= \SimpleStore\Rendering\Icon::render('eye') ?> <?= $product['published'] ? 'Skrýt produkt' : 'Publikovat produkt' ?></button>
@@ -20,7 +20,11 @@
   <div class="editor-panel-sections<?= $editing ? '' : ' is-readonly' ?>">
     <?php if ($editing): ?>
       <?php if (($_GET['stock_saved'] ?? '') === '1'): ?><p class="inline-stock-notice" role="status">Počet kusů skladem byl uložen.</p><?php endif; ?>
-      <section class="product-admin-settings" aria-labelledby="product-settings-title"><div class="product-admin-settings-heading"><strong id="product-settings-title"><?= \SimpleStore\Rendering\Icon::render('settings') ?> Nastavení produktu</strong><span><?= $escape($categoryLabel) ?> · <?= $escape($stockText[$product['stock_status']] ?? '') ?><?= ($stockReady ?? false) ? ' · Volné: ' . (int) ($product['stock_quantity'] ?? 0) . ' ks' : '' ?></span></div>
+      <section class="product-admin-settings" aria-labelledby="product-settings-title"><div class="product-admin-settings-heading"><strong id="product-settings-title"><?= \SimpleStore\Rendering\Icon::render('settings') ?> Nastavení produktu</strong><div class="editor-chips" aria-label="Přehled produktu">
+        <span class="editor-chip editor-chip--category"><?= \SimpleStore\Rendering\Icon::render('folder') ?> <?= $escape($categoryLabel) ?></span>
+        <span class="editor-chip editor-chip--<?= ['in_stock' => 'available', 'on_order' => 'waiting', 'out_of_stock' => 'empty'][$product['stock_status']] ?? 'waiting' ?>"><?= \SimpleStore\Rendering\Icon::render(['in_stock' => 'check', 'on_order' => 'clock', 'out_of_stock' => 'cancel'][$product['stock_status']] ?? 'clock') ?> <?= $escape($stockText[$product['stock_status']] ?? '') ?></span>
+        <?php if ($stockReady ?? false): ?><span class="editor-chip editor-chip--<?= (int) ($product['stock_quantity'] ?? 0) > 0 ? 'quantity' : 'empty' ?>"><?= \SimpleStore\Rendering\Icon::render('package') ?> Volné: <?= (int) ($product['stock_quantity'] ?? 0) ?> ks</span><?php endif; ?>
+      </div></div>
       <div class="inline-settings" aria-label="Nastavení produktu">
         <label><?= \SimpleStore\Rendering\Icon::render('folder') ?> Kategorie <select data-editor-select="category_path">
           <?php foreach ($editorCategories as $option): ?><option value="<?= $escape($option['path']) ?>" <?= $categoryPath === $option['path'] ? 'selected' : '' ?>><?= $escape($option['title']) ?></option><?php endforeach; ?>
@@ -39,8 +43,6 @@
         <?php else: ?><a href="<?= $escape($siteRoot . 'admin.php?section=database') ?>">Pro počet kusů aktualizuj SQL tabulky ↗</a><?php endif; ?>
         <label class="product-admin-address">Adresa produktu <span class="inline-address-prefix">/<?= $escape($language) ?>/produkt/</span><input type="text" data-editor-input="slug" value="<?= $escape($product['slug']) ?>" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="190" required spellcheck="false" autocomplete="off"></label>
       </div>
-      <p class="inline-stock-note">Počet je společný pro všechny varianty a jazyky. Zákazníci vidí jen dostupnost. „Na objednávku“ umožňuje objednání i bez kusů skladem.</p>
-      <p class="inline-stock-note">Při prvním přejmenování nového produktu se adresa vytvoří podle názvu. U zveřejněného produktu změna adresy zneplatní dosavadní odkaz.</p>
       </section>
     <?php endif; ?>
     <?php require __DIR__ . '/product-suppliers.php'; ?>

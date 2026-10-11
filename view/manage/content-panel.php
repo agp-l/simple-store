@@ -5,7 +5,7 @@
     <?php endif; ?>
     <?php if ($editing): ?>
       <div class="inline-toolbar" id="content-toolbar">
-        <div><strong><?= \SimpleStore\Rendering\Icon::render($page === 'post' ? 'book' : 'document') ?> <?= $page === 'post' ? 'Článek' : 'Stránka' ?> · <?= !empty($content['published']) ? 'publikováno' : 'koncept' ?></strong><p>Klikni do textu; úprava se uloží při opuštění pole.</p></div>
+        <div><strong><?= \SimpleStore\Rendering\Icon::render($page === 'post' ? 'book' : 'document') ?> <?= $page === 'post' ? 'Článek' : 'Stránka' ?> <span class="product-edit-state<?= !empty($content['published']) ? ' is-public' : '' ?>"><?= !empty($content['published']) ? 'Zveřejněno' : 'Skrytý koncept' ?></span></strong></div>
         <span class="inline-status" id="content-editor-status" role="status" aria-live="polite">Revize <?= (int) $content['revision_number'] ?></span>
         <button type="button" class="inline-small" data-content-action="publish" data-value="<?= $content['published'] ? '0' : '1' ?>"><?= \SimpleStore\Rendering\Icon::render('eye') ?> <?= $content['published'] ? 'Skrýt' : 'Publikovat' ?></button>
         <button type="button" class="inline-small" data-content-action="media-library"><?= \SimpleStore\Rendering\Icon::render('image') ?> Fotografie</button>
