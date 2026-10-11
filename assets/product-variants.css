@@ -1,0 +1,23 @@
+.variant-manager { margin-top: 18px; }
+.variant-manager p { font-size: 13px; line-height: 1.6; color: var(--muted); }
+.variant-table-wrap { overflow-x: auto; margin: 18px 0; }
+.variant-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.variant-table th, .variant-table td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; }
+.variant-table thead th { color: var(--pine); background: var(--moss); white-space: nowrap; }
+.variant-table th[scope=row] { min-width: 180px; }
+.variant-table input:not([type=checkbox]), .variant-table select, .variant-create textarea { box-sizing: border-box; border: 1px solid var(--line); border-radius: 5px; padding: 8px; background: #fff; color: var(--pine); font: inherit; }
+.variant-table input[type=number] { width: 100px; }
+.variant-table input[name=sku] { width: 110px; }
+.variant-table select { max-width: 170px; }
+.variant-disabled th[scope=row] { color: var(--muted); }
+.variant-create { padding: 12px 0; }
+.variant-create summary { cursor: pointer; font-weight: 600; }
+.variant-create form { display: grid; gap: 12px; margin-top: 14px; }
+.variant-create textarea { display: block; width: 100%; margin-top: 7px; }
+.variant-create button { justify-self: start; }
+.variant-confirm { font-size: 13px; line-height: 1.6; }
+.variant-purchase-note { font-size: 13px; color: var(--muted); margin: 8px 0; }
+
+.variant-create input:not([type=checkbox]) { box-sizing: border-box; width: 100%; display: block; margin-top: 7px; border: 1px solid var(--line); border-radius: 5px; padding: 8px; font: inherit; }
+.variant-merge-preview { background: var(--moss); border-left: 3px solid var(--pine); padding: 12px 16px; margin-top: 12px; }
+.variant-pickers { display: grid; grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); gap: 12px; }

@@ -97,6 +97,7 @@ jobs:
           php tests/admin-auth.php
           php tests/password-reset-collation.php
           php tests/product-import.php
+          php tests/product-variants.php
           php tests/inline-editor.php
           php tests/content-editor.php
           php tests/content-deletion.php
@@ -167,6 +168,7 @@ jobs:
           php tests/product-zip-database.php
           php tests/product-bulk-database.php
           php tests/product-mass-database.php
+          php tests/product-variants-database.php
           php tests/catalog-selection-database.php
           php tests/product-prompt-database.php
           php tests/supplier-links-database.php
@@ -212,6 +214,7 @@ jobs:
           php tests/product-zip-database.php
           php tests/product-bulk-database.php
           php tests/product-mass-database.php
+          php tests/product-variants-database.php
           php tests/catalog-selection-database.php
           php tests/product-prompt-database.php
           php tests/supplier-links-database.php

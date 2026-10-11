@@ -27,6 +27,7 @@
               </a><?php elseif ($imageUrl !== ''): ?><span class="panel-order-product-image"><img src="<?= $escape($imageUrl) ?>" alt="" loading="lazy" width="64" height="64"></span><?php endif; ?>
               <div><?php if ($productUrl !== ''): ?><a class="panel-order-product-name" href="<?= $escape($productUrl) ?>"><?= $escape($item['name'] ?? '') ?></a><?php else: ?><strong><?= $escape($item['name'] ?? '') ?></strong><?php endif; ?>
                 <small><?= (int) ($item['quantity'] ?? 0) ?> ks × <?= $orderMoney($item['unit_price_czk'] ?? 0) ?>
+                <?php if (!empty($item['variant_sku'])): ?> · SKU: <?= $escape($item['variant_sku']) ?><?php endif; ?>
                 <?php foreach (($item['options'] ?? []) as $option => $value): ?>
                   <?php if (is_scalar($value)): ?> · <?= $escape($option) ?>: <?= $escape($value) ?><?php endif; ?>
                 <?php endforeach; ?></small>

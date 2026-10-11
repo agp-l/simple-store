@@ -57,6 +57,9 @@ final class ProductStockRepository
             if ($row['variant_inventory']['enabled']) {
                 $active = array_filter($row['variant_inventory']['items'], static fn (array $v): bool => $v['enabled']);
                 $row['stock_quantity'] = array_sum(array_column($active, 'quantity'));
+                $prices = array_map(static fn (array $v): int => $v['price_czk'] ?? (int) $row['price_czk'], $active);
+                $row['offer_price_czk'] = $prices === [] ? (int) $row['price_czk'] : min($prices);
+                $row['price_varies'] = $prices !== [] && min($prices) !== max($prices);
                 $states = array_map([ProductVariants::class, 'availability'], $active);
                 $row['availability_status'] = in_array('in_stock', $states, true) ? 'in_stock' : (in_array('on_order', $states, true) ? 'on_order' : 'out_of_stock');
             }

@@ -61,7 +61,19 @@ final class ProductMassUpdate
             $stockDone = [];
             foreach ($rows as $row) {
                 $key = $row['product_key'];
-                if ($choices['quantity'] !== '' && !isset($stockDone[$key])) {
+                $variantState = $row['variant_inventory'];
+                if ($variantState['enabled'] && !isset($stockDone[$key]) && ($choices['quantity'] !== '' || $choices['stock_status'] !== '')) {
+                    $stockDone[$key] = true;
+                    foreach ($variantState['items'] as &$variant) {
+                        if (!$variant['enabled']) continue;
+                        if ($choices['quantity'] !== '') $variant['quantity'] = (int) $choices['quantity'];
+                        if ($choices['stock_status'] !== '') $variant['stock_status'] = $choices['stock_status'];
+                    }
+                    unset($variant);
+                    (new ProductVariantRepository($this->db))->apply($key, $variantState);
+                    $changed[$key] = true;
+                }
+                if (!$variantState['enabled'] && $choices['quantity'] !== '' && !isset($stockDone[$key])) {
                     $stockDone[$key] = true;
                     $quantity = (int) $choices['quantity'];
                     $this->db->query('INSERT IGNORE INTO shop_product_inventory (product_key, available_quantity) VALUES (%s, 0)', $key);
@@ -74,7 +86,7 @@ final class ProductMassUpdate
                 $published = $choices['visibility'] !== '' ? (int) ($choices['visibility'] === 'public') : (int) $row['published'];
                 if ($status === $row['stock_status'] && $published === (int) $row['published']) continue;
                 $this->db->query('UPDATE shop_product_revisions SET active_product_key=NULL, active_slug=NULL WHERE id=%i', $row['id']);
-                unset($row['id'], $row['saved_at'], $row['available_quantity']);
+                unset($row['id'], $row['saved_at'], $row['available_quantity'], $row['variant_inventory']);
                 $row['revision_number'] = (int) $row['revision_number'] + 1;
                 $row['stock_status'] = $status;
                 $row['published'] = $published;
@@ -95,9 +107,14 @@ final class ProductMassUpdate
 
     private function rows(bool $lock = false): array
     {
-        return $this->db->query('SELECT r.*, COALESCE(i.available_quantity, 0) AS available_quantity
+        $rows = $this->db->query('SELECT r.*, COALESCE(i.available_quantity, 0) AS available_quantity
             FROM shop_product_revisions r LEFT JOIN shop_product_inventory i ON i.product_key=r.product_key
             WHERE r.active_product_key IS NOT NULL ORDER BY r.product_key, r.language' . ($lock ? ' FOR UPDATE' : ''));
+        $keys = array_values(array_unique(array_column($rows, 'product_key')));
+        $variants = (new ProductVariantRepository($this->db))->snapshots($keys, $lock);
+        foreach ($rows as &$row) $row['variant_inventory'] = $variants[$row['product_key']] ?? ProductVariantRepository::empty();
+        unset($row);
+        return $rows;
     }
 
     private static function fingerprint(array $rows): string

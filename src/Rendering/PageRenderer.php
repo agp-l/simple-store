@@ -46,6 +46,8 @@ final class PageRenderer
         $managementCategories = $data['managementCategories'] ?? [];
         $categoryTipsScope = (string) ($data['categoryTipsScope'] ?? '');
         $categoryTipsSelected = $data['categoryTipsSelected'] ?? [];
+        $variantError = $data['variantError'] ?? '';
+        $variantForm = $data['variantForm'] ?? [];
         $catalogPosts = $data['catalogPosts'] ?? [];
         $catalogPostKeys = $data['catalogPostKeys'] ?? [];
         $relatedProducts = $data['relatedProducts'] ?? [];

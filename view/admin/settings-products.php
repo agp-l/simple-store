@@ -3,7 +3,7 @@
 <section class="panel-panel panel-settings-block">
   <h2><?= \SimpleStore\Rendering\Icon::render('package') ?> Hromadná úprava produktů</h2>
   <p>Změna platí pro všechny produkty včetně konceptů a všech jazyků. Počet produktů: <strong><?= (int) $massCount ?></strong>.</p>
-  <p class="panel-help">Počet znamená volné kusy k prodeji, společné pro varianty a jazyky produktu. Po inventuře zadej počet bez kusů rezervovaných pro objednávky. Rezervace se nemění; při stornu objednávky se její rezervované kusy vrátí na sklad.</p>
+  <p class="panel-help">Počet znamená volné kusy k prodeji. U produktu se skladem variant se zadaný počet i dostupnost nastaví každé nabízené variantě zvlášť. Překlady sdílejí stejný sklad. Po inventuře zadej počet bez kusů rezervovaných pro objednávky. Rezervace se nemění; při stornu objednávky se její rezervované kusy vrátí na sklad.</p>
   <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=settings&tab=products') ?>">
     <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
     <input type="hidden" name="tab" value="products">

@@ -62,6 +62,12 @@ final class ProductRepository
             'name' => 'name ASC, product_key',
             default => 'id DESC',
         };
+        if (in_array($sort, ['price-asc', 'price-desc'], true) && (new ProductVariantRepository($this->db))->installed()) {
+            $order = 'COALESCE((SELECT MIN(COALESCE(v.price_czk, shop_product_revisions.price_czk))
+                FROM shop_product_variants v JOIN shop_product_variant_settings s ON s.product_key=v.product_key
+                WHERE v.product_key=shop_product_revisions.product_key AND s.enabled=1 AND v.enabled=1), price_czk)'
+                . ($sort === 'price-desc' ? ' DESC' : ' ASC') . ', product_key';
+        }
         // Recommendations affect discovery only; explicit sorts always win.
         if ($sort === 'random') {
             $order = 'SHA2(CONCAT(product_key, %s), 256), product_key';
@@ -327,6 +333,8 @@ final class ProductRepository
             throw new InvalidArgumentException('Neplatná identita importovaného produktu.');
         }
         $key ??= $newProductKey ?? bin2hex(random_bytes(16));
+        $variantRepository = new ProductVariantRepository($this->db);
+        if (isset($fields['variant_inventory'])) $variantRepository->install();
         $this->db->startTransaction();
         try {
             if ($creating && $this->db->queryFirstRow('SELECT product_key FROM shop_product_revisions WHERE product_key=%s LIMIT 1 FOR UPDATE', $key) !== null) {
@@ -371,7 +379,9 @@ final class ProductRepository
             ]);
             $id = $this->db->insertId();
             $this->stock?->ensure($key);
+            if (isset($fields['variant_inventory'])) $variantRepository->apply($key, $fields['variant_inventory']);
             if ($inventory !== null) {
+                if ($variantRepository->snapshot($key, true)['enabled']) throw new InvalidArgumentException('Počet kusů tohoto produktu nastav v jednotlivých variantách.');
                 $quantity = $inventory['quantity'] ?? null;
                 $expectedQuantity = $inventory['expected_quantity'] ?? null;
                 if (!is_int($quantity) || $quantity < 0 || $quantity > 1000000 || !is_int($expectedQuantity) || $expectedQuantity < 0) {

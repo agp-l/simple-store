@@ -1211,3 +1211,10 @@ CREATE TABLE IF NOT EXISTS shop_order_variant_reservations (
             quantity INT UNSIGNED NOT NULL, state VARCHAR(12) NOT NULL,
             PRIMARY KEY (order_id, product_key, variant_key), KEY variant_stock (product_key, variant_key)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shop_product_redirects (
+        language VARCHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+        source_slug VARCHAR(190) NOT NULL,
+        target_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+        PRIMARY KEY (language,source_slug), KEY target_product (target_key)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

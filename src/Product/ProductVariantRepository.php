@@ -93,8 +93,14 @@ final class ProductVariantRepository
         $rows = ProductVariants::normalize($data['items']);
         (new ProductStockRepository($this->db))->ensure($key);
         $this->db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s FOR UPDATE', $key);
+        if ($this->db->queryFirstField('SELECT product_key FROM shop_product_revisions WHERE product_key=%s AND active_product_key IS NOT NULL LIMIT 1 FOR UPDATE', $key) === null) throw new InvalidArgumentException('Produkt již neexistuje.');
         $current = $this->snapshot($key, true);
         if (!hash_equals($current['expected'], $data['expected'])) throw new InvalidArgumentException('Varianty nebo sklad se mezitím změnily. Obnov stránku nebo export.');
+        if ($data['enabled'] !== $current['enabled'] && ((int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM shop_order_stock_reservations WHERE product_key=%s AND state=%s', $key, 'reserved') > 0 ||
+            (int) $this->db->queryFirstField('SELECT COUNT(*) FROM shop_order_variant_reservations WHERE product_key=%s AND state=%s', $key, 'reserved') > 0)) {
+            throw new InvalidArgumentException('Před změnou režimu skladu vyřiď nebo stornuj objednávky, které zde rezervují kusy.');
+        }
         // Omitted identities remain as disabled inventory rows for historical reservations.
         $ids = array_column($rows, 'id');
         foreach ($current['items'] as $old) {
@@ -109,11 +115,11 @@ final class ProductVariantRepository
         foreach ($rows as $position => $row) {
             $this->db->query('INSERT INTO shop_product_variants
                 (product_key,variant_key,choices_json,available_quantity,stock_status,sku,price_czk,image_path,enabled,position)
-                VALUES (%s,%s,%s,%i,%s,%s,%i,%s,%i,%i) ON DUPLICATE KEY UPDATE
+                VALUES (%s,%s,%s,%i,%s,%s,%l,%s,%i,%i) ON DUPLICATE KEY UPDATE
                 available_quantity=VALUES(available_quantity),stock_status=VALUES(stock_status),sku=VALUES(sku),
                 price_czk=VALUES(price_czk),image_path=VALUES(image_path),enabled=VALUES(enabled),position=VALUES(position)',
                 $key, $row['id'], json_encode($row['choices'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
-                $row['quantity'], $row['stock_status'], $row['sku'], $row['price_czk'], $row['image_path'], (int) $row['enabled'], $position);
+                $row['quantity'], $row['stock_status'], $row['sku'], $row['price_czk'] === null ? 'NULL' : (string) $row['price_czk'], $row['image_path'], (int) $row['enabled'], $position);
         }
         $this->db->query('INSERT INTO shop_product_variant_settings (product_key,enabled,version) VALUES (%s,%i,1)
             ON DUPLICATE KEY UPDATE enabled=VALUES(enabled),version=version+1', $key, (int) $data['enabled']);

@@ -151,7 +151,10 @@ final class OrderRepository
                 throw new InvalidArgumentException('Košík může obsahovat nejvýše 200 kusů.');
             }
             $subtotal += $line;
-            $snapshots[] = [
+            $variantId = $item['variant_key'] ?? '';
+            $variantSku = $item['variant_sku'] ?? '';
+            if (!is_string($variantId) || ($variantId !== '' && preg_match('/^[a-f0-9]{32}$/D', $variantId) !== 1) || !is_string($variantSku) || strlen($variantSku) > 100) throw new InvalidArgumentException('Neplatná varianta košíku.');
+            $snapshot = [
                 'product_key' => $key,
                 'language' => $language,
                 'slug' => $slug,
@@ -160,9 +163,9 @@ final class OrderRepository
                 'unit_price_czk' => $price,
                 'image_path' => $image,
                 'options' => $options,
-                'variant_key' => (string) ($item['variant_key'] ?? ''),
-                'variant_sku' => (string) ($item['variant_sku'] ?? ''),
             ];
+            if ($variantId !== '') $snapshot += ['variant_key' => $variantId, 'variant_sku' => $variantSku];
+            $snapshots[] = $snapshot;
         }
         $itemsJson = self::json($snapshots, 262144);
         $shippingJson = self::json($shipping, 16384);

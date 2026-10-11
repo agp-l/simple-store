@@ -358,6 +358,13 @@ try {
         $item = $editRequested && $canEdit
             ? $repository->findCurrentBySlug($route['slug'], $url->getLanguage())
             : $repository->findPublished($route['slug'], $url->getLanguage());
+        if ($item === null && !($editRequested && $canEdit)) {
+            $redirectSlug = (new \SimpleStore\Product\ProductVariantMerge($db))->redirect($url->getLanguage(), $route['slug']);
+            if ($redirectSlug !== null) {
+                header('Location: ' . $basePath . $url->getLanguage() . '/produkt/' . rawurlencode($redirectSlug), true, 302);
+                exit;
+            }
+        }
         $editMode = $editRequested && $canEdit && $item !== null;
         $supplierLinks = [];
         $supplierLinksReady = false;
@@ -397,6 +404,11 @@ try {
                     ($categories->visibility($url->getLanguage(), $node['path']) === 'hidden' ? ' (skrytá)' : '')];
             }
             $shared['editorCategories'] = $rows;
+            if (($_SESSION['variant_error']['key'] ?? '') === $item['product_key']) {
+                $shared['variantError'] = $_SESSION['variant_error']['message'];
+                $shared['variantForm'] = $_SESSION['variant_form'] ?? [];
+                unset($_SESSION['variant_error'], $_SESSION['variant_form']);
+            }
             $shared['productHistory'] = $repository->historySummary($item['product_key'], $url->getLanguage());
             $shared['editToken'] = $auth->token();
         }

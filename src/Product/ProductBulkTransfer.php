@@ -56,8 +56,8 @@ final class ProductBulkTransfer
         $documents = [];
         foreach ($rows as $row) {
             $document = json_decode(ProductImport::export($row, $suppliers[$row['product_key']] ?? []), true, 32, JSON_THROW_ON_ERROR);
-            if (strlen(json_encode($document, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)) > ProductImport::LIMIT) throw new InvalidArgumentException('Produkt ' . $row['name'] . ' přesahuje limit 128 KiB pro zpětný import. Zkrať jeho obsah.');
-            $document['stock_quantity'] = (int) ($row['stock_quantity'] ?? 0);
+            if (strlen(json_encode($document, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)) > ProductImport::LIMIT) throw new InvalidArgumentException('Produkt ' . $row['name'] . ' přesahuje limit 1 MiB pro zpětný import. Zkrať jeho obsah.');
+            if (!($row['variant_inventory']['enabled'] ?? false)) $document['stock_quantity'] = (int) ($row['stock_quantity'] ?? 0);
             $documents[] = $document;
         }
         $json = json_encode(['format' => self::FORMAT, 'exported_at' => gmdate('c'), 'products' => $documents],
@@ -109,7 +109,7 @@ final class ProductBulkTransfer
             if ($restore || $includeStock) throw new InvalidArgumentException('JSON dodavatelů použij v běžném režimu aktualizace bez přepisu skladu.');
             return (new ProductSupplierTransfer($this->db, $this->products, $this->languages))->prepare($documents);
         }
-        $items = []; $seen = []; $stockValues = [];
+        $items = []; $seen = []; $stockValues = []; $variantValues = [];
         foreach ($documents as $index => $document) {
             $item = ['folder' => 'Položka ' . ($index + 1), 'status' => 'pending', 'message' => '', 'new_key' => bin2hex(random_bytes(16))];
             try {
@@ -138,18 +138,41 @@ final class ProductBulkTransfer
                         $item['new_key'] = $key;
                     }
                 }
+                $stockKey = $key ?? $item['new_key'];
+                $variantState = (new ProductVariantRepository($this->db))->snapshot($stockKey);
+                if (isset($data['product']['variants'])) {
+                    // Stock restoration is opt-in, including quantities nested in variants.
+                    if (!is_array($data['product']['variants'])) throw new InvalidArgumentException('Neplatné varianty.');
+                    $definition = &$data['product']['variants'];
+                    if ($restore) $definition['expected'] = $variantState['expected'];
+                    if (!$includeStock && is_array($definition['items'] ?? null)) {
+                        $quantities = array_column($variantState['items'], 'quantity', 'id');
+                        foreach ($definition['items'] as &$variant) {
+                            if (is_array($variant)) $variant['quantity'] = $quantities[$variant['id'] ?? ''] ?? 0;
+                        }
+                        unset($variant);
+                    }
+                    // A multi-language backup contains the same shared inventory only once per product.
+                    $signature = json_encode($definition, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+                    if (isset($variantValues[$stockKey])) {
+                        if ($variantValues[$stockKey] !== $signature) throw new InvalidArgumentException('Překlady jednoho produktu mají rozdílné varianty.');
+                        unset($data['product']['variants']);
+                    }
+                    unset($definition);
+                }
                 $fields = ProductImport::fields($data, $current);
                 if ((new \SimpleStore\Category\CategoryRepository($this->db))->findForAdmin($data['language'], $fields['category_path']) === null) throw new InvalidArgumentException('Kategorie produktu neexistuje.');
                 $details = ProductDetails::fromForm($fields);
                 $images = array_merge([$fields['image_path']], $details['gallery']);
                 foreach ($details['sections'] as $section) if ($section['type'] === 'image') $images[] = $section['body'];
+                foreach ($fields['variant_inventory']['items'] ?? [] as $variant) if ($variant['image_path'] !== '') $images[] = $variant['image_path'];
                 foreach (array_unique($images) as $image) {
                     if (!is_file(dirname(__DIR__, 2) . '/' . $image)) throw new InvalidArgumentException('Na webu chybí fotografie: ' . $image . '. Nahraj ji před importem.');
                 }
                 $item['folder'] = $fields['name'] . ' (' . $data['language'] . ')';
                 $item['message'] = $current === null ? 'Vytvořit produkt' : ($restore ? 'Obnovit údaje zálohy jako novou revizi' : 'Upravit revizi ' . $data['revision']);
                 $item['data'] = $data;
-                if ($includeStock && $quantity !== null) {
+                if ($includeStock && $quantity !== null && !(($fields['variant_inventory']['enabled'] ?? null) ?? $variantState['enabled'])) {
                     if (!is_int($quantity) || $quantity < 0 || $quantity > 1000000) throw new InvalidArgumentException('stock_quantity musí být celé číslo od 0 do 1 000 000.');
                     $stockKey = $key ?? $item['new_key'];
                     if (isset($stockValues[$stockKey]) && $stockValues[$stockKey] !== $quantity) throw new InvalidArgumentException('Překlady jednoho produktu mají rozdílný počet kusů.');
@@ -160,6 +183,7 @@ final class ProductBulkTransfer
                         $item['message'] .= '; sklad ' . $expected . ' → ' . $quantity;
                     }
                 }
+                if (isset($fields['variant_inventory'])) $variantValues[$stockKey] = $signature;
             } catch (InvalidArgumentException $error) {
                 $item['status'] = 'error'; $item['message'] = $error->getMessage(); unset($item['data']);
             }

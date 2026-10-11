@@ -14,7 +14,7 @@
 <h2>Jeden produkt jako JSON</h2>
 <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=product-import') ?>">
 <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
-<label for="product-json">JSON od AI (nejvýše 128 KiB)</label>
+<label for="product-json">JSON od AI (nejvýše 1 MiB)</label>
 <textarea id="product-json" name="json" rows="18" spellcheck="false" required><?= $escape($importJson) ?></textarea>
 <p class="panel-help">Při chybě text zůstane ve formuláři. Neuvedená pole při úpravě zůstanou zachovaná. Seznamy gallery, options, specifications a sections se nahrazují celé; [] je vyprázdní.</p>
 <button class="panel-action panel-button" name="action" value="product-import-preview"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Zkontrolovat a zobrazit náhled</button>

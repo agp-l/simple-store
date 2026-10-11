@@ -12,12 +12,12 @@ use SimpleStore\Navigation\Slugger;
 final class ProductImport
 {
     public const FORMAT = 'simple-store.product.v1';
-    public const LIMIT = 131072;
+    public const LIMIT = 1048576;
     private const TEXT = ['name', 'slug', 'brand', 'summary', 'description', 'category_path', 'image_path', 'stock_status'];
 
     public static function decode(string $json): array
     {
-        if (strlen($json) > self::LIMIT) throw new InvalidArgumentException('JSON může mít nejvýše 128 KiB.');
+        if (strlen($json) > self::LIMIT) throw new InvalidArgumentException('JSON může mít nejvýše 1 MiB.');
         $json = trim($json);
         if (preg_match('/^```(?:json)?\s*\n(.*)\n```$/sD', $json, $match)) $json = $match[1];
         try {
@@ -60,7 +60,7 @@ final class ProductImport
             'spec_name' => [], 'spec_value' => [], 'section_type' => [], 'section_heading' => [], 'section_body' => [],
         ] : ProductInlineEditor::fromRevision($current);
         $product = $data['product'];
-        self::keys($product, array_merge(self::TEXT, ['price_czk', 'published', 'gallery', 'options', 'specifications', 'sections', 'suppliers']));
+        self::keys($product, array_merge(self::TEXT, ['price_czk', 'published', 'gallery', 'options', 'specifications', 'sections', 'suppliers', 'variants']));
         foreach (self::TEXT as $field) {
             if (!array_key_exists($field, $product)) continue;
             if (!is_string($product[$field])) throw new InvalidArgumentException($field . ' musí být text.');
@@ -120,6 +120,17 @@ final class ProductImport
                 }
             }
         }
+        if (array_key_exists('variants', $product)) {
+            $variants = $product['variants'];
+            if (!is_array($variants)) throw new InvalidArgumentException('variants musí být objekt.');
+            self::keys($variants, ['enabled', 'expected', 'items']);
+            if (!is_bool($variants['enabled'] ?? null) || !is_array($variants['items'] ?? null)) throw new InvalidArgumentException('Varianty potřebují enabled a items.');
+            self::list($variants['items'], 'variants.items');
+            $variants['items'] = ProductVariants::normalize($variants['items']);
+            if (!isset($variants['expected']) && !$updating) $variants['expected'] = ProductVariantRepository::empty()['expected'];
+            if (!is_string($variants['expected'] ?? null) || preg_match('/^[a-f0-9]{64}$/D', $variants['expected']) !== 1) throw new InvalidArgumentException('Pro aktualizaci variant použij expected z aktuálního exportu.');
+            $fields['variant_inventory'] = $variants;
+        }
         self::suppliers($data);
         ProductDetails::fromForm($fields);
         return $fields;
@@ -133,6 +144,10 @@ final class ProductImport
         $product['price_czk'] = (int) $fields['price_czk'];
         $product['published'] = (bool) $fields['published'];
         $product = array_merge($product, ProductDetails::decode($row['details_json'] ?? null, $row['sizes'] ?? ''));
+        if (($row['variant_inventory']['version'] ?? 0) > 0) {
+            $product['variants'] = $row['variant_inventory'];
+            unset($product['variants']['version']);
+        }
         if ($suppliers !== null) $product['suppliers'] = array_map(static fn (array $link): array => ['label' => $link['label'], 'url' => $link['url']], $suppliers);
         return json_encode(['format' => self::FORMAT, 'product_key' => $row['product_key'],
             'revision' => (int) $row['revision_number'], 'language' => $row['language'], 'product' => $product],

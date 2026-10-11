@@ -59,8 +59,10 @@ final class MediaDeletion
             'SELECT body, summary FROM shop_content_revisions WHERE active_document_key IS NOT NULL
              AND (body LIKE %s OR summary LIKE %s)', $needle, $needle
         );
+        $variants = (new \SimpleStore\Product\ProductVariantRepository($this->db))->installed()
+            ? $this->db->query('SELECT image_path FROM shop_product_variants WHERE image_path LIKE %s', $needle) : [];
         $tokens = [];
-        foreach (array_merge($products, $documents) as $row) {
+        foreach (array_merge($products, $documents, $variants) as $row) {
             foreach ($row as $value) {
                 if (!is_string($value)) continue;
                 preg_match_all('/--([a-f0-9]{24})(?:-(?:card|thumb))?\.(?:webp|jpg|png)/', $value, $matches);

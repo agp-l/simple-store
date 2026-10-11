@@ -28,6 +28,7 @@ final class ProductZipConflictPolicy
         if ($current !== null && $mode === 'skip') return ['skipped' => true, 'message' => 'Produkt již existuje: ' . $current['name'] . '. Podle zvolené volby byl přeskočen.'];
         if ($mode === 'copy' && ($current !== null || $key !== null)) {
             unset($data['product_key'], $data['revision']);
+            if (isset($data['product']['variants'])) $data['product']['variants']['expected'] = ProductVariantRepository::empty()['expected'];
             $key = null;
             $current = null;
             if ($slug !== '') $data['product']['slug'] = rtrim(substr($slug, 0, 170), '-') . '-kopie-' . substr($newKey, 0, 8);

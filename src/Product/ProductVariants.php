@@ -15,7 +15,7 @@ final class ProductVariants
         $result = [];
         foreach ($choices as $name => $value) {
             if (!is_string($name) || !is_string($value) || trim($name) === '' || trim($value) === '' ||
-                strlen($name) > 80 || strlen($value) > 120 || preg_match('/[\x00-\x1f\x7f]/', $name . $value)) {
+                strlen($name) > 80 || strlen($value) > 120 || preg_match('//u', $name . $value) !== 1 || preg_match('/[\x00-\x1f\x7f]/', $name . $value)) {
                 throw new InvalidArgumentException('Vyplň název a hodnotu každé vlastnosti varianty.');
             }
             $name = trim($name);
@@ -41,7 +41,8 @@ final class ProductVariants
             if (!is_array($row) || array_diff(array_keys($row), ['id', 'choices', 'quantity', 'stock_status', 'sku', 'price_czk', 'image_path', 'enabled']) !== []) {
                 throw new InvalidArgumentException('Neplatná definice varianty.');
             }
-            $choices = self::choices($row['choices'] ?? []);
+            if (!is_array($row['choices'] ?? null)) throw new InvalidArgumentException('choices musí být objekt vlastností.');
+            $choices = self::choices($row['choices']);
             $signature = json_encode($choices, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
             $id = $row['id'] ?? bin2hex(random_bytes(16));
             $quantity = $row['quantity'] ?? 0;
@@ -53,7 +54,7 @@ final class ProductVariants
             if (!is_string($id) || preg_match('/^[a-f0-9]{32}$/D', $id) !== 1 || isset($ids[$id]) ||
                 isset($combinations[$signature]) || !is_int($quantity) || $quantity < 0 || $quantity > 1000000 ||
                 ($price !== null && (!is_int($price) || $price < 1 || $price > 10000000)) ||
-                !is_string($sku) || strlen($sku) > 100 || preg_match('/[\x00-\x1f\x7f]/', $sku) ||
+                !is_string($sku) || strlen($sku) > 100 || preg_match('//u', $sku) !== 1 || preg_match('/[\x00-\x1f\x7f]/', $sku) ||
                 !is_string($image) || ($image !== '' && !ProductDetails::imagePath($image)) || !is_bool($enabled) ||
                 !in_array($status, ['in_stock', 'on_order', 'out_of_stock'], true)) {
                 throw new InvalidArgumentException('Zkontroluj varianty: kombinace nesmí být duplicitní, počet 0–1 000 000, cena kladná.');
