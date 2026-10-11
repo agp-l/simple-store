@@ -333,23 +333,6 @@
   margin: 0;
 }
 
-.panel-order-quick button,
-.panel-order-quick-status button {
-  min-height: 36px;
-  padding: 7px 9px;
-  border: 1px solid #659b62;
-  border-radius: 4px;
-  background: #e9f5e6;
-  color: #285e2b;
-  font-size: 12px;
-  font-weight: 750;
-}
-
-.panel-order-quick button:hover,
-.panel-order-quick-status button:hover {
-  background: #d4ecd0;
-}
-
 .panel-order-quick-status select {
   min-height: 36px;
   padding: 5px;

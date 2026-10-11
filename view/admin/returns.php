@@ -33,7 +33,7 @@ $e = $escape;
       <?php if ($returnCase['resolved_at'] !== null): ?><div><dt>Písemné vyřízení</dt><dd><?= $e(CaseNotice::time((string) $returnCase['resolved_at'])) ?> · <?= $e($returnCase['resolution_type']) ?><br><?= nl2br($e($returnCase['resolution_text'])) ?><?= empty($returnCase['repair_duration']) ? '' : '<br>Doba opravy: ' . $e($returnCase['repair_duration']) ?></dd></div><?php endif; ?>
       <?php if ($returnCase['refunded_at'] !== null): ?><div><dt>Ověřené vrácení peněz</dt><dd><?= $e(number_format((int) $returnCase['refund_amount_czk'], 0, ',', ' ')) ?> Kč · <?= $e(CaseNotice::time((string) $returnCase['refunded_at'])) ?><br>Reference <?= $e($returnCase['refund_reference']) ?></dd></div><?php endif; ?>
     </dl>
-    <p><a class="panel-text-link" href="<?= $e($basePath . 'support.php?case=' . $returnCase['case_token']) ?>" target="_blank" rel="noopener noreferrer">Zobrazit tisknutelné potvrzení a výsledek ↗</a></p>
+    <p><a class="panel-icon-link panel-text-link" href="<?= $e($basePath . 'support.php?case=' . $returnCase['case_token']) ?>" target="_blank" rel="noopener noreferrer"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit tisknutelné potvrzení a výsledek</a></p>
     <?php if ($returnMail !== 'sent'): ?><p class="panel-error" role="alert">Potvrzení přijetí e-mailem nemá ověřené odeslání (<?= $e($returnMail) ?>). Zkontroluj <a href="<?= $e($adminUrl . '?section=accounting&tab=mail') ?>">frontu e-mailů a SMTP</a> a pošli zákazníkovi potvrzení také přímo, pokud jej nelze doručit automaticky. Vypnutí volitelných stavových e-mailů neplatí pro potvrzení a vyřízení těchto podání.</p><?php endif; ?>
     <?php foreach ($returnMessages as $mailRow): ?><?php if ($mailRow['state'] === 'sent') continue; ?><p class="panel-help">Zpráva <?= $e($mailRow['event_key']) ?>: <?= $e($mailRow['state']) ?><?= $mailRow['last_error'] === null ? '' : ' · ' . $e($mailRow['last_error']) ?></p><?php endforeach; ?>
   </section>
@@ -47,7 +47,7 @@ $e = $escape;
       <label>Doba opravy (pokud byla skutečně provedena) <input name="repair_duration" maxlength="190" placeholder="Například od 2. do 5. října 2026"></label>
       <label>Text zákazníkovi / důvod zamítnutí / interní poznámka <textarea name="message" rows="4" maxlength="5000"></textarea></label>
       <p class="panel-help">U vyřízení a zamítnutí napiš písemný výsledek. U interní poznámky zpráva zákazníkovi neodejde. Zamítnutí odstoupení neposuzuj automaticky jen podle zákazníkem zadaného data.</p>
-      <button class="panel-button" type="submit">Uložit stav a informovat zákazníka</button>
+      <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit stav a informovat zákazníka</button>
     </form>
   </section><section class="panel-panel"><h2>Historie a vrácení peněz</h2>
     <ol><?php foreach ($returnCase['events'] as $event): ?><li><strong><?= $e(CaseNotice::time((string) $event['created_at'])) ?></strong> · <?= $e(CaseRepository::STATUSES[$event['status']] ?? $event['status']) ?><?= (int) $event['visible_to_customer'] === 0 ? ' · interní' : '' ?><br><?= nl2br($e($event['message'])) ?></li><?php endforeach; ?></ol>
@@ -57,25 +57,25 @@ $e = $escape;
         <label>Skutečně vrácená částka v Kč <input type="number" name="amount_czk" min="1" max="<?= (int) $returnCase['order_total_czk'] ?>" required></label>
         <label>Reference platby / výpisu <input name="reference" maxlength="120" required></label>
         <label class="panel-check"><input type="checkbox" name="verified" value="1" required> Ověřil/a jsem skutečné odeslání peněz v bance nebo platební bráně.</label>
-        <button class="panel-button" type="submit">Zapsat ověřené vrácení peněz</button>
+        <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Zapsat ověřené vrácení peněz</button>
       </form>
     <?php endif; ?>
     <p class="panel-help">Toto zaznamenání samo neposílá peníze ani nevytváří účetní vratku. Skutečný odtok zaneste zvlášť do <a href="<?= $e($adminUrl . '?section=accounting&tab=money') ?>">Peněžního deníku</a> a připojte bankovní nebo platební podklad.</p>
   </section></div>
-  <section class="panel-panel"><details><summary>Smazat chybné nebo testovací podání</summary>
+  <section class="panel-panel"><details><summary class="panel-action panel-action--danger"><?= \SimpleStore\Rendering\Icon::render('delete') ?> Smazat chybné nebo testovací podání</summary>
     <p>Trvale smaže případ, historii a zprávy z místní e-mailové fronty. Již odeslaný e-mail tím příjemci nezmizí. Zákonné doklady a povinnosti uchování posuzuj zvlášť.</p>
     <form class="panel-form" method="post" action="<?= $e($returnBaseUrl . '&id=' . (int) $returnCase['id']) ?>">
       <input type="hidden" name="csrf" value="<?= $e($csrf) ?>"><input type="hidden" name="action" value="return-delete"><input type="hidden" name="id" value="<?= (int) $returnCase['id'] ?>">
       <label>Opiš číslo případu <?= $e($returnCase['case_number']) ?> <input name="confirmation" required autocomplete="off"></label>
-      <button class="panel-button" type="submit">Trvale smazat tento případ</button>
+      <button class="panel-button panel-action panel-action--danger" type="submit"><?= \SimpleStore\Rendering\Icon::render('delete') ?> Trvale smazat tento případ</button>
     </form>
   </details></section>
 <?php elseif ($returnsReady): ?>
   <section class="panel-panel"><h2>Poslední případy</h2>
     <form method="get" action="<?= $e($adminUrl) ?>"><input type="hidden" name="section" value="returns">
       <label>Hledat číslo případu, objednávky nebo e-mail <input name="q" value="<?= $e($returnSearch) ?>" maxlength="100"></label>
-      <button class="panel-button" type="submit">Hledat</button>
-      <?php if ($returnSearch !== ''): ?><a href="<?= $e($returnBaseUrl) ?>">Zrušit hledání</a><?php endif; ?>
+      <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('search') ?> Hledat</button>
+      <?php if ($returnSearch !== ''): ?><a href="<?= $e($returnBaseUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('cancel') ?> Zrušit hledání</a><?php endif; ?>
     </form>
     <?php if ($returnRows === []): ?><p>Zatím nebyla podána žádná reklamace ani žádost o vrácení.</p><?php else: ?>
       <div class="panel-table-scroll"><table class="panel-table"><thead><tr><th>Případ</th><th>Objednávka</th><th>Zboží</th><th>Podáno</th><th>Stav</th><th></th></tr></thead><tbody>
@@ -84,9 +84,9 @@ $e = $escape;
         <td><?= $e($entry['order_number']) ?><br><?= $e($entry['customer_email']) ?></td>
         <td><?= $e($entry['item_name']) ?></td><td><?= $e(CaseNotice::time((string) $entry['submitted_at'])) ?></td>
         <td><?= $e(CaseRepository::STATUSES[$entry['status']] ?? $entry['status']) ?><?php if ($entry['kind'] === 'complaint' && !in_array($entry['status'], ['resolved', 'rejected'], true) && strtotime($entry['submitted_at'] . ' UTC') + 30 * 86400 < time()): ?><br><strong>Prověř lhůtu</strong><?php endif; ?></td>
-        <td><a href="<?= $e($returnBaseUrl . '&id=' . (int) $entry['id']) ?>">Otevřít →</a></td>
+        <td><a href="<?= $e($returnBaseUrl . '&id=' . (int) $entry['id']) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Otevřít</a></td>
       </tr><?php endforeach; ?></tbody></table></div>
-      <div class="panel-order-pages"><?php if ($returnOffset > 0): ?><a href="<?= $e($returnBaseUrl . '&q=' . rawurlencode($returnSearch) . '&offset=' . max(0, $returnOffset - 40)) ?>">← Předchozí</a><?php endif; ?><?php if ($returnPage['nextOffset'] !== null): ?><a href="<?= $e($returnBaseUrl . '&q=' . rawurlencode($returnSearch) . '&offset=' . $returnPage['nextOffset']) ?>">Další →</a><?php endif; ?></div>
+      <div class="panel-order-pages"><?php if ($returnOffset > 0): ?><a href="<?= $e($returnBaseUrl . '&q=' . rawurlencode($returnSearch) . '&offset=' . max(0, $returnOffset - 40)) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-left') ?> Předchozí</a><?php endif; ?><?php if ($returnPage['nextOffset'] !== null): ?><a href="<?= $e($returnBaseUrl . '&q=' . rawurlencode($returnSearch) . '&offset=' . $returnPage['nextOffset']) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?> Další</a><?php endif; ?></div>
     <?php endif; ?>
   </section>
 <?php endif; ?>

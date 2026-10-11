@@ -20,7 +20,7 @@
                     <div><dt>Výdejní místo</dt><dd><?= $escape($carrierShipment['draft']['pickup_point'] ?? '') ?> · <?= $escape($carrierShipment['draft']['pickup_address'] ?? '') ?><br>ID <?= $escape($carrierShipment['draft']['pickup_code'] ?? '') ?> · PSČ <?= $escape($carrierShipment['draft']['postal_code'] ?? '') ?></dd></div>
                     <div><dt>Hmotnost</dt><dd><?= $escape($carrierShipment['draft']['weight_kg'] ?? '') ?> kg</dd></div>
                   </dl>
-                <?php elseif (!$gatewayDispatchBlocked): ?><p><a class="panel-button" href="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id'] . '&carrier_csv=1') ?>">Stáhnout CSV pro GLS e-Balík</a></p><?php endif; ?>
+                <?php elseif (!$gatewayDispatchBlocked): ?><p><a class="panel-icon-link panel-button" href="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id'] . '&carrier_csv=1') ?>"><?= \SimpleStore\Rendering\Icon::render('download') ?> Stáhnout CSV pro GLS e-Balík</a></p><?php endif; ?>
               <?php endif; ?>
               <?php if ($carrierBalik): ?>
                 <p class="panel-help">Vyhledávací mapa Balíkovny pouze vrací vybrané místo; sama nevytváří zásilku ani čárový kód. Údaje níže si připrav pro <a href="https://www.balikovna.cz/cs/web/guest/poslat-balik" target="_blank" rel="noopener noreferrer">podání na webu Balíkovny ↗</a>. Po vytvoření zásilky tam získáš štítek nebo podací kód. Tento e-shop bez podání u dopravce platný štítek nevytvoří.</p>
@@ -41,7 +41,7 @@
                         is_string($enteredDraft[$key] ?? null) ? $enteredDraft[$key] :
                         (is_string($savedDraft[$key] ?? null) ? $savedDraft[$key] : $default);
                   ?>
-                  <?php if ($carrierShipment !== null): ?><details class="panel-order-accordion panel-order-edit-draft" <?= $enteredDraft !== [] ? 'open' : '' ?>><summary>Upravit podklady k podání</summary><?php endif; ?>
+                  <?php if ($carrierShipment !== null): ?><details class="panel-order-accordion panel-order-edit-draft" <?= $enteredDraft !== [] ? 'open' : '' ?>><summary><?= \SimpleStore\Rendering\Icon::render('edit') ?> Upravit podklady k podání</summary><?php endif; ?>
                   <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                     <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="carrier-save"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                     <label>Příjemce / kontaktní osoba<input name="recipient" value="<?= $escape($draftValue('recipient', (string) ($shipping['recipient'] ?? $shipping['name'] ?? ''))) ?>" maxlength="140" required></label>
@@ -59,7 +59,7 @@
                       <label>Obec<input name="city" value="<?= $escape($draftValue('city', $addressDefaults['city'])) ?>" maxlength="120" required></label>
                       <label>PSČ<input name="postal_code" value="<?= $escape($draftValue('postal_code', $addressDefaults['postal_code'])) ?>" maxlength="12" required></label>
                     <?php endif; ?>
-                    <button class="panel-button" type="submit"><?= $carrierShipment === null ? 'Uložit podklady k podání' : 'Upravit podklady' ?></button>
+                    <button class="panel-button panel-action" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> <?= $carrierShipment === null ? 'Uložit podklady k podání' : 'Upravit podklady' ?></button>
                   </form>
                   <?php if ($carrierShipment !== null): ?></details><?php endif; ?>
                 <?php endif; ?>
@@ -69,7 +69,7 @@
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="carrier-register"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                   <label>Skutečné číslo zásilky od dopravce<input name="tracking_number" autocomplete="off" minlength="6" maxlength="50" required></label>
                   <label class="panel-check"><input type="checkbox" name="carrier_confirmed" value="1" required> Zkontroloval/a jsem podání u dopravce a opisuji číslo skutečně vytvořené zásilky.</label>
-                  <button class="panel-button" type="submit">Zapsat číslo dopravce</button>
+                  <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Zapsat číslo dopravce</button>
                 </form>
               <?php endif; ?>
               <p class="panel-help">Uložení podkladů ani čísla v e-shopu nenahrazuje podání u dopravce. Balík označ jeho štítkem nebo kódem. Stav vyřízení objednávky nastav zvlášť po skutečném předání.</p>

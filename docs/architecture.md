@@ -117,3 +117,9 @@ Veřejný katalog čte 12 produktů a blog 6 článků v jedné dávce. SQL pou�
 ## Hranice zabezpečení
 
 Pro běžný hosting zůstává kořen projektu také kořenem webu. `.htaccess` na Apache blokuje `src/`, `config/`, `database/`, `view/`, `vendor/` a další neveřejné soubory ještě před pravidlem pro směrování. Na jiném serveru je potřeba odpovídající zákaz v jeho nastavení. Přihlášení administrátora používá silné náhodné heslo, PHP session a kontrolu CSRF tokenu u každého POST; editor přistupuje k databázi až po přihlášení. Košík má vlastní session a CSRF token i pro hosta. Soukromá stránka objednávky se otevírá pouze znalostí náhodného tokenu; odpověď zakazuje ukládání do cache a indexování. Administraci a pokladnu na veřejné doméně provozuj pouze přes HTTPS a s vypnutým ladicím výpisem chyb.
+
+## Ikony a akce administrace
+
+`SimpleStore\Rendering\Icon::render()` vykresluje pouze pojmenované SVG ze společné sady (24 × 24, tah 1,75). Ikony mají `aria-hidden` a nenahrazují text akce. Šablony volí význam výslovně; žádný JavaScript nerozpoznává tlačítka podle jejich textu. Postranní navigace přijímá `icon_name`, zákaznická navigace může nadále předat textové `icon`.
+
+`assets/panel-actions.css` se načítá po `panel.css` a `panel-orders.css`. Obsahuje společné rozměry, barvy a stavy akcí: `panel-button` pro hlavní akci, `panel-action` pro vedlejší a `panel-action--danger` pro mazání. Mazání používá stejnou geometrii, červené odlišení a původní potvrzovací formuláře. V tabulkách jsou kompaktní ovládací prvky; na mobilu mají tlačítka alespoň 44 px na výšku. Nové akce mají používat tyto třídy namísto lokálních kopií stylů.

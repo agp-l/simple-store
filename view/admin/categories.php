@@ -4,7 +4,7 @@
         <form class="panel-language" method="get" action="<?= $escape($adminUrl) ?>">
           <input type="hidden" name="section" value="categories">
           <label>Jazyk <select name="language"><?php foreach ($site['languages'] as $code): ?><option value="<?= $escape($code) ?>" <?= $language === $code ? 'selected' : '' ?>><?= $escape(strtoupper($code)) ?></option><?php endforeach; ?></select></label>
-          <button type="submit">Zobrazit</button>
+          <button type="submit" class="panel-action"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit</button>
         </form>
       </div>
       <?php if (!$categoryReady): ?><p class="panel-error">Pro správu kategorií <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
@@ -13,7 +13,7 @@
       <div class="panel-grid panel-grid-catalog">
         <section class="panel-panel panel-list" aria-labelledby="category-list-title">
           <div class="panel-panel-head"><h2 id="category-list-title">Strom kategorií <span><?= count($categoryRows) ?></span></h2>
-            <a href="<?= $escape($adminUrl . '?section=categories&language=' . rawurlencode($language)) ?>">＋ Nová</a></div>
+            <a href="<?= $escape($adminUrl . '?section=categories&language=' . rawurlencode($language)) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('plus') ?> Nová</a></div>
           <?php if ($categoryRows === []): ?><p class="panel-empty">Zatím tu není žádná kategorie v tomto jazyce.</p><?php endif; ?>
           <div class="panel-tree">
             <?php foreach ($categoryRows as $row): ?>
@@ -37,8 +37,8 @@
                 <label>Pořadí mezi sourozenci <input type="number" name="sort_order" min="0" max="65535" required value="<?= (int) $selectedCategory['sort_order'] ?>"></label>
                 <label class="panel-check"><input type="checkbox" name="enabled" value="1" <?= $selectedCategory['enabled'] ? 'checked' : '' ?>> Zobrazovat na webu</label>
                 <p class="panel-help">Adresa zůstává stálá kvůli produktům a dalším podkategoriím. Skrytí nadřazené sekce skryje i její potomky.</p>
-                <div class="panel-form-actions"><button class="panel-button" type="submit">Uložit kategorii</button>
-                  <?php if ($categories->find($language, $selectedCategory['path']) !== null): ?><a href="<?= $escape($basePath . $language . '/kategorie-produktu/' . $selectedCategory['path']) ?>">Otevřít na webu ↗</a><?php endif; ?></div>
+                <div class="panel-form-actions"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit kategorii</button>
+                  <?php if ($categories->find($language, $selectedCategory['path']) !== null): ?><a href="<?= $escape($basePath . $language . '/kategorie-produktu/' . $selectedCategory['path']) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Otevřít na webu</a><?php endif; ?></div>
               </form>
             </section>
           <?php endif; ?>
@@ -55,7 +55,7 @@
               <label>Adresa (volitelné) <input name="slug" placeholder="zimni-spacaky" pattern="[a-z0-9]+(-[a-z0-9]+)*"></label>
               <p class="panel-help">Prázdnou adresu vytvoříme automaticky z názvu. Později ji neměníme, aby odkazy a produkty zůstaly platné.</p>
               <label>Pořadí <input type="number" name="sort_order" min="0" max="65535" value="10" required></label>
-              <button class="panel-button" type="submit" <?= $categoryReady ? '' : 'disabled' ?>>＋ Vytvořit kategorii</button>
+              <button class="panel-action panel-button" type="submit" <?= $categoryReady ? '' : 'disabled' ?>><?= \SimpleStore\Rendering\Icon::render('plus') ?> Vytvořit kategorii</button>
             </form>
           </section>
         </div>

@@ -1,0 +1,69 @@
+/* Shared panel action geometry. Variants change emphasis, never icon shape. */
+.panel-icon {
+  display: inline-block;
+  width: 1.125rem;
+  height: 1.125rem;
+  flex: 0 0 1.125rem;
+  vertical-align: -.2em;
+  pointer-events: none;
+}
+.panel-area :is(.panel-action, .panel-button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: .45rem;
+  min-height: 40px;
+  padding: 9px 13px;
+  border: 1px solid #aac5a4;
+  border-radius: var(--action-radius);
+  background: #edf5e9;
+  color: #285e2b;
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.35;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+.panel-area .panel-button:not(.panel-action--danger) {
+  background: var(--forest);
+  border-color: #569d53;
+  color: #172f19;
+}
+.panel-area :is(.panel-action, .panel-button):hover:not(:disabled) {
+  background: #d7eacd;
+  border-color: #659b62;
+  text-decoration: none;
+}
+.panel-area .panel-button:not(.panel-action--danger):hover:not(:disabled) {
+  background: #83bf7d;
+}
+.panel-area .panel-action--danger {
+  color: var(--danger);
+  border-color: #ddb7b0;
+  background: #fff7f5;
+}
+.panel-area .panel-action--danger:hover:not(:disabled) {
+  color: #782a21;
+  border-color: #b5675c;
+  background: #fbe8e3;
+}
+.panel-area summary.panel-action { list-style: none; }
+.panel-area summary.panel-action::-webkit-details-marker { display: none; }
+.panel-area summary.panel-action[aria-expanded="true"],
+.panel-area details[open] > summary.panel-action { border-color: currentColor; }
+.panel-icon-link > .panel-icon,
+.panel-area summary > .panel-icon,
+.panel-area .panel-quiet > .panel-icon { margin-inline-end: .25rem; }
+.panel-area .panel-action > .panel-icon { margin-inline-end: 0; }
+.panel-area .panel-icon-link { text-underline-offset: .2em; }
+.panel-area :is(.panel-order-tabs, .panel-settings-nav, .panel-accounting-nav) a > .panel-icon { margin-inline-end: .35rem; }
+.panel-sidebar nav .panel-icon { width: 19px; height: 19px; }
+.panel-area :where(.panel-order-quick-status, .panel-order-quick) .panel-action { min-height: 36px; padding: 7px 9px; font-size: 12px; }
+@media (max-width: 640px) {
+  .panel-area :is(.panel-action, .panel-button) { min-height: 44px; }
+}
+
+.panel-order-filters a { align-items: center; gap: .4rem; }
+
+.panel-area :is(.panel-action, .panel-button)[hidden] { display: none; }

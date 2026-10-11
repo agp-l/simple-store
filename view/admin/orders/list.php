@@ -11,7 +11,7 @@
   ?>
   <nav class="panel-quick panel-order-filters" aria-label="Filtrovat objednávky">
     <?php foreach (['all' => 'Všechny', 'pending' => 'Čeká na platbu', 'overdue' => 'Po splatnosti', 'paid' => 'Zaplaceno', 'processing' => 'Připravuje se', 'ready_to_ship' => 'Připraveno', 'shipped' => 'Předáno dopravci', 'completed' => 'Dokončeno', 'cancelled' => 'Zrušeno', 'test' => 'Testovací'] as $filter => $label): ?>
-      <a href="<?= $escape($orderBaseUrl . '&status=' . $filter . '&payment=' . rawurlencode($paymentFilter) . '&q=' . rawurlencode($orderSearch)) ?>" <?= $statusFilter === $filter ? 'aria-current="page"' : '' ?>><?= $escape($label) ?></a>
+      <a href="<?= $escape($orderBaseUrl . '&status=' . $filter . '&payment=' . rawurlencode($paymentFilter) . '&q=' . rawurlencode($orderSearch)) ?>" <?= $statusFilter === $filter ? 'aria-current="page"' : '' ?>><?= \SimpleStore\Rendering\Icon::render(['all' => 'list', 'pending' => 'clock', 'overdue' => 'clock', 'paid' => 'check', 'processing' => 'settings', 'ready_to_ship' => 'package', 'shipped' => 'truck', 'completed' => 'check', 'cancelled' => 'cancel', 'test' => 'settings'][$filter]) ?> <?= $escape($label) ?></a>
     <?php endforeach; ?>
   </nav>
   <form class="panel-order-search" method="get" action="<?= $escape($adminUrl) ?>" role="search">
@@ -26,8 +26,8 @@
         <?php endforeach; ?>
       </select>
     </label>
-    <button class="panel-button" type="submit">Filtrovat</button>
-    <?php if ($orderSearch !== '' || $paymentFilter !== 'all'): ?><a class="panel-text-link" href="<?= $escape($orderBaseUrl . '&status=' . $statusFilter) ?>">Vymazat filtry</a><?php endif; ?>
+    <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('filter') ?> Filtrovat</button>
+    <?php if ($orderSearch !== '' || $paymentFilter !== 'all'): ?><a class="panel-icon-link panel-text-link" href="<?= $escape($orderBaseUrl . '&status=' . $statusFilter) ?>"><?= \SimpleStore\Rendering\Icon::render('filter') ?> Vymazat filtry</a><?php endif; ?>
   </form>
   <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Stav vyřízení byl uložen.</p><?php endif; ?>
   <?php if (($_GET['payment_saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Přijetí platby bylo potvrzeno.</p><?php endif; ?>
@@ -35,7 +35,7 @@
   <?php if (!empty($fioConfigured)): ?>
     <?php if (!empty($fioReady)): ?><form method="post" action="<?= $escape($orderBaseUrl) ?>" class="panel-order-search">
       <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="fio-sync">
-      <button class="panel-button" type="submit">Zkontrolovat převody u Fio</button>
+      <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Zkontrolovat převody u Fio</button>
       <span class="panel-help">Bez čekajících převodů banku nekontaktuje. Jinak čte výpis od nejstarší čekající objednávky (nejvýše 89 dní zpět); další dotaz lze odeslat za 35 sekund. Splatnost sama objednávku neruší.</span>
     </form><?php else: ?><p class="panel-help">Pro ověřování Fio nejdříve <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
   <?php endif; ?>
@@ -115,17 +115,17 @@
           </td>
           <td data-label="Celkem" class="panel-order-amount"><?= $orderMoney($listed['total_czk'] ?? 0) ?></td>
           <td data-label="Ovládání" class="panel-order-actions">
-            <a class="panel-text-link" href="<?= $escape($orderBaseUrl . '&id=' . $listedId) ?>">Otevřít detail</a>
-            <?php if (($customerOrderUrl = $orderCustomerUrl($listed)) !== ''): ?><a class="panel-text-link" href="<?= $escape($customerOrderUrl) ?>" target="_blank" rel="noopener noreferrer" title="Otevřít přehled, který vidí zákazník">Zobrazit objednávku ↗</a><?php endif; ?>
+            <a class="panel-icon-link panel-text-link" href="<?= $escape($orderBaseUrl . '&id=' . $listedId) ?>"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Otevřít detail</a>
+            <?php if (($customerOrderUrl = $orderCustomerUrl($listed)) !== ''): ?><a class="panel-icon-link panel-text-link" href="<?= $escape($customerOrderUrl) ?>" target="_blank" rel="noopener noreferrer" title="Otevřít přehled, který vidí zákazník"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit objednávku</a><?php endif; ?>
             <?php if (!$listedPaid && ($listed['payment_method'] ?? '') === 'bank_transfer' &&
                 ($listed['payment_status'] ?? '') === 'pending' &&
                 !in_array($listedStatus, ['cancelled', 'test'], true)): ?>
-              <details class="panel-order-quick"><summary>Potvrdit platbu</summary>
+              <details class="panel-order-quick"><summary><?= \SimpleStore\Rendering\Icon::render('check') ?> Potvrdit platbu</summary>
                 <form method="post" action="<?= $escape($listedQuickUrl) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="mark-order-paid">
                   <input type="hidden" name="id" value="<?= $listedId ?>"><input type="hidden" name="return_list" value="1">
                   <label><input type="checkbox" name="bank_checked" value="1" required> Platbu jsem ověřil ve výpisu banky.</label>
-                  <button type="submit">Označit jako zaplacené</button>
+                  <button type="submit" class="panel-action"><?= \SimpleStore\Rendering\Icon::render('check') ?> Označit jako zaplacené</button>
                 </form>
               </details>
             <?php endif; ?>
@@ -139,19 +139,19 @@
                 <select id="order-quick-<?= $listedId ?>" name="order_status">
                   <?php foreach ($listedNext as $next): ?><option value="<?= $escape($next) ?>"><?= $escape($orderFulfillmentLabel($next)) ?></option><?php endforeach; ?>
                 </select>
-                <button type="submit">Uložit stav</button>
+                <button type="submit" class="panel-action"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit stav</button>
               </form>
             <?php elseif ($listedOverdue): ?>
-              <details class="panel-order-quick"><summary>Stornovat po splatnosti</summary>
+              <details class="panel-order-quick"><summary><?= \SimpleStore\Rendering\Icon::render('cancel') ?> Stornovat po splatnosti</summary>
                 <form method="post" action="<?= $escape($listedQuickUrl) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="cancel-overdue-bank-order">
                   <input type="hidden" name="id" value="<?= $listedId ?>">
                   <label><input type="checkbox" name="bank_checked" value="1" required> Ověřil/a jsem v bankovním výpisu, že platba nedorazila.</label>
-                  <button type="submit">Stornovat a uvolnit sklad</button>
+                  <button type="submit" class="panel-action"><?= \SimpleStore\Rendering\Icon::render('cancel') ?> Stornovat a uvolnit sklad</button>
                 </form>
               </details>
             <?php elseif ($listedStatus === 'new' && !$listedPaid && ($listed['payment_status'] ?? '') === 'pending'): ?>
-              <details class="panel-order-quick"><summary>Stornovat</summary>
+              <details class="panel-order-quick"><summary><?= \SimpleStore\Rendering\Icon::render('cancel') ?> Stornovat</summary>
                 <form method="post" action="<?= $escape($listedQuickUrl) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="set-order-status">
                   <input type="hidden" name="id" value="<?= $listedId ?>"><input type="hidden" name="return_list" value="1">
@@ -160,7 +160,7 @@
                   <input type="hidden" name="fulfillment_note" value="<?= $escape($listed['fulfillment_note'] ?? '') ?>">
                   <?php if (in_array(($listed['payment_method'] ?? ''), ['comgate', 'gopay', 'btcpay'], true)): ?><p>Před stornem ověř, že všechny platby u brány jsou zrušené nebo zamítnuté. Aktivní transakci nelze stornovat.</p><?php endif; ?>
                   <label><input type="checkbox" required> Potvrzuji storno objednávky.</label>
-                  <button type="submit">Stornovat</button>
+                  <button type="submit" class="panel-action"><?= \SimpleStore\Rendering\Icon::render('cancel') ?> Stornovat</button>
                 </form>
               </details>
             <?php endif; ?>
@@ -171,8 +171,8 @@
     </table></div><?php endif; ?>
     <?php if ($ordersPreviousUrl !== '' || $ordersNextUrl !== ''): ?>
       <nav class="panel-quick panel-order-pages" aria-label="Stránky objednávek">
-        <?php if ($ordersPreviousUrl !== ''): ?><a href="<?= $escape($ordersPreviousUrl) ?>">← Předchozí</a><?php endif; ?>
-        <?php if ($ordersNextUrl !== ''): ?><a href="<?= $escape($ordersNextUrl) ?>">Další →</a><?php endif; ?>
+        <?php if ($ordersPreviousUrl !== ''): ?><a href="<?= $escape($ordersPreviousUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-left') ?> Předchozí</a><?php endif; ?>
+        <?php if ($ordersNextUrl !== ''): ?><a href="<?= $escape($ordersNextUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?> Další</a><?php endif; ?>
       </nav>
     <?php endif; ?>
   </section>

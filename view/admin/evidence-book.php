@@ -10,7 +10,7 @@ use SimpleStore\Accounting\EvidenceBookRowPresenter;
         <input type="hidden" name="section" value="accounting"><input type="hidden" name="tab" value="overview">
         <label>Rok<input type="number" name="year" min="2000" max="2100" value="<?= (int) $taxYear ?>" required></label>
         <label>Hledat objednávku, fakturu, VS nebo doklad<input name="q" maxlength="100" value="<?= $escape($evidenceSearch) ?>"></label>
-        <button class="panel-button" type="submit">Zobrazit</button>
+        <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit</button>
       </form>
       <?php if (!$accountingReady || !$invoicesReady): ?><p class="panel-error">Pro společnou knihu nejprve <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
       <?php if ($accountingReady && $invoicesReady): ?>
@@ -28,7 +28,7 @@ use SimpleStore\Accounting\EvidenceBookRowPresenter;
                 <strong><?= $escape($row['order_number']) ?></strong><small> · smazaná objednávka</small>
               <?php endif; ?>
               <?php if ($row['invoice_id'] !== null): ?>
-                <br><a href="<?= $escape($taxUrl . '&tab=invoices&year=' . $taxYear . '&invoice_id=' . (int) $row['invoice_id']) ?>">Faktura <?= $escape($row['invoice_number']) ?></a>
+                <br><a href="<?= $escape($taxUrl . '&tab=invoices&year=' . $taxYear . '&invoice_id=' . (int) $row['invoice_id']) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('document') ?> Faktura <?= $escape($row['invoice_number']) ?></a>
               <?php endif; ?>
               <?php if ($row['kind'] === 'entry'): ?>
                 <strong><?= $escape($row['entry_reference'] !== '' ? $row['entry_reference'] : 'Zápis #' . $row['entry_id']) ?></strong>
@@ -67,8 +67,8 @@ use SimpleStore\Accounting\EvidenceBookRowPresenter;
         <?php endforeach; ?>
         </tbody></table></div>
         <nav class="panel-quick panel-order-pages" aria-label="Stránky knihy dokladů">
-          <?php if ($evidencePreviousUrl !== ''): ?><a href="<?= $escape($evidencePreviousUrl) ?>">← Předchozí</a><?php endif; ?>
-          <?php if ($evidenceNextUrl !== ''): ?><a href="<?= $escape($evidenceNextUrl) ?>">Další →</a><?php endif; ?>
+          <?php if ($evidencePreviousUrl !== ''): ?><a href="<?= $escape($evidencePreviousUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-left') ?> Předchozí</a><?php endif; ?>
+          <?php if ($evidenceNextUrl !== ''): ?><a href="<?= $escape($evidenceNextUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?> Další</a><?php endif; ?>
         </nav>
       <?php endif; ?>
     </section>

@@ -18,14 +18,14 @@ declare(strict_types=1);
       <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=database') ?>">
         <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
         <input type="hidden" name="action" value="table-prefix-migrate">
-        <button class="panel-button" type="submit">Přejmenovat šest tabulek</button>
+        <button class="panel-button panel-action" type="submit"><?= \SimpleStore\Rendering\Icon::render('edit') ?> Přejmenovat šest tabulek</button>
       </form>
     <?php elseif ($tablePrefixStatus['state'] === 'migrated'): ?>
       <p>Tabulky mají prefix <code>shop_</code>. Staré názvy jsou již nepotřebné přechodné pohledy.</p>
       <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=database') ?>">
         <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
         <input type="hidden" name="action" value="table-prefix-cleanup">
-        <button class="panel-button" type="submit">Odstranit staré pohledy</button>
+        <button class="panel-action panel-action--danger panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('delete') ?> Odstranit staré pohledy</button>
       </form>
     <?php elseif ($tablePrefixStatus['state'] === 'complete'): ?>
       <p>Hotovo. Tabulky tohoto obchodu používají jednotně prefix <code>shop_</code> a původní pohledy byly odstraněny.</p>
@@ -65,7 +65,7 @@ declare(strict_types=1);
       <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=database') ?>">
         <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
         <input type="hidden" name="action" value="schema-apply">
-        <button class="panel-button" type="submit">Aktualizovat SQL tabulky</button>
+        <button class="panel-button panel-action" type="submit"><?= \SimpleStore\Rendering\Icon::render('database') ?> Aktualizovat SQL tabulky</button>
       </form>
     <?php endif; ?>
   </section>

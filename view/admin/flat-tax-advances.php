@@ -31,14 +31,14 @@ foreach ($flatTaxAdvanceRows as $advance) $advanceByMonth[(int) $advance['tax_mo
             <?php else: ?>
               <?= $escape($advance['entry_date']) ?> · <strong><?= $taxMoney($advance['amount_czk']) ?></strong>
               <?php if ($advance['reference'] !== ''): ?> · <?= $escape($advance['reference']) ?><?php endif; ?>
-              · <a href="<?= $escape($taxUrl . '&tab=money&year=' . substr((string) $advance['entry_date'], 0, 4) . '&edit_entry=' . (int) $advance['entry_id']) ?>">Zobrazit v deníku</a><br>
+              · <a href="<?= $escape($taxUrl . '&tab=money&year=' . substr((string) $advance['entry_date'], 0, 4) . '&edit_entry=' . (int) $advance['entry_id']) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit v deníku</a><br>
             <?php endif; ?>
           <?php endforeach; ?>
         </td></tr>
       <?php endforeach; ?>
     </tbody></table></div>
     <?php if ($taxYearMode['flat_tax_confirmed']): ?>
-      <details class="panel-entry-add"><summary>Zapsat skutečně uhrazenou zálohu</summary>
+      <details class="panel-entry-add"><summary><?= \SimpleStore\Rendering\Icon::render('save') ?> Zapsat skutečně uhrazenou zálohu</summary>
         <form class="panel-form" method="post" action="<?= $escape($taxUrl) ?>">
           <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="tax-add-flat-advance"><input type="hidden" name="year" value="<?= (int) $taxYear ?>">
           <label>Měsíc, kterého se platba týká<select name="tax_month"><?php foreach ($advanceMonths as $monthNumber => $monthName): ?><option value="<?= $monthNumber ?>"><?= $escape($monthName) ?></option><?php endforeach; ?></select></label>
@@ -48,7 +48,7 @@ foreach ($flatTaxAdvanceRows as $advance) $advanceByMonth[(int) $advance['tax_mo
           <label>Reference z výpisu<input name="reference" maxlength="100"></label>
           <label>Poznámka k platbě nebo přeplatku<input name="note" maxlength="100"></label>
           <p class="panel-help">Zadej jen skutečný peněžní pohyb. Pokud jeden převod pokrývá dva měsíce, zapiš ho jednou a další měsíc uveď v poznámce; tabulka sama nerozúčtuje platbu mezi měsíce. Zápočet přeplatku bez nové platby sem nevkládej jako peněžní pohyb a uschovej podklad finančního úřadu.</p>
-          <button class="panel-button" type="submit">Zapsat úhradu do deníku</button>
+          <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Zapsat úhradu do deníku</button>
         </form>
       </details>
     <?php else: ?>

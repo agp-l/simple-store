@@ -2,7 +2,6 @@
 .product-transfer-actions,
 .product-transfer-filters { display: flex; flex-wrap: wrap; align-items: end; gap: .75rem; margin-block: 1rem; }
 .product-transfer-tabs a { display: inline-flex; align-items: center; gap: .5rem; }
-.product-transfer-icon { font-size: 1.1rem; line-height: 1; }
 .product-prompt-panel .panel-form { width: 100%; min-width: 0; }
 .product-prompt-panel textarea { width: 100%; box-sizing: border-box; resize: vertical; line-height: 1.65; }
 .product-prompt-form textarea { min-height: 30rem; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .875rem; }

@@ -10,7 +10,7 @@
 <p class="panel-help">Kopie dostane novou identitu, adresu s příponou a stav konceptu. Potřebuje úplné údaje nového produktu (název, kategorii a cenu). Nové produkty se normálně přidají při každé volbě. Chybná položka ani konflikt nezastaví ostatní.</p>
 <?php if ($zipState !== null): ?><p>Volba již nahrané fronty: <strong><?= $escape(\SimpleStore\Product\ProductZipConflictPolicy::LABELS[$zipState['duplicate_mode'] ?? 'update']) ?></strong>. Změna výše se použije až při novém nahrání ZIP.</p><?php endif; ?>
 <p class="panel-help">ZIP do 128 MiB, rozbalená data do 512 MiB, nejvýše 200 produktů a 5 000 souborů. Hosting může mít nižší limit: upload_max_filesize <?= $escape(ini_get('upload_max_filesize')) ?>, post_max_size <?= $escape(ini_get('post_max_size')) ?>. Galerie nemá limit 12 fotografií. Každá fotografie do 12 MiB a 20 Mpx.</p>
-<button class="panel-button" <?= class_exists(ZipArchive::class) ? '' : 'disabled' ?>>Nahrát ZIP<?= $zipState !== null ? ' a nahradit dosavadní frontu' : '' ?></button>
+<button class="panel-action panel-button" <?= class_exists(ZipArchive::class) ? '' : 'disabled' ?>><?= \SimpleStore\Rendering\Icon::render('upload') ?> Nahrát ZIP<?= $zipState !== null ? ' a nahradit dosavadní frontu' : '' ?></button>
 <?php if (!class_exists(ZipArchive::class)): ?><p class="panel-error">Pro ZIP import zapni na hostingu PHP rozšíření zip. JSON import zůstává dostupný.</p><?php endif; ?>
 </form>
 <?php
