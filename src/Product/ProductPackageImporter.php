@@ -32,7 +32,7 @@ final class ProductPackageImporter
         // Validate all text and update identity before doing costly image work.
         $probe = self::mapImages($data, array_fill_keys($images, 'images/product-placeholder.png'));
         $fields = ProductImport::fields($probe, $current);
-        if ($this->categories->find($data['language'], $fields['category_path']) === null) throw new InvalidArgumentException('Kategorie neexistuje nebo není aktivní: ' . $fields['category_path']);
+        if ($this->categories->findForAdmin($data['language'], $fields['category_path']) === null) throw new InvalidArgumentException('Kategorie neexistuje: ' . $fields['category_path']);
         $paths = [];
         try {
             foreach ($images as $image) {

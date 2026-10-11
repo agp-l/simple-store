@@ -12,6 +12,7 @@ final class CategoryRepository
 {
     private array $cache = [];
     private ?bool $installed = null;
+    private array $productCounts = [];
 
     public function __construct(private MeekroDB $db)
     {
@@ -63,6 +64,37 @@ final class CategoryRepository
         return $all[$path];
     }
 
+    /** Count current published products, including descendants and hidden folders. */
+    public function productCount(string $language, string $path): int
+    {
+        if (!isset($this->productCounts[$language])) {
+            $this->productCounts[$language] = [];
+            $ready = (int) $this->db->queryFirstField(
+                'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
+                'shop_product_revisions'
+            ) > 0;
+            $rows = $ready ? $this->db->query(
+                'SELECT category, subcategory, COUNT(*) AS total FROM shop_product_revisions
+                 WHERE language=%s AND published=1 AND active_product_key IS NOT NULL GROUP BY category, subcategory', $language
+            ) : [];
+            foreach ($rows as $row) {
+                $branch = CategoryPath::fromProduct($row);
+                while ($branch !== '') {
+                    $this->productCounts[$language][$branch] = ($this->productCounts[$language][$branch] ?? 0) + (int) $row['total'];
+                    $branch = CategoryPath::parent($branch);
+                }
+            }
+        }
+        return $this->productCounts[$language][$path] ?? 0;
+    }
+
+    /** Manual visibility is persistent; emptiness never changes the saved switch. */
+    public function visibility(string $language, string $path): string
+    {
+        if ($this->find($language, $path) === null) return 'hidden';
+        return CategoryPath::parent($path) !== '' && $this->productCount($language, $path) === 0 ? 'empty' : 'visible';
+    }
+
     public function children(string $language, string $parent = ''): array
     {
         if ($parent !== '' && $this->find($language, $parent) === null) {
@@ -89,9 +121,10 @@ final class CategoryRepository
 
     public function trail(string $language, string $path): array
     {
-        if ($this->find($language, $path) === null) {
-            return [];
+        while ($path !== '' && $this->find($language, $path) === null) {
+            $path = CategoryPath::parent($path);
         }
+        if ($path === '') return [];
         $trail = [];
         do {
             array_unshift($trail, $this->all($language)[$path]);
@@ -140,8 +173,8 @@ final class CategoryRepository
         $slug = trim($slug) === '' ? Slugger::fromTitle($title) : trim($slug);
         $path = $parent === '' ? $slug : $parent . '/' . $slug;
         $this->validate($language, $path, $title, $order);
-        if (str_contains($slug, '/') || ($parent !== '' && $this->find($language, $parent) === null)) {
-            throw new InvalidArgumentException('Vyber existující zapnutou nadřazenou kategorii.');
+        if (str_contains($slug, '/') || ($parent !== '' && $this->findForAdmin($language, $parent) === null)) {
+            throw new InvalidArgumentException('Vyber existující nadřazenou kategorii.');
         }
         if ($this->findForAdmin($language, $path) !== null) {
             throw new InvalidArgumentException('Tato adresa kategorie se už používá.');

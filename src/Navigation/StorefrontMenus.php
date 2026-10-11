@@ -74,7 +74,7 @@ final class StorefrontMenus
             'manualUtilityMenu' => ($settings['utility']['source'] ?? '') === 'manual',
             'manualFooterMenu' => ($settings['footer']['source'] ?? '') === 'manual',
             'manualCategoryMenu' => ($settings['category_tabs']['source'] ?? '') === 'manual',
-            'categoryLabels' => array_column($categories->all($url->getLanguage()), 'title', 'path'),
+            'categoryLabels' => array_column(array_filter($categories->all($url->getLanguage()), static fn (array $row): bool => $categories->find($url->getLanguage(), $row['path']) !== null), 'title', 'path'),
         ];
     }
 }

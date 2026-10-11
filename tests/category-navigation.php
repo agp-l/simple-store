@@ -26,9 +26,10 @@ if ($names !== ['Spaní', 'Batohy', 'Vybavení', 'Vaření', 'Oblečení', 'Boty
     throw new RuntimeException('Incorrect root categories: ' . implode(', ', $names));
 }
 $sleeping = $menus->links('category_tabs', 'spani');
-if (!in_array('Spacáky', array_column($sleeping, 'label'), true)
-    || !in_array('Quilty', array_column($sleeping, 'label'), true)) {
-    throw new RuntimeException('Missing sleeping subcategories.');
+foreach ($sleeping as $link) {
+    if ($categories->visibility($language, $link['path']) !== 'visible') {
+        throw new RuntimeException('Empty or hidden subcategory leaked into navigation.');
+    }
 }
 $clothing = $categories->trail($language, 'obleceni/muzi/bundy');
 if (array_column($clothing, 'title') !== ['Oblečení', 'Muži', 'Bundy']) {

@@ -87,6 +87,24 @@ try {
     $before = $home->keys('cs'); $after = array_reverse($before); $home->reorder('cs', $after, $before);
     $assert($home->keys('cs') === $after, 'Homepage drag order not persisted.');
     $home->change('cs', 'remove', $keys[0]); $home->change('cs', 'remove', $keys[1]);
+    // Folder visibility must not suppress published products or block assignment.
+    $folders = new \SimpleStore\Category\CategoryRepository($db);
+    $folders->create('cs', '', $category, 'Test folder', 1);
+    $folders->create('cs', $category, 'stany', 'Hidden tents', 1);
+    $folders->create('cs', $category, 'empty', 'Empty folder', 2);
+    $folders->update('cs', $category . '/stany', 'Hidden tents', 1, false);
+    $assert($folders->visibility('cs', $category . '/empty') === 'empty', 'Empty subcategory remained visible.');
+    $assert($folders->visibility('cs', $category . '/stany') === 'hidden', 'Manual visibility ignored.');
+    $assert($folders->findForAdmin('cs', $category . '/stany') !== null, 'Hidden category unavailable for assignment.');
+    $assert($folders->productCount('cs', $category) === 26, 'Hidden descendants must count toward their parent.');
+    $assert(array_column($folders->trail('cs', $category . '/stany'), 'path') === [$category], 'Hidden product breadcrumb must use its visible ancestor.');
+    $folders->create('cs', $category . '/stany', 'child', 'Child of hidden folder', 1);
+    $folders->update('cs', $category . '/stany', 'Hidden tents', 1, true);
+    $assert($folders->visibility('cs', $category . '/stany') === 'visible', 'Reenabled populated category did not appear.');
+    $db->query('UPDATE shop_product_revisions SET subcategory=%s WHERE product_key=%s', 'empty', $keys[0]);
+    $freshFolders = new \SimpleStore\Category\CategoryRepository($db);
+    $assert($freshFolders->visibility('cs', $category . '/empty') === 'visible', 'Newly populated folder did not appear automatically.');
+    $assert((int) $freshFolders->findForAdmin('cs', $category . '/empty')['enabled'] === 1, 'Automatic hiding changed saved visibility.');
     // A separate test language keeps selection fixtures isolated from catalog content.
     $posts = new \SimpleStore\Content\CatalogPostSelection($db, ['zz']);
     foreach (range(0, 4) as $i) {
@@ -113,6 +131,7 @@ try {
     catch (InvalidArgumentException $expected) {}
     echo "Catalog recommendations, pagination, ordering and weight tests passed.\n";
 } finally {
+    $db->query('DELETE FROM shop_catalog_categories WHERE path=%s OR path LIKE %s', $category, $category . '/%');
     $db->query('DELETE FROM shop_catalog_post_selections WHERE language=%s', 'zz');
     foreach ($postKeys as $key) $db->query('DELETE FROM shop_content_revisions WHERE document_key=%s', $key);
     $db->query('DELETE FROM shop_category_product_selections WHERE category_path=%s OR category_path LIKE %s', $category, $category . '/%');

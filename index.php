@@ -227,7 +227,9 @@ try {
             exit;
         }
         $path = $route['path'] ?? null;
-        $selected = $path === null ? null : $categories->find($url->getLanguage(), $path);
+        $selected = $path === null ? null : ($managingCatalog
+            ? $categories->findForAdmin($url->getLanguage(), $path)
+            : $categories->find($url->getLanguage(), $path));
         if ($path !== null && $selected === null) {
             $renderer->render('not-found', $shared, 404);
             exit;
@@ -316,7 +318,7 @@ try {
         $shared['products'] = $batch['items'];
         $shared['managingCatalog'] = $managingCatalog;
         $shared['catalogVisibility'] = $visibility;
-        $shared['managementCategories'] = $managingCatalog ? $categories->all($url->getLanguage()) : [];
+        $shared['managementCategories'] = $managingCatalog ? $categories->allForAdmin($url->getLanguage()) : [];
         $shared['privatePage'] = $managingCatalog || $homepageEditing;
         $shared['productDeleted'] = $managingCatalog && ($_GET['deleted'] ?? '') === '1';
         $shared['searchTerm'] = $search;
@@ -390,13 +392,10 @@ try {
         }
         if ($editMode) {
             $rows = [];
-            $addCategories = static function (array $nodes, int $depth) use (&$addCategories, &$rows): void {
-                foreach ($nodes as $node) {
-                    $rows[] = ['path' => $node['path'], 'title' => str_repeat('— ', $depth) . $node['title']];
-                    $addCategories($node['children'], $depth + 1);
-                }
-            };
-            $addCategories($categories->tree($url->getLanguage()), 0);
+            foreach ($categories->allForAdmin($url->getLanguage()) as $node) {
+                $rows[] = ['path' => $node['path'], 'title' => str_repeat('— ', $node['depth']) . $node['title'] .
+                    ($categories->visibility($url->getLanguage(), $node['path']) === 'hidden' ? ' (skrytá)' : '')];
+            }
             $shared['editorCategories'] = $rows;
             $shared['productHistory'] = $repository->historySummary($item['product_key'], $url->getLanguage());
             $shared['editToken'] = $auth->token();

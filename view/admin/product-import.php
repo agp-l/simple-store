@@ -47,7 +47,7 @@
 <section class="panel-panel product-prompt-panel"><h2>Platné kategorie (<?= $escape($language) ?>)</h2>
 <p>AI předej i tento seznam. Cesty si nesmí vymýšlet; seznam se vytváří z aktuálních kategorií obchodu.</p>
 <div class="panel-form"><label for="ai-product-categories">Kategorie pro AI</label>
-<textarea id="ai-product-categories" rows="8" readonly><?php foreach ($importCategories as $row): ?><?php if ($categories->find($language, $row['path']) !== null): ?><?= $escape($row['path'] . ' — ' . $row['title']) . "\n" ?><?php endif; ?><?php endforeach; ?></textarea></div>
+<textarea id="ai-product-categories" rows="8" readonly><?php foreach ($importCategories as $row): ?><?php if ($categories->findForAdmin($language, $row['path']) !== null): ?><?= $escape($row['path'] . ' — ' . $row['title']) . "\n" ?><?php endif; ?><?php endforeach; ?></textarea></div>
 <p><a href="<?= $escape($adminUrl . '?section=product-import&example=flextail') ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Načíst JSON ukázku Flextail ZERO Power 10000</a> — koncept s referenční cenou z Gramino, bez fotografie. Odkaz na zdroj se uloží soukromě do dodavatelů.</p>
 <p>Nové externí adresy fotografií nejsou povolené. Použij ZIP s obrázky nebo po JSON importu fotografie nahraj v detailu. Dříve uložené externí fotografie zůstávají čitelné, ale pro novou revizi je nahraď lokálními soubory.</p>
 </section>

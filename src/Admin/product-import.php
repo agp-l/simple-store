@@ -85,7 +85,7 @@ try {
         $key = $importData['product_key'] ?? null;
         $current = $key === null ? null : $repository->current($key, $language);
         $importPreview = ProductImport::fields($importData, $current);
-        if ($categories->find($language, $importPreview['category_path']) === null) {
+        if ($categories->findForAdmin($language, $importPreview['category_path']) === null) {
             throw new InvalidArgumentException('category_path neodpovídá aktivní kategorii. Použij cestu ze seznamu níže.');
         }
         if ($action === 'product-import-save') {
