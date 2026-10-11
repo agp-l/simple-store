@@ -130,3 +130,34 @@ Choose the conflict policy when uploading the ZIP; it is stored with that queue 
 `revision: 5` means “based on revision 5”, not “force the resulting revision to 5”. A successful update creates revision 6. A keyed document with a missing product is skipped in skip/update mode and is never redirected to another product with a matching slug. Copies can explicitly be created from such complete documents.
 
 Expected duplicates/conflicts use a distinct `skipped` result. Invalid products use `error`. Both allow the queue to continue to later items; uncertain interrupted writes are still never retried automatically. For an already-uploaded queue, upload again to choose another policy. Older in-flight queues keep the update policy they originally used.
+
+## Compact overview and supplier-only updates
+
+Export “Přehled pro AI a dodavatelé — stručný JSON” returns
+`simple-store.product-suppliers.v1` with `products`. Each product contains
+`product_key`, `language`, `name`, absolute `url`, `category_path`, `published`,
+and `suppliers` (`id`, `label`, `url`). Translations are deduplicated by product
+identity because supplier links are shared. Draft URLs may not be public.
+
+Import this file through Hromadný JSON in regular update mode, without stock
+restoration. The format is recognized automatically. Only `product_key`,
+`language` and `suppliers` are required; the overview fields are informational.
+No product revision, price, content, category, stock or image is changed.
+
+Keep an exported supplier `id` to edit its label or URL. Omit `id` for new links:
+an exact existing URL updates its label instead of creating a duplicate. Links
+are never matched by domain or label. Omitted links and empty arrays never
+remove existing suppliers. Duplicate/conflicting entries and IDs belonging to
+another product are rejected. Each product is transactional; other valid
+products continue. Supplier changes after preparation reject that item's stale
+plan. Reimporting a freshly prepared identical file adds no duplicate links.
+The full backup format retains its existing explicit replacement semantics.
+
+Example (replace the product key with an exported identity):
+
+```json
+{"format":"simple-store.product-suppliers.v1","products":[
+  {"product_key":"0123456789abcdef0123456789abcdef","language":"cs",
+   "suppliers":[{"label":"Another supplier","url":"https://example.com/product"}]}
+]}
+```

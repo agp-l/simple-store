@@ -70,3 +70,9 @@ ZIP A EXISTUJÍCÍ PRODUKTY:
 - Identita je product_key + language; bez klíče se porovnává přesný slug ve stejném jazyce. Zachovej správnou adresu, pokud se má aktualizovat existující produkt.
 - revision je verze, ze které úprava vychází. Musí se přesně shodovat s aktuální revizí; nižší ani vyšší číslo nepřepíše produkt. Číslo revize nevymýšlej ani nezvyšuj ručně.
 - Pro novou kopii dodej kompletní údaje nového produktu a jeho fotografie, nikoli jen částečnou změnu ceny. Kopie bude koncept s vlastní adresou.
+
+
+AKTUALIZACE POUZE DODAVATELŮ / STRUČNÝ PŘEHLED
+Pro doplnění dodavatelů použij export „Přehled pro AI a dodavatelé — stručný JSON“.
+Vrať {"format":"simple-store.product-suppliers.v1","products":[{"product_key":"KLÍČ Z EXPORTU","language":"cs","suppliers":[{"label":"Obchod","url":"https://example.com/produkt"}]}]}.
+Nikdy si nevymýšlej product_key ani id. Existující id odkazu ponech, pokud měníš jeho URL nebo název. Nové odkazy přidej bez id. Shodná URL se neduplikuje; ostatní existující odkazy se nemažou. Prázdné suppliers nic nesmaže. product_key, language a suppliers stačí; name, url, category_path a published jsou jen informativní. Tento formát neupravuje jiné údaje produktu a nepotřebuje revision, popisy ani obrázky. Dodavatelé jsou společné pro všechny překlady, produkt uváděj jen jednou. Odkazy musí být ověřené adresy produktů dodavatele, ne vymyšlené URL.
