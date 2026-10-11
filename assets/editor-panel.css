@@ -132,3 +132,28 @@
 .catalog-context-actions a { display: inline-flex; align-items: center; gap: 6px; color: #285e2b; font: 650 13px/1.4 var(--font-body); text-underline-offset: 3px; }
 
 .site-admin-inner a[aria-current="page"] { background: #e5f1df; border-color: #568652; }
+
+/* Compact status labels keep the settings summary readable without explanatory prose. */
+.content-admin-panel .product-admin-settings-heading { align-items: flex-start; gap: 10px; }
+.content-admin-panel .product-admin-settings-heading > strong { flex-basis: 100%; }
+.editor-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+.content-admin-panel .editor-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 9px;
+  border: 1px solid;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.editor-chip .panel-icon { width: 15px; height: 15px; flex-basis: 15px; }
+.content-admin-panel .editor-chip--category { color: #345b7d; background: #edf4fb; border-color: #c3d8e9; }
+.content-admin-panel .editor-chip--available { color: #285e2b; background: #e5f2df; border-color: #bdd8b2; }
+.content-admin-panel .editor-chip--waiting { color: #795115; background: #fff4d9; border-color: #ead29a; }
+.content-admin-panel .editor-chip--empty { color: #963e32; background: #fff0eb; border-color: #e6bdb3; }
+.content-admin-panel .editor-chip--quantity { color: #44546b; background: #edf0f6; border-color: #cdd6e4; }
+.content-admin-panel .inline-settings > label,
+.content-admin-panel .inline-stock-form > label { gap: 6px; font-weight: 600; }
+.content-admin-panel .inline-settings :is(input:not([type="checkbox"]), select) { background: #fff; }
