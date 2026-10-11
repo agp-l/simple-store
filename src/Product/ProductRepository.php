@@ -252,6 +252,9 @@ final class ProductRepository
             if ((int) $current['revision_number'] !== $expectedRevision) {
                 throw new RuntimeException('Produkt se mezitím změnil. Obnov stránku a zkus to znovu.');
             }
+            if ((new ProductRelationRepository($this->db, $this->languages))->installed()) {
+                $this->db->query('DELETE FROM shop_product_relations WHERE language=%s AND (product_a=%s OR product_b=%s)', $language, $key, $key);
+            }
             $this->db->query(
                 'DELETE FROM shop_product_revisions WHERE product_key=%s AND language=%s',
                 $key, $language

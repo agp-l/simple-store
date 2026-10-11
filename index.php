@@ -364,6 +364,22 @@ try {
             $shared['editToken'] = $auth->token();
             $shared['privatePage'] = true;
         }
+        if ($item !== null) {
+            $relations = new \SimpleStore\Product\ProductRelationRepository($db, $site['languages']);
+            $shared['relatedProducts'] = $relations->products($url->getLanguage(), $item['product_key']);
+            if ($editMode) {
+                $shared['relationAdmin'] = $relations->products($url->getLanguage(), $item['product_key'], true);
+                $query = $_GET['relation_search'] ?? '';
+                if (!is_string($query) || strlen($query) > 200) { $renderer->render('not-found', $shared, 400); exit; }
+                $shared['relationSearch'] = trim($query);
+                if ($shared['relationSearch'] !== '') {
+                    $found = $repository->managementPage($url->getLanguage(), null, $shared['relationSearch'], 'all', 0, 48);
+                    $excluded = array_merge([$item['product_key']], array_column($shared['relationAdmin'], 'product_key'));
+                    $shared['relationCandidates'] = array_values(array_filter($found['items'], static fn (array $row): bool => !in_array($row['product_key'], $excluded, true)));
+                    $shared['relationMore'] = $found['nextOffset'] !== null;
+                }
+            }
+        }
         if ($editMode) {
             $rows = [];
             $addCategories = static function (array $nodes, int $depth) use (&$addCategories, &$rows): void {

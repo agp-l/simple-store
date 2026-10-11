@@ -71,6 +71,16 @@ final class ProductBulkTransfer
         return (new ProductSupplierTransfer($this->db, $this->products, $this->languages))->export($rows, $baseUrl);
     }
 
+    public function exportRelations(array $rows): string
+    {
+        if (count($rows) > self::COUNT_LIMIT) throw new InvalidArgumentException('Vyber nejvýše 10 000 produktů.');
+        $documents = (new ProductRelationRepository($this->db, $this->languages))->exportDocuments($rows);
+        if ($documents === []) throw new InvalidArgumentException('Vybrané produkty nemají žádná propojení.');
+        $json = json_encode(['format' => ProductRelationTransfer::FORMAT, 'products' => $documents], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        if (strlen($json) > self::LIMIT) throw new InvalidArgumentException('Export přesahuje 32 MiB. Rozděl jej podle kategorií.');
+        return $json;
+    }
+
     public static function decode(string $json, ?string &$format = null): array
     {
         if (strlen($json) > self::LIMIT) throw new InvalidArgumentException('Hromadný JSON může mít nejvýše 32 MiB.');
@@ -78,9 +88,9 @@ final class ProductBulkTransfer
         if (preg_match('/^```(?:json)?\s*\n(.*)\n```$/sD', $json, $match)) $json = $match[1];
         try { $data = json_decode($json, false, 40, JSON_THROW_ON_ERROR); }
         catch (\JsonException $error) { throw new InvalidArgumentException('Neplatný JSON: ' . $error->getMessage()); }
-        if (!$data instanceof \stdClass || !in_array($data->format ?? null, [self::FORMAT, ProductSupplierTransfer::FORMAT], true) || !is_array($data->products ?? null) ||
+        if (!$data instanceof \stdClass || !in_array($data->format ?? null, [self::FORMAT, ProductSupplierTransfer::FORMAT, ProductRelationTransfer::FORMAT], true) || !is_array($data->products ?? null) ||
             array_diff(array_keys((array) $data), ['format', 'exported_at', 'products']) !== []) {
-            throw new InvalidArgumentException('Očekávám format simple-store.products.v1 nebo simple-store.product-suppliers.v1 a seznam products.');
+            throw new InvalidArgumentException('Očekávám format simple-store.products.v1 , simple-store.product-suppliers.v1 nebo simple-store.product-relations.v1 a seznam products.');
         }
         if (count($data->products) < 1 || count($data->products) > self::COUNT_LIMIT) throw new InvalidArgumentException('Dávka musí obsahovat 1 až 10 000 produktů.');
         $format = $data->format;
@@ -91,6 +101,10 @@ final class ProductBulkTransfer
     public function prepare(string $json, bool $restore, bool $includeStock): array
     {
         $documents = self::decode($json, $format);
+        if ($format === ProductRelationTransfer::FORMAT) {
+            if ($restore || $includeStock) throw new InvalidArgumentException('Propojení importuj v běžném režimu bez obnovy skladu.');
+            return (new ProductRelationTransfer($this->db, $this->products, $this->languages))->prepare($documents);
+        }
         if ($format === ProductSupplierTransfer::FORMAT) {
             if ($restore || $includeStock) throw new InvalidArgumentException('JSON dodavatelů použij v běžném režimu aktualizace bez přepisu skladu.');
             return (new ProductSupplierTransfer($this->db, $this->products, $this->languages))->prepare($documents);
@@ -156,6 +170,7 @@ final class ProductBulkTransfer
 
     public function import(array $item): array
     {
+        if (($item['kind'] ?? '') === 'relations') return (new ProductRelationTransfer($this->db, $this->products, $this->languages))->import($item);
         if (($item['kind'] ?? '') === 'suppliers') return (new ProductSupplierTransfer($this->db, $this->products, $this->languages))->import($item);
         $data = $item['data'];
         $current = isset($data['product_key']) ? $this->products->current($data['product_key'], $data['language']) : null;

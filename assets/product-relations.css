@@ -1,0 +1,16 @@
+.product-related { margin-block: 32px; padding-top: 24px; border-top: 1px solid var(--line); }
+.related-product-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr)); gap: 20px; }
+.related-product-card { display: flex; flex-direction: column; gap: 12px; padding: 20px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+.related-product-link { color: var(--ink); text-decoration: none; }
+.related-product-link:hover h3 { text-decoration: underline; }
+.related-product-link img { width: 100%; height: 180px; object-fit: contain; }
+.related-product-link h3 { margin: 12px 0 0; font-size: 17px; }
+.related-product-card p { margin: 0; line-height: 1.6; color: var(--muted); }
+.related-product-card .add-button { align-self: flex-start; margin-top: auto; text-decoration: none; }
+.relation-editor { grid-column: 1 / -1; min-width: 0; }
+.relation-editor summary { cursor: pointer; font-weight: 700; }
+.relation-edit-row { display: flex; flex-wrap: wrap; align-items: end; gap: 10px; padding-block: 12px; border-top: 1px solid var(--line); }
+.relation-edit-row > a { flex-basis: 100%; }
+.relation-edit-row label { display: grid; gap: 5px; flex: 1 1 240px; min-width: 0; }
+.relation-edit-row input:not([type=hidden]), .relation-edit-row select { width: 100%; min-width: 0; box-sizing: border-box; padding: 9px 10px; border: 1px solid var(--line); border-radius: 6px; background: #fff; color: var(--ink); font: inherit; }
+.relation-edit-row :is(input, select):focus-visible { outline: 2px solid var(--forest); outline-offset: 2px; }

@@ -76,3 +76,8 @@ AKTUALIZACE POUZE DODAVATELŮ / STRUČNÝ PŘEHLED
 Pro doplnění dodavatelů použij export „Přehled pro AI a dodavatelé — stručný JSON“.
 Vrať {"format":"simple-store.product-suppliers.v1","products":[{"product_key":"KLÍČ Z EXPORTU","language":"cs","suppliers":[{"label":"Obchod","url":"https://example.com/produkt"}]}]}.
 Nikdy si nevymýšlej product_key ani id. Existující id odkazu ponech, pokud měníš jeho URL nebo název. Nové odkazy přidej bez id. Shodná URL se neduplikuje; ostatní existující odkazy se nemažou. Prázdné suppliers nic nesmaže. product_key, language a suppliers stačí; name, url, category_path a published jsou jen informativní. Tento formát neupravuje jiné údaje produktu a nepotřebuje revision, popisy ani obrázky. Dodavatelé jsou společné pro všechny překlady, produkt uváděj jen jednou. Odkazy musí být ověřené adresy produktů dodavatele, ne vymyšlené URL.
+
+
+SOUVISEJÍCÍ PRODUKTY
+Pro samotné propojení existujících produktů vrať {"format":"simple-store.product-relations.v1","products":[{"product_key":"KLÍČ PRODUKTU Z EXPORTU","language":"cs","related":[{"product_key":"KLÍČ SOUVISEJÍCÍHO PRODUKTU","note":"Krátké vysvětlení propojení nebo ověřené kompatibility."}]}]}.
+Vazba je obousměrná: stejnou dvojici uváděj pouze jednou. Nevymýšlej klíče ani kompatibilitu. note má nejvýše 500 znaků a zobrazuje se u obou produktů, proto ji piš srozumitelně pro obě strany. Popisy, sklad, ceny a další vazby se nezmění. Není potřeba revision. Prázdné related nic nesmaže. Kompatibilitu ověřuj u výrobce pro konkrétní modely a varianty.

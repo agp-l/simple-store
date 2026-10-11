@@ -237,4 +237,17 @@ if (!str_contains($html, 'aria-label="Podkategorie Spaní"') ||
     throw new RuntimeException('Manual category tabs and editorial links must not assume category paths.');
 }
 
+
+
+ob_start();
+$renderer->render('product-record', $detailData + ['relatedProducts' => [[
+    'product_key' => str_repeat('a', 32), 'name' => 'Related <filter>', 'slug' => 'related-filter',
+    'image_path' => 'images/product-placeholder.png', 'price_czk' => 999, 'note' => 'Fits <b>this</b> bottle',
+]]]);
+$relatedHtml = ob_get_clean();
+if (!str_contains($relatedHtml, 'Související produkty') || !str_contains($relatedHtml, 'Related &lt;filter&gt;') ||
+    !str_contains($relatedHtml, 'Fits &lt;b&gt;this&lt;/b&gt; bottle') || !str_contains($relatedHtml, '/shop/cs/produkt/related-filter')) {
+    throw new RuntimeException('Related product cards must resolve URLs and escape all text.');
+}
+
 echo "Catalog rendering tests passed.\n";

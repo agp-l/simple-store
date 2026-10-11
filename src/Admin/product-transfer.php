@@ -62,9 +62,10 @@ try {
                     $exportUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://') . $host . rtrim($basePath, '/');
                 }
             }
-            $body = $namesOnly ? $transfer->supplierOverview($exportRows, $exportUrl) : $transfer->export($exportRows);
+            $relationsOnly = ($_POST['export_format'] ?? '') === 'relations';
+            $body = $namesOnly ? $transfer->supplierOverview($exportRows, $exportUrl) : ($relationsOnly ? $transfer->exportRelations($exportRows) : $transfer->export($exportRows));
             header('Content-Type: application/json; charset=utf-8');
-            header('Content-Disposition: attachment; filename="products-' . gmdate('Y-m-d-His') . ($namesOnly ? '-suppliers.json' : '.json') . '"');
+            header('Content-Disposition: attachment; filename="products-' . gmdate('Y-m-d-His') . ($namesOnly ? '-suppliers.json' : ($relationsOnly ? '-relations.json' : '.json')) . '"');
             echo $body;
             exit;
         }
