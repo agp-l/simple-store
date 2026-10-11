@@ -1,0 +1,24 @@
+.category-panel.category-panel--stories { display: block; }
+.category-panel--stories::before { content: none; }
+.category-panel-destinations { display: flex; align-items: center; gap: 45px; padding-top: 24px; border-top: 1px dashed #9ab98c; }
+.catalog-stories { padding-bottom: 28px; }
+.catalog-stories-heading { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+.catalog-stories-heading a { display: inline-flex; gap: 8px; align-items: center; color: var(--pine); font-size: 13px; font-weight: 600; text-decoration: none; }
+.catalog-story-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; }
+.catalog-story { min-width: 0; background: #fff; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.catalog-story > a { display: flex; flex-direction: column; height: 100%; color: var(--pine); text-decoration: none; }
+.catalog-story img, .catalog-story-placeholder { display: block; width: 100%; height: 170px; object-fit: cover; }
+.catalog-story-placeholder { display: grid; place-items: center; background: linear-gradient(140deg, #d9e8cf, #eef4e8); color: var(--forest); }
+.catalog-story-placeholder svg { width: 48px; height: 48px; }
+.catalog-story-copy { display: flex; flex-direction: column; flex: 1; gap: 12px; padding: 20px; }
+.catalog-story h3 { margin: 0; font-size: 18px; line-height: 1.35; overflow-wrap: anywhere; }
+.catalog-story p { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.6; }
+.catalog-story-read { display: inline-flex; align-items: center; gap: 8px; padding-top: 4px; margin-top: auto; font-size: 13px; font-weight: 700; }
+.catalog-story > a:hover h3 { text-decoration: underline; text-decoration-color: var(--forest); text-underline-offset: 4px; }
+.catalog-story > a:focus-visible { outline: 3px solid var(--forest); outline-offset: -3px; }
+.catalog-story-settings { margin-bottom: 22px; font-size: 13px; }
+.catalog-story-settings summary { cursor: pointer; font-weight: 600; }
+.catalog-story-settings form { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.catalog-story-settings strong { margin-right: auto; }
+@media (max-width: 900px) { .catalog-story-grid { gap: 12px; } .catalog-story-copy { padding: 15px; } .category-panel-destinations .category-panel-copy { flex: none; } .category-panel-destinations { flex-direction: column; align-items: flex-start; gap: 22px; } }
+@media (max-width: 640px) { .catalog-story-grid { grid-template-columns: 1fr; } .catalog-story img, .catalog-story-placeholder { height: 190px; } }

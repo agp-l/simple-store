@@ -250,4 +250,17 @@ if (!str_contains($relatedHtml, 'Související produkty') || !str_contains($rela
     throw new RuntimeException('Related product cards must resolve URLs and escape all text.');
 }
 
+ob_start();
+$renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs', 'catalogPosts' => [[
+    'document_key' => str_repeat('c', 32), 'slug' => 'vyprava', 'title' => 'Výprava <test>',
+    'summary' => 'Náš & váš příběh', 'body' => '',
+]]]);
+$storyHtml = ob_get_clean();
+if (!str_contains($storyHtml, 'Výprava &lt;test&gt;') || !str_contains($storyHtml, 'Náš &amp; váš příběh') ||
+    !str_contains($storyHtml, 'href="/shop/cs/blog/vyprava"') || !str_contains($storyHtml, 'href="/shop/cs/blog"') ||
+    strpos($storyHtml, 'catalog-story-grid') > strpos($storyHtml, 'category-panel-destinations') ||
+    str_contains($storyHtml, 'Vybrat články do tohoto boxu')) {
+    throw new RuntimeException('Article cards must precede destinations, escape text and hide administrator controls.');
+}
+
 echo "Catalog rendering tests passed.\n";

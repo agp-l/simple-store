@@ -20,6 +20,13 @@
           <label>Pořadí v menu <input type="number" min="0" max="65535" value="<?= (int) $content['menu_order'] ?>" data-content-input="menu_order"></label>
         <?php endif; ?>
       </div>
+      <?php if ($page === 'post'): $picked = in_array($content['document_key'], $catalogPostKeys, true); ?>
+      <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>" class="inline-settings">
+        <input type="hidden" name="action" value="catalog-post"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="key" value="<?= $escape($content['document_key']) ?>"><input type="hidden" name="expected" value="<?= $escape(json_encode($catalogPostKeys, JSON_THROW_ON_ERROR)) ?>">
+        <button class="inline-small" name="operation" value="<?= $picked ? 'remove' : 'add' ?>" <?= !$picked && !$content['published'] ? 'disabled' : '' ?>><?= \SimpleStore\Rendering\Icon::render('book') ?> <?= $picked ? 'Odebrat z Kam dál?' : 'Zobrazit v Kam dál?' ?></button>
+        <a href="<?= $escape($siteRoot . $language . '#kategorie') ?>">Výběr článků pod produkty →</a>
+      </form>
+      <?php endif; ?>
       <details class="inline-delete-product"><summary><?= \SimpleStore\Rendering\Icon::render('delete') ?> Odstranit <?= $page === 'post' ? 'článek' : 'stránku' ?></summary>
         <p>Smazání odstraní <?= $page === 'post' ? 'článek' : 'stránku' ?> a všechny revize v tomto jazyce. Ostatní překlady a nahrané fotografie zůstanou zachované.</p>
         <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>">

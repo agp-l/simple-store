@@ -305,6 +305,14 @@ try {
         }
         $shared['homepageSelectionActive'] = $homepageSelectionActive;
         $shared['homepageConfigured'] = $homepageKeys !== null;
+        if ($hasContent && !$managingCatalog) {
+            $postSelection = new \SimpleStore\Content\CatalogPostSelection($db, $site['languages']);
+            $shared['catalogPosts'] = $postSelection->posts($url->getLanguage());
+            if ($canEdit) {
+                $shared['catalogPostKeys'] = $postSelection->keys($url->getLanguage());
+                $shared['adminCsrf'] = $auth->token();
+            }
+        }
         $shared['products'] = $batch['items'];
         $shared['managingCatalog'] = $managingCatalog;
         $shared['catalogVisibility'] = $visibility;
@@ -447,6 +455,7 @@ try {
             ? $contents->findCurrentBySlug($type, $slug, $url->getLanguage())
             : $contents->findPublished($type, $slug, $url->getLanguage());
         $contentEditMode = $editRequested && $canEdit && $item !== null;
+        if ($contentEditMode && $type === 'post') $shared['catalogPostKeys'] = (new \SimpleStore\Content\CatalogPostSelection($db, $site['languages']))->keys($url->getLanguage());
         if ($contentEditMode) {
             $shared['contentHistory'] = $contents->historySummary($item['document_key'], $url->getLanguage());
             $shared['editToken'] = $auth->token();

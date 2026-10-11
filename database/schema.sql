@@ -1184,3 +1184,9 @@ CREATE TABLE IF NOT EXISTS shop_product_relations (
         PRIMARY KEY (language, product_a, product_b),
         KEY product_relation_reverse (language, product_b)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+CREATE TABLE IF NOT EXISTS shop_catalog_post_selections (
+        language CHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+        document_keys_json TEXT NOT NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

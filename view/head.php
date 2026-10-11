@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="<?= $siteRoot ?>assets/inline-edit.css?v=<?= filemtime(__DIR__ . '/../assets/inline-edit.css') ?>">
   <link rel="stylesheet" href="<?= $siteRoot ?>assets/content.css?v=<?= filemtime(__DIR__ . '/../assets/content.css') ?>">
   <?php if (($page ?? '') === 'product-record'): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/product-relations.css?v=<?= filemtime(__DIR__ . '/../assets/product-relations.css') ?>"><?php endif; ?>
+  <?php if (($page ?? '') === 'catalog'): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/catalog-stories.css?v=<?= filemtime(__DIR__ . '/../assets/catalog-stories.css') ?>"><?php endif; ?>
   <?php if (in_array($page ?? '', ['cart', 'shipping', 'payment', 'review', 'complete'], true)): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/checkout.css?v=<?= filemtime(__DIR__ . '/../assets/checkout.css') ?>"><?php endif; ?>
   <?php if ($editMode || $contentEditMode || ($mediaManager ?? false)): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/media.css?v=<?= filemtime(__DIR__ . '/../assets/media.css') ?>"><?php endif; ?>
   <?php if ($panelStylesheet): ?>
