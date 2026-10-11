@@ -10,8 +10,8 @@ Each category has its own ordered recommendations in
 `shop_category_product_selections`, keyed by language and category path. Parent
 recommendations do not automatically become child recommendations. Up to 24 tips
 can be selected for each category. Public queries still enforce category,
-publication, search and weight constraints. Matching tips are first for every
-sort, with a “Náš tip” badge; remaining slots contain the rest of the selection.
+publication, search and weight constraints. Matching tips are first for random, price and name
+sorts, with a “Náš tip” badge; remaining slots contain the rest of the selection.
 Explicit price/name sorts apply to the non-recommended remainder.
 
 Administrators can add/remove the current product from the homepage or any of
@@ -33,3 +33,10 @@ inferred from marketing text. Clear the limit to include all products again.
 No new weight column or product import format is needed. Filtering scans SQL
 pages until enough matching rows are found; a large catalog may later benefit
 from a normalized, indexed weight projection maintained during imports/edits.
+
+Explicit weight ordering (lightest/heaviest first) sorts the full matching catalog
+before pagination, keeps unknown weights last in both directions, and preserves
+tip badges without overriding the requested weight order. Sort and maximum weight
+share one GET form, so changing the sort also submits the current weight limit.
+Weight sorting currently scans matching SQL pages and sorts in PHP; the normalized
+weight projection mentioned above is the scaling path for a much larger catalog.
