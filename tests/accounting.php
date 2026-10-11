@@ -64,6 +64,7 @@ class MeekroDB
 }
 
 require dirname(__DIR__) . '/src/Accounting/AccountingRepository.php';
+require dirname(__DIR__) . '/src/Rendering/Icon.php';
 
 use SimpleStore\Accounting\AccountingRepository;
 
