@@ -42,6 +42,27 @@ try {
         $offset = $page['nextOffset'];
     } while ($offset !== null);
     $assert(count($seen) === 26 && count(array_unique($seen)) === 26 && !in_array($keys[25], $seen, true), 'Random pagination duplicated or leaked products.');
+    foreach (['price-asc', 'price-desc', 'name', 'default'] as $explicitSort) {
+        foreach ([null, 20000] as $weightLimit) {
+            $actual = []; $cursor = 0;
+            do {
+                $page = $catalog->page('cs', $category, '', $explicitSort, $cursor, '0123456789abcdef', $picks, $weightLimit);
+                foreach ($page['items'] as $item) {
+                    $assert($item['is_tip'] === in_array($item['product_key'], $picks, true), 'Explicit sort lost recommendation badges.');
+                }
+                array_push($actual, ...array_column($page['items'], 'product_key'));
+                $cursor = $page['nextOffset'];
+            } while ($cursor !== null);
+            $indices = $weightLimit === null ? array_merge(range(0, 24), [26]) : range(0, 19);
+            if (in_array($explicitSort, ['price-desc', 'default'], true)) $indices = array_reverse($indices);
+            if ($explicitSort === 'name') usort($indices, static fn (int $a, int $b): int => strcmp($prefix . '-' . $a, $prefix . '-' . $b));
+            $assert($actual === array_map(static fn (int $i): string => $keys[$i], $indices), 'Recommendations overrode explicit sort or filtered pagination.');
+        }
+    }
+    foreach ([-1, 100001] as $invalidOffset) {
+        try { $catalog->page('cs', $category, '', 'weight-asc', $invalidOffset, '', [], null); throw new RuntimeException('Invalid weight page accepted.'); }
+        catch (InvalidArgumentException $expected) {}
+    }
     foreach (['weight-asc', 'weight-desc'] as $weightSort) {
         $weighted = []; $cursor = 0;
         do {

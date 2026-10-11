@@ -2,6 +2,8 @@
 declare(strict_types=1);
 namespace SimpleStore\Product;
 
+use InvalidArgumentException;
+
 /** SQL-paged catalog; weight filtering reads existing structured specifications. */
 final class CatalogSelection
 {
@@ -10,6 +12,9 @@ final class CatalogSelection
     public function page(string $language, ?string $category, string $search, string $sort,
         int $offset, string $seed, array $tips, ?int $maxWeight): array
     {
+        if ($offset < 0 || $offset > 100000 || ($maxWeight !== null && ($maxWeight < 1 || $maxWeight > 1000000))) {
+            throw new InvalidArgumentException('Invalid catalog page or weight limit.');
+        }
         if (in_array($sort, ['weight-asc', 'weight-desc'], true)) {
             $batch = $this->weightPage($language, $category, $search, $sort, $offset, $maxWeight);
         } elseif ($maxWeight === null) {
@@ -22,6 +27,7 @@ final class CatalogSelection
                     $weight = ProductWeight::grams($row['details_json'] ?? null);
                     if ($weight === null || $weight > $maxWeight) continue;
                     if ($accepted++ < $offset) continue;
+                    $row['weight_grams'] = $weight;
                     $items[] = $row;
                     if (count($items) === 13) break 2;
                 }
@@ -31,7 +37,9 @@ final class CatalogSelection
         }
         foreach ($batch['items'] as &$row) {
             $row['is_tip'] = in_array($row['product_key'], $tips, true);
-            $row['weight_grams'] = ProductWeight::grams($row['details_json'] ?? null);
+            if (!array_key_exists('weight_grams', $row)) {
+                $row['weight_grams'] = ProductWeight::grams($row['details_json'] ?? null);
+            }
         }
         unset($row);
         return $batch;

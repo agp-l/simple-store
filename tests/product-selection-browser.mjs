@@ -25,9 +25,10 @@ const item = (key) => {
   return row;
 };
 const a = item('a'.repeat(32)), b = item('b'.repeat(32)); list.children = [a, b];
-let responseOK = true, payload, requests = 0;
-const document = {querySelectorAll: () => [list], getElementById: () => null, elementFromPoint: () => a};
-vm.runInNewContext(fs.readFileSync('assets/product-selection.js', 'utf8'), {document, URLSearchParams, Map,
+let responseOK = true, payload, requests = 0, activeCatalog = null, sortValue = 'price-asc', redirected = '';
+const location = {href: 'https://shop.example/cs/kategorie-produktu/spani?sort=random&offset=12&seed=0123456789abcdef&max_weight=500', assign: url => redirected = url};
+const document = {querySelectorAll: () => [list], getElementById: id => id === 'catalog' ? activeCatalog : id === 'sort' ? {value: sortValue} : null, elementFromPoint: () => a};
+vm.runInNewContext(fs.readFileSync('assets/product-selection.js', 'utf8'), {document, URLSearchParams, URL, Map, location,
   fetch: async (_url, options) => { requests++; payload = options.body; return {ok: responseOK, json: async () => responseOK ? {saved: true} : {error: 'Conflict'}}; }});
 const settle = () => new Promise(resolve => setImmediate(resolve));
 b.handlers.keydown({altKey: true, key: 'ArrowUp', preventDefault() {}}); await settle();
@@ -55,3 +56,21 @@ listHandlers.pointermove({pointerId: 2, clientX: 0, clientY: 80});
 listHandlers.pointerup({pointerId: 2}); await settle();
 assert.deepEqual(list.children, [a, b]); assert.equal(requests, 3);
 console.log('Product selection pointer, keyboard, persistence and failure recovery tests passed.');
+
+let prepends = 0;
+activeCatalog = {querySelectorAll: () => [{dataset: {productKey: a.dataset.key}}, {dataset: {productKey: b.dataset.key}}], prepend() { prepends++; }};
+b.handlers.keydown({altKey: true, key: 'ArrowUp', preventDefault() {}}); await settle();
+assert.equal(prepends, 0, 'Saving tips must not override explicit catalog ordering.');
+assert.equal(redirected, '');
+sortValue = 'random';
+b.handlers.keydown({altKey: true, key: 'ArrowDown', preventDefault() {}}); await settle();
+const refreshed = new URL(redirected);
+assert.equal(refreshed.searchParams.has('offset'), false, 'Changed recommendations must reset pagination.');
+assert.equal(refreshed.searchParams.get('max_weight'), '500');
+assert.equal(refreshed.searchParams.get('seed'), '0123456789abcdef');
+assert.equal(prepends, 0, 'Category preview must reload complete ordering instead of moving an incomplete card subset.');
+list.dataset.scope = 'home'; redirected = '';
+b.handlers.keydown({altKey: true, key: 'ArrowUp', preventDefault() {}}); await settle();
+assert.equal(prepends, 2, 'Homepage preview should still update immediately.');
+assert.equal(redirected, '');
+console.log('Recommendation preview respects explicit sorts and resets random pagination.');
