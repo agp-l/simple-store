@@ -539,25 +539,6 @@ main {
   font-size: 16px;
 }
 
-.product-admin-nav-head form {
-  margin: 0;
-}
-
-.product-admin-nav-head button {
-  min-height: 34px;
-  padding: 6px 11px;
-  border: 1px solid #568652;
-  border-radius: 4px;
-  background: #387341;
-  color: white;
-  font: 700 12px var(--font-body);
-  cursor: pointer;
-}
-
-.product-admin-nav-head button:hover {
-  background: #568652;
-}
-
 .product-admin-nav-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -621,32 +602,6 @@ main {
   }
 }
 
-.site-admin-bar {
-  border-bottom: 1px solid #bed7b8;
-  background: #eaf5e6;
-}
-
-.site-admin-inner {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-  padding-top: 9px;
-  padding-bottom: 9px;
-  font-size: 12px;
-}
-
-.site-admin-inner strong {
-  color: var(--ink);
-  margin-right: 6px;
-}
-
-.site-admin-inner form {
-  margin: 0;
-}
-
-.site-admin-inner button,
-.site-admin-inner a,
 .catalog-manage-filter a {
   display: inline-flex;
   align-items: center;
@@ -661,14 +616,9 @@ main {
   cursor: pointer;
 }
 
-.site-admin-inner button:hover,
-.site-admin-inner a:hover,
 .catalog-manage-filter a:hover {
   background: #dcefd6;
 }
-.site-admin-inner .site-admin-preview { margin-left:auto; }
-.site-admin-preview button { border-color:var(--forest-dark); background:var(--forest-dark); color:#fff; }
-.site-admin-preview button:hover { background:#396b3c; color:#fff; }
 .visitor-preview-toggle { position:fixed; z-index:100; right:16px; bottom:16px; margin:0; }
 .visitor-preview-toggle button { padding:10px 14px; border:1px solid var(--lime); border-radius:4px; background:var(--night); color:#fff; font:700 12px var(--font-body); cursor:pointer; }
 .visitor-preview-toggle button:hover, .visitor-preview-toggle button:focus-visible { background:#3a483c; }

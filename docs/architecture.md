@@ -123,3 +123,9 @@ Pro běžný hosting zůstává kořen projektu také kořenem webu. `.htaccess`
 `SimpleStore\Rendering\Icon::render()` vykresluje pouze pojmenované SVG ze společné sady (24 × 24, tah 1,75). Ikony mají `aria-hidden` a nenahrazují text akce. Šablony volí význam výslovně; žádný JavaScript nerozpoznává tlačítka podle jejich textu. Postranní navigace přijímá `icon_name`, zákaznická navigace může nadále předat textové `icon`.
 
 `assets/panel-actions.css` se načítá po `panel.css` a `panel-orders.css`. Obsahuje společné rozměry, barvy a stavy akcí: `panel-button` pro hlavní akci, `panel-action` pro vedlejší a `panel-action--danger` pro mazání. Mazání používá stejnou geometrii, červené odlišení a původní potvrzovací formuláře. V tabulkách jsou kompaktní ovládací prvky; na mobilu mají tlačítka alespoň 44 px na výšku. Nové akce mají používat tyto třídy namísto lokálních kopií stylů.
+
+## Úpravy přímo na webu
+
+`view/manage/site-tools.php` vykresluje jednotnou lištu Správa webu z ověřeného administračního kontextu. Vytváření produktů, stránek a článků je jen zde, nikoli zároveň v jednotlivých editorech. Veřejné trasy včetně košíku ji dostávají pouze přihlášenému správci mimo návštěvnický náhled; administrační obrazovky ji dostávají po autorizaci.
+
+`view/manage/product-panel.php` sdružuje produktové akce, otevřené nastavení, soukromé dodavatele (`product-suppliers.php`) a rozbalovací organizační a mazací volby. `content-panel.php` používá stejný rámec pro stránky a články. `assets/editor-panel.css` obsahuje jejich společné rozvržení: na desktopu nastavení a dodavatelé vedle sebe, pod 960 px pod sebou. Přesun šablon nemění POST akce, CSRF tokeny ani datové atributy editorů.
