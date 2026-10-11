@@ -62,9 +62,9 @@ try {
                     $exportUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://') . $host . rtrim($basePath, '/');
                 }
             }
-            $body = $namesOnly ? ProductBulkTransfer::names($exportRows, $exportUrl) : $transfer->export($exportRows);
-            header('Content-Type: ' . ($namesOnly ? 'text/plain' : 'application/json') . '; charset=utf-8');
-            header('Content-Disposition: attachment; filename="products-' . gmdate('Y-m-d-His') . ($namesOnly ? '-ai.txt' : '.json') . '"');
+            $body = $namesOnly ? $transfer->supplierOverview($exportRows, $exportUrl) : $transfer->export($exportRows);
+            header('Content-Type: application/json; charset=utf-8');
+            header('Content-Disposition: attachment; filename="products-' . gmdate('Y-m-d-His') . ($namesOnly ? '-suppliers.json' : '.json') . '"');
             echo $body;
             exit;
         }

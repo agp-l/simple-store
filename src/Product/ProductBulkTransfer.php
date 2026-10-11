@@ -66,37 +66,37 @@ final class ProductBulkTransfer
         return $json;
     }
 
-    public static function names(array $rows, string $baseUrl): string
+    public function supplierOverview(array $rows, string $baseUrl): string
     {
-        $lines = ['# Produkty v katalogu — název | adresa | kategorie | stav', '# Koncepty jsou zahrnuté; jejich adresy nejsou veřejně dostupné.'];
-        foreach ($rows as $row) {
-            $lines[] = str_replace(["\r", "\n", "\t"], ' ', $row['name']) . ' | ' . rtrim($baseUrl, '/') . '/' .
-                rawurlencode($row['language']) . '/produkt/' . rawurlencode($row['slug']) . ' | ' . CategoryPath::fromProduct($row) .
-                ' | ' . ((int) $row['published'] === 1 ? 'veřejný' : 'koncept');
-        }
-        return implode("\n", $lines) . "\n";
+        return (new ProductSupplierTransfer($this->db, $this->products, $this->languages))->export($rows, $baseUrl);
     }
 
-    public static function decode(string $json): array
+    public static function decode(string $json, ?string &$format = null): array
     {
         if (strlen($json) > self::LIMIT) throw new InvalidArgumentException('Hromadný JSON může mít nejvýše 32 MiB.');
         $json = trim($json);
         if (preg_match('/^```(?:json)?\s*\n(.*)\n```$/sD', $json, $match)) $json = $match[1];
         try { $data = json_decode($json, false, 40, JSON_THROW_ON_ERROR); }
         catch (\JsonException $error) { throw new InvalidArgumentException('Neplatný JSON: ' . $error->getMessage()); }
-        if (!$data instanceof \stdClass || ($data->format ?? null) !== self::FORMAT || !is_array($data->products ?? null) ||
+        if (!$data instanceof \stdClass || !in_array($data->format ?? null, [self::FORMAT, ProductSupplierTransfer::FORMAT], true) || !is_array($data->products ?? null) ||
             array_diff(array_keys((array) $data), ['format', 'exported_at', 'products']) !== []) {
-            throw new InvalidArgumentException('Očekávám format simple-store.products.v1 a seznam products.');
+            throw new InvalidArgumentException('Očekávám format simple-store.products.v1 nebo simple-store.product-suppliers.v1 a seznam products.');
         }
         if (count($data->products) < 1 || count($data->products) > self::COUNT_LIMIT) throw new InvalidArgumentException('Dávka musí obsahovat 1 až 10 000 produktů.');
+        $format = $data->format;
         return $data->products;
     }
 
     /** Planning is read-only. Restore rebases once here; execution still checks for intervening edits. */
     public function prepare(string $json, bool $restore, bool $includeStock): array
     {
+        $documents = self::decode($json, $format);
+        if ($format === ProductSupplierTransfer::FORMAT) {
+            if ($restore || $includeStock) throw new InvalidArgumentException('JSON dodavatelů použij v běžném režimu aktualizace bez přepisu skladu.');
+            return (new ProductSupplierTransfer($this->db, $this->products, $this->languages))->prepare($documents);
+        }
         $items = []; $seen = []; $stockValues = [];
-        foreach (self::decode($json) as $index => $document) {
+        foreach ($documents as $index => $document) {
             $item = ['folder' => 'Položka ' . ($index + 1), 'status' => 'pending', 'message' => '', 'new_key' => bin2hex(random_bytes(16))];
             try {
                 if (!$document instanceof \stdClass) throw new InvalidArgumentException('Produkt musí být JSON objekt.');
@@ -156,6 +156,7 @@ final class ProductBulkTransfer
 
     public function import(array $item): array
     {
+        if (($item['kind'] ?? '') === 'suppliers') return (new ProductSupplierTransfer($this->db, $this->products, $this->languages))->import($item);
         $data = $item['data'];
         $current = isset($data['product_key']) ? $this->products->current($data['product_key'], $data['language']) : null;
         $fields = ProductImport::fields($data, $current);

@@ -32,7 +32,7 @@
 <?php endif; ?>
 </form></section>
 <?php endif; ?>
-<?php if ($importTab === 'help'): ?><section class="panel-panel product-prompt-panel"><h2>Zadání pro AI</h2>
+<?php if ($importTab === 'help'): ?><section class="panel-panel product-prompt-panel"><h2>Zadání pro AI</h2><p>Pro doplňování pouze dodavatelů exportuj stručný JSON. Požádej AI, aby zachovala product_key a language, doplnila suppliers s label a url a ponechala format simple-store.product-suppliers.v1. Existující id odkazu slouží pro jeho úpravu; nový odkaz přidej bez id. Výsledek nahraj přes Hromadný JSON. Ostatní údaje produktu se nezmění.</p>
 <p>Uprav pravidla, podle kterých má AI připravovat produkty. Uložené zadání je společné pro všechny jazyky a zůstane zachované i při aktualizaci webu.</p>
 <?php if ($promptError !== ''): ?><p class="panel-error" role="alert"><?= $escape($promptError) ?></p><?php endif; ?>
 <?php if (($_GET['prompt_saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Zadání pro AI bylo uloženo.</p><?php endif; ?>

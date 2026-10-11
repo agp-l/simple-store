@@ -1,6 +1,7 @@
 <section class="panel-panel">
 <h2>Hromadný import JSON</h2>
-<p>Nahraj export nebo vlož JSON od AI ve formátu <code>simple-store.products.v1</code>. Nejdřív se připraví seznam změn bez zápisu produktů. Potom import spustíš; chybné položky se přeskočí.</p>
+<p>Nahraj export nebo vlož JSON od AI ve formátu <code>simple-store.products.v1</code> nebo stručný přehled <code>simple-store.product-suppliers.v1</code>. Nejdřív se připraví seznam změn bez zápisu produktů. Potom import spustíš; chybné položky se přeskočí.</p>
+<p><strong>Stručný JSON dodavatelů:</strong> aktualizuje pouze dodavatelské odkazy. Existující odkazy, které v JSON chybí, zůstanou zachované; prázdný seznam nic nesmaže. ID z exportu umožňuje změnit název i URL odkazu. Nový odkaz přidej bez ID; shodná URL se neduplikuje. Název produktu, jeho adresa a kategorie v přehledu jsou pouze informativní. Použij běžný režim bez přepisu skladu.</p>
 <form class="panel-form" method="post" enctype="multipart/form-data" action="<?= $escape($adminUrl . '?section=product-import&tab=bulk') ?>">
 <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="product-bulk-prepare">
 <label>Soubor JSON<input type="file" name="json_file" accept=".json,application/json"></label>

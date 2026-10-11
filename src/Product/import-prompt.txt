@@ -59,7 +59,7 @@ HROMADNÝ JSON / EXISTUJÍCÍ KATALOG:
 - Pro více produktů vrať jediný objekt {"format":"simple-store.products.v1","products":[...]}.
 - Každý prvek products je celý samostatný objekt simple-store.product.v1 popsaný výše, včetně language a product. Nesmí to být jen obsah product.
 - Při úpravě zachovej product_key a revision z čerstvého exportu. Do product vlož pouze měněná pole; neuvedená pole a dodavatelé zůstanou beze změny. Kolekce nahrazuješ celé, nikoli po jednotlivých položkách. Původní produkt v dávce neopakuj.
-- Pro nový produkt vynech product_key a revision; dodej povinné name, category_path, price_czk. Nezakládej znovu produkt ze seznamu existujících produktů. Seznam názvů a adres TXT není importovatelný; pro aktualizaci si vyžádej úplný JSON export vybraných produktů.
+- Pro nový produkt vynech product_key a revision; dodej povinné name, category_path, price_czk. Nezakládej znovu produkt ze seznamu existujících produktů. Stručný přehled JSON lze importovat pouze pro aktualizaci dodavatelů (viz níže); pro úpravy popisů a cen si vyžádej úplný JSON export vybraných produktů.
 - Export může obsahovat exported_at na kořeni dávky a stock_quantity vedle product v jednotlivých položkách. Skladové počty si nevymýšlej ani neměň. Import skladu se zapíná samostatně v administraci. product_key ani revision neodvozuj z adresy nebo názvu.
 - Běžný import odmítne zastaralou revizi. Režim obnovy zálohy je ruční volba správce, nikdy jej nevyžaduj pro běžnou AI úpravu.
 - JSON obsahuje cesty k obrázkům, nikoli obrazová data. Zachovej existující image_path, gallery a obrazové bloky. Pro nové fotografie použij ZIP nebo následné ruční nahrání.
@@ -70,3 +70,9 @@ ZIP A EXISTUJÍCÍ PRODUKTY:
 - Identita je product_key + language; bez klíče se porovnává přesný slug ve stejném jazyce. Zachovej správnou adresu, pokud se má aktualizovat existující produkt.
 - revision je verze, ze které úprava vychází. Musí se přesně shodovat s aktuální revizí; nižší ani vyšší číslo nepřepíše produkt. Číslo revize nevymýšlej ani nezvyšuj ručně.
 - Pro novou kopii dodej kompletní údaje nového produktu a jeho fotografie, nikoli jen částečnou změnu ceny. Kopie bude koncept s vlastní adresou.
+
+
+AKTUALIZACE POUZE DODAVATELŮ / STRUČNÝ PŘEHLED
+Pro doplnění dodavatelů použij export „Přehled pro AI a dodavatelé — stručný JSON“.
+Vrať {"format":"simple-store.product-suppliers.v1","products":[{"product_key":"KLÍČ Z EXPORTU","language":"cs","suppliers":[{"label":"Obchod","url":"https://example.com/produkt"}]}]}.
+Nikdy si nevymýšlej product_key ani id. Existující id odkazu ponech, pokud měníš jeho URL nebo název. Nové odkazy přidej bez id. Shodná URL se neduplikuje; ostatní existující odkazy se nemažou. Prázdné suppliers nic nesmaže. product_key, language a suppliers stačí; name, url, category_path a published jsou jen informativní. Tento formát neupravuje jiné údaje produktu a nepotřebuje revision, popisy ani obrázky. Dodavatelé jsou společné pro všechny překlady, produkt uváděj jen jednou. Odkazy musí být ověřené adresy produktů dodavatele, ne vymyšlené URL.

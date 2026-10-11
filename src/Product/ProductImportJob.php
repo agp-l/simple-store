@@ -111,7 +111,7 @@ final class ProductImportJob
                     } else {
                         $item['status'] = 'success';
                         $item['saved'] = $saved;
-                        $item['message'] = $saved['name'] . ' — uložena revize ' . $saved['revision_number'];
+                        $item['message'] = $saved['message'] ?? ($saved['name'] . ' — uložena revize ' . $saved['revision_number']);
                     }
                 } catch (Throwable $error) {
                     error_log('Product import: ' . $error->getMessage());

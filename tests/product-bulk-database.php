@@ -41,7 +41,7 @@ try {
     $assert(count($rows) === 2, 'Filtered export omitted a draft.');
     $selected = ProductBulkTransfer::select($rows, json_encode([ProductBulkTransfer::identity($rows[0])]));
     $assert(count($selected) === 1, 'Selection did not restrict export.');
-    $assert(str_contains(ProductBulkTransfer::names($rows, 'https://example.com/shop'), 'https://example.com/shop/cs/produkt/' . $prefix), 'AI list has no absolute product URL.');
+    $assert(str_contains($transfer->supplierOverview($rows, 'https://example.com/shop'), 'https://example.com/shop/cs/produkt/' . $prefix), 'AI list has no absolute product URL.');
     $backup = $transfer->export($rows);
     $exported = json_decode($backup, true, 40, JSON_THROW_ON_ERROR)['products'];
     $first = array_values(array_filter($exported, static fn (array $d): bool => $d['product_key'] === $keys[0]))[0];
@@ -74,6 +74,37 @@ try {
     $collision = $template; $collision['product']['slug'] = $prefix . '-new';
     $state = $run($transfer->prepare($bundle([$collision]), false, false));
     $assert($state['items'][0]['status'] === 'error', 'Duplicate slug created a second product.');
+    // Compact supplier batches never modify product content or remove omitted links.
+    $overview = json_decode($transfer->supplierOverview($transfer->rows('cs', 'batohy', $prefix), 'https://example.com/shop'), true, 40, JSON_THROW_ON_ERROR);
+    $assert($overview['format'] === \SimpleStore\Product\ProductSupplierTransfer::FORMAT, 'Wrong compact export format.');
+    $compact = array_values(array_filter($overview['products'], static fn (array $d): bool => $d['product_key'] === $keys[0]))[0];
+    $assert(count($compact['suppliers']) === 1 && is_int($compact['suppliers'][0]['id']), 'Compact export omitted supplier identities.');
+    $supplierBundle = static fn (array $entries): string => json_encode(['format' => \SimpleStore\Product\ProductSupplierTransfer::FORMAT, 'products' => $entries], JSON_THROW_ON_ERROR);
+    $beforeProduct = $products->current($keys[0], 'cs');
+    $links = new ProductSupplierLinkRepository($db);
+    $originalId = (int) $compact['suppliers'][0]['id'];
+    $compact['suppliers'] = [['label' => 'Extra shop', 'url' => 'https://extra.example/item']];
+    $state = $run($transfer->prepare($supplierBundle([['product_key' => 'bad'], $compact]), false, false));
+    $assert(array_column($state['items'], 'status') === ['error', 'success'], 'Supplier batch did not isolate invalid products.');
+    $assert(count($links->forProduct($keys[0])) === 2, 'Add removed an omitted link.');
+    $compact['suppliers'][0]['label'] = 'Updated shop';
+    $run($transfer->prepare($supplierBundle([$compact]), false, false));
+    $assert(count($links->forProduct($keys[0])) === 2 && $links->forProduct($keys[0])[1]['label'] === 'Updated shop', 'URL matching duplicated a supplier.');
+    $compact['suppliers'] = [['id' => $originalId, 'label' => 'Moved supplier', 'url' => 'https://example.com/new-item']];
+    $run($transfer->prepare($supplierBundle([$compact]), false, false));
+    $assert($links->forProduct($keys[0])[0]['url'] === 'https://example.com/new-item', 'ID update did not change URL.');
+    $compact['suppliers'] = [];
+    $run($transfer->prepare($supplierBundle([$compact]), false, false));
+    $assert(count($links->forProduct($keys[0])) === 2, 'Empty supplier list deleted links.');
+    $assert($products->current($keys[0], 'cs') === $beforeProduct, 'Supplier import changed content, revisions or inventory.');
+    $compact['suppliers'] = [['label' => 'Third', 'url' => 'https://third.example/item']];
+    $planned = $transfer->prepare($supplierBundle([$compact]), false, false);
+    $links->save($keys[0], $originalId, 'Concurrent edit', 'https://example.com/new-item');
+    $state = $run($planned);
+    $assert($state['items'][0]['status'] === 'error' && count($links->forProduct($keys[0])) === 2, 'Stale supplier plan overwrote concurrent changes.');
+    $foreign = $links->forProduct($keys[1])[0];
+    $compact['suppliers'] = [['id' => (int) $foreign['id'], 'label' => 'Wrong owner', 'url' => 'https://wrong.example/item']];
+    $assert($transfer->prepare($supplierBundle([$compact]), false, false)[0]['status'] === 'error', 'Foreign supplier ID accepted.');
 } finally {
     foreach ($jobs as $job) $job->remove();
     foreach ($keys as $key) {
