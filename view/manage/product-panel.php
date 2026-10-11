@@ -37,7 +37,7 @@
             <button type="submit" class="inline-small"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit sklad</button>
           </form>
         <?php else: ?><a href="<?= $escape($siteRoot . 'admin.php?section=database') ?>">Pro počet kusů aktualizuj SQL tabulky ↗</a><?php endif; ?>
-        <label>Adresa produktu <span class="inline-address-prefix">/<?= $escape($language) ?>/produkt/</span><input type="text" data-editor-input="slug" value="<?= $escape($product['slug']) ?>" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="190" required spellcheck="false" autocomplete="off"></label>
+        <label class="product-admin-address">Adresa produktu <span class="inline-address-prefix">/<?= $escape($language) ?>/produkt/</span><input type="text" data-editor-input="slug" value="<?= $escape($product['slug']) ?>" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="190" required spellcheck="false" autocomplete="off"></label>
       </div>
       <p class="inline-stock-note">Počet je společný pro všechny varianty a jazyky. Zákazníci vidí jen dostupnost. „Na objednávku“ umožňuje objednání i bez kusů skladem.</p>
       <p class="inline-stock-note">Při prvním přejmenování nového produktu se adresa vytvoří podle názvu. U zveřejněného produktu změna adresy zneplatní dosavadní odkaz.</p>

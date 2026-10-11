@@ -75,6 +75,7 @@
 }
 .content-admin-panel .product-admin-settings .inline-settings { padding: 14px 0 0; }
 .content-admin-panel .inline-settings label { min-width: 0; }
+.content-admin-panel .inline-settings .product-admin-address { grid-column: 1 / -1; }
 .content-admin-panel .inline-settings :is(input:not([type="checkbox"]), select) { width: 100%; min-width: 0; box-sizing: border-box; }
 .content-admin-panel .inline-settings .inline-stock-form { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; }
 .content-admin-panel .inline-stock-form label { flex: 1 1 100px; }
