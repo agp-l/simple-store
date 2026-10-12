@@ -101,6 +101,7 @@ jobs:
           php tests/inline-editor.php
           php tests/content-editor.php
           php tests/content-import.php
+          php tests/content-import-controller.php
           php tests/content-deletion.php
       - name: Test cart cookie across HTTP requests
         run: bash tests/cart-http.sh
@@ -166,6 +167,7 @@ jobs:
           php tests/shipping-database.php
           php tests/homepage-database.php
           php tests/product-import-database.php
+          php tests/content-import-database.php
           php tests/product-zip-database.php
           php tests/product-bulk-database.php
           php tests/product-mass-database.php
@@ -213,6 +215,7 @@ jobs:
           php tests/shipping-database.php
           php tests/homepage-database.php
           php tests/product-import-database.php
+          php tests/content-import-database.php
           php tests/product-zip-database.php
           php tests/product-bulk-database.php
           php tests/product-mass-database.php
