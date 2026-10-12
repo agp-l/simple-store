@@ -22,3 +22,17 @@ unavailable to customers; on-order products can be ordered with zero pieces.
 
 Implementation: `ProductMassUpdate`, `src/Admin/settings-products.php`, and
 `view/admin/settings-products.php`. No JavaScript is needed.
+
+The same screen also offers **Hromadné vytvoření variant** for initial setup. It
+creates combinations from saved product options and gives each new variant the
+entered stock (default 10). It has a separate preview and confirmation so it never
+implicitly resets existing variants. Products with any variant definitions,
+without options, with active simple-stock reservations or invalid combinations
+are skipped with a reason. The catalog's default language supplies the options,
+with the first available translation as fallback; inventory is created once per
+product. Old shared stock is reset when variant mode is enabled. Common content
+and publication state are preserved. All writes occur in one transaction and a
+stale catalog/stock/reservation snapshot is rejected.
+
+Implementation: `ProductVariantBulkCreate`; database regression coverage:
+`tests/product-variant-bulk-database.php`.

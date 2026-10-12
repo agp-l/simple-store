@@ -61,3 +61,16 @@ Fotografie varianty v ZIP používá `images/soubor.jpg` a musí být přibalena
 - Objednávka uchovává `variant_key`, SKU, volby, skutečnou cenu a fotografii ve svém snímku. Storno či smazání neodeslané objednávky vrátí rezervaci přesně jednou. Odeslané kusy se pouhým smazáním objednávky nevracejí. Převod na externího dodavatele uvolní lokální rezervaci, návrat ji musí znovu získat.
 - Inventární řádek hlavního produktu slouží jako společný zámek pro nákup i úpravy variant. U více produktů se zámky získávají podle klíče. Konflikty verze jsou viditelné, nikdy se nepřebíjí posledním zápisem.
 - Testy: `tests/product-variants.php`, `tests/product-variants-database.php` (MySQL i MariaDB), `tests/product-variants-browser.mjs` (Chromium, desktop, mobil a bez JS).
+
+## Hromadné vytvoření při spuštění obchodu
+
+V **Nastavení obchodu → Produkty → Hromadné vytvoření variant** vyplň počet kusů každé nové varianty (předvyplněno **10**) a zobraz náhled. Systém použije uložené volby produktu, včetně staršího pole velikostí. Dvě barvy a tři velikosti vytvoří šest variant, při deseti kusech celkem šedesát kusů. Ověř, že všechny kombinace skutečně prodáváš.
+
+Náhled vyjmenuje dotčené produkty, počet kombinací a původní společný sklad, který se po potvrzení vynuluje. Novým variantám nastaví zadaný počet a dostupnost Skladem; nula je zákazníkovi nedostupná. Cena a fotografie se dědí z hlavního produktu, SKU zůstává prázdné. SKU je nepovinný interní skladový kód, například `BUNDA-M-MODRA`; není to čárový kód.
+
+- Existující varianty (i vypnuté) se přeskočí, aby se jejich identita a zásoby nepřepsaly. Pro doplnění jednotlivého produktu použij **Přidat kombinace**; pro úpravu zásob už vytvořených variant použij původní **Hromadná úprava produktů**.
+- Produkty bez voleb, s rezervovanými kusy nebo s neplatnými/příliš početnými kombinacemi se přeskočí s důvodem. Limit zůstává 1 000 variant na produkt.
+- Překlady sdílejí jediný sklad. Volby se berou z výchozího jazyka, není-li dostupný, z prvního překladu podle kódu jazyka. Koncepty se zahrnou, ale samy se nezveřejní. Popisy, dodavatelé a uložené ceny ani obrázky se nemění.
+- Potvrzení používá jednorázový náhled v administrátorské relaci a transakci. Změna produktů, skladu nebo rezervací vyžaduje nový náhled. Opakované vytvoření nezaloží duplicitní varianty ani nepřičte další kusy.
+
+V editoru lze výběrem varianty zobrazit její fotografii v hlavní galerii i ve zvětšení. Výchozí editovatelná cena produktu se při tomto náhledu nemění. Formulář převodu samostatného produktu po odeslání zůstává otevřený a stránka se přesune přímo k náhledu nebo chybě.

@@ -83,9 +83,23 @@ final class ProductVariants
             if (isset($groups[$name])) throw new InvalidArgumentException('Vlastnost je uvedena vícekrát.');
             $groups[$name] = array_unique(array_map('trim', explode('|', $parts[1])));
         }
-        if ($groups === [] || count($groups) > 8) throw new InvalidArgumentException('Vyplň 1 až 8 vlastností.');
+        $options = [];
+        foreach ($groups as $name => $values) $options[] = ['name' => $name, 'values' => $values];
+        return self::fromOptions($options);
+    }
+
+    /** Preserve literal punctuation in saved options; do not round-trip through textarea delimiters. */
+    public static function fromOptions(array $options): array
+    {
+        if ($options === [] || count($options) > 8) throw new InvalidArgumentException('Vyplň 1 až 8 vlastností.');
         $choices = [[]];
-        foreach ($groups as $name => $values) {
+        $names = [];
+        foreach ($options as $group) {
+            if (!is_array($group) || !is_string($group['name'] ?? null) || !is_array($group['values'] ?? null) || $group['values'] === []) throw new InvalidArgumentException('Vlastnost potřebuje název a hodnoty.');
+            $name = trim($group['name']);
+            if (isset($names[$name])) throw new InvalidArgumentException('Vlastnost je uvedena vícekrát.');
+            $names[$name] = true;
+            $values = $group['values'];
             if (count($choices) * count($values) > self::LIMIT) throw new InvalidArgumentException('Příliš mnoho kombinací. Přidávej pouze skutečně prodávané varianty.');
             $next = [];
             foreach ($choices as $choice) foreach ($values as $value) $next[] = $choice + [$name => $value];
