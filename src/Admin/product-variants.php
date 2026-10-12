@@ -69,5 +69,6 @@ try {
     $_SESSION['variant_form'] = $_POST;
 }
 $notice = !isset($_SESSION['variant_error']) && ($operation ?? '') !== 'merge-preview' ? '&variants_saved=1' : '';
-header('Location: ' . $basePath . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1' . $notice . '#product-variants', true, 303);
+$anchor = in_array($operation ?? '', ['merge', 'merge-preview'], true) && isset($_SESSION['variant_error']) ? 'product-variant-merge' : 'product-variants';
+header('Location: ' . $basePath . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1' . $notice . '#' . $anchor, true, 303);
 exit;

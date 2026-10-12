@@ -8,6 +8,7 @@ foreach ($items as $i => &$variant) {
     $variant['quantity'] = $i % 3;
     $variant['price_czk'] = $i % 2 ? 2890 : null;
     $variant['sku'] = 'BUNDA-' . $i;
+    if ($i === 2) $variant['image_path'] = 'images/batoh.webp';
 }
 unset($variant);
 $product = ['product_key' => str_repeat('a', 32), 'language' => 'cs', 'revision_number' => 1,

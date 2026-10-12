@@ -52,5 +52,10 @@ ob_start(); $renderer->render('product-record', ['product' => $product, 'basePat
 $check(str_contains($html, 'name="variant_key"') && str_contains($html, 'Barva: Modrá') && !str_contains($html, 'value="' . $rows[2]['id'] . '"') && !str_contains($html, 'Volné kusy'), 'Public variant picker leaked admin inventory or retired combinations.');
 ob_start(); $renderer->render('product-record', ['product' => $product, 'basePath' => '/shop/', 'language' => 'cs', 'editMode' => true, 'canEditProduct' => true]); $adminHtml = ob_get_clean();
 $check(str_contains($adminHtml, 'id="variant-batch"') && str_contains($adminHtml, 'name="merge_groups"') && str_contains($adminHtml, 'BLUE-S'), 'Variant controls did not render.');
+$check(str_contains($adminHtml, 'id="detail-image" src="/shop/' . $product['image_path'] . '"'), 'Variant photo choices corrupted the main image URL.');
+$check(str_contains($adminHtml, '/assets/product-variants.js?'), 'Variant photo preview is missing in edit mode.');
+ob_start(); $renderer->render('product-record', ['product' => $product, 'basePath' => '/shop/', 'language' => 'cs', 'editMode' => true, 'canEditProduct' => true,
+    'variantError' => 'Vyber jiný existující produkt.', 'variantForm' => ['operation' => 'merge-preview', 'source_slug' => 'wrong-product', 'merge_groups' => 'Velikost: XL']]); $failedMerge = ob_get_clean();
+$check(str_contains($failedMerge, 'id="product-variant-merge" open') && str_contains($failedMerge, 'value="wrong-product"') && str_contains($failedMerge, 'role="alert">Vyber jiný'), 'Failed conversion must stay open with input and a visible error.');
 $cart->clear();
 echo "Variant validation, cart, import and rendering passed.\n";
