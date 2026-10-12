@@ -43,6 +43,18 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
       assert.equal(await page.locator('#variant-choice-1').inputValue(), 'M');
       await page.locator('.product-purchase').screenshot({ path: `/tmp/variant-screenshots/customer-${width}.png` });
       await page.goto('http://127.0.0.1:8765/' + adminPath);
+      assert.equal(await page.locator('#detail-image').getAttribute('src'), '/images/product-placeholder.png');
+      assert.ok(await page.locator('#detail-image').evaluate(img => img.complete && img.naturalWidth > 0));
+      const basePrice = await page.locator('[data-edit-field="price_czk"]').textContent();
+      const photoVariant = await page.locator('#product-variant option[data-image="/images/batoh.webp"]').getAttribute('value');
+      await page.locator('#product-variant').selectOption(photoVariant);
+      assert.equal(await page.locator('#detail-image').getAttribute('src'), '/images/batoh.webp');
+      assert.equal(await page.locator('[data-edit-field="price_czk"]').textContent(), basePrice);
+      await page.locator('#detail-image-open').click();
+      assert.match(await page.locator('#detail-lightbox-image').getAttribute('src'), /images\/batoh.webp$/);
+      await page.locator('#detail-lightbox-close').click();
+      await page.locator('#product-variant').selectOption('');
+      assert.equal(await page.locator('#detail-image').getAttribute('src'), '/images/product-placeholder.png');
       const rows = page.locator('[data-variant-row]');
       await rows.nth(0).locator('input[name="quantity"]').fill('3');
       await rows.nth(1).locator('input[name="quantity"]').fill('5');

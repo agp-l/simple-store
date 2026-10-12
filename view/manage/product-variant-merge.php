@@ -1,6 +1,7 @@
 <?php if ($variantInventory['enabled']): ?>
-<details class="variant-create" <?= isset($variantForm['merge_preview']) ? 'open' : '' ?>>
+<details class="variant-create" id="product-variant-merge" <?= in_array($variantForm['operation'] ?? '', ['merge', 'merge-preview'], true) ? 'open' : '' ?>>
   <summary><?= \SimpleStore\Rendering\Icon::render('package') ?> Převést samostatný produkt na variantu</summary>
+  <?php if ($variantError !== '' && in_array($variantForm['operation'] ?? '', ['merge', 'merge-preview'], true)): ?><p class="panel-error" role="alert"><?= $escape($variantError) ?></p><?php endif; ?>
   <p>Pro samostatně založenou velikost nebo barvu. Přenesou se její volné kusy, cena, hlavní fotografie a dodavatelé. Původní produkt i popis zůstanou uložené jako koncept; jeho veřejná adresa povede sem. Společný popis tohoto produktu se nezmění.</p>
   <?php if (isset($variantForm['merge_preview']) && is_array($variantForm['merge_preview'])): $merge = $variantForm['merge_preview']; ?>
   <div class="variant-merge-preview"><strong><?= $escape($merge['source_name']) ?></strong><p>→ <?= $escape(\SimpleStore\Product\ProductVariants::label($merge['variant']['choices'])) ?><br>Volné kusy: <?= (int) $merge['variant']['quantity'] ?> · Cena: <?= (int) $merge['variant']['price_czk'] ?> Kč</p></div>

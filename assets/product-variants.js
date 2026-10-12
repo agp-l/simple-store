@@ -3,7 +3,20 @@
   const price = document.querySelector('[data-variant-price]');
   const stock = document.querySelector('[data-variant-stock]');
   const btc = document.querySelector('[data-variant-btc]');
-  if (!picker || !price || !stock) return;
+  if (!picker || !stock) return;
+  const editing = Boolean(picker.closest('.is-editing'));
+  const mainImage = document.getElementById('detail-image');
+  const initialImage = mainImage?.getAttribute('src');
+  const selectImage = image => {
+    const thumbnail = Array.from(document.querySelectorAll('[data-gallery-image]'))
+      .find(button => button.dataset.galleryImage === image);
+    thumbnail?.click();
+  };
+  // The editable base price must stay intact while previewing a variant photo.
+  picker.addEventListener('change', () => {
+    selectImage(picker.selectedOptions[0]?.dataset.image || initialImage);
+  });
+  if (editing || !price) return;
   const initial = { price: price.textContent, stock: stock.textContent, btc: btc?.textContent || '', waiting: stock.parentElement.classList.contains('stock-wait') };
   picker.addEventListener('change', () => {
     const option = picker.selectedOptions[0];
@@ -17,10 +30,6 @@
     stock.textContent = option.dataset.stock;
     stock.parentElement.classList.toggle('stock-wait', option.dataset.state !== 'in_stock');
     if (btc) btc.textContent = option.dataset.btc || '';
-    // Reuse the gallery controller so selection and lightbox stay synchronized.
-    const thumbnail = Array.from(document.querySelectorAll('[data-gallery-image]'))
-      .find(button => button.dataset.galleryImage === option.dataset.image);
-    thumbnail?.click();
   });
   // Enhance the complete PHP picker with one accessible select per attribute.
   const options = Array.from(picker.options).filter(option => option.value);
