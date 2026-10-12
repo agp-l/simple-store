@@ -2,6 +2,7 @@
         <div><p class="panel-eyebrow">Obsah webu</p><h1>Stránky</h1>
           <p>Spravuj publikované stránky i koncepty. Články a jejich rozpracované verze najdeš přímo v blogu.</p></div>
         <div class="panel-quick">
+          <a href="<?= $escape($adminUrl . '?section=content-import&type=page') ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('upload') ?> Import JSON</a>
           <form method="post" action="<?= $escape($adminUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="create-content"><input type="hidden" name="type" value="page"><input type="hidden" name="language" value="<?= $escape($site['default_language']) ?>"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('plus') ?> Nová stránka</button></form>
           <a href="<?= $escape($basePath . $site['default_language']) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('external') ?> Na web</a>
           <a href="<?= $escape($basePath . $site['default_language'] . '/blog') ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('external') ?> Blog</a>
@@ -46,6 +47,7 @@
               <small><?= $document['published'] ? 'Publikováno' : 'Koncept' ?><?= $document['published'] && empty($document['visible_in_menu']) ? ' · mimo menu' : '' ?> · revize <?= (int) $document['revision_number'] ?></small>
             </div>
             <div class="panel-document-actions">
+              <a class="panel-icon-link" href="<?= $escape($adminUrl . '?section=content-import&key=' . $document['document_key'] . '&language=' . $document['language'] . '&download=1') ?>" aria-label="Export JSON: <?= $escape($document['title']) ?>"><?= \SimpleStore\Rendering\Icon::render('download') ?> JSON</a>
               <a class="panel-icon-link panel-button" href="<?= $escape($link) ?>" aria-label="Upravit <?= $escape($document['title']) ?>"><?= \SimpleStore\Rendering\Icon::render('edit') ?> Upravit</a>
               <details class="panel-document-delete"><summary aria-label="Smazat <?= $escape($document['title']) ?>" class="panel-action panel-action--danger"><?= \SimpleStore\Rendering\Icon::render('delete') ?> Smazat</summary>
                 <form method="post" action="<?= $escape($adminUrl) ?>">

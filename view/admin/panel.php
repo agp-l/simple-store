@@ -1,7 +1,7 @@
 <?php
 // This body is framed by the shared storefront shell.
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-$inside = in_array($screen, ['product-import', 'editor', 'categories', 'menus', 'media', 'orders', 'returns', 'accounting', 'settings', 'users', 'database'], true);
+$inside = in_array($screen, ['content-import', 'product-import', 'editor', 'categories', 'menus', 'media', 'orders', 'returns', 'accounting', 'settings', 'users', 'database'], true);
 $panelPreviewControl = $inside && $csrf !== '' ? [
     'active' => (bool) ($adminPreviewActive ?? false),
     'csrf' => $csrf,
@@ -17,7 +17,7 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
     $panelSubtitle = 'OBCHOD A OBSAH';
     $panelIdentity = 'Přihlášený správce';
     $panelLogoutUrl = $adminUrl;
-    $panelCurrent = $screen;
+    $panelCurrent = $screen === 'content-import' ? 'product-import' : $screen;
     $panelLinks = [
         ['key' => 'editor', 'label' => 'Stránky', 'icon_name' => 'document', 'href' => $adminUrl . '?section=contents'],
         ['key' => 'products', 'label' => 'Produkty', 'icon_name' => 'package', 'href' => $basePath . $site['default_language'] . '?manage=1#produkty'],
@@ -80,6 +80,8 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
             <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('edit') ?> Změnit heslo</button></form><?php endif; ?>
         <?php endif; ?><p><a href="<?= $escape($adminUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('lock') ?> Přihlásit se</a></p>
       </section>
+    <?php elseif ($screen === 'content-import'): ?>
+      <?php require __DIR__ . '/content-import.php'; ?>
     <?php elseif ($screen === 'product-import'): ?>
       <?php require __DIR__ . '/product-import.php'; ?>
     <?php elseif ($screen === 'categories'): ?>

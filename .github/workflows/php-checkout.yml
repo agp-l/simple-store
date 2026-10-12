@@ -100,6 +100,7 @@ jobs:
           php tests/product-variants.php
           php tests/inline-editor.php
           php tests/content-editor.php
+          php tests/content-import.php
           php tests/content-deletion.php
       - name: Test cart cookie across HTTP requests
         run: bash tests/cart-http.sh

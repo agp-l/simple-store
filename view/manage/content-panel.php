@@ -9,6 +9,9 @@
         <span class="inline-status" id="content-editor-status" role="status" aria-live="polite">Revize <?= (int) $content['revision_number'] ?></span>
         <button type="button" class="inline-small" data-content-action="publish" data-value="<?= $content['published'] ? '0' : '1' ?>"><?= \SimpleStore\Rendering\Icon::render('eye') ?> <?= $content['published'] ? 'Skrýt' : 'Publikovat' ?></button>
         <button type="button" class="inline-small" data-content-action="media-library"><?= \SimpleStore\Rendering\Icon::render('image') ?> Fotografie</button>
+        <?php $contentTransferUrl = $siteRoot . 'admin.php?' . http_build_query(['section' => 'content-import', 'key' => $content['document_key'], 'language' => $language], '', '&', PHP_QUERY_RFC3986); ?>
+        <a class="inline-small" data-content-transfer href="<?= $escape($contentTransferUrl . '&download=1') ?>"><?= \SimpleStore\Rendering\Icon::render('download') ?> Export JSON</a>
+        <a class="inline-small" data-content-transfer href="<?= $escape($contentTransferUrl) ?>"><?= \SimpleStore\Rendering\Icon::render('upload') ?> Import JSON</a>
 
         <?php if ($content['published']): ?><a href="<?= $escape($siteRoot . $route) ?>"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit bez úprav</a><?php endif; ?>
         <a href="<?= $escape($page === 'post' ? $siteRoot . $language . '/blog?manage=1' : $siteRoot . 'admin.php?section=contents') ?>"><?= $page === 'post' ? 'Správa blogu' : 'Všechny stránky' ?></a>

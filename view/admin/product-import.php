@@ -1,5 +1,6 @@
 <div class="panel-intro"><div><p class="panel-eyebrow">Katalog / data produktů</p><h1>Import a export produktů</h1>
-<p>Vyber produkty pro zálohu nebo AI. Upravená data nahraj zpět jako jeden JSON; nové fotografie lze přiložit v ZIP.</p></div></div>
+<p>Vyber produkty pro zálohu nebo AI. Upravená data nahraj zpět jako jeden JSON; nové fotografie lze přiložit v ZIP.</p>
+<p><a class="panel-icon-link" href="<?= $escape($adminUrl . '?section=content-import') ?>"><?= \SimpleStore\Rendering\Icon::render('document') ?> Import a export stránek a článků</a></p></div></div>
 <nav class="panel-order-tabs product-transfer-tabs" aria-label="Import a export">
 <?php foreach (['export' => 'Export a seznam pro AI', 'bulk' => 'Hromadný JSON', 'single' => 'Jeden produkt', 'zip' => 'ZIP s fotografiemi', 'help' => 'Zadání pro AI'] as $tab => $label): ?>
 <a <?= $importTab === $tab ? 'aria-current="page"' : '' ?> href="<?= $escape($adminUrl . '?section=product-import&tab=' . $tab . '&language=' . $language) ?>"><?= \SimpleStore\Rendering\Icon::render(['export' => 'download', 'bulk' => 'list', 'single' => 'plus', 'zip' => 'package', 'help' => 'edit'][$tab]) ?><span><?= $escape($label) ?></span></a>

@@ -232,6 +232,12 @@ try {
 
     $action = $method === 'POST' ? ($_POST['action'] ?? '') : '';
     $section = $_GET['section'] ?? '';
+    if (in_array($action, ['content-import-preview', 'content-import-save'], true) ||
+        ($method === 'GET' && $section === 'content-import')) {
+        require __DIR__ . '/src/Admin/content-import.php';
+        require __DIR__ . '/view/admin/layout.php';
+        exit;
+    }
     if (in_array($action, ['category-create', 'category-update'], true) ||
         ($method !== 'POST' && $section === 'categories')) {
         require __DIR__ . '/src/Admin/categories.php';

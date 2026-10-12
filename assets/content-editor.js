@@ -113,6 +113,16 @@
   }
 
   document.addEventListener('click', event => {
+    const transfer = event.target.closest('a[data-content-transfer]');
+    if (transfer) {
+      event.preventDefault();
+      clearTimeout(refreshTimer);
+      queue.then(() => {
+        clearTimeout(refreshTimer);
+        if (!failed) location.assign(transfer.href);
+      });
+      return;
+    }
     const link = event.target.closest('[data-edit-operation] a');
     if (link) { event.preventDefault(); link.closest('[data-edit-operation]').focus(); }
   });
