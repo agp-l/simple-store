@@ -220,6 +220,10 @@ try {
         require __DIR__ . '/src/Admin/homepage-products.php';
         exit;
     }
+    if ($method === 'POST' && ($_POST['action'] ?? '') === 'product-sale') {
+        require __DIR__ . '/src/Admin/product-sale.php';
+        exit;
+    }
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'product-supplier-link') {
         require __DIR__ . '/src/Admin/product-suppliers.php';
         exit;

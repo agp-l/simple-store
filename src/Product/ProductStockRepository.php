@@ -11,7 +11,7 @@ use Throwable;
 /** Sellable pieces are shared by every language; variant products use individual inventory rows. */
 final class ProductStockRepository
 {
-    public function __construct(private MeekroDB $db)
+    public function __construct(private MeekroDB $db, private ?ProductSalesRepository $sales = null)
     {
     }
 
@@ -66,7 +66,7 @@ final class ProductStockRepository
 
         }
         unset($row);
-        return $rows;
+        return $this->sales?->decorate($rows) ?? $rows;
     }
 
     public function setAvailable(string $key, int $expected, int $quantity): void
