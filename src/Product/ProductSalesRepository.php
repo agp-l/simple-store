@@ -83,7 +83,7 @@ final class ProductSalesRepository
                 AND language=%s AND active_product_key IS NOT NULL LIMIT 1 FOR UPDATE', $key, $language);
             if ($product === null) throw new InvalidArgumentException('Produkt už neexistuje.');
             $stored = $this->db->queryFirstRow('SELECT version FROM shop_product_sales WHERE product_key=%s FOR UPDATE', $key);
-            if ((int) ($stored['version'] ?? 0) !== $expected) throw new InvalidArgumentException('Nastavení mezitím někdo změnil. Obnov stránku.');
+            if ((int) ($stored['version'] ?? 0) !== $expected) throw new InvalidArgumentException('Nastavení mezitím někdo změnil. Otevři uložené nastavení v nové kartě a porovnej změny.');
             $cost = ($input['supplier_price_czk'] ?? '') === '' ? null : self::price($input['supplier_price_czk']);
             $note = self::text($input['delivery_note'] ?? '', 190);
             $partnerId = filter_var($input['partner_id'] ?? '0', FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
@@ -97,7 +97,10 @@ final class ProductSalesRepository
                 if ($hasPartner) {
                     $partner['confirmed'] = $input['partner_confirmed'] ?? '';
                     $partnerId = (new PurchasePartnerRepository($this->db))->save(0, $partner);
-                } else $partnerId = null;
+                } else {
+                    if (($input['create_partner'] ?? '') === '1') throw new InvalidArgumentException('Vyplň alespoň jeden údaj nového prodávajícího.');
+                    $partnerId = null;
+                }
             } else {
                 foreach (array_keys(PurchasePartnerRepository::FIELDS) as $field) {
                     if (($input['partner_' . $field] ?? '') !== '') {

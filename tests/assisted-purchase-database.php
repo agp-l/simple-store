@@ -68,6 +68,12 @@ try {
     $check($outbox!==null&&str_contains($outbox['terms_attachment'],A::TERMS_SLUG)&&str_contains($outbox['terms_attachment'],OrderLegalDocuments::TERMS_SLUG)
         &&str_contains($outbox['body_text'],'1 678 Kč + služba 122 Kč')&&str_contains($outbox['body_text'],A::EARLY_REQUEST),'Durable confirmation lost contract data.');
     $check((int)$db->queryFirstField('SELECT COUNT(*) FROM shop_sale_lines WHERE order_id=%i',$order['id'])===1,'Partner goods entered our goods ledger.');
+    $partners = new \SimpleStore\Product\PurchasePartnerRepository($db);
+    $profile = $partners->find($partnerId);
+    $partners->save($partnerId, array_replace($profile,['confirmed'=>'1','email'=>'changed@example.test']));
+    $check($orders->findById((int)$order['id'])['items'][0]['seller']['email']==='partner@example.test' &&
+        $sales->snapshot($key,'',1800)['seller']['email']==='changed@example.test', 'Editing the seller changed an accepted contract.');
+    $partners->save($partnerId, array_replace($profile,['confirmed'=>'1','version'=>'2']));
     // A failed confirmation must roll back the entire order and its stock reservation.
     $before=(int)$db->queryFirstField('SELECT COUNT(*) FROM shop_orders');
     $stockBefore=(int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$key);

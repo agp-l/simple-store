@@ -14,6 +14,7 @@ if (!is_string($key) || preg_match('/^[a-f0-9]{32}$/D', $key) !== 1 ||
 $product = (new ProductRepository($db, $site['languages']))->current($key, $language);
 if ($product === null) throw new InvalidArgumentException('Produkt už neexistuje.');
 $returnUrl = $basePath . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1';
+if (($_POST['create_partner'] ?? '') === '1') $_POST['partner_id'] = '0';
 try {
     (new ProductSalesRepository($db))->save($key, $language, $_POST);
     unset($_SESSION['product_sale_errors'][$key . ':' . $language]);

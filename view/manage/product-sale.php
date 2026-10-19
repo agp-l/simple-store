@@ -26,7 +26,8 @@ if (($saleValues['mode'] ?? 'own') === 'assisted') {
     <p><a href="<?= $escape($siteRoot . 'admin.php?section=database') ?>">Nejprve aktualizuj databázi.</a></p>
   <?php else: ?>
     <?php if (($_GET['sale_saved'] ?? '') === '1'): ?><p role="status">Nastavení prodeje bylo uloženo.</p><?php endif; ?>
-    <?php if (($productSaleError ?? '') !== ''): ?><p role="alert"><?= $escape($productSaleError) ?> Zadané údaje zůstaly ve formuláři.</p><?php endif; ?>
+    <?php if (($productSaleError ?? '') !== ''): ?><p role="alert"><?= $escape($productSaleError) ?> Zadané údaje zůstaly ve formuláři.</p>
+      <p><a target="_blank" rel="noopener" href="<?= $escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1#product-sale') ?>">Otevřít uložené nastavení v nové kartě</a></p><?php endif; ?>
     <?php if ($saleMissing !== []): ?><p>Rozpracované nastavení – doplň <?= $escape(implode(', ', $saleMissing)) ?>. Zákazník může objednat až úplnou nabídku.</p><?php endif; ?>
     <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>" class="supplier-form" novalidate>
       <input type="hidden" name="action" value="product-sale"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>">
@@ -48,10 +49,11 @@ if (($saleValues['mode'] ?? 'own') === 'assisted') {
         <?php foreach (($purchasePartners ?? []) as $partner): ?><option value="<?= (int) $partner['id'] ?>" <?= (int) ($saleValues['partner_id'] ?? 0) === (int) $partner['id'] ? 'selected' : '' ?>><?= $escape(\SimpleStore\Product\PurchasePartnerRepository::label($partner) . ($partner['ico'] !== '' ? ' · IČO ' . $partner['ico'] : '') . (\SimpleStore\Product\PurchasePartnerRepository::missing($partner) !== [] ? ' · rozpracovaný' : '')) ?></option><?php endforeach; ?>
       </select></label>
       <p><a href="<?= $escape($siteRoot . 'admin.php?section=purchase-partners') ?>" target="_blank" rel="noopener">Seznam a úpravy prodávajících ↗</a>
-        <?php if ($selectedPartner !== null): ?> · <a href="<?= $escape($siteRoot . 'admin.php?section=purchase-partners&id=' . (int) $selectedPartner['id'] . '#partner-form') ?>" target="_blank" rel="noopener">Upravit vybraného prodávajícího ↗</a><?php endif; ?></p>
+        <?php if ($selectedPartner !== null): ?> · <a href="<?= $escape($siteRoot . 'admin.php?section=purchase-partners&id=' . (int) $selectedPartner['id'] . '#partner-form') ?>" target="_blank" rel="noopener">Upravit: <?= $escape(\SimpleStore\Product\PurchasePartnerRepository::label($selectedPartner)) ?> ↗</a><?php endif; ?></p>
       <details <?= $hasNewPartner ? 'open' : '' ?>><summary>Nový prodávající</summary>
-        <p>Ve výběru nad tímto formulářem zvol „Zatím nevybrán / nový prodávající níže“. Při uložení se nový profil přidá do seznamu a přiřadí k produktu, i když zatím není úplný.</p>
+        <p>Vyplň alespoň jeden údaj. Tlačítko níže uloží nový profil i nastavení prodeje a vybere nového prodávajícího pro tento produkt. Neúplné údaje můžeš doplnit později.</p>
         <?php $partnerPrefix = 'partner_'; require __DIR__ . '/purchase-partner-fields.php'; ?>
+        <button type="submit" name="create_partner" value="1" class="inline-small">Uložit nového prodávajícího a nastavení</button>
       </details>
       <p>U asistovaného nákupu uvidí zákazník rozpis ceny, prodávajícího a dobu dodání v souhrnu objednávky. Soukromé zdrojové odkazy níže se nezveřejňují. Dostupnost a dopravu nastav podle skutečných možností partnera.</p>
       <button type="submit" class="inline-small">Uložit způsob prodeje</button>
