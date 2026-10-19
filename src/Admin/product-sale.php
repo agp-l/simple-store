@@ -16,9 +16,20 @@ if ($product === null) throw new InvalidArgumentException('Produkt už neexistuj
 $returnUrl = $basePath . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1';
 try {
     (new ProductSalesRepository($db))->save($key, $language, $_POST);
+    unset($_SESSION['product_sale_errors'][$key . ':' . $language]);
     $returnUrl .= '&sale_saved=1';
-} catch (InvalidArgumentException $error) {
-    $returnUrl .= '&sale_error=' . rawurlencode($error->getMessage());
+} catch (Throwable $error) {
+    if (!$error instanceof InvalidArgumentException) error_log((string) $error);
+    $form = [];
+    foreach (['mode', 'version', 'supplier_price_czk', 'delivery_note', 'partner_id',
+        'partner_name', 'partner_ico', 'partner_address', 'partner_email', 'partner_terms_url', 'partner_confirmed'] as $field) {
+        $form[$field] = is_string($_POST[$field] ?? null) ? $_POST[$field] : '';
+    }
+    $form['variant_price'] = is_array($_POST['variant_price'] ?? null)
+        ? array_filter($_POST['variant_price'], 'is_string') : [];
+    $_SESSION['product_sale_errors'][$key . ':' . $language] = ['form' => $form,
+        'message' => $error instanceof InvalidArgumentException ? $error->getMessage()
+            : 'Uložení se nezdařilo. Údaje zůstaly ve formuláři; zkus jej znovu uložit.'];
 }
 header('Location: ' . $returnUrl . '#product-sale', true, 303);
 exit;

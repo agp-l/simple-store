@@ -266,6 +266,11 @@ try {
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }
+    if ($action === 'purchase-partner-save' || ($method !== 'POST' && $section === 'purchase-partners')) {
+        require __DIR__ . '/src/Admin/purchase-partners.php';
+        require __DIR__ . '/view/admin/layout.php';
+        exit;
+    }
     if ($action === 'create-product' || ($method !== 'POST' && $section === 'products')) {
         require __DIR__ . '/src/Admin/products.php';
         require __DIR__ . '/view/admin/layout.php';

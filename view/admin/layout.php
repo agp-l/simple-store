@@ -4,10 +4,10 @@ declare(strict_types=1);
 // Choose text and content only; the chrome is shared with customer pages.
 $panelTitle = 'Administrace · dobrodruzi';
 $panelDescription = 'Správa obchodu Dobrodruzi';
-$panelHeroTitle = in_array($screen, ['content-import', 'product-import', 'editor', 'products', 'categories', 'menus', 'media', 'orders', 'returns', 'accounting', 'settings', 'users', 'database'], true)
+$panelHeroTitle = in_array($screen, ['purchase-partners', 'content-import', 'product-import', 'editor', 'products', 'categories', 'menus', 'media', 'orders', 'returns', 'accounting', 'settings', 'users', 'database'], true)
     ? 'Správa obchodu' : 'Vstup do administrace';
 $panelHeroSubtitle = 'Obsah, produkty a navigace na jednom místě.';
-$adminCreate = in_array($screen, ['content-import', 'product-import', 'editor', 'products', 'categories', 'menus', 'media', 'orders', 'returns', 'accounting', 'settings', 'users', 'database'], true) && ($csrf ?? '') !== ''
+$adminCreate = in_array($screen, ['purchase-partners', 'content-import', 'product-import', 'editor', 'products', 'categories', 'menus', 'media', 'orders', 'returns', 'accounting', 'settings', 'users', 'database'], true) && ($csrf ?? '') !== ''
     ? ['csrf' => $csrf, 'language' => $site['default_language']] : null;
 $bodyView = __DIR__ . '/panel.php';
 $mediaManager = $screen === 'media';

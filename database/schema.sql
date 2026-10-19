@@ -379,6 +379,23 @@ CREATE TABLE IF NOT EXISTS shop_purchase_partners (
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Existing partner profiles were explicitly confirmed when first created.
+SET @partner_confirmed_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_purchase_partners' AND COLUMN_NAME='confirmed');
+SET @partner_confirmed_upgrade = IF(@partner_confirmed_exists=0,
+  'ALTER TABLE shop_purchase_partners ADD COLUMN confirmed TINYINT(1) NOT NULL DEFAULT 1', 'SELECT 1');
+PREPARE partner_confirmed_statement FROM @partner_confirmed_upgrade;
+EXECUTE partner_confirmed_statement;
+DEALLOCATE PREPARE partner_confirmed_statement;
+
+SET @partner_version_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_purchase_partners' AND COLUMN_NAME='version');
+SET @partner_version_upgrade = IF(@partner_version_exists=0,
+  'ALTER TABLE shop_purchase_partners ADD COLUMN version INT UNSIGNED NOT NULL DEFAULT 1', 'SELECT 1');
+PREPARE partner_version_statement FROM @partner_version_upgrade;
+EXECUTE partner_version_statement;
+DEALLOCATE PREPARE partner_version_statement;
+
 CREATE TABLE IF NOT EXISTS shop_product_sales (
   product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
   mode VARCHAR(12) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'own',

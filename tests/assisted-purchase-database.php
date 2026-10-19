@@ -45,6 +45,8 @@ try {
         'partner_email'=>'partner@example.test','partner_terms_url'=>'https://partner.example.test/terms','partner_confirmed'=>'1'];
     $sales->save($key,'cs',$input);
     $partnerId=(int)$sales->forProduct($key)['partner_id'];
+    $input = array_diff_key($input, array_flip(['partner_name','partner_ico','partner_address','partner_email','partner_terms_url','partner_confirmed']));
+    $input['partner_id'] = (string) $partnerId;
     $reject(static fn()=> $sales->save($key,'cs',$input)); // stale admin save
     $reject(static fn()=> $sales->save($key,'cs',array_replace($input,['version'=>'1','partner_id'=>(string)$partnerId,'supplier_price_czk'=>'1801'])));
     $public=$stock->decorate([['product_key'=>$key,'stock_status'=>'in_stock','price_czk'=>1800]])[0];

@@ -1,4 +1,7 @@
 <?php declare(strict_types=1); ?>
+<section class="panel-panel panel-settings-block"><h2>Prodávající pro asistovaný nákup</h2>
+<p>Spravuj společné profily prodávajících a rozpracované kontakty pro výběr u produktů.</p>
+<a class="panel-icon-link" href="<?= $escape($adminUrl . '?section=purchase-partners') ?>">Seznam prodávajících a nový prodávající</a></section>
 <?php if (is_string($massNotice)): ?><p class="panel-notice" role="status"><?= $escape($massNotice) ?></p><?php endif; ?>
 <section class="panel-panel panel-settings-block">
   <h2><?= \SimpleStore\Rendering\Icon::render('package') ?> Hromadná úprava produktů</h2>
