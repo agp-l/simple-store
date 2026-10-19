@@ -5,8 +5,11 @@ require dirname(__DIR__) . '/src/bootstrap.php';
 
 use SimpleStore\Admin\AdminActionPolicy;
 
-$views = new RecursiveIteratorIterator(new RecursiveDirectoryIterator(
-    dirname(__DIR__) . '/view/admin', FilesystemIterator::SKIP_DOTS));
+$views = new AppendIterator();
+foreach (['admin', 'manage'] as $directory) {
+    $views->append(new RecursiveIteratorIterator(new RecursiveDirectoryIterator(
+        dirname(__DIR__) . '/view/' . $directory, FilesystemIterator::SKIP_DOTS)));
+}
 $guestActions = ['login', 'logout', 'reset-request', 'reset-complete', 'visitor-preview'];
 $checked = [];
 
@@ -33,8 +36,8 @@ foreach ($views as $view) {
     }
 }
 
-if (!isset($checked['fio-sync'], $checked['change-order-shipping'])) {
-    throw new RuntimeException('The Fio sync and shipping forms must remain available in order administration.');
+if (!isset($checked['fio-sync'], $checked['change-order-shipping'], $checked['product-sale'])) {
+    throw new RuntimeException('The Fio sync, shipping and product sale forms must remain available to administrators.');
 }
 
 echo 'Admin form actions: ' . count($checked) . " verified\n";
