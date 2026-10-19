@@ -37,7 +37,7 @@ try {
         $db->insert('shop_product_revisions',['product_key'=>$key,'active_product_key'=>$key,'language'=>'cs','revision_number'=>1,
             'slug'=>'assist-'.$key,'active_slug'=>'assist-'.$key,'name'=>'Test '.$price,'category'=>'batohy','price_czk'=>$price,
             'description'=>'','image_path'=>'','stock_status'=>'in_stock','published'=>1]);
-        $stock->ensure($key);$stock->setAvailable($key,5,10);
+        $stock->ensure($key);$stock->setAvailable($key,0,10);
     }
     [$key,$ownKey]=$productKeys;
     $input=['mode'=>'assisted','version'=>'0','supplier_price_czk'=>'1678','delivery_note'=>'Do 5 pracovních dnů',
@@ -48,7 +48,7 @@ try {
     $reject(static fn()=> $sales->save($key,'cs',$input)); // stale admin save
     $reject(static fn()=> $sales->save($key,'cs',array_replace($input,['version'=>'1','partner_id'=>(string)$partnerId,'supplier_price_czk'=>'1801'])));
     $public=$stock->decorate([['product_key'=>$key,'stock_status'=>'in_stock','price_czk'=>1800]])[0];
-    $check($public['sale_mode']==='assisted'&&!isset($public['supplier_price_czk'],$public['seller']), 'Private purchase fields leaked into public product.');
+    $check($public['sale_mode']==='assisted'&&!isset($public['supplier_price_czk'])&&!isset($public['seller']), 'Private purchase fields leaked into public product.');
     $cart=new CartSession('/assisted-test/');$cart->clear();
     $cartService=new CartService(new ProductRepository($db,['cs'],null,50,$stock),['cs'],$sales);
     $cartService->add($cart,$key,'cs',[],2);$cartService->add($cart,$ownKey,'cs',[],1);
@@ -78,6 +78,32 @@ try {
     $reject(static fn()=> $orders->create(null,'buyer@example.test',$summary['items'],$bad,79,bin2hex(random_bytes(32))));
     $sales->save($key,'cs',array_replace($input,['version'=>'1','partner_id'=>(string)$partnerId,'supplier_price_czk'=>'1700']));
     $check($orders->findById((int)$order['id'])['items'][0]['supplier_price_czk']===1678,'Catalog edit changed existing contract.');
+    $delivery=['method'=>'gls_home','name'=>'Eva Test','email'=>'buyer@example.test','phone'=>'123456789',
+        'street'=>'Test 1','city'=>'Praha','postal_code'=>'11000','country'=>'CZ'];
+    $cart->setDelivery($delivery);$cart->setPaymentMethod('bank_transfer');
+    $bank=new BankTransferPayment('','1004823033/3030','Test');
+    $controller=new \SimpleStore\Checkout\CheckoutController(
+        new \SimpleStore\Navigation\UrlManager('/cs/pokladna','/index.php',['cs'],'cs'),
+        new \SimpleStore\Rendering\PageRenderer(dirname(__DIR__).'/view'), ['basePath'=>'/','language'=>'cs'],
+        $cart,$cartService,new \SimpleStore\Checkout\ShippingPolicy(['gls_home'=>['price_czk'=>79,'label'=>'GLS domů','requires_address'=>true]]),
+        $orders,$bank,null,'/cs/obchodni-podminky',[],[],null,null,null,null,
+        new \SimpleStore\Accounting\OrderMailQueue($db),'shop@example.test',null,null,null,null,null,$legal);
+    $_POST=['terms'=>'1','assisted_terms'=>'1','early_start'=>'1',
+        'review_token'=>A::reviewToken($summary,$delivery,79,'bank_transfer',$bundle['hash'],$cart->token())];
+    $place=new ReflectionMethod($controller,'placeOrder');$place->setAccessible(true);
+    $reject(static fn()=> $place->invoke($controller));
+    $_SERVER['REQUEST_METHOD']='GET';$_GET=['step'=>'review'];
+    ob_start();$controller->handle(['name'=>'checkout']);$review=ob_get_clean();
+    $check(str_contains($review,'name="assisted_terms"')&&str_contains($review,'name="review_token"')&&
+        str_contains($review,'Partner &lt;test&gt;')&&str_contains($review,'1 700 Kč'), 'Final review lost seller, breakdown or explicit consent.');
+    ob_start();
+    (new \SimpleStore\Rendering\PageRenderer(dirname(__DIR__).'/view'))->render('product-record',[
+        'basePath'=>'/','language'=>'cs','editMode'=>true,'canEditProduct'=>true,'productSalesReady'=>true,
+        'productSale'=>$sales->forProduct($key),'purchasePartners'=>$sales->partners(),
+        'product'=>(new ProductRepository($db,['cs'],null,50,$stock))->current($key,'cs')]);
+    $adminHtml=ob_get_clean();
+    $check(str_contains($adminHtml,'name="supplier_price_czk"')&&str_contains($adminHtml,'name="mode"')&&
+        str_contains($adminHtml,'Partner &lt;test&gt;'), 'Admin cannot configure the sale and supplier price.');
     $db->query('UPDATE shop_orders SET payment_status=%s,payment_paid_at=UTC_TIMESTAMP() WHERE id=%i','paid',$order['id']);
     $seller=['name'=>'Test OSVČ','ico'=>'12345678','street'=>'Test 1','city'=>'Praha','postal_code'=>'11000','bank_account'=>'1004823033/3030'];
     $invoice=(new InvoiceRepository($db))->issue((int)$order['id'],$seller,['name'=>'Eva Test']);
