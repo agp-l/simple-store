@@ -37,6 +37,12 @@ final class AssistedPurchase
                 throw new InvalidArgumentException('Údaje partnerského prodávajícího nejsou úplné.');
             }
         }
+        if (filter_var($seller['terms_url'], FILTER_VALIDATE_URL) === false ||
+            parse_url($seller['terms_url'], PHP_URL_SCHEME) !== 'https' ||
+            parse_url($seller['terms_url'], PHP_URL_USER) !== null || parse_url($seller['terms_url'], PHP_URL_PASS) !== null ||
+            preg_match('/^[0-9]{8}$/D', $seller['ico']) !== 1 || filter_var($seller['email'], FILTER_VALIDATE_EMAIL) === false) {
+            throw new InvalidArgumentException('Údaje partnerského prodávajícího nejsou platné.');
+        }
         return ['sale_mode' => 'assisted', 'supplier_price_czk' => $cost,
             'assistance_fee_czk' => $price - $cost, 'seller' => $seller,
             'delivery_note' => $sale['delivery_note']];

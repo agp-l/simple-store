@@ -46,16 +46,22 @@ $isWithdraw = ($preview['kind'] ?? '') === 'withdrawal';
     <?php elseif ($preview !== null && $order !== null && $isWithdraw): ?>
       <?php $item = $order['items'][(int) $preview['item_line'] - 1] ?? []; ?>
       <h2>Potvrdit odstoupení od smlouvy</h2>
-      <p>Prohlašuji, že odstupuji od kupní smlouvy k objednávce <strong><?= $e($order['order_number']) ?></strong> v rozsahu <strong><?= $e($preview['quantity']) ?> × <?= $e($item['name'] ?? '') ?></strong>. Sdělení: <?= $e($preview['description'] ?: 'Bez dalšího sdělení.') ?></p>
+      <p>Prohlašuji, že odstupuji od <?= ($item['sale_mode'] ?? 'own') === 'assisted' ? 'smlouvy o službě asistovaného nákupu' : 'kupní smlouvy' ?> k objednávce <strong><?= $e($order['order_number']) ?></strong> v rozsahu <strong><?= $e($preview['quantity']) ?> × <?= $e($item['name'] ?? '') ?></strong>. Sdělení: <?= $e($preview['description'] ?: 'Bez dalšího sdělení.') ?></p>
       <p>Datum převzetí podle vás: <?= $e($preview['delivered_on'] ?: 'neuvedeno') ?>. Kontakt: <?= $e($order['customer_email']) ?>.</p>
       <p>Odesláním následujícího formuláře se odstoupení zapíše s přesným časem a přijde potvrzení e-mailem, je-li služba nastavena.</p>
       <form class="panel-form" method="post" action="<?= $e($supportUrl) ?>">
         <input type="hidden" name="csrf" value="<?= $e($csrf) ?>"><input type="hidden" name="action" value="confirm-withdrawal">
         <label class="panel-check"><input type="checkbox" name="confirmed" value="1" required> Potvrzuji, že chci od uvedeného nákupu odstoupit.</label>
-        <button class="panel-button" type="submit">Odeslat odstoupení</button>
+        <button class="panel-button" type="submit">Potvrdit odstoupení od smlouvy</button>
       </form><p><a href="<?= $e($supportUrl . '?order=' . $preview['order_token']) ?>">← Zpět k objednávce</a></p>
     <?php elseif ($order !== null): ?>
       <h2>Objednávka <?= $e($order['order_number']) ?></h2>
+      <?php if (\SimpleStore\Checkout\AssistedPurchase::has($order['items'])): ?>
+        <p>U položek označených „Asistovaný nákup“ tento formulář řeší naši službu; lhůta pro odstoupení od služby běží od uzavření smlouvy. Vrácení nebo reklamaci samotného zboží uplatněte u níže uvedeného prodávajícího. S postupem vám pomůžeme na kontaktním e-mailu obchodu.</p>
+        <?php foreach ($order['items'] as $partnerItem): if (($partnerItem['sale_mode'] ?? 'own') !== 'assisted') continue; ?>
+          <p><strong><?= $e($partnerItem['name']) ?>:</strong> <?= $e($partnerItem['seller']['name']) ?> · <?= $e($partnerItem['seller']['email']) ?> · <a href="<?= $e($partnerItem['seller']['terms_url']) ?>" target="_blank" rel="noopener noreferrer">Podmínky prodávajícího</a></p>
+        <?php endforeach; ?>
+      <?php endif; ?>
       <?php if ($cases !== []): ?><h3>Dosavadní podání</h3><ul><?php foreach ($cases as $record): ?>
         <li><a href="<?= $e($supportUrl . '?case=' . $record['case_token']) ?>"><?= $e($record['case_number']) ?></a> · <?= $e($record['item_name']) ?> · <?= $e(CaseRepository::STATUSES[$record['status']] ?? $record['status']) ?></li>
       <?php endforeach; ?></ul><?php endif; ?>
@@ -74,7 +80,7 @@ $isWithdraw = ($preview['kind'] ?? '') === 'withdrawal';
               <button class="panel-button" type="submit">Podat reklamaci</button>
             </form>
           </section>
-          <section class="panel-panel"><h3>Vrácení zboží</h3>
+          <section class="panel-panel" id="odstoupeni"><h3>Odstoupení od smlouvy</h3>
             <p class="panel-help">Odstoupení od smlouvy můžete podat bez uvedení důvodu. Standardní lhůta je 14 dní od převzetí; výjimky a další postup uvádí stránka Výměna a vrácení zboží.</p>
             <form class="panel-form" method="post" action="<?= $e($supportUrl) ?>">
               <input type="hidden" name="csrf" value="<?= $e($csrf) ?>"><input type="hidden" name="action" value="review-withdrawal"><input type="hidden" name="order_token" value="<?= $e($orderToken) ?>"><input type="hidden" name="request_key" value="<?= $e(bin2hex(random_bytes(32))) ?>">

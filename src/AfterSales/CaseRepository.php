@@ -140,6 +140,11 @@ final class CaseRepository
             $seller = array_intersect_key($sellerSettings,
                 array_fill_keys(['name', 'ico', 'street', 'city', 'postal_code', 'email', 'phone'], true));
             $options = is_array($item['options'] ?? null) ? $item['options'] : [];
+            if (($item['sale_mode'] ?? 'own') === 'assisted') {
+                $options['Plnění'] = 'Služba asistovaného nákupu';
+                $options['Prostředky k nákupu za kus'] = (int) $item['supplier_price_czk'] . ' Kč';
+                $item['unit_price_czk'] = (int) $item['assistance_fee_czk'];
+            }
             $optionsJson = json_encode($options, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
             if (strlen($optionsJson) > 4000) throw new InvalidArgumentException('Varianty zboží jsou příliš dlouhé.');
             $number = ($kind === 'complaint' ? 'R' : 'V') . '-' . gmdate('Y') . '-' . strtoupper(bin2hex(random_bytes(6)));

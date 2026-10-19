@@ -165,7 +165,23 @@ final class OrderRepository
                 'options' => $options,
             ];
             if ($variantId !== '') $snapshot += ['variant_key' => $variantId, 'variant_sku' => $variantSku];
+            if (($item['sale_mode'] ?? 'own') === 'assisted') {
+                $snapshot += AssistedPurchase::snapshot(['mode' => 'assisted',
+                    'supplier_price_czk' => $item['supplier_price_czk'] ?? null,
+                    'seller' => $item['seller'] ?? null, 'delivery_note' => $item['delivery_note'] ?? ''], $price);
+                if (($item['assistance_fee_czk'] ?? null) !== $snapshot['assistance_fee_czk']) {
+                    throw new InvalidArgumentException('Rozpis ceny asistovaného nákupu nesouhlasí.');
+                }
+            }
             $snapshots[] = $snapshot;
+        }
+        if (AssistedPurchase::has($snapshots)) {
+            $consent = $shipping['assisted_purchase'] ?? [];
+            if (!is_bool($consent['early_start'] ?? null) ||
+                ($consent['early_request_text'] ?? '') !== AssistedPurchase::EARLY_REQUEST ||
+                !is_string($consent['terms_hash'] ?? null) || preg_match('/^[a-f0-9]{64}$/D', $consent['terms_hash']) !== 1) {
+                throw new InvalidArgumentException('Chybí potvrzení podmínek asistovaného nákupu.');
+            }
         }
         $itemsJson = self::json($snapshots, 262144);
         $shippingJson = self::json($shipping, 16384);
@@ -220,18 +236,27 @@ final class OrderRepository
             }
             // Keep the exact published terms with this order, in the same transaction.
             // A later edit of the public page must not change an earlier contract.
-            (new OrderLegalDocuments($this->db))->capture((int) $saved['id'], $snapshots);
+            (new OrderLegalDocuments($this->db))->capture((int) $saved['id'], $snapshots,
+                (string) ($shipping['assisted_purchase']['terms_hash'] ?? ''));
             $this->stock?->reserve((int) $saved['id'], $snapshots);
             if ((int) $this->db->queryFirstField(
                 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
                 'shop_sale_lines'
             ) > 0) {
                 foreach ($snapshots as $index => $item) {
+                    if (($item['sale_mode'] ?? 'own') === 'assisted') continue; // Not our goods or inventory cost.
                     $this->db->insert('shop_sale_lines', [
                         'order_id' => (int) $saved['id'], 'line_no' => $index + 1,
                         'product_key' => $item['product_key'], 'name' => $item['name'],
                         'quantity' => $item['quantity'], 'unit_price_czk' => $item['unit_price_czk'],
                     ]);
+                }
+            }
+            if (AssistedPurchase::has($snapshots)) {
+                // Queue confirmation atomically with the contract, even if immediate delivery fails.
+                $mail = new \SimpleStore\Accounting\OrderMailQueue($this->db);
+                if ($mail->enqueueOrder(self::hydrate($saved), '', true) === null) {
+                    throw new InvalidArgumentException('Potvrzení objednávky nelze připravit. Zkuste nákup později.');
                 }
             }
             $this->db->commit();

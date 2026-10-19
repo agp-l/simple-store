@@ -29,6 +29,7 @@ require __DIR__ . '/common.php';
               <?php if ($productUrl !== null): ?><a class="checkout-line-title" href="<?= $checkoutEscape($productUrl) ?>"><?= $checkoutEscape($item['name']) ?></a><?php else: ?><strong class="checkout-line-title"><?= $checkoutEscape($item['name']) ?></strong><?php endif; ?>
               <?php foreach (($item['options'] ?? []) as $label => $value): ?><small><?= $checkoutEscape($label) ?>: <?= $checkoutEscape($value) ?></small><?php endforeach; ?>
               <small><?= $item['unit_price_czk'] === null ? 'Cena není dostupná' : $checkoutMoney((int) $item['unit_price_czk']) . ' / ks' ?></small>
+              <?php require __DIR__ . '/assisted-item.php'; ?>
               <?php if (($item['issue'] ?? '') !== ''): ?><p class="checkout-line-issue" role="alert"><?= $checkoutEscape($item['issue']) ?></p><?php endif; ?>
               <div class="checkout-line-actions">
                 <form method="post" action="<?= $checkoutEscape($cartUrl) ?>">

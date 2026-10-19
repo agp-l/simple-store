@@ -59,11 +59,21 @@ final class OrderEmailComposer
             $lines[] = $quantity . ' × ' . (string) ($item['name'] ?? '') . ' — ' .
                 number_format($quantity * (int) ($item['unit_price_czk'] ?? 0), 0, ',', ' ') . ' Kč';
             foreach (self::options($item) as $option) $lines[] = '  ' . $option;
+            $assistance = \SimpleStore\Checkout\AssistedPurchase::description($item);
+            if ($assistance !== '') $lines[] = $assistance;
         }
         $lines[] = 'Zboží: ' . number_format((int) ($order['subtotal_czk'] ??
             ((int) ($order['total_czk'] ?? 0) - (int) ($order['shipping_czk'] ?? 0))), 0, ',', ' ') . ' Kč';
         $lines[] = 'Doprava: ' . number_format((int) ($order['shipping_czk'] ?? 0), 0, ',', ' ') . ' Kč';
         $lines[] = 'Celkem: ' . $total;
+        $assistanceConsent = $order['shipping_ordered']['assisted_purchase'] ?? $order['shipping']['assisted_purchase'] ?? null;
+        if (is_array($assistanceConsent)) {
+            $serviceNote = 'Smlouva o asistenci byla uzavřena odesláním objednávky. ' .
+                ($assistanceConsent['early_start'] ? 'Vaše výslovná žádost: ' . $assistanceConsent['early_request_text'] :
+                'O zahájení služby před uplynutím 14 dnů jste nepožádali; nákup u partnera zahájíme až po uplynutí lhůty pro odstoupení.');
+            $lines[] = $serviceNote;
+            $facts['Asistovaný nákup'] = $serviceNote;
+        }
         $lines[] = '';
         $lines[] = 'Doručení · ' . $carrier . ':';
         $address = self::addressLines($shipping);
@@ -165,6 +175,8 @@ final class OrderEmailComposer
             if (!is_array($item)) continue;
             $quantity = (int) ($item['quantity'] ?? 0);
             $options = self::options($item);
+            $assistance = \SimpleStore\Checkout\AssistedPurchase::description($item);
+            if ($assistance !== '') $options[] = $assistance;
             $itemsHtml .= '<tr><td style="padding:12px 0;border-bottom:1px solid #e5ebe2;vertical-align:top"><strong>' .
                 $escape((string) ($item['name'] ?? '')) . '</strong>' .
                 ($options === [] ? '' : '<br><span style="color:#617064;font-size:12px">' .

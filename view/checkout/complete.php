@@ -127,6 +127,7 @@ if ($testOrder) {
     <?php if ($fulfillmentStatus === 'ready_to_ship' && ($trackingNumber !== '' || $trackingUrl !== '')): ?><p class="checkout-fineprint">Pohyb zásilky se může zobrazit až po předání dopravci.</p><?php endif; ?>
     <?php if ($orderUrl !== ''): ?><?php require __DIR__ . '/order-link.php'; ?><?php endif; ?>
     <?php if (!$testOrder && $orderUrl !== ''): ?><p><a class="checkout-back" href="<?= $checkoutEscape($siteRoot . 'support.php?order=' . rawurlencode((string) ($order['order_token'] ?? ''))) ?>">Reklamace a vrácení zboží →</a></p><?php endif; ?>
+    <?php if (!$testOrder && $orderUrl !== ''): ?><p><a class="checkout-primary" href="<?= $checkoutEscape($siteRoot . 'support.php?order=' . rawurlencode((string) ($order['order_token'] ?? '')) . '#odstoupeni') ?>">Odstoupit od smlouvy</a></p><?php endif; ?>
   </section>
   <?php if (isset($order['subtotal_czk'], $order['shipping_czk'], $order['total_czk'])): ?>
   <section class="checkout-panel checkout-receipt"><h2>Souhrn nákupu</h2>
@@ -151,6 +152,7 @@ if ($testOrder) {
         <div class="checkout-line-detail">
           <strong class="checkout-line-title"><?= $checkoutEscape($item['name'] ?? '') ?></strong>
           <small><?= $quantity ?> ks × <?= $checkoutMoney($unitPrice) ?> / ks</small>
+          <?php require __DIR__ . '/assisted-item.php'; ?>
           <?php foreach (($item['options'] ?? []) as $label => $value): ?><?php if (is_scalar($value)): ?><small><?= $checkoutEscape($label) ?>: <?= $checkoutEscape($value) ?></small><?php endif; ?><?php endforeach; ?>
         </div>
         <strong class="checkout-line-price"><?= $checkoutMoney($quantity * $unitPrice) ?></strong>

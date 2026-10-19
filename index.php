@@ -205,7 +205,7 @@ try {
             $customerProfile, $customerAddresses, $packeta, $ppl, null, null,
             new OrderMailQueue($db), (string) ($taxSettings['mail_from'] ?? ''),
             new InvoiceRepository($db), $comgate, $gopay, $btcpay,
-            new OrderTrackingRepository($db));
+            new OrderTrackingRepository($db), new \SimpleStore\Accounting\OrderLegalDocuments($db));
         $controller->handle($route);
         exit;
     }
