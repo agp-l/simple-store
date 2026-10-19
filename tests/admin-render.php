@@ -38,6 +38,17 @@ if (!str_contains($html, 'Kategorie a podkategorie') ||
     throw new RuntimeException('Category administration must provide the new and edit controls.');
 }
 
+$screen = 'purchase-partners';
+$partnersReady = true; $partnerError = ''; $partnerQuery = ''; $partnerRows = [];
+$partnerForm = ['id'=>0,'version'=>0,'confirmed'=>0,'name'=>'Rozpracovaný kontakt'];
+$partnerMissing = \SimpleStore\Product\PurchasePartnerRepository::missing($partnerForm);
+ob_start();require dirname(__DIR__) . '/view/admin/layout.php';$html = ob_get_clean();
+if (!str_contains($html, 'Prodávající pro asistovaný nákup') ||
+    !str_contains($html, 'name="action" value="purchase-partner-save"') ||
+    !str_contains($html, 'value="Rozpracovaný kontakt"') || !str_contains($html, 'aria-current="page"')) {
+    throw new RuntimeException('Partner administration is not connected to the authenticated admin layout.');
+}
+
 $screen = 'menus';
 $slot = 'utility';
 $menuSlots = ['utility' => ['source' => 'content', 'include_blog' => true]];

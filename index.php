@@ -379,9 +379,16 @@ try {
             $supplierRepository = new ProductSupplierLinkRepository($db);
             $supplierLinksReady = $supplierRepository->installed();
             if ($supplierLinksReady) $supplierLinks = $supplierRepository->forProduct($item['product_key']);
-            $shared['productSalesReady'] = $productSales->installed();
+            $shared['productSalesReady'] = $productSales->installed() &&
+                (new \SimpleStore\Product\PurchasePartnerRepository($db))->installed();
             $shared['productSale'] = $productSales->forProduct($item['product_key']);
             $shared['purchasePartners'] = $productSales->partners();
+            $saleFormKey = $item['product_key'] . ':' . $url->getLanguage();
+            if (isset($_SESSION['product_sale_errors'][$saleFormKey])) {
+                $shared['productSaleForm'] = $_SESSION['product_sale_errors'][$saleFormKey]['form'];
+                $shared['productSaleError'] = $_SESSION['product_sale_errors'][$saleFormKey]['message'];
+                unset($_SESSION['product_sale_errors'][$saleFormKey]);
+            }
             $shared['editToken'] = $auth->token();
             $shared['privatePage'] = true;
         }

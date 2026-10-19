@@ -36,7 +36,7 @@ foreach ($views as $view) {
     }
 }
 
-if (!isset($checked['fio-sync'], $checked['change-order-shipping'], $checked['product-sale'])) {
+if (!isset($checked['fio-sync'], $checked['change-order-shipping'], $checked['product-sale'], $checked['purchase-partner-save'])) {
     throw new RuntimeException('The Fio sync, shipping and product sale forms must remain available to administrators.');
 }
 

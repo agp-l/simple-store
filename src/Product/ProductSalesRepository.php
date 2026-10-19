@@ -24,7 +24,7 @@ final class ProductSalesRepository
 
     public function partners(): array
     {
-        return $this->installed() ? $this->db->query('SELECT * FROM shop_purchase_partners ORDER BY name, id LIMIT 500') : [];
+        return $this->installed() ? (new PurchasePartnerRepository($this->db))->all() : [];
     }
 
     public function forProduct(string $key): array
@@ -35,8 +35,9 @@ final class ProductSalesRepository
         $row['supplier_price_czk'] = $row['supplier_price_czk'] === null ? null : (int) $row['supplier_price_czk'];
         $row['version'] = (int) $row['version'];
         $row['variant_prices'] = json_decode((string) $row['variant_prices_json'], true, 32, JSON_THROW_ON_ERROR);
-        $partner = $row['partner_id'] === null ? null : $this->db->queryFirstRow(
-            'SELECT name, ico, address, email, terms_url FROM shop_purchase_partners WHERE id=%i', (int) $row['partner_id']);
+        $partner = $row['partner_id'] === null ? null : (new PurchasePartnerRepository($this->db))->find((int) $row['partner_id']);
+        if ($partner !== null && PurchasePartnerRepository::missing($partner) !== []) $partner = null;
+        if ($partner !== null) $partner = array_intersect_key($partner, PurchasePartnerRepository::FIELDS);
         $row['seller'] = $partner;
         return $row;
     }
@@ -65,10 +66,10 @@ final class ProductSalesRepository
         return $rows;
     }
 
-    /** One atomic save; existing partner identities are immutable, corrections create a new profile. */
+    /** Save unfinished settings too; checkout independently requires complete, confirmed data. */
     public function save(string $key, string $language, array $input): void
     {
-        if (!$this->installed() || preg_match('/^[a-f0-9]{32}$/D', $key) !== 1) {
+        if (!$this->installed() || !(new PurchasePartnerRepository($this->db))->installed() || preg_match('/^[a-f0-9]{32}$/D', $key) !== 1) {
             throw new InvalidArgumentException('Nejprve aktualizuj databázi v administraci.');
         }
         $mode = $input['mode'] ?? null;
@@ -82,47 +83,49 @@ final class ProductSalesRepository
                 AND language=%s AND active_product_key IS NOT NULL LIMIT 1 FOR UPDATE', $key, $language);
             if ($product === null) throw new InvalidArgumentException('Produkt už neexistuje.');
             $stored = $this->db->queryFirstRow('SELECT version FROM shop_product_sales WHERE product_key=%s FOR UPDATE', $key);
-            if ((int) ($stored['version'] ?? 0) !== $expected) throw new InvalidArgumentException('Nastavení mezitím někdo změnil. Obnov stránku.');
-            if ($mode === 'assisted') {
-                $cost = self::price($input['supplier_price_czk'] ?? null);
-                $note = self::text($input['delivery_note'] ?? null, 190);
-                $partnerId = filter_var($input['partner_id'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
-                if ($partnerId === false) throw new InvalidArgumentException('Vyber prodávajícího.');
-                if ($partnerId === 0) {
-                    if (($input['partner_confirmed'] ?? '') !== '1') throw new InvalidArgumentException('Potvrď možnost nakupovat u partnera jménem zákazníků.');
-                    $partner = [];
-                    foreach (['name' => 190, 'ico' => 8, 'address' => 500, 'email' => 190, 'terms_url' => 1000] as $field => $limit) {
-                        $partner[$field] = self::text($input['partner_' . $field] ?? null, $limit);
+            if ((int) ($stored['version'] ?? 0) !== $expected) throw new InvalidArgumentException('Nastavení mezitím někdo změnil. Otevři uložené nastavení v nové kartě a porovnej změny.');
+            $cost = ($input['supplier_price_czk'] ?? '') === '' ? null : self::price($input['supplier_price_czk']);
+            $note = self::text($input['delivery_note'] ?? '', 190);
+            $partnerId = filter_var($input['partner_id'] ?? '0', FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
+            if ($partnerId === false) throw new InvalidArgumentException('Vyber prodávajícího.');
+            if ($partnerId === 0) {
+                $partner = []; $hasPartner = false;
+                foreach (PurchasePartnerRepository::FIELDS as $field => $limit) {
+                    $partner[$field] = $input['partner_' . $field] ?? '';
+                    if ($partner[$field] !== '') $hasPartner = true;
+                }
+                if ($hasPartner) {
+                    $partner['confirmed'] = $input['partner_confirmed'] ?? '';
+                    $partnerId = (new PurchasePartnerRepository($this->db))->save(0, $partner);
+                } else {
+                    if (($input['create_partner'] ?? '') === '1') throw new InvalidArgumentException('Vyplň alespoň jeden údaj nového prodávajícího.');
+                    $partnerId = null;
+                }
+            } else {
+                foreach (array_keys(PurchasePartnerRepository::FIELDS) as $field) {
+                    if (($input['partner_' . $field] ?? '') !== '') {
+                        throw new InvalidArgumentException('Vybral jsi uloženého prodávajícího a vyplnil také nového. Pro vytvoření nového zvol ve výběru „Zatím nevybrán / nový prodávající níže“, jinak vyprázdni údaje nového.');
                     }
-                    if (preg_match('/^[0-9]{8}$/D', $partner['ico']) !== 1 ||
-                        filter_var($partner['email'], FILTER_VALIDATE_EMAIL) === false ||
-                        filter_var($partner['terms_url'], FILTER_VALIDATE_URL) === false ||
-                        parse_url($partner['terms_url'], PHP_URL_SCHEME) !== 'https' ||
-                        parse_url($partner['terms_url'], PHP_URL_USER) !== null ||
-                        parse_url($partner['terms_url'], PHP_URL_PASS) !== null) {
-                        throw new InvalidArgumentException('Zkontroluj IČO, e-mail a HTTPS adresu podmínek prodávajícího.');
-                    }
-                    $this->db->insert('shop_purchase_partners', $partner);
-                    $partnerId = (int) $this->db->insertId();
-                } elseif ($this->db->queryFirstRow('SELECT id FROM shop_purchase_partners WHERE id=%i', $partnerId) === null) {
+                }
+                if ((new PurchasePartnerRepository($this->db))->find($partnerId) === null) {
                     throw new InvalidArgumentException('Vybraný prodávající už neexistuje.');
                 }
-                $variants = (new ProductVariantRepository($this->db))->snapshots([$key]);
-                $inventory = $variants[$key] ?? ProductVariantRepository::empty();
-                $overrides = $input['variant_price'] ?? [];
-                if (!is_array($overrides)) throw new InvalidArgumentException('Neplatné ceny variant.');
-                if ($inventory['enabled']) {
-                    foreach ($inventory['items'] as $variant) {
-                        $value = $overrides[$variant['id']] ?? '';
-                        if ($value !== '') $variantPrices[$variant['id']] = self::price($value);
-                        if ($variant['enabled'] && ($variantPrices[$variant['id']] ?? $cost) >
-                            ($variant['price_czk'] ?? (int) $product['price_czk'])) {
-                            throw new InvalidArgumentException('Cena dodavatele nesmí převýšit konečnou cenu žádné aktivní varianty.');
-                        }
+            }
+            $variants = (new ProductVariantRepository($this->db))->snapshots([$key]);
+            $inventory = $variants[$key] ?? ProductVariantRepository::empty();
+            $overrides = $input['variant_price'] ?? [];
+            if (!is_array($overrides)) throw new InvalidArgumentException('Neplatné ceny variant.');
+            if ($inventory['enabled']) {
+                foreach ($inventory['items'] as $variant) {
+                    $value = $overrides[$variant['id']] ?? '';
+                    if ($value !== '') $variantPrices[$variant['id']] = self::price($value);
+                    if ($mode === 'assisted' && $variant['enabled'] && ($variantPrices[$variant['id']] ?? $cost) >
+                        ($variant['price_czk'] ?? (int) $product['price_czk'])) {
+                        throw new InvalidArgumentException('Cena dodavatele nesmí převýšit konečnou cenu žádné aktivní varianty.');
                     }
-                } elseif ($cost > (int) $product['price_czk']) {
-                    throw new InvalidArgumentException('Cena dodavatele nesmí převýšit konečnou cenu produktu.');
                 }
+            } elseif ($mode === 'assisted' && $cost > (int) $product['price_czk']) {
+                throw new InvalidArgumentException('Cena dodavatele nesmí převýšit konečnou cenu produktu.');
             }
             $values = ['mode' => $mode, 'partner_id' => $partnerId, 'supplier_price_czk' => $cost,
                 'delivery_note' => $note, 'variant_prices_json' => json_encode($variantPrices, JSON_THROW_ON_ERROR),
@@ -142,9 +145,9 @@ final class ProductSalesRepository
 
     private static function text(mixed $value, int $limit): string
     {
-        if (!is_string($value) || trim($value) === '' || strlen(trim($value)) > $limit ||
+        if (!is_string($value) || strlen(trim($value)) > $limit ||
             preg_match('//u', $value) !== 1 || preg_match('/[\x00-\x1f\x7f]/', $value) === 1) {
-            throw new InvalidArgumentException('Vyplň úplné údaje prodávajícího a předpokládanou dobu dodání.');
+            throw new InvalidArgumentException('Doba dodání je příliš dlouhá nebo obsahuje nepovolené znaky.');
         }
         return trim($value);
     }

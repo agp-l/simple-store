@@ -45,6 +45,8 @@ try {
         'partner_email'=>'partner@example.test','partner_terms_url'=>'https://partner.example.test/terms','partner_confirmed'=>'1'];
     $sales->save($key,'cs',$input);
     $partnerId=(int)$sales->forProduct($key)['partner_id'];
+    $input = array_diff_key($input, array_flip(['partner_name','partner_ico','partner_address','partner_email','partner_terms_url','partner_confirmed']));
+    $input['partner_id'] = (string) $partnerId;
     $reject(static fn()=> $sales->save($key,'cs',$input)); // stale admin save
     $reject(static fn()=> $sales->save($key,'cs',array_replace($input,['version'=>'1','partner_id'=>(string)$partnerId,'supplier_price_czk'=>'1801'])));
     $public=$stock->decorate([['product_key'=>$key,'stock_status'=>'in_stock','price_czk'=>1800]])[0];
@@ -66,6 +68,12 @@ try {
     $check($outbox!==null&&str_contains($outbox['terms_attachment'],A::TERMS_SLUG)&&str_contains($outbox['terms_attachment'],OrderLegalDocuments::TERMS_SLUG)
         &&str_contains($outbox['body_text'],'1 678 Kč + služba 122 Kč')&&str_contains($outbox['body_text'],A::EARLY_REQUEST),'Durable confirmation lost contract data.');
     $check((int)$db->queryFirstField('SELECT COUNT(*) FROM shop_sale_lines WHERE order_id=%i',$order['id'])===1,'Partner goods entered our goods ledger.');
+    $partners = new \SimpleStore\Product\PurchasePartnerRepository($db);
+    $profile = $partners->find($partnerId);
+    $partners->save($partnerId, array_replace($profile,['confirmed'=>'1','email'=>'changed@example.test']));
+    $check($orders->findById((int)$order['id'])['items'][0]['seller']['email']==='partner@example.test' &&
+        $sales->snapshot($key,'',1800)['seller']['email']==='changed@example.test', 'Editing the seller changed an accepted contract.');
+    $partners->save($partnerId, array_replace($profile,['confirmed'=>'1','version'=>'2']));
     // A failed confirmation must roll back the entire order and its stock reservation.
     $before=(int)$db->queryFirstField('SELECT COUNT(*) FROM shop_orders');
     $stockBefore=(int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$key);

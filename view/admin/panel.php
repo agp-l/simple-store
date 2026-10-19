@@ -1,7 +1,7 @@
 <?php
 // This body is framed by the shared storefront shell.
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-$inside = in_array($screen, ['content-import', 'product-import', 'editor', 'categories', 'menus', 'media', 'orders', 'returns', 'accounting', 'settings', 'users', 'database'], true);
+$inside = in_array($screen, ['purchase-partners', 'content-import', 'product-import', 'editor', 'categories', 'menus', 'media', 'orders', 'returns', 'accounting', 'settings', 'users', 'database'], true);
 $panelPreviewControl = $inside && $csrf !== '' ? [
     'active' => (bool) ($adminPreviewActive ?? false),
     'csrf' => $csrf,
@@ -21,6 +21,7 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
     $panelLinks = [
         ['key' => 'editor', 'label' => 'Stránky', 'icon_name' => 'document', 'href' => $adminUrl . '?section=contents'],
         ['key' => 'products', 'label' => 'Produkty', 'icon_name' => 'package', 'href' => $basePath . $site['default_language'] . '?manage=1#produkty'],
+        ['key' => 'purchase-partners', 'label' => 'Prodávající', 'icon_name' => 'users', 'href' => $adminUrl . '?section=purchase-partners'],
         ['key' => 'product-import', 'label' => 'Import a export', 'icon_name' => 'upload', 'href' => $adminUrl . '?section=product-import'],
         ['key' => 'orders', 'label' => 'Objednávky', 'icon_name' => 'package', 'href' => $adminUrl . '?section=orders'],
         ['key' => 'returns', 'label' => 'Reklamace a vrácení', 'icon_name' => 'refresh', 'href' => $adminUrl . '?section=returns'],
@@ -82,6 +83,8 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
       </section>
     <?php elseif ($screen === 'content-import'): ?>
       <?php require __DIR__ . '/content-import.php'; ?>
+    <?php elseif ($screen === 'purchase-partners'): ?>
+      <?php require __DIR__ . '/purchase-partners.php'; ?>
     <?php elseif ($screen === 'product-import'): ?>
       <?php require __DIR__ . '/product-import.php'; ?>
     <?php elseif ($screen === 'categories'): ?>

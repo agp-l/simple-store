@@ -90,6 +90,8 @@ final class PageRenderer
         $productSalesReady = (bool) ($data['productSalesReady'] ?? false);
         $productSale = $data['productSale'] ?? ['mode' => 'own', 'version' => 0];
         $purchasePartners = $data['purchasePartners'] ?? [];
+        $productSaleForm = $data['productSaleForm'] ?? [];
+        $productSaleError = $data['productSaleError'] ?? '';
         $contentEditMode = (bool) ($data['contentEditMode'] ?? false);
         $canEditContent = (bool) ($data['canEditContent'] ?? false);
         $canManageContent = (bool) ($data['canManageContent'] ?? false);
