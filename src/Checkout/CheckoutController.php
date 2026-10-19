@@ -43,7 +43,8 @@ final class CheckoutController
         private ?ComgatePaymentService $comgate = null,
         private ?GoPayPaymentService $gopay = null,
         private ?BTCPayPaymentService $btcpay = null,
-        ?OrderTrackingRepository $orderTracking = null
+        ?OrderTrackingRepository $orderTracking = null,
+        private ?\SimpleStore\Accounting\OrderLegalDocuments $legalDocuments = null
     ) {
         $this->cartUrl = $url->path('kosik');
         $this->checkoutUrl = $url->path('pokladna');
@@ -225,10 +226,10 @@ final class CheckoutController
     private function placeOrder(): void
     {
         $paymentMethod = $this->selectedPaymentMethod();
-        if ($this->termsUrl !== '' && self::field('terms') !== '1') {
+        $summary = $this->cartService->summary($this->cart);
+        if (AssistedPurchase::own($summary['items']) && ($this->termsUrl !== '' || AssistedPurchase::has($summary['items'])) && self::field('terms') !== '1') {
             throw new InvalidArgumentException('Pro odeslání objednávky potvrďte obchodní podmínky.');
         }
-        $summary = $this->cartService->summary($this->cart);
         $delivery = $this->cart->state()['delivery'];
         if ($paymentMethod === 'gopay' && is_array($delivery) &&
             strlen((string) ($delivery['email'] ?? '')) > 128) {
@@ -251,6 +252,20 @@ final class CheckoutController
             throw new InvalidArgumentException('Doprava není dostupná.');
         }
         $shipping = $delivery;
+        if (!AssistedPurchase::has($summary['items']) && isset($_POST['review_token'])) {
+            throw new InvalidArgumentException('Způsob prodeje se změnil. Zkontrolujte prosím souhrn znovu.');
+        }
+        if (AssistedPurchase::has($summary['items'])) {
+            $bundle = $this->assistanceBundle($summary['items']);
+            $expected = AssistedPurchase::reviewToken($summary, $delivery, $price, $paymentMethod,
+                $bundle['hash'], $this->cart->token());
+            if (!is_string($_POST['review_token'] ?? null) || !hash_equals($expected, $_POST['review_token'])) {
+                throw new InvalidArgumentException('Cena, prodávající nebo údaje objednávky se změnily. Zkontrolujte souhrn a objednejte znovu.');
+            }
+            if (($_POST['assisted_terms'] ?? '') !== '1') throw new InvalidArgumentException('Potvrďte podmínky asistovaného nákupu.');
+            $shipping['assisted_purchase'] = ['early_start' => ($_POST['early_start'] ?? '') === '1',
+                'early_request_text' => AssistedPurchase::EARLY_REQUEST, 'terms_hash' => $bundle['hash']];
+        }
         $shipping['label'] = $label;
         $shipping['recipient'] = $delivery['name'];
         if ($methodCode === 'zasilkovna_pickup') {
@@ -383,6 +398,18 @@ final class CheckoutController
         $baseReady = $summary['can_continue'] && $shippingConfigured && $installed && $price !== null &&
             $summary['subtotal_czk'] + $price <= 9999999;
         $ready = $baseReady && $this->paymentAvailable($paymentMethod);
+        $assisted = AssistedPurchase::has($summary['items']);
+        $reviewToken = '';
+        if ($assisted) {
+            try {
+                $bundle = $this->assistanceBundle($summary['items']);
+                $reviewToken = AssistedPurchase::reviewToken($summary, is_array($delivery) ? $delivery : [],
+                    $price, $paymentMethod, $bundle['hash'], $this->cart->token());
+            } catch (InvalidArgumentException $exception) {
+                $ready = false;
+                if ($error === '') $error = $exception->getMessage();
+            }
+        }
         $data = array_merge($this->shared, [
             'title' => match ($step) {
                 'cart' => 'Košík — dobrodruzi.cz',
@@ -410,7 +437,10 @@ final class CheckoutController
                 $this->comgate !== null && $this->comgate->canInitiate() ||
                 $this->gopay !== null && $this->gopay->canInitiate() ||
                 $this->btcpay !== null && $this->btcpay->canInitiate()),
-            'checkoutReady' => $ready, 'termsUrl' => $this->termsUrl,
+            'checkoutReady' => $ready, 'termsUrl' => $this->termsUrl !== '' ? $this->termsUrl :
+                ($assisted ? $this->url->path(\SimpleStore\Accounting\OrderLegalDocuments::TERMS_SLUG) : ''),
+            'hasAssisted' => $assisted, 'hasOwnSale' => AssistedPurchase::own($summary['items']),
+            'assistedTermsUrl' => $this->url->path(AssistedPurchase::TERMS_SLUG), 'reviewToken' => $reviewToken,
             'error' => $error, 'step' => $step,
             'setupNotice' => !$installed ? 'Pro objednávky znovu importuj aktuální database/schema.sql.' : '',
         ]);
@@ -424,6 +454,15 @@ final class CheckoutController
             throw new InvalidArgumentException('Neplatné pole formuláře: ' . $name . '.');
         }
         return trim($value);
+    }
+
+    private function assistanceBundle(array $items): array
+    {
+        if ($this->legalDocuments === null || !$this->legalDocuments->installed() ||
+            $this->mailQueue === null || !$this->mailQueue->assistanceReady($this->mailSender)) {
+            throw new InvalidArgumentException('Asistovaný nákup zatím není připraven k objednání. Kontaktujte nás prosím.');
+        }
+        return $this->legalDocuments->checkoutBundle($items);
     }
 
     private static function quantity(): int

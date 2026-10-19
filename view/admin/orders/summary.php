@@ -8,6 +8,8 @@
           </div></div>
         <p class="panel-help">Přijato <?= $escape($order['created_at'] ?? '') ?> · <?= $escape($shipping['label'] ?? $shipping['method'] ?? 'Doprava neuvedena') ?></p>
         <h3 class="panel-order-lines-title">Objednané zboží</h3>
+        <?php $assistanceConsent = $order['shipping_ordered']['assisted_purchase'] ?? $order['shipping']['assisted_purchase'] ?? null; ?>
+        <?php if (is_array($assistanceConsent)): ?><p class="panel-help"><strong>Asistovaný nákup:</strong> <?= $assistanceConsent['early_start'] ? 'Zákazník výslovně požádal o zahájení služby před uplynutím 14 dnů.' : 'Zákazník nepožádal o předčasné zahájení. Nákup u partnera proveď až po uplynutí lhůty pro odstoupení.' ?> Nakupuj jménem zákazníka, doklad musí být vystaven zákazníkovi. Před zahájením ověř odeslání smluvního potvrzení v e-mailech objednávky.</p><?php endif; ?>
         <div class="panel-order-lines">
           <?php foreach (($order['items'] ?? []) as $item): ?>
             <?php if (!is_array($item)): continue; endif; ?>
@@ -31,6 +33,7 @@
                 <?php foreach (($item['options'] ?? []) as $option => $value): ?>
                   <?php if (is_scalar($value)): ?> · <?= $escape($option) ?>: <?= $escape($value) ?><?php endif; ?>
                 <?php endforeach; ?></small>
+                <?php if (($item['sale_mode'] ?? 'own') === 'assisted'): ?><small><?= $escape(\SimpleStore\Checkout\AssistedPurchase::description($item)) ?></small><?php endif; ?>
                 <?php if (!empty($orderSupplierLinks[$item['product_key'] ?? ''])): ?>
                   <div class="panel-order-suppliers"><span>Dodavatelé:</span>
                     <?php foreach ($orderSupplierLinks[$item['product_key']] as $supplier): ?>

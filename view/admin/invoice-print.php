@@ -8,7 +8,8 @@ $printMoney = static fn (mixed $value): string => number_format((int) $value, 0,
 $seller = $selectedInvoice['seller'];
 $buyer = $selectedInvoice['buyer'];
 $invoiceQr = '';
-if (($selectedInvoice['payment_method'] ?? '') === 'bank_transfer') {
+$entrustedPurchase = \SimpleStore\Checkout\AssistedPurchase::principal($selectedInvoice['items']);
+if (($selectedInvoice['payment_method'] ?? '') === 'bank_transfer' && $entrustedPurchase === 0) {
     try {
         $invoiceQr = \SimpleStore\Checkout\BankTransferPayment::qrPayloadForAccount(
             (string) ($selectedInvoice['bank_account'] ?? ''),
@@ -75,6 +76,7 @@ $invoiceAssetRoot = (string) ($printAssetBase ?? $basePath ?? '/');
   <td class="money"><?= $printMoney($selectedInvoice['shipping_czk']) ?></td></tr>
 </tbody></table>
 <p class="total">Celkem: <?= $printMoney($selectedInvoice['total_czk']) ?></p>
+<?php if ($entrustedPurchase > 0): ?><p>Navíc přijato <?= $printMoney($entrustedPurchase) ?> jako svěřené prostředky k nákupu u partnerských prodávajících. Tyto prostředky nejsou součástí této faktury; doklad za zboží vystavuje příslušný prodávající zákazníkovi. Celá přijatá platba: <?= $printMoney((int) $selectedInvoice['total_czk'] + $entrustedPurchase) ?>. Neplaťte znovu.</p><?php endif; ?>
 <?php if ($invoiceQr !== ''): ?>
 <div class="invoice-qr"><div data-qr-payload="<?= $printEscape($invoiceQr) ?>"></div>
   <p><strong>QR platba pro účet na faktuře</strong><br>Uhrazeno. Kód uvádí původní platební údaje pro kontrolu; neplaťte znovu.</p></div>

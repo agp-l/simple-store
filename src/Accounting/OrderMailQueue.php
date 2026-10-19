@@ -42,7 +42,7 @@ final class OrderMailQueue
         return true;
     }
 
-    public function enqueueOrder(array $order, string $orderUrl = ''): ?int
+    public function enqueueOrder(array $order, string $orderUrl = '', bool $withinOrderTransaction = false): ?int
     {
         if (!$this->installed() || ($order['payment_method'] ?? '') === 'test' ||
             ($order['status'] ?? '') === 'cancelled') return null;
@@ -57,25 +57,33 @@ final class OrderMailQueue
         if ($orderId < 1) throw new InvalidArgumentException('Neplatná objednávka pro potvrzení e-mailem.');
         // Checkout and cancellation both lock the order before its outbox row. A delayed
         // checkout must not queue payment instructions after the order was cancelled.
-        $this->db->startTransaction();
+        if (!$withinOrderTransaction) $this->db->startTransaction();
         try {
             $current = $this->db->queryFirstRow(
                 'SELECT status, payment_status FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId
             );
             if ($current === null || $current['status'] !== 'new' ||
                 $current['payment_status'] !== 'pending') {
-                $this->db->commit();
+                if (!$withinOrderTransaction) $this->db->commit();
                 return null;
             }
             $id = $this->enqueue('order:' . $orderId, $orderId,
                 (string) $order['customer_email'], $message['subject'], $message['text'], $message['html'],
                 $legal['terms']);
-            $this->db->commit();
+            if (!$withinOrderTransaction) $this->db->commit();
             return $id;
         } catch (Throwable $error) {
-            $this->db->rollback();
+            if (!$withinOrderTransaction) $this->db->rollback();
             throw $error;
         }
+    }
+
+    public function assistanceReady(string $fallbackSender = ''): bool
+    {
+        if (!$this->installed()) return false;
+        $config = $this->settings->load();
+        return (bool) $config['settings']['automatic_enabled'] && (bool) $config['templates']['order']['enabled'] &&
+            $this->sender($fallbackSender) !== '';
     }
 
     /** Queue a stage once per order; repeated callbacks or clicks cannot send duplicates. */
@@ -163,6 +171,10 @@ final class OrderMailQueue
         }
         $lines[] = 'Doprava: ' . (int) $invoice['shipping_czk'] . ' Kč';
         $lines[] = 'Celkem: ' . (int) $invoice['total_czk'] . ' Kč';
+        $principal = \SimpleStore\Checkout\AssistedPurchase::principal($invoice['items']);
+        if ($principal > 0) $lines[] = 'Mimo tuto fakturu přijato ' . $principal .
+            ' Kč jako svěřené prostředky k nákupu u partnerů. Doklad za zboží vystavuje prodávající zákazníkovi. Celá přijatá platba: ' .
+            ((int) $invoice['total_czk'] + $principal) . ' Kč. Neplaťte znovu.';
         $lines[] = match ($invoice['payment_method'] ?? 'bank_transfer') {
             'comgate' => 'Uhrazeno online přes Comgate.',
             'gopay' => 'Platba online přes GoPay byla při vystavení faktury potvrzená.',
@@ -359,7 +371,7 @@ final class OrderMailQueue
         if (filter_var($email, FILTER_VALIDATE_EMAIL) === false ||
             strlen($subject) > 190 || preg_match('/[\r\n]/', $subject) ||
             strlen($body) > 250000 || strlen($html) > 1000000 ||
-            strlen($termsAttachment) > 30000) {
+            strlen($termsAttachment) > 64000) {
             throw new InvalidArgumentException('E-mailovou zprávu nelze připravit.');
         }
         if ($termsAttachment !== '') {

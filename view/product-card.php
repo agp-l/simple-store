@@ -14,6 +14,7 @@ while ($categoryPath !== '' && !isset($categoryLabels[$categoryPath])) $category
 $categoryHref = $categoryPath === '' ? $basePath . $language . '?all=1#produkty' : $basePath . $language . '/kategorie-produktu/' . $categoryPath;
 $categoryLabel = $categoryLabels[$categoryPath] ?? $categoryLabels[explode('/', $categoryPath)[0]] ?? 'Vybavení';
 $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_stock' => 'Není skladem'];
+if (($product['sale_mode'] ?? 'own') === 'assisted') $stockText['in_stock'] = 'Dostupné u partnera';
 $availability = $product['availability_status'] ?? $product['stock_status'];
 $offerPrice = (int) ($product['offer_price_czk'] ?? $product['price_czk']);
 $hasOptions = ($product['variant_inventory']['enabled'] ?? false) || ProductDetails::decode($product['details_json'] ?? null, $product['sizes'] ?? '')['options'] !== [];
@@ -29,6 +30,7 @@ $hasOptions = ($product['variant_inventory']['enabled'] ?? false) || ProductDeta
         <div class="product-body">
           <?php if (!empty($product['is_tip'])): ?><span class="product-tip">★ Náš tip</span><?php endif; ?>
           <p class="product-brand"><?= $escape($product['brand']) ?></p>
+          <?php if (($product['sale_mode'] ?? 'own') === 'assisted'): ?><small class="assisted-label">Asistovaný nákup · služba v ceně</small><?php endif; ?>
           <h3><a href="<?= $escape($productLink) ?>"><?= $escape($product['name']) ?></a></h3>
           <?php if ($product['summary'] !== ''): ?><p class="product-summary"><?= $escape($product['summary']) ?></p><?php endif; ?>
           <div class="product-meta"><span class="stock <?= $availability === 'in_stock' ? '' : 'stock-wait' ?>"><span class="stock-dot" aria-hidden="true"></span><?= $escape($stockText[$availability] ?? '') ?></span><?php if (($managingCatalog ?? false) && isset($product['stock_quantity'])): ?> <small>Volné: <?= (int) $product['stock_quantity'] ?> ks</small><?php endif; ?></div>

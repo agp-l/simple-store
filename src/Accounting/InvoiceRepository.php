@@ -60,6 +60,8 @@ final class InvoiceRepository
             if (!is_array($items) || $items === [] || !is_string($order['customer_email'] ?? null)) {
                 throw new InvalidArgumentException('Položky nebo kontakt objednávky nejsou úplné.');
             }
+            $principal = \SimpleStore\Checkout\AssistedPurchase::principal($items);
+            $items = \SimpleStore\Checkout\AssistedPurchase::invoiceItems($items);
             $payment = json_decode((string) ($order['payment_details_json'] ?? '{}'), true);
             if ($order['payment_method'] === 'bank_transfer') {
                 $seller['bank_account'] = is_array($payment) && is_string($payment['account_display'] ?? null)
@@ -88,9 +90,9 @@ final class InvoiceRepository
                 'seller_json' => json_encode($seller, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
                 'buyer_json' => json_encode($buyer, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
                 'items_json' => json_encode($items, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
-                'subtotal_czk' => (int) $order['subtotal_czk'],
+                'subtotal_czk' => (int) $order['subtotal_czk'] - $principal,
                 'shipping_czk' => (int) $order['shipping_czk'],
-                'total_czk' => (int) $order['total_czk'],
+                'total_czk' => (int) $order['total_czk'] - $principal,
                 'variable_symbol' => $order['variable_symbol'],
                 'payment_method' => $order['payment_method'],
                 'bank_account' => (string) ($seller['bank_account'] ?? ''),

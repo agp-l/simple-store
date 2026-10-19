@@ -7,6 +7,7 @@ use InvalidArgumentException;
 use MeekroDB;
 use SimpleStore\Content\ContentBody;
 use SimpleStore\Content\ContentRepository;
+use SimpleStore\Checkout\AssistedPurchase;
 
 /** Published legal pages only; save their purchase-time text for the mail attachment. */
 final class OrderLegalDocuments
@@ -20,8 +21,20 @@ final class OrderLegalDocuments
     {
     }
 
-    public function capture(int $orderId, array $items): void
+    public function capture(int $orderId, array $items, string $expectedHash = ''): void
     {
+        if (AssistedPurchase::has($items)) {
+            if (!$this->installed()) throw new InvalidArgumentException('Chybí ukládání smluvních podmínek.');
+            $bundle = $this->checkoutBundle($items);
+            if ($expectedHash === '' || !hash_equals($bundle['hash'], $expectedHash)) {
+                throw new InvalidArgumentException('Podmínky se změnily. Zkontrolujte prosím souhrn objednávky znovu.');
+            }
+            $this->db->query('INSERT IGNORE INTO shop_order_legal_snapshots
+                (order_id, language, terms_document_key, terms_revision, terms_text)
+                VALUES (%i, %s, %s, %i, %s)', $orderId, self::language($items),
+                $bundle['key'], $bundle['revision'], $bundle['text']);
+            return;
+        }
         if (!$this->installed()) return; // Existing installations must run the SQL updater.
         $language = self::language($items);
         $page = (new ContentRepository($this->db))->findPublished('page', self::TERMS_SLUG, $language);
@@ -40,7 +53,9 @@ final class OrderLegalDocuments
         $published = [];
         if ($includePublishedLinks) {
             $contents = new ContentRepository($this->db);
-            foreach ([self::TERMS_SLUG, self::RETURN_SLUG, self::COMPLAINT_SLUG] as $slug) {
+            $slugs = AssistedPurchase::has($order['items'] ?? []) ? [AssistedPurchase::TERMS_SLUG] : [];
+            if (AssistedPurchase::own($order['items'] ?? [])) array_push($slugs, self::TERMS_SLUG, self::RETURN_SLUG, self::COMPLAINT_SLUG);
+            foreach ($slugs as $slug) {
                 if ($contents->findPublished('page', $slug, $language) !== null) $published[] = $slug;
             }
         }
@@ -56,6 +71,26 @@ final class OrderLegalDocuments
         return (int) $this->db->queryFirstField(
             'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
             'shop_order_legal_snapshots') > 0;
+    }
+
+    /** Required published versions, included in both the checkout signature and durable confirmation. */
+    public function checkoutBundle(array $items): array
+    {
+        $slugs = [AssistedPurchase::TERMS_SLUG];
+        if (AssistedPurchase::own($items)) $slugs[] = self::TERMS_SLUG;
+        $parts = []; $versions = []; $first = null;
+        foreach ($slugs as $slug) {
+            $page = (new ContentRepository($this->db))->findPublished('page', $slug, self::language($items));
+            if ($page === null) throw new InvalidArgumentException('Podmínky pro tuto objednávku se připravují. Zkuste nákup později.');
+            $body = self::bodyText((string) $page['body']);
+            if ($body === '') throw new InvalidArgumentException('Podmínky objednávky nejsou úplné.');
+            $first ??= $page;
+            $parts[] = $slug . ' · revize ' . (int) $page['revision_number'] . "\n\n" . $body;
+            $versions[] = [$page['document_key'], (int) $page['revision_number'], $body];
+        }
+        return ['text' => implode("\n\n--------------------\n\n", $parts),
+            'hash' => hash('sha256', json_encode($versions, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)),
+            'key' => $first['document_key'], 'revision' => (int) $first['revision_number']];
     }
 
     public static function bodyText(string $body): string

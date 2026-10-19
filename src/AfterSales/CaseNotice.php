@@ -16,6 +16,11 @@ final class CaseNotice
         $statement = $withdrawal
             ? 'Zákazník odstoupil od kupní smlouvy v rozsahu níže uvedeného zboží.'
             : 'Zákazník uplatnil reklamaci zboží.';
+        $caseOptions = json_decode((string) ($case['item_options_json'] ?? '{}'), true);
+        if (($caseOptions['Plnění'] ?? '') === 'Služba asistovaného nákupu') {
+            $statement = $withdrawal ? 'Zákazník odstoupil od smlouvy o službě asistovaného nákupu v níže uvedeném rozsahu.' :
+                'Zákazník uplatnil reklamaci služby asistovaného nákupu.';
+        }
         $facts = self::sellerFacts($case) + [
             'Číslo případu' => (string) $case['case_number'],
             'Datum a čas podání' => self::time((string) $case['submitted_at']),

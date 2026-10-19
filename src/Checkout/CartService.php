@@ -7,11 +7,13 @@ use InvalidArgumentException;
 use SimpleStore\Product\ProductDetails;
 use SimpleStore\Product\ProductRepository;
 use SimpleStore\Product\ProductVariantRepository;
+use SimpleStore\Product\ProductSalesRepository;
 
 /** Resolve cart identities against current published products; browser prices are never accepted. */
 final class CartService
 {
-    public function __construct(private ProductRepository $products, private array $languages = ['cs'])
+    public function __construct(private ProductRepository $products, private array $languages = ['cs'],
+        private ?ProductSalesRepository $sales = null)
     {
     }
 
@@ -103,10 +105,15 @@ final class CartService
                 $issue ??= 'Cenu produktu se nepodařilo ověřit.';
                 $price = null;
             }
+            $assistance = [];
+            if ($issue === null && $this->sales !== null) {
+                try { $assistance = $this->sales->snapshot($key, $variantKey, $price); }
+                catch (InvalidArgumentException $error) { $issue = $error->getMessage(); }
+            }
             if ($issue !== null) $issues[] = $issue;
             $lineTotal = $issue === null ? $price * $quantity : null;
             if ($lineTotal !== null) $subtotal += $lineTotal;
-            $items[] = [
+            $items[] = $assistance + [
                 'line_id' => $lineId,
                 'product_key' => $key,
                 'variant_key' => $variantKey,

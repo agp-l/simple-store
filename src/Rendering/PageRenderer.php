@@ -87,6 +87,9 @@ final class PageRenderer
         $editMode = (bool) ($data['editMode'] ?? false);
         $supplierLinks = $data['supplierLinks'] ?? [];
         $supplierLinksReady = (bool) ($data['supplierLinksReady'] ?? false);
+        $productSalesReady = (bool) ($data['productSalesReady'] ?? false);
+        $productSale = $data['productSale'] ?? ['mode' => 'own', 'version' => 0];
+        $purchasePartners = $data['purchasePartners'] ?? [];
         $contentEditMode = (bool) ($data['contentEditMode'] ?? false);
         $canEditContent = (bool) ($data['canEditContent'] ?? false);
         $canManageContent = (bool) ($data['canManageContent'] ?? false);
@@ -136,6 +139,10 @@ final class PageRenderer
         $paymentNotice = (string) ($data['paymentNotice'] ?? '');
         $shippingConfigured = (bool) ($data['shippingConfigured'] ?? false);
         $termsUrl = (string) ($data['termsUrl'] ?? '');
+        $hasAssisted = (bool) ($data['hasAssisted'] ?? false);
+        $hasOwnSale = (bool) ($data['hasOwnSale'] ?? true);
+        $assistedTermsUrl = (string) ($data['assistedTermsUrl'] ?? '');
+        $reviewToken = (string) ($data['reviewToken'] ?? '');
         $order = $data['order'] ?? [];
         $bankPayment = $data['bankPayment'] ?? [];
         $orderUrl = (string) ($data['orderUrl'] ?? '');

@@ -73,7 +73,8 @@ if ($missing !== []) {
 try {
     $database = require $databaseFile;
     $db = ConnectionFactory::create($database);
-    $stock = new ProductStockRepository($db);
+    $productSales = new \SimpleStore\Product\ProductSalesRepository($db);
+    $stock = new ProductStockRepository($db, $productSales);
     $stockReady = $stock->installed();
     $productStock = $stockReady ? $stock : null;
     $contents = new ContentRepository($db, $site['languages'], $site['revision_limit']);
@@ -199,12 +200,12 @@ try {
         $mailConfiguration = (new MailSettingsRepository($db))->load((string) ($taxSettings['mail_from'] ?? ''));
         $shared['publicBaseUrl'] = (string) ($mailConfiguration['settings']['public_base_url'] ?? '');
         $controller = new CheckoutController($url, $renderer, $shared, $cart,
-            new CartService(new ProductRepository($db, $site['languages'], null, 50, $productStock), $site['languages']),
+            new CartService(new ProductRepository($db, $site['languages'], null, 50, $productStock), $site['languages'], $productSales),
             $shipping, $orders, $bank, $customerId, (string) ($checkoutConfig['terms_url'] ?? ''),
             $customerProfile, $customerAddresses, $packeta, $ppl, null, null,
             new OrderMailQueue($db), (string) ($taxSettings['mail_from'] ?? ''),
             new InvoiceRepository($db), $comgate, $gopay, $btcpay,
-            new OrderTrackingRepository($db));
+            new OrderTrackingRepository($db), new \SimpleStore\Accounting\OrderLegalDocuments($db));
         $controller->handle($route);
         exit;
     }
@@ -378,6 +379,9 @@ try {
             $supplierRepository = new ProductSupplierLinkRepository($db);
             $supplierLinksReady = $supplierRepository->installed();
             if ($supplierLinksReady) $supplierLinks = $supplierRepository->forProduct($item['product_key']);
+            $shared['productSalesReady'] = $productSales->installed();
+            $shared['productSale'] = $productSales->forProduct($item['product_key']);
+            $shared['purchasePartners'] = $productSales->partners();
             $shared['editToken'] = $auth->token();
             $shared['privatePage'] = true;
         }

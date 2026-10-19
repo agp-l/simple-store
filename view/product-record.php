@@ -20,6 +20,7 @@ $galleryPaths = array_values(array_unique($galleryPaths));
 $categoryPath = CategoryPath::fromProduct($product);
 $categoryLabel = $categoryLabels[$categoryPath] ?? $categoryLabels[explode('/', $categoryPath)[0]] ?? 'Vybavení';
 $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_stock' => 'Není skladem'];
+if (!$editing && ($product['sale_mode'] ?? 'own') === 'assisted') $stockText['in_stock'] = 'Dostupné u partnera';
 $variantMode = (bool) ($product['variant_inventory']['enabled'] ?? false);
 $offerPrice = $editing ? (int) $product['price_czk'] : (int) ($product['offer_price_czk'] ?? $product['price_czk']);
 $availability = $product['availability_status'] ?? $product['stock_status'];
@@ -54,6 +55,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         <?php if ($editing): ?><textarea class="detail-lead inline-summary-editor" data-editor-input="summary" maxlength="<?= CardSummary::MAX_CHARACTERS ?>" rows="3" aria-label="Perex produktu" aria-describedby="product-summary-hint" placeholder="Krátký popis produktu…"><?= $escape($product['summary'] ?? '') ?></textarea>
           <small class="inline-summary-hint" id="product-summary-hint">Perex na kartě: nejvýše <?= CardSummary::MAX_CHARACTERS ?> znaků; v katalogu se zobrazí maximálně tři řádky. <output data-summary-counter></output></small>
         <?php elseif ($product['summary'] !== ''): ?><p class="detail-lead"><?= $escape($product['summary']) ?></p><?php endif; ?>
+        <?php if (($product['sale_mode'] ?? 'own') === 'assisted'): ?><p class="assisted-label">Asistovaný nákup u vybraného partnera. Služba je zahrnuta v ceně; prodávajícího a rozpis uvidíte před objednáním. <a href="<?= $escape($siteRoot . $language . '/obchodni-podminky-asistovaneho-nakupu') ?>">Jak nákup funguje</a></p><?php endif; ?>
         <form method="post" action="<?= $escape($cartUrl) ?>" class="product-purchase">
           <input type="hidden" name="action" value="add"><input type="hidden" name="csrf" value="<?= $escape($cartToken) ?>">
           <input type="hidden" name="product_key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">

@@ -368,6 +368,28 @@ CREATE TABLE IF NOT EXISTS shop_tax_year_regimes (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- Assisted purchase settings are independent of product text revisions and source links.
+CREATE TABLE IF NOT EXISTS shop_purchase_partners (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(190) NOT NULL,
+  ico CHAR(8) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  address VARCHAR(500) NOT NULL,
+  email VARCHAR(190) NOT NULL,
+  terms_url VARCHAR(1000) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shop_product_sales (
+  product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+  mode VARCHAR(12) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'own',
+  partner_id BIGINT UNSIGNED NULL,
+  supplier_price_czk INT UNSIGNED NULL,
+  variant_prices_json TEXT NOT NULL,
+  delivery_note VARCHAR(190) NOT NULL DEFAULT '',
+  version INT UNSIGNED NOT NULL DEFAULT 1,
+  KEY purchase_partner (partner_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS shop_tax_entries (
   id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
   entry_date DATE NOT NULL,

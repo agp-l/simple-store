@@ -10,7 +10,7 @@ require __DIR__ . '/common.php';
   <div class="checkout-columns">
     <div class="checkout-review">
       <section class="checkout-panel"><div class="checkout-panel-title"><h2>Produkty</h2><a href="<?= $checkoutEscape($cartUrl) ?>">Upravit košík</a></div><ul class="checkout-review-lines">
-        <?php foreach ($checkoutItems as $item): ?><li><span><strong><?= $checkoutEscape($item['name']) ?></strong><small><?= (int) $item['quantity'] ?> ks<?php foreach (($item['options'] ?? []) as $label => $value): ?> · <?= $checkoutEscape($label) ?>: <?= $checkoutEscape($value) ?><?php endforeach; ?></small><?php if (($item['issue'] ?? '') !== ''): ?><small class="checkout-line-issue" role="alert"><?= $checkoutEscape($item['issue']) ?></small><?php endif; ?></span><strong><?= $item['line_total_czk'] === null ? 'Nedostupné' : $checkoutMoney((int) $item['line_total_czk']) ?></strong></li><?php endforeach; ?>
+        <?php foreach ($checkoutItems as $item): ?><li><span><strong><?= $checkoutEscape($item['name']) ?></strong><small><?= (int) $item['quantity'] ?> ks<?php foreach (($item['options'] ?? []) as $label => $value): ?> · <?= $checkoutEscape($label) ?>: <?= $checkoutEscape($value) ?><?php endforeach; ?></small><?php require __DIR__ . '/assisted-item.php'; ?><?php if (($item['issue'] ?? '') !== ''): ?><small class="checkout-line-issue" role="alert"><?= $checkoutEscape($item['issue']) ?></small><?php endif; ?></span><strong><?= $item['line_total_czk'] === null ? 'Nedostupné' : $checkoutMoney((int) $item['line_total_czk']) ?></strong></li><?php endforeach; ?>
       </ul></section>
       <section class="checkout-panel"><div class="checkout-panel-title"><h2>Doprava a kontakt</h2><a href="<?= $checkoutEscape($checkoutUrl . '?step=shipping') ?>">Upravit údaje</a></div>
         <p><strong><?= $checkoutEscape($chosenShipping['label'] ?? '') ?></strong></p>
@@ -24,7 +24,13 @@ require __DIR__ . '/common.php';
       <?php if ($checkoutCanContinue && ($checkoutReady ?? false) && $summaryShippingPrice !== null): ?>
       <form class="checkout-place" method="post" action="<?= $checkoutEscape($checkoutUrl) ?>">
         <input type="hidden" name="csrf" value="<?= $checkoutEscape($cartToken) ?>"><input type="hidden" name="action" value="place">
-        <?php if (($termsUrl ?? '') !== ''): ?><label><input type="checkbox" name="terms" value="1" required> Souhlasím s <a href="<?= $checkoutEscape($termsUrl) ?>" target="_blank" rel="noopener">obchodními podmínkami</a>.</label><?php endif; ?>
+        <?php if (($hasOwnSale ?? true) && ($termsUrl ?? '') !== ''): ?><label><input type="checkbox" name="terms" value="1" required> Souhlasím s <a href="<?= $checkoutEscape($termsUrl) ?>" target="_blank" rel="noopener">obchodními podmínkami pro zboží prodávané přímo obchodem</a>.</label><?php endif; ?>
+        <?php if ($hasAssisted ?? false): ?>
+          <input type="hidden" name="review_token" value="<?= $checkoutEscape($reviewToken) ?>">
+          <label><input type="checkbox" name="assisted_terms" value="1" required> Souhlasím s <a href="<?= $checkoutEscape($assistedTermsUrl) ?>" target="_blank" rel="noopener">podmínkami asistovaného nákupu</a> a pověřuji vás nákupem označených položek mým jménem u uvedených prodávajících za zobrazených podmínek.</label>
+          <label><input type="checkbox" name="early_start" value="1"> <?= $checkoutEscape(\SimpleStore\Checkout\AssistedPurchase::EARLY_REQUEST) ?></label>
+          <p class="checkout-fineprint">Bez této žádosti nákup u partnera zahájíme až po uplynutí lhůty pro odstoupení. Smlouva o asistenci vzniká odesláním této objednávky.</p>
+        <?php endif; ?>
         <button type="submit" class="checkout-primary">Objednat s povinností platby</button>
       </form>
       <?php else: ?><p class="checkout-alert" role="alert">Objednávku nyní nelze vytvořit. Vraťte se do košíku a zkontrolujte údaje.</p><?php endif; ?>

@@ -207,7 +207,7 @@ final class TaxEvidenceRepository
         $this->db->startTransaction();
         try {
             $order = $this->db->queryFirstRow(
-                'SELECT id, order_number, payment_status, payment_method, total_czk, variable_symbol
+                'SELECT id, order_number, payment_status, payment_method, total_czk, variable_symbol, items_json
                  FROM shop_orders WHERE id=%i LIMIT 1 FOR UPDATE', $orderId);
             if ($order === null || $order['payment_method'] !== 'bank_transfer' ||
                 $order['payment_status'] !== 'paid') {
@@ -216,13 +216,20 @@ final class TaxEvidenceRepository
             $already = $this->db->queryFirstField(
                 'SELECT COUNT(*) FROM shop_tax_entries WHERE order_id=%i', $orderId);
             if ((int) $already > 0) throw new InvalidArgumentException('Tato objednávka už má zapsaný příjem.');
-            $this->db->insert('shop_tax_entries', [
+            $items = json_decode((string) ($order['items_json'] ?? '[]'), true, 512, JSON_THROW_ON_ERROR);
+            $principal = \SimpleStore\Checkout\AssistedPurchase::principal($items);
+            $receipt = [
                 'entry_date' => $date, 'direction' => 'income', 'account' => 'bank',
-                'tax_kind' => 'taxable', 'amount_czk' => (int) $order['total_czk'],
+                'tax_kind' => 'taxable', 'amount_czk' => (int) $order['total_czk'] - $principal,
                 'description' => 'Úhrada objednávky ' . $order['order_number'],
                 'counterparty' => '', 'reference' => $reference !== '' ? $reference :
                     (string) ($order['variable_symbol'] ?? ''), 'order_id' => $orderId,
-            ]);
+            ];
+            if ($receipt['amount_czk'] > 0) $this->db->insert('shop_tax_entries', $receipt);
+            if ($principal > 0) $this->db->insert('shop_tax_entries', array_replace($receipt, [
+                'tax_kind' => 'nontaxable', 'amount_czk' => $principal,
+                'description' => 'Svěřené prostředky k nákupu · ' . $order['order_number'],
+            ]));
             $this->db->commit();
         } catch (\Throwable $error) {
             $this->db->rollback();
@@ -233,8 +240,8 @@ final class TaxEvidenceRepository
     public function orderReceipt(int $orderId): ?array
     {
         if ($orderId < 1 || !$this->installed()) return null;
-        return $this->db->queryFirstRow('SELECT id, entry_date, amount_czk, reference
-            FROM shop_tax_entries WHERE order_id=%i AND direction=%s ORDER BY id DESC LIMIT 1',
+        return $this->db->queryFirstRow('SELECT MIN(id) AS id, MIN(entry_date) AS entry_date, SUM(amount_czk) AS amount_czk, MAX(reference) AS reference
+            FROM shop_tax_entries WHERE order_id=%i AND direction=%s GROUP BY order_id',
             $orderId, 'income');
     }
 
@@ -479,9 +486,9 @@ final class TaxEvidenceRepository
     public function backfillSaleLines(): int
     {
         $orders = $this->db->query('SELECT o.id, o.items_json FROM shop_orders o
-            WHERE o.status<>%s AND NOT EXISTS
+            WHERE o.status<>%s AND o.items_json NOT LIKE %s AND NOT EXISTS
                 (SELECT 1 FROM shop_sale_lines l WHERE l.order_id=o.id)
-            ORDER BY o.id ASC LIMIT %i', 'test', 100);
+            ORDER BY o.id ASC LIMIT %i', 'test', '%"sale_mode":"assisted"%', 100);
         $count = 0;
         foreach ($orders as $order) {
             $items = json_decode((string) $order['items_json'], true);

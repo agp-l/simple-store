@@ -84,7 +84,9 @@ FROM (
         i.issue_date AS invoice_issue_date,
         e.id AS entry_id, e.entry_date, e.direction AS entry_direction,
         e.account AS entry_account, e.tax_kind AS entry_tax_kind,
-        e.amount_czk AS entry_amount_czk, COALESCE(e.reference, '') AS entry_reference,
+        CASE WHEN LOCATE('"sale_mode":"assisted"', o.items_json)>0 AND e.direction='income'
+            THEN (SELECT SUM(te.amount_czk) FROM shop_tax_entries te WHERE te.order_id=o.id AND te.direction='income')
+            ELSE e.amount_czk END AS entry_amount_czk, COALESCE(e.reference, '') AS entry_reference,
         o.total_czk AS amount_czk, '' AS direction,
         COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(i.buyer_json, '$.name')), ''),
             CONVERT(o.customer_email USING utf8mb4), '') COLLATE utf8mb4_unicode_ci AS counterparty,
