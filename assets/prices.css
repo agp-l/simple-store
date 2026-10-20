@@ -15,6 +15,11 @@
   font-variant-numeric: tabular-nums;
 }
 .panel-order-line > :last-child { text-align: right; }
+.panel-order-list .panel-order { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; }
+.panel-order-list .panel-order > span { grid-column: 1; grid-row: 2; }
+.panel-order-list .panel-order > strong:last-of-type { grid-column: 2; grid-row: 1 / span 2; text-align: right; }
+.panel-order-list .panel-order > a { grid-column: 1 / -1; margin-top: 5px; }
+.panel-order-list .money-main { color: var(--ink); }
 .product-prices, .detail-prices { gap: 0; }
 .checkout-line-price, .checkout-review-lines li > strong { text-align: right; }
 .checkout-summary dd, .checkout-receipt dd { flex-shrink: 0; text-align: right; }

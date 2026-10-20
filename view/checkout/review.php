@@ -10,7 +10,16 @@ require __DIR__ . '/common.php';
   <div class="checkout-columns">
     <div class="checkout-review">
       <section class="checkout-panel"><div class="checkout-panel-title"><h2>Produkty</h2><a href="<?= $checkoutEscape($cartUrl) ?>">Upravit košík</a></div><ul class="checkout-review-lines">
-        <?php foreach ($checkoutItems as $item): ?><li><div class="checkout-review-item"><strong><?= $checkoutEscape($item['name']) ?></strong><small><?= (int) $item['quantity'] ?> ks<?php foreach (($item['options'] ?? []) as $label => $value): ?> · <?= $checkoutEscape($label) ?>: <?= $checkoutEscape($value) ?><?php endforeach; ?></small><?php require __DIR__ . '/assisted-item.php'; ?><?php if (($item['issue'] ?? '') !== ''): ?><small class="checkout-line-issue" role="alert"><?= $checkoutEscape($item['issue']) ?></small><?php endif; ?></div><strong><?= $item['line_total_czk'] === null ? 'Nedostupné' : $checkoutMoney((int) $item['line_total_czk']) ?></strong></li><?php endforeach; ?>
+        <?php foreach ($checkoutItems as $item): ?>
+          <li>
+            <div class="checkout-review-item"><strong><?= $checkoutEscape($item['name']) ?></strong>
+              <small><?= (int) $item['quantity'] ?> ks<?php foreach (($item['options'] ?? []) as $label => $value): ?> · <?= $checkoutEscape($label) ?>: <?= $checkoutEscape($value) ?><?php endforeach; ?></small>
+              <?php if (($item['issue'] ?? '') !== ''): ?><small class="checkout-line-issue" role="alert"><?= $checkoutEscape($item['issue']) ?></small><?php endif; ?>
+            </div>
+            <strong><?= $item['line_total_czk'] === null ? 'Nedostupné' : $checkoutMoney((int) $item['line_total_czk']) ?></strong>
+            <?php if (($item['sale_mode'] ?? 'own') === 'assisted'): ?><div class="checkout-review-assistance"><?php require __DIR__ . '/assisted-item.php'; ?></div><?php endif; ?>
+          </li>
+        <?php endforeach; ?>
       </ul><?php require __DIR__ . '/assisted-delivery.php'; ?></section>
       <section class="checkout-panel"><div class="checkout-panel-title"><h2>Doprava a kontakt</h2><a href="<?= $checkoutEscape($checkoutUrl . '?step=shipping') ?>">Upravit údaje</a></div>
         <p><strong><?= $checkoutEscape($chosenShipping['label'] ?? '') ?></strong></p>

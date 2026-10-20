@@ -775,9 +775,9 @@
 }
 
 .checkout-review-lines li {
-  display: flex;
-  justify-content: space-between;
-  gap: 18px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0 18px;
   padding: 12px 0;
   border-bottom: 1px solid var(--line);
 }
@@ -792,6 +792,7 @@
 }
 
 .checkout-review-item { min-width: 0; }
+.checkout-review-assistance { grid-column: 1 / -1; min-width: 0; }
 .assisted-item { margin-top: 9px; font-size: 12px; line-height: 1.6; color: #52604f; }
 .assisted-item p { margin: 0; }
 .assisted-item-kind strong { font-weight: 600; }
