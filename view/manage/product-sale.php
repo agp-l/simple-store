@@ -19,46 +19,75 @@ if (($saleValues['mode'] ?? 'own') === 'assisted') {
     if ($selectedPartner === null) $saleMissing[] = 'prodávajícího';
     elseif (\SimpleStore\Product\PurchasePartnerRepository::missing($selectedPartner) !== []) $saleMissing[] = 'úplné a ověřené údaje prodávajícího';
 }
+$saleVariants = ($product['variant_inventory']['enabled'] ?? false) ? $product['variant_inventory']['items'] : [];
+$basePrice = (int) $product['price_czk'];
+$fee = is_numeric($saleValues['supplier_price_czk'] ?? null) ? $basePrice - (int) $saleValues['supplier_price_czk'] : null;
+$money = static fn (int $value): string => number_format($value, 0, ',', ' ') . ' Kč';
+$partnerAdminUrl = $siteRoot . 'admin.php?section=purchase-partners';
 ?>
-<section class="supplier-links" id="product-sale" aria-label="Způsob prodeje">
-  <h2>Způsob prodeje <small>Jen pro správce</small></h2>
+<section class="product-sale" id="product-sale" aria-labelledby="product-sale-title">
+  <div class="sale-heading"><h2 id="product-sale-title">Způsob prodeje</h2><span>Jen pro správce</span></div>
   <?php if (!($productSalesReady ?? false)): ?>
     <p><a href="<?= $escape($siteRoot . 'admin.php?section=database') ?>">Nejprve aktualizuj databázi.</a></p>
   <?php else: ?>
-    <?php if (($_GET['sale_saved'] ?? '') === '1'): ?><p role="status">Nastavení prodeje bylo uloženo.</p><?php endif; ?>
-    <?php if (($productSaleError ?? '') !== ''): ?><p role="alert"><?= $escape($productSaleError) ?> Zadané údaje zůstaly ve formuláři.</p>
-      <p><a target="_blank" rel="noopener" href="<?= $escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1#product-sale') ?>">Otevřít uložené nastavení v nové kartě</a></p><?php endif; ?>
-    <?php if ($saleMissing !== []): ?><p>Rozpracované nastavení – doplň <?= $escape(implode(', ', $saleMissing)) ?>. Zákazník může objednat až úplnou nabídku.</p><?php endif; ?>
-    <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>" class="supplier-form" novalidate>
+    <?php if (($_GET['sale_saved'] ?? '') === '1' && ($productSaleError ?? '') === ''): ?><p class="sale-notice" role="status">Nastavení prodeje bylo uloženo.</p><?php endif; ?>
+    <?php if (($productSaleError ?? '') !== ''): ?><div class="sale-notice sale-notice--error" role="alert"><?= $escape($productSaleError) ?> Zadané údaje zůstaly ve formuláři.
+      <a target="_blank" rel="noopener" href="<?= $escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1#product-sale') ?>">Porovnat s uloženým nastavením ↗</a></div><?php endif; ?>
+    <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>" class="sale-form" data-product-sale-form data-base-price="<?= $basePrice ?>" data-recovered="<?= ($productSaleError ?? '') !== '' ? '1' : '0' ?>" novalidate>
       <input type="hidden" name="action" value="product-sale"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>">
       <input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
       <input type="hidden" name="version" value="<?= (int) ($saleValues['version'] ?? 0) ?>">
-      <fieldset><legend>Kdo prodává zboží</legend>
-        <label><input type="radio" name="mode" value="own" <?= ($saleValues['mode'] ?? 'own') === 'own' ? 'checked' : '' ?>> Prodáváme my</label>
-        <label><input type="radio" name="mode" value="assisted" <?= ($saleValues['mode'] ?? '') === 'assisted' ? 'checked' : '' ?>> Asistovaný nákup u partnera</label>
+      <fieldset class="sale-modes"><legend class="sale-sr-only">Kdo prodává zboží</legend>
+        <label class="sale-mode"><input type="radio" name="mode" value="own" <?= ($saleValues['mode'] ?? 'own') === 'own' ? 'checked' : '' ?>><span><strong>Prodáváme my</strong><small>Vlastní prodej zboží</small></span></label>
+        <label class="sale-mode"><input type="radio" name="mode" value="assisted" <?= ($saleValues['mode'] ?? '') === 'assisted' ? 'checked' : '' ?>><span><strong>Asistovaný nákup</strong><small>Nákup u vybraného partnera</small></span></label>
       </fieldset>
-      <p>Konečná cena produktu se nezvyšuje. Cena dodavatele se odečte a rozdíl je odměna za službu. Níže uvedené údaje vyplň pouze pro asistovaný nákup.</p>
-      <label>Cena dodavatele za kus (celé Kč) <input type="number" name="supplier_price_czk" min="1" max="9999999" step="1" value="<?= $escape($saleValues['supplier_price_czk'] ?? '') ?>"></label>
-      <?php if ($product['variant_inventory']['enabled'] ?? false): ?><details><summary>Odlišné nákupní ceny variant</summary>
-        <p>Prázdné pole použije nákupní cenu produktu.</p>
-        <?php foreach ($product['variant_inventory']['items'] as $saleVariant): ?>
-          <label><?= $escape(implode(' / ', $saleVariant['choices'])) ?> <input type="number" min="1" max="9999999" step="1" name="variant_price[<?= $escape($saleVariant['id']) ?>]" value="<?= $escape($saleValues['variant_prices'][$saleVariant['id']] ?? '') ?>"></label>
-        <?php endforeach; ?></details><?php endif; ?>
-      <label>Předpokládaná doba dodání zákazníkovi <input name="delivery_note" maxlength="190" value="<?= $escape($saleValues['delivery_note'] ?? '') ?>" placeholder="Např. do 5 pracovních dnů od zaplacení"></label>
-      <label>Vybraný prodávající <select name="partner_id"><option value="0">Zatím nevybrán / nový prodávající níže</option>
-        <?php foreach (($purchasePartners ?? []) as $partner): ?><option value="<?= (int) $partner['id'] ?>" <?= (int) ($saleValues['partner_id'] ?? 0) === (int) $partner['id'] ? 'selected' : '' ?>><?= $escape(\SimpleStore\Product\PurchasePartnerRepository::label($partner) . ($partner['ico'] !== '' ? ' · IČO ' . $partner['ico'] : '') . (\SimpleStore\Product\PurchasePartnerRepository::missing($partner) !== [] ? ' · rozpracovaný' : '')) ?></option><?php endforeach; ?>
-      </select></label>
-      <p><a href="<?= $escape($siteRoot . 'admin.php?section=purchase-partners') ?>" target="_blank" rel="noopener">Seznam a úpravy prodávajících ↗</a>
-        <?php if ($selectedPartner !== null): ?> · <a href="<?= $escape($siteRoot . 'admin.php?section=purchase-partners&id=' . (int) $selectedPartner['id'] . '#partner-form') ?>" target="_blank" rel="noopener">Upravit: <?= $escape(\SimpleStore\Product\PurchasePartnerRepository::label($selectedPartner)) ?> ↗</a><?php endif; ?></p>
-      <details <?= $hasNewPartner ? 'open' : '' ?>><summary>Nový prodávající</summary>
-        <p>Vyplň alespoň jeden údaj. Tlačítko níže uloží nový profil i nastavení prodeje a vybere nového prodávajícího pro tento produkt. Neúplné údaje můžeš doplnit později.</p>
-        <?php $partnerPrefix = 'partner_'; require __DIR__ . '/purchase-partner-fields.php'; ?>
-        <button type="submit" name="create_partner" value="1" class="inline-small">Uložit nového prodávajícího a nastavení</button>
-      </details>
-      <p>U asistovaného nákupu uvidí zákazník rozpis ceny, prodávajícího a dobu dodání v souhrnu objednávky. Soukromé zdrojové odkazy níže se nezveřejňují. Dostupnost a dopravu nastav podle skutečných možností partnera.</p>
-      <button type="submit" class="inline-small">Uložit způsob prodeje</button>
-      <p>Uloží se i rozpracované nastavení. Údaje partnera a nákupní ceny zůstanou zachované také při přepnutí na vlastní prodej.</p>
+      <div class="sale-assistance" data-sale-assistance>
+        <div class="sale-main-grid">
+          <div class="sale-partner">
+            <label>Vybraný prodávající <select name="partner_id"><option value="0" data-missing="Vyber prodávajícího nebo vyplň nového.">Vybrat prodávajícího…</option>
+              <?php foreach ($purchasePartners as $partner): $missing = \SimpleStore\Product\PurchasePartnerRepository::missing($partner); ?>
+                <option value="<?= (int) $partner['id'] ?>" data-missing="<?= $escape($missing === [] ? '' : 'Doplň: ' . implode(', ', $missing) . '.') ?>" <?= (int) ($saleValues['partner_id'] ?? 0) === (int) $partner['id'] ? 'selected' : '' ?>><?= $escape(\SimpleStore\Product\PurchasePartnerRepository::label($partner) . ($partner['ico'] !== '' ? ' · ' . $partner['ico'] : '') . ($missing !== [] ? ' · rozpracovaný' : '')) ?></option>
+              <?php endforeach; ?>
+            </select></label>
+            <div class="sale-links"><a href="<?= $escape($partnerAdminUrl) ?>" target="_blank" rel="noopener">Seznam a úpravy prodávajících ↗</a>
+              <a data-sale-partner-edit data-edit-base="<?= $escape($partnerAdminUrl) ?>" href="<?= $escape($partnerAdminUrl . '&id=' . (int) ($selectedPartner['id'] ?? 0) . '#partner-form') ?>" target="_blank" rel="noopener" <?= $selectedPartner === null ? 'hidden' : '' ?>>Upravit vybraného ↗</a></div>
+            <p class="sale-hint" data-sale-partner-status><?= $escape($selectedPartner === null ? 'Vyber prodávajícího nebo vyplň nového.' : (\SimpleStore\Product\PurchasePartnerRepository::missing($selectedPartner) === [] ? 'Údaje prodávajícího jsou kompletní.' : 'Rozpracovaný profil – doplň chybějící údaje.')) ?></p>
+          </div>
+          <div>
+            <label>Cena dodavatele <span class="sale-money-input"><input type="number" name="supplier_price_czk" min="1" max="9999999" step="1" inputmode="numeric" value="<?= $escape($saleValues['supplier_price_czk'] ?? '') ?>" aria-describedby="sale-price-help"><span>Kč / ks</span></span></label>
+            <p class="sale-hint" id="sale-price-help">Celé Kč. Základní cena produktu: <strong data-sale-base-price><?= $money($basePrice) ?></strong>.</p>
+            <p class="sale-fee">Odměna za službu <output data-sale-fee><?= $fee === null ? '—' : $money($fee) ?></output></p>
+          </div>
+          <div><label>Doba dodání <input name="delivery_note" maxlength="190" value="<?= $escape($saleValues['delivery_note'] ?? '') ?>" placeholder="Např. do 5 pracovních dnů"></label>
+            <p class="sale-hint">Doba dodání zákazníkovi podle možností partnera.</p></div>
+        </div>
+        <p class="sale-notice sale-notice--draft" data-sale-readiness <?= $saleMissing === [] ? 'hidden' : '' ?>><?= $saleMissing !== [] ? $escape('Rozpracováno: doplň ' . implode(', ', $saleMissing) . '. Uložit můžeš i nyní, objednávka bude možná po doplnění.') : '' ?></p>
+        <div class="sale-extras">
+          <details class="sale-disclosure sale-new-partner" data-sale-new <?= $hasNewPartner ? 'open' : '' ?>>
+            <summary>Nový prodávající</summary>
+            <div class="sale-disclosure-body"><p class="sale-hint">Nový profil se uloží do seznamu a vybere pro tento produkt. Stačí i rozpracované údaje.</p>
+              <div class="sale-partner-fields"><?php $partnerPrefix = 'partner_'; require __DIR__ . '/purchase-partner-fields.php'; ?></div>
+              <button type="submit" name="create_partner" value="1" class="sale-button sale-button--secondary">Uložit nového prodávajícího a nastavení</button>
+            </div>
+          </details>
+          <?php if ($saleVariants !== []): ?><details class="sale-disclosure sale-variant-prices"><summary>Nákupní ceny variant <span><?= count($saleVariants) ?></span></summary>
+            <div class="sale-disclosure-body"><p class="sale-hint">Prázdné pole přebírá cenu dodavatele výše. Odměna se počítá z konečné ceny konkrétní varianty.</p>
+              <div class="sale-variant-table"><table><thead><tr><th>Varianta</th><th>Cena pro zákazníka</th><th>Cena dodavatele Kč</th><th>Odměna</th></tr></thead><tbody>
+              <?php foreach ($saleVariants as $saleVariant): $variantPrice = (int) ($saleVariant['price_czk'] ?? $basePrice); ?>
+                <tr data-sale-variant data-price="<?= $variantPrice ?>" data-enabled="<?= $saleVariant['enabled'] ? '1' : '0' ?>" data-base="<?= $saleVariant['price_czk'] === null ? '1' : '0' ?>">
+                  <th scope="row"><label for="sale-cost-<?= $escape($saleVariant['id']) ?>"><?= $escape(implode(' / ', $saleVariant['choices'])) ?><?= $saleVariant['enabled'] ? '' : ' (nenabízí se)' ?></label></th>
+                  <td data-sale-variant-retail><?= $money($variantPrice) ?></td><td><input id="sale-cost-<?= $escape($saleVariant['id']) ?>" type="number" min="1" max="9999999" step="1" inputmode="numeric" name="variant_price[<?= $escape($saleVariant['id']) ?>]" value="<?= $escape($saleValues['variant_prices'][$saleVariant['id']] ?? '') ?>" placeholder="Z produktu"></td><td><output>—</output></td>
+                </tr>
+              <?php endforeach; ?></tbody></table></div>
+            </div>
+          </details><?php endif; ?>
+        </div>
+        <p class="sale-hint sale-explanation">Odměna je již v konečné ceně. Zákazník uvidí rozpis a prodávajícího v souhrnu objednávky; cena se nezvýší.</p>
+      </div>
+      <footer class="sale-footer"><div><p class="sale-save-state" data-sale-save-state role="status"><?= ($productSaleError ?? '') !== '' ? 'Změny nejsou uložené' : 'Nastavení odpovídá uloženým údajům' ?></p><p class="sale-hint">Lze uložit i rozpracované. Přepnutí prodeje zachová partnerské údaje.</p></div>
+        <button type="submit" class="sale-button">Uložit způsob prodeje</button></footer>
     </form>
+    <script defer src="<?= $escape($siteRoot . 'assets/product-sale.js?v=' . filemtime(__DIR__ . '/../../assets/product-sale.js')) ?>"></script>
   <?php endif; ?>
 </section>
 <?php endif; ?>

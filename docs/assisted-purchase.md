@@ -50,3 +50,11 @@ Formulář reklamace/odstoupení na vlastním webu u asistovaných položek ře�
 - Přepnutí na vlastní prodej zachová vyplněné partnerské údaje pro další použití. Neveřejná nákupní cena zůstává neveřejná mimo odsouhlasený rozpis asistované objednávky.
 - Při chybě validace se zachovají zadané hodnoty. Produktový formulář je obnoví z administrátorské relace po přesměrování; formulář seznamu prodávajících je zobrazí přímo. Při souběžné úpravě se nezmění očekávaná verze: otevři aktuální profil v nové kartě a porovnej změny.
 - Úprava vybraného prodávajícího se otevírá v nové kartě, aby nezmizel rozpracovaný produktový formulář. Nového prodávajícího lze vytvořit i přímo v produktu: rozbal „Nový prodávající“, vyplň údaje a použij „Uložit nového prodávajícího a nastavení“. Tím se nový profil přiřadí k produktu.
+
+## Kompaktní editor způsobu prodeje
+
+Sekce má samostatné rozložení přes šířku editoru. U vlastního prodeje se partnerská pole s JavaScriptem sbalí, ale zůstanou součástí odeslaného formuláře. Po chybě se zobrazí i u vlastního prodeje, aby šly opravit. Bez JavaScriptu zůstávají dostupná všechna pole.
+
+Náhled odměny používá základní cenu produktu a zvlášť ceny jednotlivých variant; konečné ověření stále provádí server. Výběr prodávajícího aktualizuje odkaz na jeho profil. Vyplnění nového profilu jej automaticky vybere k vytvoření; tlačítko Zrušit nového vymaže pouze tato rozepsaná pole a vrátí předchozí výběr.
+
+Editor označuje neuložené změny a varuje při odchodu. Automatické obnovení po úpravě produktu počká, dokud je formulář způsobu prodeje rozpracovaný. Uložení ceny produktu aktualizuje náhled odměny bez ztráty formuláře.

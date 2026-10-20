@@ -19,6 +19,19 @@ $product = ['product_key' => str_repeat('a', 32), 'language' => 'cs', 'revision_
     'subcategory' => '', 'published' => true, 'details_json' => null, 'sizes' => '',
     'variant_inventory' => ['enabled' => true, 'version' => 1, 'expected' => str_repeat('b', 64), 'items' => $items]];
 $admin = in_array('--admin', $argv, true);
+$saleFixture = in_array('--sale', $argv, true);
+$partners = [
+    ['id'=>1, 'name'=>'Horská výbava s.r.o.', 'ico'=>'12345678', 'address'=>'Ukázková 12, Praha', 'email'=>'info@example.test', 'terms_url'=>'https://example.test/podminky', 'confirmed'=>1],
+    ['id'=>2, 'name'=>'Rozpracovaný dodavatel', 'ico'=>'', 'address'=>'', 'email'=>'', 'terms_url'=>'', 'confirmed'=>0],
+];
+if ($saleFixture) { $product['price_czk'] = 1800; $product['offer_price_czk'] = 1800; }
+
 (new \SimpleStore\Rendering\PageRenderer(dirname(__DIR__, 2) . '/view'))->render('product-record', [
     'basePath' => '/', 'language' => 'cs', 'product' => $product, 'canEditProduct' => $admin,
-    'editMode' => $admin, 'stockReady' => true]);
+    'editMode' => $admin, 'stockReady' => true,
+    'productSalesReady' => $saleFixture, 'purchasePartners' => $saleFixture ? $partners : [],
+    'productSale' => ['mode' => in_array('--own', $argv, true) ? 'own' : 'assisted', 'version'=>1,
+        'partner_id'=>1, 'supplier_price_czk'=>1678, 'delivery_note'=>'Do 5 pracovních dnů', 'variant_prices'=>[]],
+    'productSaleError' => in_array('--error', $argv, true) ? 'Zkontroluj cenu dodavatele.' : '',
+    'productSaleForm' => in_array('--error', $argv, true) ? ['mode'=>'own', 'partner_id'=>'0', 'partner_name'=>'Nový rozpracovaný partner', 'supplier_price_czk'=>'1801'] : [],
+]);

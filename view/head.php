@@ -24,6 +24,7 @@
     <link rel="stylesheet" href="<?= $siteRoot ?>assets/panel-actions.css?v=<?= filemtime(__DIR__ . '/../assets/panel-actions.css') ?>">
   <?php endif; ?>
   <link rel="stylesheet" href="<?= $siteRoot ?>assets/editor-panel.css?v=<?= filemtime(__DIR__ . '/../assets/editor-panel.css') ?>">
+  <?php if (($page ?? '') === 'product-record' && $editMode): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/product-sale.css?v=<?= filemtime(__DIR__ . '/../assets/product-sale.css') ?>"><?php endif; ?>
   <?php if ($productCardEffects ?? false): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/product-card-effects.css?v=<?= filemtime(__DIR__ . '/../assets/product-card-effects.css') ?>"><?php endif; ?>
   <?php if (in_array($page ?? '', ['catalog', 'product-record'], true)): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/product-selection.css?v=<?= filemtime(__DIR__ . '/../assets/product-selection.css') ?>"><?php endif; ?>
 </head>
