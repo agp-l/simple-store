@@ -1570,3 +1570,7 @@ main {
   vertical-align: -.2em;
   pointer-events: none;
 }
+
+/* A clear, quiet sales-mode label; full partner details are available in checkout. */
+.assisted-label { display: block; margin: 6px 0; color: #52604f; font-size: 12px; line-height: 1.6; }
+.assisted-label a { color: var(--forest-dark); text-underline-offset: 3px; }

@@ -19,7 +19,7 @@
 .sale-mode small { font-size: 11px; color: #56664f; margin-top: 2px; }
 .product-sale input[type=radio], .product-sale input[type=checkbox] { width: 17px; height: 17px; flex: 0 0 17px; padding: 0; margin: 0; accent-color: #386934; }
 .sale-assistance { display: grid; gap: 12px; }
-.sale-main-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr); gap: 18px; }
+.sale-main-grid { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 24px; }
 .product-sale label { display: grid; gap: 5px; min-width: 0; font-size: 12px; font-weight: 600; color: #32422e; }
 .product-sale :is(input:not([type=radio]):not([type=checkbox]):not([type=hidden]), select) { box-sizing: border-box; width: 100%; min-width: 0; height: 39px; padding: 8px 10px; border: 1px solid #bacbb4; border-radius: 4px; background: #fff; color: #243421; font: 400 13px/1.4 var(--font-body, sans-serif); }
 .product-sale input[aria-invalid=true] { border-color: #ac4435; }
@@ -64,7 +64,6 @@
 .product-sale .sale-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 @media (max-width: 960px) {
   .sale-main-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px 16px; }
-  .sale-partner { grid-column: 1 / -1; }
   .sale-partner-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 }
 @media (max-width: 600px) {

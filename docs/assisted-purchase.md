@@ -6,7 +6,7 @@ Produkty mají dva smluvní režimy: vlastní prodej (výchozí) a asistovaný n
 
 1. V administraci **Databáze** použij opakovatelnou aktualizaci `database/schema.sql`. Přidává pouze tabulky partnerů a nastavení prodeje; existující produkty zůstávají vlastní prodej.
 2. Importuj upravenou stránku `obchodni-podminky-asistovaneho-nakupu`. Doplň skutečné údaje stejného provozovatele do obou sad podmínek, kontaktů a účetnictví. Účinnost podmínek musí odpovídat skutečnému spuštění služby.
-3. Na detailu produktu otevři **Upravit produkt → Způsob prodeje**. Vyber vlastní prodej nebo asistenci; u asistence zadej nákupní cenu, dobu dodání a partnera. Společný seznam najdeš v **Administrace → Prodávající** i v **Nastavení obchodu → Produkty**. Uloženého prodávajícího lze zobrazit a upravit; změna kontaktů se projeví u všech jeho produktů, předchozí objednávky mají neměnný snímek. Pro jinou právnickou či fyzickou osobu založ nový profil. Neveřejné zdrojové odkazy zůstávají oddělené.
+3. Na detailu produktu otevři **Upravit produkt → Způsob prodeje**. Vyber vlastní prodej nebo asistenci; u asistence zadej nákupní cenu a partnera. Společný seznam najdeš v **Administrace → Prodávající** i v **Nastavení obchodu → Produkty**. Uloženého prodávajícího lze zobrazit a upravit; změna kontaktů se projeví u všech jeho produktů, předchozí objednávky mají neměnný snímek. Pro jinou právnickou či fyzickou osobu založ nový profil. Neveřejné zdrojové odkazy zůstávají oddělené.
 4. Konečnou prodejní cenu nadále zadáváš jako dosud. Obchod používá celé Kč: 1 800 − 1 678 = 122 Kč. Cena dodavatele nesmí být vyšší než konečná cena. U variant lze zadat odlišnou nákupní cenu; prázdné pole dědí cenu produktu. Haléřové ceny se nesmějí svévolně zaokrouhlit na jinou cenu smlouvy; tato verze celočíselného ceníku je nepodporuje.
 5. Udržuj skutečnou dostupnost. Stav **Na objednávku** dovoluje nákup bez rezervace místních kusů; stav **Skladem** dál používá existující množstevní limit a rezervaci, ale veřejně se u asistence popisuje jako „Dostupné u partnera“. Žádné automatické objednávání ani kontrola skladu cizího webu zde není. Nabízené způsoby dopravy musí partner skutečně umožňovat; jejich cena musí pokrýt i více zásilek v kombinovaném košíku.
 6. Zapni a ověř automatické potvrzovací e-maily. Asistence vyžaduje publikované podmínky a připravenou frontu potvrzení. Po objednání ověř doručení potvrzení před zahájením služby; fronta ukládá přesné podmínky a souhlasy. E-mail potvrzuje již uzavřenou smlouvu, není jejím dalším schválením.
@@ -15,7 +15,7 @@ Nastavení prodeje je společné jazykovým verzím produktu a samostatné vůč
 
 ## Co zákazník uvidí
 
-Karta a detail: decentní „Asistovaný nákup · služba v ceně“. Košík a závěrečný souhrn uvádějí cenu zboží, již zahrnutou odměnu, identitu a kontakt konkrétního prodávajícího, jeho podmínky a termín. Konkrétního partnera vybírá správce, zákazník jej nemusí vybírat. Změna prodávajícího či rozpisu ceny po zobrazení závěrečného souhrnu vyžaduje novou kontrolu a odeslání.
+Karta a detail: decentní „Asistovaný nákup · služba v ceně“. Košík a závěrečný souhrn ponechávají viditelné označení asistence, jméno prodávajícího a cenu zboží i již zahrnuté služby. Sídlo, IČO, kontakt a odkaz na jeho podmínky jsou v označeném rozbalovacím detailu, dostupném i bez JavaScriptu. Společné podmínky obstarání a doručení jsou uvedeny jednou pod seznamem položek. Konkrétního partnera vybírá správce, zákazník jej nemusí vybírat. Změna prodávajícího či rozpisu ceny po zobrazení závěrečného souhrnu vyžaduje novou kontrolu a odeslání.
 
 Smíšená objednávka zachová obě sady podmínek. U asistence zákazník potvrzuje pověření a může zvlášť požádat o zahájení služby během 14 dnů. Bez této žádosti neprováděj nákup u partnera před uplynutím lhůty pro odstoupení (včetně zákonného posunu posledního dne). Aplikace nákup na cizím webu sama neprovádí; pokyn vidíš u objednávky.
 
@@ -46,7 +46,7 @@ Formulář reklamace/odstoupení na vlastním webu u asistovaných položek ře�
 
 - Aktualizace databáze přidá k profilům potvrzení spolupráce a verzi pro ochranu souběžných úprav. Stávající profily zůstanou potvrzené; nové vyžadují vlastní potvrzení.
 - Prodávajícího lze uložit s neúplnou adresou, IČO, rozepsaným e-mailem či URL. Seznam rozlišuje připravené a rozpracované profily a ukazuje počet přiřazených produktů. Prázdný nový profil bez jediného údaje se nevytváří.
-- Způsob prodeje lze uložit i bez nákupní ceny, doby dodání nebo dokončeného prodávajícího. Taková asistovaná nabídka zatím neumožní objednávku. Po doplnění se zpřístupní automaticky; zákaznické ceny se nepřepočítávají ani nenavyšují.
+- Způsob prodeje lze uložit i bez nákupní ceny nebo dokončeného prodávajícího. Taková asistovaná nabídka zatím neumožní objednávku. Po doplnění se zpřístupní automaticky; zákaznické ceny se nepřepočítávají ani nenavyšují.
 - Přepnutí na vlastní prodej zachová vyplněné partnerské údaje pro další použití. Neveřejná nákupní cena zůstává neveřejná mimo odsouhlasený rozpis asistované objednávky.
 - Při chybě validace se zachovají zadané hodnoty. Produktový formulář je obnoví z administrátorské relace po přesměrování; formulář seznamu prodávajících je zobrazí přímo. Při souběžné úpravě se nezmění očekávaná verze: otevři aktuální profil v nové kartě a porovnej změny.
 - Úprava vybraného prodávajícího se otevírá v nové kartě, aby nezmizel rozpracovaný produktový formulář. Nového prodávajícího lze vytvořit i přímo v produktu: rozbal „Nový prodávající“, vyplň údaje a použij „Uložit nového prodávajícího a nastavení“. Tím se nový profil přiřadí k produktu.
@@ -58,3 +58,18 @@ Sekce má samostatné rozložení přes šířku editoru. U vlastního prodeje s
 Náhled odměny používá základní cenu produktu a zvlášť ceny jednotlivých variant; konečné ověření stále provádí server. Výběr prodávajícího aktualizuje odkaz na jeho profil. Vyplnění nového profilu jej automaticky vybere k vytvoření; tlačítko Zrušit nového vymaže pouze tato rozepsaná pole a vrátí předchozí výběr.
 
 Editor označuje neuložené změny a varuje při odchodu. Automatické obnovení po úpravě produktu počká, dokud je formulář způsobu prodeje rozpracovaný. Uložení ceny produktu aktualizuje náhled odměny bez ztráty formuláře.
+
+
+## Dodání bez pole u každého produktu (20. 10. 2026)
+
+Pole Doba dodání se již nevyplňuje a nebrání objednání. Nový košík používá společné pravidlo `AssistedPurchase::DELIVERY_POLICY`: nákup se obstará bez zbytečného odkladu po zaplacení a s respektováním žádosti o dřívější zahájení služby; prodávající dodává podle svých podmínek, nejpozději do 30 dnů od uzavření kupní smlouvy s ním. Jinou lhůtu smí zástupce sjednat až po předchozím souhlasu zákazníka. Nejde o 30 dnů od objednání služby ani o odklad ověřování dostupnosti až po závazné koupi.
+
+Toto je společné vymezení pověření pro všechny nové asistované nákupy, které musí provoz skutečně dodržet. Není to automatická kontrola partnerova webu. Před nákupem u partnera ověř jeho podmínky; pokud s tímto pověřením nejsou slučitelné, vyžádej si souhlas zákazníka před uzavřením kupní smlouvy. Publikované obchodní podmínky služby musí odpovídat tomuto postupu. Zákonnou informaci o dodání nelze nahradit pouhým neurčitým příslibem, že ji zákazník zjistí později.
+
+Původní sloupec v databázi zůstává kvůli kompatibilitě, formulář do něj nezapisuje. Historické objednávky a jejich potvrzení dál zobrazují původní uložený termín. Nové pravidlo se ukládá do snímku nové objednávky a je součástí podepsaného souhrnu.
+
+Ověření: [ČOI – dodání zboží](https://coi.gov.cz/faq/7-kdy-musi-prodavajici-zbozi-dodat/) (§ 1811 odst. 2 písm. d), § 2159 a § 2159a) a [ČOI – informace na tržištích](https://coi.gov.cz/faq/6-jak-funguji-on-line-trziste/). Rozbalení identifikačních detailů je zvolené provedení rozhraní; není to obecná právní výjimka z informační povinnosti. Povaha služby, rozpis ceny a konkrétní prodávající zůstávají viditelné před závaznou objednávkou, úplné údaje zůstávají i v potvrzení.
+
+## Doplňkové BTC ceny
+
+Orientační BTC se zobrazují na samostatném řádku, menším běžným písmem, v katalogu, detailu a souvisejících produktech, košíku, dopravě, souhrnu, potvrzení a zákaznickém účtu. U dílčího rozpisu asistence jsou jen Kč; BTC je u celkové ceny položky. Při vypnutém přepočtu nebo nedostupném kurzu BTC řádek nevzniká. Obchod aktuálně nemá přepínač hlavní měny na BTC; účetní a objednávkové ceny zůstávají Kč. Skutečnou částku a kurz bitcoinové platby určuje BTCPay, jeho platební rozhraní tyto styly nemění.

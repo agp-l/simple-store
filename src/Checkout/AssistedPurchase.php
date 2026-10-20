@@ -9,6 +9,8 @@ use InvalidArgumentException;
 final class AssistedPurchase
 {
     public const TERMS_SLUG = 'obchodni-podminky-asistovaneho-nakupu';
+    // Shared mandate for new purchases; copied into each order, never read live for old orders.
+    public const DELIVERY_POLICY = 'Nákup vaším jménem obstaráme bez zbytečného odkladu po přijetí platby a po uplynutí lhůty pro odstoupení od služby, nebo dříve na vaši výslovnou žádost. Zboží dodává uvedený prodávající v termínu podle svých podmínek, nejpozději však do 30 dnů od uzavření kupní smlouvy s ním. Jinou dodací lhůtu sjednáme pouze s vaším předchozím souhlasem.';
     public const EARLY_REQUEST = 'Žádám o zahájení asistovaného nákupu před uplynutím 14 dnů. Při odstoupení uhradím přiměřenou cenu již poskytnuté služby; po jejím úplném poskytnutí zaniká právo odstoupit od této služby. Práva ze samotné koupě zboží tím nejsou dotčena.';
 
     public static function has(array $items): bool
@@ -29,7 +31,7 @@ final class AssistedPurchase
         $cost = $sale['supplier_price_czk'] ?? null;
         $seller = $sale['seller'] ?? null;
         if (($sale['mode'] ?? '') !== 'assisted' || !is_int($cost) || $cost < 1 || $cost > $price ||
-            !is_array($seller) || ($sale['delivery_note'] ?? '') === '') {
+            !is_array($seller)) {
             throw new InvalidArgumentException('Nabídku partnerského produktu právě aktualizujeme. Zkuste nákup později.');
         }
         foreach (['name', 'ico', 'address', 'email', 'terms_url'] as $field) {
@@ -45,7 +47,7 @@ final class AssistedPurchase
         }
         return ['sale_mode' => 'assisted', 'supplier_price_czk' => $cost,
             'assistance_fee_czk' => $price - $cost, 'seller' => $seller,
-            'delivery_note' => $sale['delivery_note']];
+            'delivery_note' => ($sale['delivery_note'] ?? '') !== '' ? $sale['delivery_note'] : self::DELIVERY_POLICY];
     }
 
     /** Exclude entrusted purchase funds from our own invoice and taxable receipt. */

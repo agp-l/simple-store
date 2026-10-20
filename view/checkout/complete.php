@@ -151,7 +151,7 @@ if ($testOrder) {
         <span class="checkout-line-image" aria-hidden="true"><?php if ($imageUrl !== ''): ?><img src="<?= $checkoutEscape($imageUrl) ?>" alt="" loading="lazy" width="96" height="96"><?php endif; ?></span>
         <div class="checkout-line-detail">
           <strong class="checkout-line-title"><?= $checkoutEscape($item['name'] ?? '') ?></strong>
-          <small><?= $quantity ?> ks × <?= $checkoutMoney($unitPrice) ?> / ks</small>
+          <small><?= $quantity ?> ks × <?= number_format($unitPrice, 0, ',', ' ') . ' Kč' ?> / ks</small>
           <?php require __DIR__ . '/assisted-item.php'; ?>
           <?php foreach (($item['options'] ?? []) as $label => $value): ?><?php if (is_scalar($value)): ?><small><?= $checkoutEscape($label) ?>: <?= $checkoutEscape($value) ?></small><?php endif; ?><?php endforeach; ?>
         </div>
@@ -159,6 +159,7 @@ if ($testOrder) {
       </li>
       <?php endforeach; ?>
     </ul>
+    <?php $checkoutItems = $order['items']; require __DIR__ . '/assisted-delivery.php'; ?>
     <?php endif; ?>
     <dl>
     <div><dt>Produkty</dt><dd><?= $checkoutMoney((int) $order['subtotal_czk']) ?></dd></div>

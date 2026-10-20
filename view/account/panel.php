@@ -1,7 +1,7 @@
 <?php
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-$accountMoney = static fn (int $czk): string => $escape($priceDisplay instanceof \SimpleStore\Pricing\BitcoinPriceDisplay
-    ? $priceDisplay->format($czk) : number_format($czk, 0, ',', ' ') . ' Kč');
+$accountMoney = static fn (int $czk): string => $priceDisplay instanceof \SimpleStore\Pricing\BitcoinPriceDisplay
+    ? $priceDisplay->html($czk) : number_format($czk, 0, ',', ' ') . ' Kč';
 $sectionNames = ['overview' => 'Přehled', 'orders' => 'Objednávky', 'returns' => 'Reklamace a vrácení', 'addresses' => 'Moje adresy',
     'payments' => 'Platby', 'settings' => 'Nastavení účtu'];
 $checkoutReturn = $checkoutReturn ?? $accountUrl;
@@ -65,8 +65,9 @@ $checkoutReturn = $checkoutReturn ?? $accountUrl;
             <?php foreach ($orderDetail['items'] as $item): ?><?php if (!is_array($item)) continue; ?>
               <div class="panel-order-line"><span><?= $escape($item['name'] ?? 'Položka') ?> · <?= (int) ($item['quantity'] ?? 0) ?> ks</span><strong><?= $accountMoney((int) ($item['unit_price_czk'] ?? 0) * (int) ($item['quantity'] ?? 0)) ?></strong></div>
             <?php endforeach; ?>
-            <p>Produkty: <?= $accountMoney((int) $orderDetail['subtotal_czk']) ?> · <?= $escape($orderDetail['shipping']['label'] ?? 'Doprava') ?>: <?= $accountMoney((int) $orderDetail['shipping_czk']) ?></p>
-            <p><strong>Celkem <?= $accountMoney((int) $orderDetail['total_czk']) ?></strong></p>
+            <div class="panel-order-line"><span>Produkty</span><span><?= $accountMoney((int) $orderDetail['subtotal_czk']) ?></span></div>
+            <div class="panel-order-line"><span><?= $escape($orderDetail['shipping']['label'] ?? 'Doprava') ?></span><span><?= $accountMoney((int) $orderDetail['shipping_czk']) ?></span></div>
+            <div class="panel-order-line"><strong>Celkem</strong><strong><?= $accountMoney((int) $orderDetail['total_czk']) ?></strong></div>
             <?php if (!empty($orderDetail['shipping']['pickup_point'])): ?><p>Výdejní místo: <?= $escape($orderDetail['shipping']['pickup_point']) ?>, <?= $escape($orderDetail['shipping']['pickup_address'] ?? '') ?></p>
             <?php else: ?><p>Doručení: <?= $escape($orderDetail['shipping']['recipient'] ?? $orderDetail['shipping']['name'] ?? '') ?><?php if (!empty($orderDetail['shipping']['company'])): ?>, <?= $escape($orderDetail['shipping']['company']) ?><?php endif; ?>, <?= $escape($orderDetail['shipping']['street'] ?? '') ?>, <?= $escape($orderDetail['shipping']['postal_code'] ?? '') ?> <?= $escape($orderDetail['shipping']['city'] ?? '') ?></p><?php endif; ?>
             <?php if ($orderTrackingUrl !== null): ?><p><a class="panel-text-link" href="<?= $escape($orderTrackingUrl) ?>" target="_blank" rel="noopener noreferrer">Sledovat zásilku u Zásilkovny →</a></p><?php endif; ?>

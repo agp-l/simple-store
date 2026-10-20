@@ -46,9 +46,13 @@ try {
     $partners->save($id, $full + ['version'=>'1']);
     $reject(static fn()=> $partners->save($id, array_replace($full,['name'=>'stale','version'=>'1'])));
     $check($partners->find($id)['name']===$full['name'],'Stale editor overwrote current identity.');
-    $input=['mode'=>'assisted','version'=>'1','partner_id'=>(string)$id,'supplier_price_czk'=>'1678','delivery_note'=>'Do 5 dnů'];
+    $input=['mode'=>'assisted','version'=>'1','partner_id'=>(string)$id,'supplier_price_czk'=>'1678'];
     foreach ($keys as $key) $sales->save($key,'cs',$input);
+    // Legacy product text stays in storage for compatibility, but is not offered in new carts.
+    $db->update('shop_product_sales', ['delivery_note'=>'Do 5 dnů'], 'product_key=%s', $keys[0]);
     $before=$sales->snapshot($keys[0],'',1800);
+    $check($before['delivery_note']===\SimpleStore\Checkout\AssistedPurchase::DELIVERY_POLICY,
+        'A retired product estimate leaked into a new offer.');
     $check($before['assistance_fee_czk']===122 && !isset($before['seller']['confirmed'], $before['seller']['version']),
         'Final price or private seller metadata changed.');
     $partners->save($id, array_replace($full,['email'=>'new@example.test','version'=>'2']));
