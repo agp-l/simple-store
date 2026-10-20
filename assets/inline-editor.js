@@ -43,7 +43,8 @@
   function refreshWhenReady() {
     clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => {
-      if (pending || document.getElementById('media-picker')?.open ||
+      if (pending || document.querySelector('[data-product-sale-form][data-dirty="true"]') ||
+          document.getElementById('media-picker')?.open ||
           document.activeElement?.matches('[data-edit-operation], [data-editor-select], [data-editor-input], [data-editor-type]')) {
         refreshWhenReady();
         return;
@@ -97,6 +98,7 @@
       }
       config.revision = result.revision;
       nextUrl = result.url;
+      if (field === 'price_czk') document.dispatchEvent(new CustomEvent('product-price-saved', { detail: { price: Number(value) } }));
       if (operation === 'section.add') {
         addedSection = index === null ? document.querySelectorAll('.product-content-block').length : index + 1;
       }
