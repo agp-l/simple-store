@@ -249,11 +249,15 @@ jobs:
         run: |
           npm install --no-save --package-lock=false playwright@1.56.1
           npx playwright install --with-deps chromium
-      - name: Verify variant UI on desktop and mobile
-        run: node --test tests/product-variants-browser.mjs
+      - name: Verify variant and sale UI on desktop and mobile
+        run: |
+          node --test tests/product-variants-browser.mjs
+          node --test tests/product-sale-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: variant-ui-screenshots
-          path: /tmp/variant-screenshots/
+          path: |
+            /tmp/variant-screenshots/
+            /tmp/sale-screenshots/
           retention-days: 7

@@ -62,7 +62,7 @@
     cancelNew.hidden = !creating && !newFields.some(input => input.checked);
     partnerStatus.textContent = partner.value === '0' && creating ? (newReady() ? 'Nový profil je připravený k uložení.' : 'Nový profil se uloží jako rozpracovaný.') :
       (selected?.dataset.missing || 'Údaje prodávajícího jsou kompletní.');
-    let missingCost = false, invalidCost = false;
+    let missingCost = false, invalidCost = false, inheritedTooHigh = false;
     for (const row of variants) {
       const input = row.querySelector('input');
       const effectiveCost = input.value === '' ? cost : price(input);
@@ -76,11 +76,12 @@
       if (row.dataset.enabled === '1') {
         missingCost ||= effectiveCost === null;
         invalidCost ||= invalid;
+        inheritedTooHigh ||= input.value === '' && effectiveCost !== null && effectiveCost > retail;
       }
     }
     if (!variants.length) { missingCost = cost === null; invalidCost = cost !== null && cost > basePrice; }
     const badBase = field('supplier_price_czk').value !== '' && cost === null;
-    field('supplier_price_czk').setAttribute('aria-invalid', badBase || (!variants.length && invalidCost) ? 'true' : 'false');
+    field('supplier_price_czk').setAttribute('aria-invalid', badBase || inheritedTooHigh || (!variants.length && invalidCost) ? 'true' : 'false');
     const missing = [];
     if (missingCost) missing.push('nákupní cenu');
     if (!field('delivery_note').value.trim()) missing.push('dobu dodání');

@@ -98,6 +98,13 @@
       }
       config.revision = result.revision;
       nextUrl = result.url;
+      // The sale form can defer a page refresh. Keep editable values current for the next focus.
+      document.querySelectorAll('[data-edit-operation][data-edit-field]').forEach(target => {
+        const targetIndex = target.hasAttribute('data-edit-index') ? Number(target.dataset.editIndex) : null;
+        if (target.dataset.editOperation === operation && target.dataset.editField === field && targetIndex === index) {
+          target.dataset.editValue = value;
+        }
+      });
       if (field === 'price_czk') document.dispatchEvent(new CustomEvent('product-price-saved', { detail: { price: Number(value) } }));
       if (operation === 'section.add') {
         addedSection = index === null ? document.querySelectorAll('.product-content-block').length : index + 1;
