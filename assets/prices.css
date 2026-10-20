@@ -1,0 +1,30 @@
+/* Only indicative conversions use this class. Actual BTC payment amounts stay primary. */
+.money { display: inline-block; max-width: 100%; vertical-align: top; line-height: 1.4; font-variant-numeric: tabular-nums; }
+.money-main { white-space: nowrap; }
+.money .price-secondary,
+.product-prices .price-secondary,
+.detail-prices .price-secondary {
+  display: block;
+  margin: 3px 0 0;
+  color: #626c63;
+  font-size: 12px;
+  line-height: 1.4;
+  font-weight: 400;
+  letter-spacing: 0;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.panel-order-line > :last-child { text-align: right; }
+.panel-order-list .panel-order { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px 16px; }
+.panel-order-list .panel-order > span { grid-column: 1; grid-row: 2; }
+.panel-order-list .panel-order > strong:last-of-type { grid-column: 2; grid-row: 1 / span 2; text-align: right; }
+.panel-order-list .panel-order > a { grid-column: 1 / -1; margin-top: 5px; }
+.panel-order-list .money-main { color: var(--ink); }
+.product-prices, .detail-prices { gap: 0; }
+.checkout-line-price, .checkout-review-lines li > strong { text-align: right; }
+.checkout-summary dd, .checkout-receipt dd { flex-shrink: 0; text-align: right; }
+.checkout-summary-total .money-main { font-size: 20px; }
+
+@media print {
+  .price-secondary { color: #555; }
+}

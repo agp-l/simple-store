@@ -27,6 +27,8 @@ test('sale editor: responsive layout, drafts, fees, selected partner and safe su
       const root = page.locator('#product-sale');
       const form = root.locator('form');
       const cost = form.locator('[name="supplier_price_czk"]');
+      assert.equal(await form.locator('[name="delivery_note"]').count(), 0);
+      assert.equal(await form.locator('[data-sale-readiness]').isVisible(), false);
       assert.match(await form.locator('[data-sale-fee]').textContent(), /122/);
       assert.equal(await form.getAttribute('data-dirty'), 'false');
       assert.equal(await root.evaluate(el => getComputedStyle(el.querySelector('.sale-heading')).backgroundColor), 'rgba(0, 0, 0, 0)');

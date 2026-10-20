@@ -45,7 +45,7 @@ $bitcoinData = $data + ['priceDisplay' => new \SimpleStore\Pricing\BitcoinPriceD
 ob_start();
 $renderer->render('cart', $bitcoinData);
 $bitcoinCart = ob_get_clean();
-if (!str_contains($bitcoinCart, '1 000 Kč (≈ 0.00050000 BTC)') ||
+if (!str_contains($bitcoinCart, 'class="money-main">1 000 Kč</span><span class="price-secondary" title="Orientační přepočet na bitcoin">≈ 0.00050000 BTC</span>') ||
     str_contains($bitcoinCart, 'Data poskytuje')) {
     throw new RuntimeException('The cart must show CZK and BTC without exchange-rate text in the footer.');
 }

@@ -15,7 +15,6 @@ foreach ($purchasePartners as $partner) {
 $saleMissing = [];
 if (($saleValues['mode'] ?? 'own') === 'assisted') {
     if (empty($saleValues['supplier_price_czk'])) $saleMissing[] = 'cenu dodavatele';
-    if (trim((string) ($saleValues['delivery_note'] ?? '')) === '') $saleMissing[] = 'dobu dodání';
     if ($selectedPartner === null) $saleMissing[] = 'prodávajícího';
     elseif (\SimpleStore\Product\PurchasePartnerRepository::missing($selectedPartner) !== []) $saleMissing[] = 'úplné a ověřené údaje prodávajícího';
 }
@@ -58,8 +57,6 @@ $partnerAdminUrl = $siteRoot . 'admin.php?section=purchase-partners';
             <p class="sale-hint" id="sale-price-help">Celé Kč. Základní cena produktu: <strong data-sale-base-price><?= $money($basePrice) ?></strong>.</p>
             <p class="sale-fee">Odměna za službu <output data-sale-fee><?= $fee === null ? '—' : $money($fee) ?></output></p>
           </div>
-          <div><label>Doba dodání <input name="delivery_note" maxlength="190" value="<?= $escape($saleValues['delivery_note'] ?? '') ?>" placeholder="Např. do 5 pracovních dnů"></label>
-            <p class="sale-hint">Doba dodání zákazníkovi podle možností partnera.</p></div>
         </div>
         <p class="sale-notice sale-notice--draft" data-sale-readiness <?= $saleMissing === [] ? 'hidden' : '' ?>><?= $saleMissing !== [] ? $escape('Rozpracováno: doplň ' . implode(', ', $saleMissing) . '. Uložit můžeš i nyní, objednávka bude možná po doplnění.') : '' ?></p>
         <div class="sale-extras">

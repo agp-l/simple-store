@@ -84,7 +84,6 @@
     field('supplier_price_czk').setAttribute('aria-invalid', badBase || inheritedTooHigh || (!variants.length && invalidCost) ? 'true' : 'false');
     const missing = [];
     if (missingCost) missing.push('nákupní cenu');
-    if (!field('delivery_note').value.trim()) missing.push('dobu dodání');
     if (partner.value === '0' && (!creating || !newReady())) missing.push(creating ? 'úplný a ověřený profil nového prodávajícího' : 'prodávajícího');
     else if (selected?.dataset.missing) missing.push('údaje prodávajícího');
     let notice = '';

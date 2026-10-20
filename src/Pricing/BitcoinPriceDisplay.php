@@ -32,6 +32,16 @@ final class BitcoinPriceDisplay
         return $bitcoin === null ? $czech : $czech . ' (' . $bitcoin . ')';
     }
 
+    /** Safe HTML for prices in the storefront; format() remains plain text. */
+    public function html(int $czk): string
+    {
+        $czech = number_format($czk, 0, ',', ' ') . ' Kč';
+        $bitcoin = $this->bitcoin($czk);
+        return '<span class="money"><span class="money-main">' . $czech . '</span>' .
+            ($bitcoin === null ? '' : '<span class="price-secondary" title="Orientační přepočet na bitcoin">' .
+                htmlspecialchars($bitcoin, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') . '</span>') . '</span>';
+    }
+
     public function updatedAt(): ?string
     {
         return $this->quote['updated_at'] ?? null;

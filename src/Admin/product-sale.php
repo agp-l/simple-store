@@ -22,7 +22,7 @@ try {
 } catch (Throwable $error) {
     if (!$error instanceof InvalidArgumentException) error_log((string) $error);
     $form = [];
-    foreach (['mode', 'version', 'supplier_price_czk', 'delivery_note', 'partner_id',
+    foreach (['mode', 'version', 'supplier_price_czk', 'partner_id',
         'partner_name', 'partner_ico', 'partner_address', 'partner_email', 'partner_terms_url', 'partner_confirmed'] as $field) {
         $form[$field] = is_string($_POST[$field] ?? null) ? $_POST[$field] : '';
     }

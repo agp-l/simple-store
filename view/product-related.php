@@ -9,9 +9,9 @@
         <h3><?= $escape($related['name']) ?></h3>
       </a>
       <?php if ($related['note'] !== ''): ?><p><?= $escape($related['note']) ?></p><?php endif; ?>
-      <strong><?= number_format((int) $related['price_czk'], 0, ',', ' ') ?> Kč</strong>
+      <div class="product-prices"><strong><?= number_format((int) $related['price_czk'], 0, ',', ' ') ?> Kč</strong>
       <?php $relatedBtc = $priceDisplay instanceof \SimpleStore\Pricing\BitcoinPriceDisplay ? $priceDisplay->bitcoin((int) $related['price_czk']) : null; ?>
-      <?php if ($relatedBtc !== null): ?><small><?= $escape($relatedBtc) ?></small><?php endif; ?>
+      <?php if ($relatedBtc !== null): ?><small class="price-secondary" title="Orientační přepočet na bitcoin"><?= $escape($relatedBtc) ?></small><?php endif; ?></div>
       <a class="add-button" href="<?= $escape($siteRoot . $language . '/produkt/' . rawurlencode($related['slug'])) ?>">Přejít na detail →</a>
     </article>
   <?php endforeach; ?>

@@ -45,6 +45,9 @@ final class ProductSalesRepository
     public function snapshot(string $key, string $variantKey, int $price): array
     {
         $sale = $this->forProduct($key);
+        // Product-specific estimates are retired. Keep the legacy DB column untouched,
+        // but all new carts use the same delivery mandate and freeze it in the order.
+        $sale['delivery_note'] = AssistedPurchase::DELIVERY_POLICY;
         if ($variantKey !== '' && isset($sale['variant_prices'][$variantKey])) {
             $sale['supplier_price_czk'] = $sale['variant_prices'][$variantKey];
         }
@@ -76,7 +79,7 @@ final class ProductSalesRepository
         if (!in_array($mode, ['own', 'assisted'], true)) throw new InvalidArgumentException('Vyber způsob prodeje.');
         $expected = filter_var($input['version'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
         if ($expected === false) throw new InvalidArgumentException('Obnov formulář nastavení prodeje.');
-        $cost = null; $partnerId = null; $note = ''; $variantPrices = [];
+        $cost = null; $partnerId = null; $variantPrices = [];
         $this->db->startTransaction();
         try {
             $product = $this->db->queryFirstRow('SELECT * FROM shop_product_revisions WHERE product_key=%s
@@ -85,7 +88,6 @@ final class ProductSalesRepository
             $stored = $this->db->queryFirstRow('SELECT version FROM shop_product_sales WHERE product_key=%s FOR UPDATE', $key);
             if ((int) ($stored['version'] ?? 0) !== $expected) throw new InvalidArgumentException('Nastavení mezitím někdo změnil. Otevři uložené nastavení v nové kartě a porovnej změny.');
             $cost = ($input['supplier_price_czk'] ?? '') === '' ? null : self::price($input['supplier_price_czk']);
-            $note = self::text($input['delivery_note'] ?? '', 190);
             $partnerId = filter_var($input['partner_id'] ?? '0', FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
             if ($partnerId === false) throw new InvalidArgumentException('Vyber prodávajícího.');
             if ($partnerId === 0) {
@@ -128,7 +130,7 @@ final class ProductSalesRepository
                 throw new InvalidArgumentException('Cena dodavatele nesmí převýšit konečnou cenu produktu.');
             }
             $values = ['mode' => $mode, 'partner_id' => $partnerId, 'supplier_price_czk' => $cost,
-                'delivery_note' => $note, 'variant_prices_json' => json_encode($variantPrices, JSON_THROW_ON_ERROR),
+                'variant_prices_json' => json_encode($variantPrices, JSON_THROW_ON_ERROR),
                 'version' => $expected + 1];
             if ($stored === null) $this->db->insert('shop_product_sales', ['product_key' => $key] + $values);
             else $this->db->update('shop_product_sales', $values, 'product_key=%s', $key);
@@ -143,12 +145,4 @@ final class ProductSalesRepository
         return $price;
     }
 
-    private static function text(mixed $value, int $limit): string
-    {
-        if (!is_string($value) || strlen(trim($value)) > $limit ||
-            preg_match('//u', $value) !== 1 || preg_match('/[\x00-\x1f\x7f]/', $value) === 1) {
-            throw new InvalidArgumentException('Doba dodání je příliš dlouhá nebo obsahuje nepovolené znaky.');
-        }
-        return trim($value);
-    }
 }

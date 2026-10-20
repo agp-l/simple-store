@@ -40,11 +40,13 @@ try {
         $stock->ensure($key);$stock->setAvailable($key,0,10);
     }
     [$key,$ownKey]=$productKeys;
-    $input=['mode'=>'assisted','version'=>'0','supplier_price_czk'=>'1678','delivery_note'=>'Do 5 pracovních dnů',
+    $input=['mode'=>'assisted','version'=>'0','supplier_price_czk'=>'1678',
         'partner_id'=>'0','partner_name'=>'Partner <test>','partner_ico'=>'12345678','partner_address'=>'Ulice 1, Praha',
         'partner_email'=>'partner@example.test','partner_terms_url'=>'https://partner.example.test/terms','partner_confirmed'=>'1'];
     $sales->save($key,'cs',$input);
     $partnerId=(int)$sales->forProduct($key)['partner_id'];
+    $check($sales->forProduct($key)['delivery_note']==='' && $sales->snapshot($key,'',1800)['delivery_note']===A::DELIVERY_POLICY,
+        'New products must be orderable without a manual delivery estimate.');
     $input = array_diff_key($input, array_flip(['partner_name','partner_ico','partner_address','partner_email','partner_terms_url','partner_confirmed']));
     $input['partner_id'] = (string) $partnerId;
     $reject(static fn()=> $sales->save($key,'cs',$input)); // stale admin save
@@ -62,6 +64,7 @@ try {
     $orders=new OrderRepository($db,new BankTransferPayment('','1004823033/3030','Test'),7,$stock);
     $requestKey=bin2hex(random_bytes(32));
     $order=$orders->create(null,'buyer@example.test',$summary['items'],$shipping,79,$requestKey);$orderIds[]=(int)$order['id'];
+    $check($order['items'][0]['delivery_note']===A::DELIVERY_POLICY, 'Common delivery mandate was not frozen in the order.');
     $check((int)$order['total_czk']===3879&&$order['items'][0]['assistance_fee_czk']===122,'Order snapshot differs from approval.');
     $check($orders->create(null,'buyer@example.test',$summary['items'],$shipping,79,$requestKey)['id']===$order['id'],'Duplicate contract created.');
     $outbox=$db->queryFirstRow('SELECT * FROM shop_mail_outbox WHERE event_key=%s','order:'.$order['id']);

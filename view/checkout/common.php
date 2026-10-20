@@ -5,7 +5,7 @@ declare(strict_types=1);
 // from the server's priced cart/order snapshot, never from form fields.
 $checkoutEscape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $checkoutMoney = static fn (int $amount): string => $priceDisplay instanceof \SimpleStore\Pricing\BitcoinPriceDisplay
-    ? $priceDisplay->format($amount) : number_format($amount, 0, ',', ' ') . ' Kč';
+    ? $priceDisplay->html($amount) : number_format($amount, 0, ',', ' ') . ' Kč';
 $checkoutItems = is_array($checkout['items'] ?? null) ? $checkout['items'] : [];
 $checkoutIssues = is_array($checkout['issues'] ?? null) ? $checkout['issues'] : [];
 $lineIssues = array_values(array_filter(array_column($checkoutItems, 'issue'), 'is_string'));
