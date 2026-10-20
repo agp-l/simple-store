@@ -35,7 +35,7 @@ async function verify(name, file, configId, actionName, blockSelector, keyPrefix
     const document = {
       getElementById: id => id === configId ? { textContent: JSON.stringify(config) } :
         id.endsWith('status') ? status : null,
-      querySelectorAll: () => Array(count).fill({}),
+      querySelectorAll: selector => selector === blockSelector ? Array(count).fill({}) : [],
       querySelector: selector => selector.includes(`${blockSelector}[data-section="2"]`) ? block : null,
       addEventListener: (event, callback) => {
         if (event === 'click') clicks.push(callback);
