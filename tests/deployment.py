@@ -8,7 +8,7 @@ import subprocess
 import sys
 import tempfile
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 
 SCRIPTS = Path(__file__).resolve().parents[1] / "scripts"
@@ -64,11 +64,55 @@ with tempfile.TemporaryDirectory() as directory:
     assert "vendor/autoload.php" in manifest["files"]
     assert "tools/fio-worker.php" in manifest["files"]
     assert "images/media/.htaccess" in manifest["files"]
+    assert manifest["files"]["database/schema.sql"] == manifest["schema_sha256"]
+    assert (package / "database/schema.sql").read_bytes() == (root / "database/schema.sql").read_bytes()
     assert "config/database.php" not in manifest["files"]
     assert "database/zaloha.sql" not in manifest["files"]
     assert "images/media/photo.jpg" not in manifest["files"]
     assert not (package / "config/database.php").exists()
     assert not (package / "images/media/photo.jpg").exists()
+
+    # A transient failure before login must recover; credentials are never
+    # retried after an authentication failure. No real network or waiting here.
+    flaky = Mock()
+    flaky.connect.side_effect = [OSError("Network is unreachable"),
+                                 deployer.ftplib.error_temp("421 Temporarily unavailable"), None]
+    with patch.object(deployer.time, "sleep") as sleep:
+        deployer.connect(flaky, "ftp.example.org", 21)
+    assert flaky.connect.call_count == 3 and flaky.close.call_count == 2
+    assert sleep.call_count == 2
+    flaky.login.assert_not_called()
+
+    connection_error = OSError("Network is unreachable")
+    unavailable = Mock(sock=None)
+    unavailable.connect.side_effect = connection_error
+    env = {"FTP_HOST": "ftp.example.org", "FTP_USER": "shop", "FTP_PASSWORD": "example"}
+    with patch.dict(os.environ, env), patch.object(deployer.ftplib, "FTP", return_value=unavailable), \
+            patch.object(deployer.time, "sleep"):
+        try:
+            deployer.deploy(package, False)
+            raise AssertionError("An unavailable FTP server appeared to deploy.")
+        except OSError as error:
+            assert error is connection_error  # cleanup must preserve the original failure
+    assert unavailable.connect.call_count == 3
+    unavailable.login.assert_not_called()
+    unavailable.quit.assert_not_called()
+    unavailable.storbinary.assert_not_called()
+
+    denied = Mock(sock=object())
+    denied.login.side_effect = deployer.ftplib.error_perm("530 Login incorrect")
+    with patch.dict(os.environ, env), patch.object(deployer.ftplib, "FTP", return_value=denied), \
+            patch.object(deployer.time, "sleep") as sleep:
+        try:
+            deployer.deploy(package, False)
+            raise AssertionError("Rejected credentials appeared to deploy.")
+        except deployer.ftplib.error_perm:
+            pass
+    assert denied.connect.call_count == 1 and denied.login.call_count == 1
+    denied.quit.assert_called_once()
+    denied.close.assert_called_once()
+    denied.storbinary.assert_not_called()
+    sleep.assert_not_called()
 
     manifest["files"]["config/database.php"] = "0" * 64
     (package / "config/database.php").write_text("secret", encoding="utf-8")

@@ -26,6 +26,8 @@ Se zadanými proměnnými prostředí `FTP_HOST`, `FTP_USER`, `FTP_PASSWORD` lze
 
 FTP přenáší soubory a nespouští SQL. Po nasazení, v němž se změnil hash `database/schema.sql`, otevři přihlášenou **Administraci → Databáze** na testovacím webu a klikni na **Aktualizovat SQL tabulky**. Aplikace použije databázi v soukromém `config/database.php`; příkazy `CREATE DATABASE` a `USE` z instalačního SQL ignoruje. Proces má zámek a evidenci dokončení. Do GitHub Actions není pro tento postup potřeba ukládat heslo k databázi.
 
+Stav **Aktuální vůči souboru na serveru** neověřuje poslední verzi na GitHubu. Pokud očekávané tlačítko chybí, zkontroluj v Actions úspěšné dokončení **Deploy Webglobe test shop** pro příslušný commit; samotné zelené testy ani sloučení do `main` přenos nepotvrzují. Přechodné chyby připojení FTP skript před přihlášením třikrát zkusí. Pokud nasazení přesto selže, po odstranění příčiny spusť **Re-run failed jobs**. Při nedostupném FTP nebo chybném hesle se nové schéma na web nedostane a opakování starého SQL souboru nepomůže.
+
 Před změnou schématu ulož zálohu databáze a médií. Neimportuj na hostovanou databázi přímo celý `database/schema.sql`: jeho první příkazy míří na instalační název `simple_store`, který se liší od názvu databáze na hostingu.
 
 ## Ověření a návrat
