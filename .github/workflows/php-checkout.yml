@@ -171,6 +171,7 @@ jobs:
           php tests/content-import-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
+          php tests/product-sales-mass-database.php
           php tests/product-zip-database.php
           php tests/product-bulk-database.php
           php tests/product-mass-database.php
@@ -221,6 +222,7 @@ jobs:
           php tests/content-import-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
+          php tests/product-sales-mass-database.php
           php tests/product-zip-database.php
           php tests/product-bulk-database.php
           php tests/product-mass-database.php
@@ -253,6 +255,7 @@ jobs:
         run: |
           node --test tests/product-variants-browser.mjs
           node --test tests/product-sale-browser.mjs
+          node --test tests/product-sales-mass-browser.mjs
           node --test tests/checkout-presentation-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
@@ -261,5 +264,6 @@ jobs:
           path: |
             /tmp/variant-screenshots/
             /tmp/sale-screenshots/
+            /tmp/sales-mass-screenshots/
             /tmp/checkout-presentation/
           retention-days: 7
