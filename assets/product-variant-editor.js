@@ -27,7 +27,7 @@
       return count;
     };
     const update = () => {
-      generate.dataset.dirty = new URLSearchParams(new FormData(generate)).toString() !== initial ? 'true' : 'false';
+      generate.dataset.dirty = generate.dataset.recovered === '1' || new URLSearchParams(new FormData(generate)).toString() !== initial ? 'true' : 'false';
       error.hidden = true;
       groups.removeAttribute('aria-invalid');
       preview.hidden = false;

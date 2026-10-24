@@ -60,7 +60,7 @@ foreach ($details['options'] as $group) $variantGroups[] = $group['name'] . ': '
   </form>
   <?php endif; ?>
   <details class="variant-create" id="variant-create" <?= $variantRows === [] || ($variantForm['operation'] ?? '') === 'generate' ? 'open' : '' ?>><summary><?= \SimpleStore\Rendering\Icon::render('plus') ?> <?= $variantRows === [] ? 'Vytvořit varianty' : 'Přidat kombinace' ?></summary>
-    <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>" data-variant-generate>
+    <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>" data-variant-generate data-recovered="<?= $variantError !== '' && ($variantForm['operation'] ?? '') === 'generate' ? '1' : '0' ?>">
       <input type="hidden" name="action" value="product-variants"><input type="hidden" name="operation" value="generate"><input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>"><input type="hidden" name="expected" value="<?= $escape($variantInventory['expected']) ?>">
       <label>1. Vlastnosti a jejich hodnoty<textarea name="groups" rows="4" maxlength="16000" aria-describedby="variant-groups-help variant-generate-error" placeholder="Velikost: S | M | L&#10;Barva: Modrá | Červená" required><?= $escape($variantForm['groups'] ?? implode("\n", $variantGroups)) ?></textarea></label>
       <p id="variant-groups-help">Například <code>Velikost: S | M | L</code> vytvoří tři varianty. Každou další vlastnost dej na nový řádek. Text v šedé ukázce je potřeba nahradit vlastními hodnotami. Existující kombinace se nepřepíšou.</p>

@@ -206,6 +206,7 @@ test('first variants: clear validation, editable base price and drafts survive a
     assert.ok(await failed.locator('#variant-create').evaluate(el => el.open));
     assert.equal(await failed.locator('[name="groups"]').inputValue(), 'Velikost: XL');
     assert.ok(await failed.locator('[data-variant-generate] [name="confirm"]').isChecked());
+    assert.equal(await failed.locator('[data-variant-generate]').getAttribute('data-dirty'), 'true', 'Recovered definitions must remain protected from price autosave.');
     await failed.getByText('Varianty nebo sklad se mezitím změnily.', { exact: false }).waitFor();
     await failed.close();
     const noJs = await browser.newPage({ javaScriptEnabled: false });
