@@ -15,6 +15,8 @@ $product = (new ProductRepository($db, $site['languages']))->current($key, $lang
 if ($product === null) throw new InvalidArgumentException('Produkt už neexistuje.');
 $returnUrl = $basePath . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1';
 if (($_POST['create_partner'] ?? '') === '1') $_POST['partner_id'] = '0';
+// PHP-only fallback for the same bulk inheritance action available in the editor.
+if (($_POST['inherit_variant_prices'] ?? '') === '1') $_POST['variant_price'] = [];
 try {
     (new ProductSalesRepository($db))->save($key, $language, $_POST);
     unset($_SESSION['product_sale_errors'][$key . ':' . $language]);

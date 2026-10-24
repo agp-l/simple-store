@@ -7,6 +7,14 @@ use InvalidArgumentException;
 /** Parse browser values before applying a version-checked inventory change. */
 final class ProductVariantForm
 {
+    /** Inheritance stays live when the product price changes; other row data is preserved. */
+    public static function inheritPrices(array $snapshot): array
+    {
+        foreach ($snapshot['items'] as &$variant) $variant['price_czk'] = null;
+        unset($variant);
+        return $snapshot;
+    }
+
     public static function apply(array $snapshot, array $changes): array
     {
         if ($changes === [] || count($changes) > ProductVariants::LIMIT) throw new InvalidArgumentException('Vyplň změny variant.');

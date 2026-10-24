@@ -82,6 +82,8 @@
     if (!variants.length) { missingCost = cost === null; invalidCost = cost !== null && cost > basePrice; }
     const badBase = field('supplier_price_czk').value !== '' && cost === null;
     field('supplier_price_czk').setAttribute('aria-invalid', badBase || inheritedTooHigh || (!variants.length && invalidCost) ? 'true' : 'false');
+    const inheritPrices = form.querySelector('[data-sale-inherit-prices]');
+    if (inheritPrices) inheritPrices.disabled = !variants.some(row => row.querySelector('input').value !== '');
     const missing = [];
     if (missingCost) missing.push('nákupní cenu');
     if (partner.value === '0' && (!creating || !newReady())) missing.push(creating ? 'úplný a ověřený profil nového prodávajícího' : 'prodávajícího');
@@ -105,6 +107,12 @@
   });
   form.addEventListener('change', event => {
     if (event.target.name === 'mode') recovered = false;
+    update();
+  });
+  const inheritPrices = form.querySelector('[data-sale-inherit-prices]');
+  inheritPrices?.addEventListener('click', event => {
+    event.preventDefault();
+    variants.forEach(row => { row.querySelector('input').value = ''; });
     update();
   });
   form.addEventListener('submit', () => { submitted = true; });

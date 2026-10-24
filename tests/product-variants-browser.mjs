@@ -45,11 +45,11 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
       await page.goto('http://127.0.0.1:8765/' + adminPath);
       assert.equal(await page.locator('#detail-image').getAttribute('src'), '/images/product-placeholder.png');
       assert.ok(await page.locator('#detail-image').evaluate(img => img.complete && img.naturalWidth > 0));
-      const basePrice = await page.locator('[data-edit-field="price_czk"]').textContent();
+      const basePrice = await page.locator('.detail-prices [data-edit-field="price_czk"]').textContent();
       const photoVariant = await page.locator('#product-variant option[data-image="/images/batoh.webp"]').getAttribute('value');
       await page.locator('#product-variant').selectOption(photoVariant);
       assert.equal(await page.locator('#detail-image').getAttribute('src'), '/images/batoh.webp');
-      assert.equal(await page.locator('[data-edit-field="price_czk"]').textContent(), basePrice);
+      assert.equal(await page.locator('.detail-prices [data-edit-field="price_czk"]').textContent(), basePrice);
       await page.locator('#detail-image-open').click();
       assert.match(await page.locator('#detail-lightbox-image').getAttribute('src'), /images\/batoh.webp$/);
       await page.locator('#detail-lightbox-close').click();

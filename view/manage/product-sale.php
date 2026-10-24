@@ -68,7 +68,8 @@ $partnerAdminUrl = $siteRoot . 'admin.php?section=purchase-partners';
             </div>
           </details>
           <?php if ($saleVariants !== []): ?><details class="sale-disclosure sale-variant-prices"><summary>Nákupní ceny variant <span><?= count($saleVariants) ?></span></summary>
-            <div class="sale-disclosure-body"><p class="sale-hint">Prázdné pole přebírá cenu dodavatele výše. Odměna se počítá z konečné ceny konkrétní varianty.</p>
+            <div class="sale-disclosure-body"><p class="sale-hint">Všechny varianty mohou přebírat jednu cenu dodavatele výše. Tady vyplň jen odlišné nákupní ceny; prázdné pole se přepočítá i při další změně společné ceny.</p>
+              <button type="submit" name="inherit_variant_prices" value="1" data-sale-inherit-prices class="sale-button sale-button--secondary">Použít společnou nákupní cenu u všech variant</button>
               <div class="sale-variant-table"><table><thead><tr><th>Varianta</th><th>Cena pro zákazníka</th><th>Cena dodavatele Kč</th><th>Odměna</th></tr></thead><tbody>
               <?php foreach ($saleVariants as $saleVariant): $variantPrice = (int) ($saleVariant['price_czk'] ?? $basePrice); ?>
                 <tr data-sale-variant data-price="<?= $variantPrice ?>" data-enabled="<?= $saleVariant['enabled'] ? '1' : '0' ?>" data-base="<?= $saleVariant['price_czk'] === null ? '1' : '0' ?>">

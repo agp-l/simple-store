@@ -8,7 +8,8 @@ Jeden produkt má společný název, popis, kategorii, galerii a výchozí cenu.
 2. Zapiš například `Velikost: S | M | L` a na další řádek `Barva: Modrá | Červená`. Vznikne šest kombinací. Pro jednu kombinaci napiš u každé vlastnosti jednu hodnotu. Nevyráběj kombinace, které dodavatel neprodává; lze je také vypnout sloupcem **Nabízet**.
 3. Při prvním přepnutí potvrď převod režimu. Systém neví, kterým velikostem patří původních deset kusů: společný počet proto vynuluje a nové kombinace založí s nulou. Skutečné kusy rozděl podle inventury.
 4. Vyplň tabulku a stiskni **Uložit celou tabulku variant**. S JavaScriptem uloží celou tabulku také tlačítko na řádku. Bez JavaScriptu funguje uložení každého řádku zvlášť. Při konfliktu nebo chybě zůstanou zadané hodnoty ve formuláři; konflikt vyžaduje nový stav skladu, nepřepisuje se potichu.
-5. Prázdná cena a volba fotografie **Společná** přebírají údaje hlavního produktu. Stav **Skladem** s nulou kusů je zákazníkovi nedostupný. **Na objednávku** dovoluje nákup bez lokální rezervace, stejně jako u jednoduchých produktů.
+5. V panelu **Společná cena produktu** klikni na částku a uprav ji jednou. Nové varianty ji přebírají automaticky. U již vyplněných cen použij **Použít společnou cenu u všech variant** a **Uložit celou tabulku variant**. Tím vznikne trvalé přebírání, ne kopie dnešní částky; další změna ceny produktu se projeví u všech variant bez výjimky. Tlačítko **Vrátit původní ceny** vrátí právě připravené sjednocení. Sloupec **Vlastní cena Kč** vyplň jen u skutečně dražší nebo levnější varianty. Bez JavaScriptu tlačítko sjednocení rovnou uloží společné ceny, ostatní údaje ponechá beze změny.
+6. Prázdná cena a volba fotografie **Společná** přebírají údaje hlavního produktu. Stav **Skladem** s nulou kusů je zákazníkovi nedostupný. **Na objednávku** dovoluje nákup bez lokální rezervace, stejně jako u jednoduchých produktů.
 
 Zákazník vidí dostupnost, nikoli počet kusů. Výběr barvy a velikosti ukazuje jen nabízené kombinace; nemožné nebo vyprodané kombinace nelze objednat. PHP kontroluje identitu a cenu znovu při objednávce. Bez JavaScriptu funguje jeden úplný seznam kombinací s cenami. Katalog uvádí nejnižší variantní cenu (při různých cenách „od“) a podle této ceny také řadí.
 
@@ -74,3 +75,8 @@ Náhled vyjmenuje dotčené produkty, počet kombinací a původní společný s
 - Potvrzení používá jednorázový náhled v administrátorské relaci a transakci. Změna produktů, skladu nebo rezervací vyžaduje nový náhled. Opakované vytvoření nezaloží duplicitní varianty ani nepřičte další kusy.
 
 V editoru lze výběrem varianty zobrazit její fotografii v hlavní galerii i ve zvětšení. Výchozí editovatelná cena produktu se při tomto náhledu nemění. Formulář převodu samostatného produktu po odeslání zůstává otevřený a stránka se přesune přímo k náhledu nebo chybě.
+
+
+Ve **Způsobu prodeje → Nákupní ceny variant** lze obdobně použít společnou nákupní cenu dodavatele. Po sjednocení potvrď **Uložit způsob prodeje**. Jednotlivou nákupní cenu vyplň jen pro výjimku. Přepočet odměny používá skutečnou prodejní cenu každé varianty. Bez JavaScriptu tlačítko uloží celý formulář způsobu prodeje rovnou.
+
+Automatické obnovení po změně společné ceny počká na uložení rozepsané tabulky variant. Hromadné uložení tabulky nejprve vyčká na dokončení rozpracovaného ukládání ceny produktu. Chyba ani souběžná změna skladu se tiše nepřepíše; sklad, fotografie a SKU se sjednocením cen nemění.

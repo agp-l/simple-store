@@ -1,5 +1,14 @@
 .variant-manager { margin-top: 18px; min-width: 0; max-width: 100%; }
 .variant-manager p { font-size: 13px; line-height: 1.6; color: var(--muted); }
+.variant-manager [hidden] { display: none !important; }
+.variant-pricing { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; padding: 16px; margin: 16px 0; border: 1px solid var(--line); border-radius: 5px; background: #f4f8f1; }
+.variant-pricing strong { font-size: 13px; }
+.variant-shared-price { margin-top: 7px; font-size: 22px; font-weight: 750; }
+.variant-pricing p { margin: 8px 0 0; font-size: 12px; }
+.variant-pricing form { margin: 0; align-self: center; min-width: 0; }
+.variant-pricing .inline-small { white-space: normal; max-width: 100%; margin: 4px 4px 4px 0; }
+.variant-table [data-variant-price-note] { display: block; color: var(--muted); font-size: 11px; margin-top: 4px; }
+.variant-manager [data-variant-save-state] { padding: 8px 12px; border-left: 3px solid var(--forest); background: #f4f8f1; }
 .variant-table-wrap { overflow-x: auto; margin: 18px 0; }
 .variant-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .variant-table th, .variant-table td { padding: 10px 8px; border-bottom: 1px solid var(--line); text-align: left; }
@@ -30,6 +39,7 @@
 .variant-table .inline-small { white-space: nowrap; }
 .variant-table td:last-child { min-width: 90px; }
 @media (max-width: 700px) {
+  .variant-pricing { grid-template-columns: minmax(0, 1fr); gap: 12px; }
   .variant-table-wrap { overflow: visible; }
   .variant-table, .variant-table tbody { display: block; }
   .variant-table thead { display: none; }

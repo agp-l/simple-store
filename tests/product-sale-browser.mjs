@@ -114,7 +114,7 @@ test('sale editor: responsive layout, drafts, fees, selected partner and safe su
       savedPrices.push(post.get('value'));
       await route.fulfill({ json: { revision: 1 + savedPrices.length, url: url(files[0]) } });
     });
-    const retail = editing.locator('[data-edit-field="price_czk"]');
+    const retail = editing.locator('.detail-prices [data-edit-field="price_czk"]');
     await retail.focus();
     await retail.press('ControlOrMeta+A');
     await editing.keyboard.insertText('2100');

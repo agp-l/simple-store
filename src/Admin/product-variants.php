@@ -52,6 +52,8 @@ try {
             if (!is_array($changes)) throw new InvalidArgumentException('Neplatné údaje variant.');
         }
         $snapshot = \SimpleStore\Product\ProductVariantForm::apply($snapshot, $changes);
+    } elseif ($operation === 'inherit-prices') {
+        $snapshot = \SimpleStore\Product\ProductVariantForm::inheritPrices($snapshot);
     } elseif ($operation === 'mode') {
         if (($_POST['confirm'] ?? '') !== '1') throw new InvalidArgumentException('Potvrď změnu skladu.');
         $snapshot['enabled'] = ($_POST['enabled'] ?? '') === '1';
