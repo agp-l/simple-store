@@ -49,7 +49,7 @@ $partnerAdminUrl = $siteRoot . 'admin/?section=purchase-partners';
               <?php endforeach; ?>
             </select></label>
             <div class="sale-links"><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($partnerAdminUrl) ?>" target="_blank" rel="noopener">Seznam a úpravy prodávajících ↗</a>
-              <a data-sale-partner-edit data-edit-base="<?= $escape($partnerAdminUrl) ?>" href="<?= \SimpleStore\Navigation\PanelUrl::escape($partnerAdminUrl . '&id=' . (int) ($selectedPartner['id'] ?? 0) . '#partner-form') ?>" target="_blank" rel="noopener" <?= $selectedPartner === null ? 'hidden' : '' ?>>Upravit vybraného ↗</a></div>
+              <a data-sale-partner-edit data-edit-base="<?= \SimpleStore\Navigation\PanelUrl::escape($partnerAdminUrl) ?>" href="<?= \SimpleStore\Navigation\PanelUrl::escape($partnerAdminUrl . '&id=' . (int) ($selectedPartner['id'] ?? 0) . '#partner-form') ?>" target="_blank" rel="noopener" <?= $selectedPartner === null ? 'hidden' : '' ?>>Upravit vybraného ↗</a></div>
             <p class="sale-hint" data-sale-partner-status><?= $escape($selectedPartner === null ? 'Vyber prodávajícího nebo vyplň nového.' : (\SimpleStore\Product\PurchasePartnerRepository::missing($selectedPartner) === [] ? 'Údaje prodávajícího jsou kompletní.' : 'Rozpracovaný profil – doplň chybějící údaje.')) ?></p>
           </div>
           <div>

@@ -30,7 +30,7 @@ async function verify(name, file, configId, actionName, blockSelector, keyPrefix
       assign: url => { assigned = url; },
     };
     const status = { textContent: '', classList: { add() {} } };
-    const config = { key, revision, csrf: 'csrf', endpoint: '/admin.php',
+    const config = { key, revision, csrf: 'csrf', endpoint: '/shop/admin/', basePath: '/shop/',
       language: 'cs', type: name };
     const document = {
       getElementById: id => id === configId ? { textContent: JSON.stringify(config) } :
@@ -51,6 +51,7 @@ async function verify(name, file, configId, actionName, blockSelector, keyPrefix
         url: new URL(current).pathname + '?edit=1' }) }),
     };
     runInNewContext(readFileSync(new URL(`../assets/${file}`, import.meta.url), 'utf8'), context);
+    assert.equal(window.SimpleStoreMediaContext.basePath, '/shop/', `${name}: media paths must stay relative to the shop, not the admin route`);
     return clicks;
   };
 
