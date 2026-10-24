@@ -28,7 +28,7 @@ if ($saleFixture) { $product['price_czk'] = 1800; $product['offer_price_czk'] = 
 
 (new \SimpleStore\Rendering\PageRenderer(dirname(__DIR__, 2) . '/view'))->render('product-record', [
     'basePath' => '/', 'language' => 'cs', 'product' => $product, 'canEditProduct' => $admin,
-    'editMode' => $admin, 'stockReady' => true,
+    'editMode' => $admin, 'editToken' => 'test-token', 'stockReady' => true,
     'productSalesReady' => $saleFixture, 'purchasePartners' => $saleFixture ? $partners : [],
     'productSale' => ['mode' => in_array('--own', $argv, true) ? 'own' : 'assisted', 'version'=>1,
         'partner_id'=>1, 'supplier_price_czk'=>1678, 'delivery_note'=>'Do 5 pracovních dnů', 'variant_prices'=>[]],

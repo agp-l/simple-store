@@ -44,6 +44,7 @@
     clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => {
       if (pending || document.querySelector('[data-product-sale-form][data-dirty="true"]') ||
+          document.querySelector('[data-variant-manager][data-dirty="true"]') ||
           document.getElementById('media-picker')?.open ||
           document.activeElement?.matches('[data-edit-operation], [data-editor-select], [data-editor-input], [data-editor-type]')) {
         refreshWhenReady();

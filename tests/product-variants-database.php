@@ -113,6 +113,28 @@ $check($products->current($source, 'cs')['name'] === 'Old XL red', 'Merge delete
 // Price ordering must use the variant offer, not the unused base price.
 $page = $products->publishedPage('cs', null, $prefix, 'price-asc');
 $check(count($page['items']) >= 1, 'Price-ordered catalog query failed with variants.');
+// Clear existing price exceptions atomically, preserving stock and future product-price inheritance.
+$beforePrices = $variants->snapshot($key);
+$sharedPrices = \SimpleStore\Product\ProductVariantForm::inheritPrices($beforePrices);
+$variants->save($key, $sharedPrices);
+$reject(static fn () => $variants->save($key, $sharedPrices)); // stale page must not overwrite newer stock
+$inherited = $variants->snapshot($key);
+$check(array_filter($inherited['items'], static fn (array $variant): bool => $variant['price_czk'] !== null) === [],
+    'Shared prices must remain NULL in storage rather than being copied to each variant.');
+$check(array_column($inherited['items'], 'quantity') === array_column($beforePrices['items'], 'quantity') &&
+    array_column($inherited['items'], 'sku') === array_column($beforePrices['items'], 'sku') &&
+    array_column($inherited['items'], 'image_path') === array_column($beforePrices['items'], 'image_path'), 'Unifying prices changed unrelated row data.');
+$current = $products->current($key, 'cs');
+$fields = ProductInlineEditor::fromRevision($current); $fields['price_czk'] = '1800';
+$products->saveRevision($fields, $key, (int) $current['revision_number']);
+$current = $products->current($key, 'cs');
+$check($current['offer_price_czk'] === 1800 && !$current['price_varies'], 'Catalog still advertises old fixed variant prices.');
+foreach ($inherited['items'] as $variant) {
+    if (!$variant['enabled']) continue;
+    // Base product columns can be returned as numeric strings by MeekroDB.
+    $check((int) ProductVariantRepository::resolve($current, $variant['id'])['price_czk'] === 1800,
+        'Stored inheritance does not resolve to the latest shared product price.');
+}
 foreach ([$source, $key] as $cleanup) {
     $db->query('DELETE FROM shop_product_redirects WHERE target_key=%s', $cleanup);
     $db->query('DELETE FROM shop_product_variants WHERE product_key=%s', $cleanup);
