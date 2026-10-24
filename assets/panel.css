@@ -1551,3 +1551,20 @@
 .panel-accounting-details>summary{font-weight:650;cursor:pointer}.panel-audit-values{display:grid;grid-template-columns:1fr 1fr;gap:12px}.panel-audit-values pre{max-height:350px;overflow:auto;font-size:.75rem;background:#f5f7f8;padding:12px;white-space:pre-wrap;overflow-wrap:anywhere}.panel-preserve-lines{white-space:pre-wrap}
 @media(max-width:850px){.panel-evidence-form{grid-template-columns:repeat(2,minmax(0,1fr))}.panel-audit-values{grid-template-columns:1fr}}
 @media(max-width:520px){.panel-evidence-form,.panel-ledger-filters{grid-template-columns:1fr}.panel-ledger-totals{grid-template-columns:1fr 1fr}.panel-ledger-totals>div{padding:12px}.panel-ledger-totals dd{font-size:1rem}}
+
+/* Account administration: compact filters, readable table and explicit password controls. */
+.users-heading,.users-actions{display:flex;align-items:center;gap:.65rem;flex-wrap:wrap}
+.users-heading{justify-content:space-between}.users-heading h2{margin:0}
+.users-filters{display:grid;grid-template-columns:minmax(160px,2fr) repeat(2,minmax(120px,1fr)) auto;gap:.7rem;align-items:end;margin:1rem 0}
+.users-filters label,.users-password label{display:grid;gap:.4rem;min-width:0}
+.users-filters input,.users-filters select{width:100%;min-width:0}
+.users-password{max-width:600px}.users-password .users-actions{margin-top:.65rem}
+.users-password input[type=text]{font-family:monospace;letter-spacing:.03em}
+.users-addresses{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:1rem;margin:1rem 0}
+.users-addresses article{border:1px solid var(--panel-line,#dce2dd);padding:1rem;overflow-wrap:anywhere}
+#account-management .users-check{display:flex;flex-direction:row;align-items:center;gap:.65rem}
+#account-management .users-check input{width:auto;flex:none}
+.users-table td:first-child{overflow-wrap:anywhere;max-width:320px}
+.users-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+#account-management details>summary{cursor:pointer;font-weight:700;margin:.4rem 0}
+@media(max-width:700px){.users-filters{grid-template-columns:1fr 1fr}.users-filters>label:first-of-type{grid-column:1/-1}.users-filters button{width:100%}.users-table{min-width:580px}}

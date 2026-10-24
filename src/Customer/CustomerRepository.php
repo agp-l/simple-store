@@ -30,7 +30,7 @@ final class CustomerRepository
     public function byEmail(string $email): ?array
     {
         return $this->db->queryFirstRow(
-            'SELECT id, email, display_name, phone, password_hash FROM shop_users
+            'SELECT * FROM shop_users
              WHERE email=%s AND role=%s AND is_active=1 LIMIT 1', self::email($email), 'customer'
         );
     }
@@ -38,7 +38,7 @@ final class CustomerRepository
     public function byId(int $id): ?array
     {
         return $this->db->queryFirstRow(
-            'SELECT id, email, display_name, phone, password_hash FROM shop_users
+            'SELECT * FROM shop_users
              WHERE id=%i AND role=%s AND is_active=1 LIMIT 1', $id, 'customer'
         );
     }

@@ -20,7 +20,8 @@ class MeekroDB
             return ['settings_json' => json_encode(['admin_recovery_email' => $this->recoveryEmail], JSON_THROW_ON_ERROR)];
         }
         foreach ($this->admins as $user) {
-            if ($user['role'] !== 'admin' || $user['is_active'] !== 1) continue;
+            if ($user['role'] !== 'admin' || (str_contains($sql, 'is_active=1') && $user['is_active'] !== 1)) continue;
+            if (str_contains($sql, 'WHERE email=%s') && $user['email'] === $values[0]) return $user;
             if (str_contains($sql, 'WHERE username=%s') && $user['username'] === $values[0]) return $user;
             if (str_contains($sql, 'WHERE id=%i') && $user['id'] === $values[0]) return $user;
             if (str_contains($sql, 'WHERE role=%s') && $user['role'] === $values[0]) return $user;
@@ -102,4 +103,11 @@ $db->admins['admin']['email'] = 'stored@example.test';
 if (!$auth->signIn('stored@example.test', 'new-password')) {
     throw new RuntimeException('Initial administrator email without mail settings was not used.');
 }
+$auth->signOut();
+$users->createAdmin('second', password_hash('second-password', PASSWORD_DEFAULT), 'second@example.test');
+if (!$auth->signIn('second@example.test', 'second-password') || (int) $auth->user()['id'] !== 2 ||
+    $auth->signIn('stored@example.test', 'second-password')) throw new RuntimeException('Administrator identities were mixed.');
+$db->admins['second']['auth_version'] = 1;
+if ($auth->signedIn()) throw new RuntimeException('Revoked administrator session remained valid.');
+$auth->signOut();
 echo "Admin authentication tests passed.\n";

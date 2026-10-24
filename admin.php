@@ -113,7 +113,7 @@ try {
         } elseif ($action === 'reset-request' && !$auth->signedIn()) {
             try {
                 $entryUrl = 'https://' . ($_SERVER['HTTP_HOST'] ?? '') . $adminUrl;
-                (new PasswordResetService($db))->request('admin', '', 'admin.php', $entryUrl);
+                (new PasswordResetService($db))->request('admin', is_string($_POST['email'] ?? null) ? $_POST['email'] : '', 'admin.php', $entryUrl);
                 header('Location: ' . $adminUrl . '?mode=forgot&sent=1', true, 303);
                 exit;
             } catch (InvalidArgumentException | RuntimeException $exception) {
@@ -305,7 +305,7 @@ try {
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }
-    if (in_array($action, ['customer-create', 'customer-update', 'customer-active', 'customer-password'], true) ||
+    if (in_array($action, AdminActionPolicy::USERS, true) ||
         ($method !== 'POST' && $section === 'users')) {
         require __DIR__ . '/src/Admin/users.php';
         require __DIR__ . '/view/admin/layout.php';

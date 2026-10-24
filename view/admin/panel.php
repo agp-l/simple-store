@@ -26,7 +26,7 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
         ['key' => 'orders', 'label' => 'Objednávky', 'icon_name' => 'package', 'href' => $adminUrl . '?section=orders'],
         ['key' => 'returns', 'label' => 'Reklamace a vrácení', 'icon_name' => 'refresh', 'href' => $adminUrl . '?section=returns'],
         ['key' => 'accounting', 'label' => 'Doklady a platby', 'icon_name' => 'document', 'href' => $adminUrl . '?section=accounting'],
-        ['key' => 'users', 'label' => 'Zákazníci', 'icon_name' => 'users', 'href' => $adminUrl . '?section=users'],
+        ['key' => 'users', 'label' => 'Účty a administrátoři', 'icon_name' => 'users', 'href' => $adminUrl . '?section=users'],
         ['key' => 'settings', 'label' => 'Nastavení obchodu', 'icon_name' => 'settings', 'href' => $adminUrl . '?section=settings'],
         ['key' => 'database', 'label' => 'Databáze', 'icon_name' => 'database', 'href' => $adminUrl . '?section=database'],
         ['key' => 'media', 'label' => 'Fotografie', 'icon_name' => 'image', 'href' => $adminUrl . '?section=media'],
@@ -51,6 +51,7 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
     <?php elseif ($screen === 'login'): ?>
       <section class="panel-panel panel-centered">
         <p class="panel-eyebrow">Redakční systém</p><h1>Přihlášení správce</h1>
+        <?php if (($_GET['account_changed'] ?? '') === '1'): ?><p class="panel-notice">Přihlašovací údaje byly změněny. Přihlas se aktuálním e-mailem a heslem.</p><?php endif; ?>
         <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
         <form method="post" action="<?= $escape($adminUrl) ?>">
           <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
@@ -63,12 +64,12 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
     <?php elseif ($screen === 'reset-request'): ?>
       <section class="panel-panel panel-centered"><h1>Obnovit heslo správce</h1>
         <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
-        <?php if (($_GET['sent'] ?? '') === '1'): ?><p class="panel-notice" role="status">Odkaz jsme odeslali na nastavený e-mail správce.</p><?php endif; ?>
+        <?php if (($_GET['sent'] ?? '') === '1'): ?><p class="panel-notice" role="status">Pokud existuje aktivní správce s tímto e-mailem, obdrží odkaz pro obnovu hesla.</p><?php endif; ?>
         <form method="post" action="<?= $escape($adminUrl . '?mode=forgot') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="reset-request">
-          <p>Obnovovací odkaz pošleme na e-mail správce nastavený u obchodu. Další zprávu lze poslat nejdříve za pět minut.</p>
+          <label>E-mail správce<input type="email" name="email" maxlength="254" autocomplete="username" required></label><p>Každý správce obnovuje vlastní účet. Další zprávu lze poslat nejdříve za pět minut.</p>
           <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('mail') ?> Poslat odkaz</button></form>
         <p><a href="<?= $escape($adminUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-left') ?> Zpět na přihlášení</a></p>
-        <p>Pokud nemáš přístup k e-mailu, na serveru lze spustit <code>php tools/admin.php --reset</code>.</p>
+        <p>Pokud nemáš přístup k e-mailu, na serveru lze spustit <code>php tools/admin.php --reset --email=tvuj@email.cz</code>.</p>
       </section>
     <?php elseif ($screen === 'reset-complete'): ?>
       <section class="panel-panel panel-centered"><h1>Nastavit nové heslo správce</h1>

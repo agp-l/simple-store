@@ -37,34 +37,38 @@ final class AdminUserRepository
         );
     }
 
-    /** The configured recovery address is the login identity for the single shop administrator. */
+    /** Default identity for the CLI and older single-administrator installations. */
     public function loginEmail(): ?string
     {
+        $user = $this->db->queryFirstRow('SELECT * FROM shop_users WHERE role=%s ORDER BY id LIMIT 1', 'admin');
+        if ($user !== null && (int) ($user['is_active'] ?? 1) !== 1) return null;
+        $stored = strtolower(trim((string) ($user['email'] ?? '')));
+        if (self::validEmail($stored)) return $stored;
         $settings = (new MailSettingsRepository($this->db))->load()['settings'];
         $configured = strtolower(trim((string) ($settings['admin_recovery_email'] ?? '')));
-        if (self::validEmail($configured)) return $configured;
-        $user = $this->db->queryFirstRow('SELECT email FROM shop_users WHERE role=%s AND is_active=1 ORDER BY id LIMIT 1', 'admin');
-        $stored = strtolower(trim((string) ($user['email'] ?? '')));
-        return self::validEmail($stored) ? $stored : null;
+        return self::validEmail($configured) ? $configured : null;
     }
 
     public function findAdminByEmail(string $email): ?array
     {
         $email = strtolower(trim($email));
+        if (!self::validEmail($email)) return null;
+        // SELECT * tolerates installations awaiting the auth_version migration.
+        $user = $this->db->queryFirstRow('SELECT * FROM shop_users
+            WHERE email=%s AND role=%s AND is_active=1 LIMIT 1', $email, 'admin');
+        if ($user !== null) return $user;
+        // Only the original account without its own email may use the legacy address.
+        // Never transfer this alias to another administrator after blocking an account.
+        $legacy = $this->db->queryFirstRow('SELECT * FROM shop_users WHERE role=%s ORDER BY id LIMIT 1', 'admin');
+        if ($legacy === null || (int) ($legacy['is_active'] ?? 1) !== 1 || self::validEmail((string) ($legacy['email'] ?? ''))) return null;
         $configured = $this->loginEmail();
-        if ($configured === null || !hash_equals($configured, $email)) return null;
-        return $this->db->queryFirstRow(
-            'SELECT id, username, email, password_hash FROM shop_users
-             WHERE role=%s AND is_active=1 ORDER BY id LIMIT 1', 'admin'
-        );
+        return $configured !== null && hash_equals($configured, $email) ? $legacy : null;
     }
 
     public function findAdminById(int $id): ?array
     {
-        return $this->db->queryFirstRow(
-            'SELECT id, username, password_hash FROM shop_users
-             WHERE id=%i AND role=%s AND is_active=1 LIMIT 1', $id, 'admin'
-        );
+        return $this->db->queryFirstRow('SELECT * FROM shop_users
+            WHERE id=%i AND role=%s AND is_active=1 LIMIT 1', $id, 'admin');
     }
 
     public function createAdmin(string $username, string $passwordHash, ?string $email = null): void

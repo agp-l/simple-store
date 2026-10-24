@@ -43,12 +43,11 @@ final class PasswordResetService
         }
         if ($role === 'admin') {
             $adminUsers = new AdminUserRepository($this->db);
-            $email = $adminUsers->loginEmail();
+            $email = $identifier === '' ? $adminUsers->loginEmail() : strtolower(trim($identifier));
             if ($email === null) {
-                throw new RuntimeException('Správce zatím nemá nastavený e-mail pro přihlášení a obnovu hesla.');
+                throw new RuntimeException('Zadej e-mail svého administrátorského účtu.');
             }
-            $user = $identifier === '' || hash_equals($email, strtolower(trim($identifier)))
-                ? $adminUsers->findAdminByEmail($email) : null;
+            $user = $adminUsers->findAdminByEmail($email);
         } else {
             $email = strtolower(trim($identifier));
             $user = filter_var($email, FILTER_VALIDATE_EMAIL) !== false && strlen($email) <= 254

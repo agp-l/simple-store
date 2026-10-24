@@ -50,11 +50,17 @@ abstract class RoleAuth
         $sessionHash = $_SESSION[$this->hashKey] ?? null;
         if (!is_int($id) || $id < 1 || !is_string($sessionHash)) return null;
         $user = $this->byId($id);
-        if ($user === null || !hash_equals(hash('sha256', $user['password_hash']), $sessionHash)) {
+        if ($user === null || !hash_equals(self::fingerprint($user), $sessionHash)) {
             unset($_SESSION[$this->idKey], $_SESSION[$this->hashKey]);
             return null;
         }
         return $user;
+    }
+
+    private static function fingerprint(array $user): string
+    {
+        $version = (int) ($user['auth_version'] ?? 0);
+        return hash('sha256', $user['password_hash'] . ($version > 0 ? ':' . $version : ''));
     }
 
     public function signedIn(): bool
@@ -86,7 +92,7 @@ abstract class RoleAuth
         if ($user !== null && password_verify($password, $user['password_hash'])) {
             session_regenerate_id(true);
             $_SESSION[$this->idKey] = (int) $user['id'];
-            $_SESSION[$this->hashKey] = hash('sha256', $user['password_hash']);
+            $_SESSION[$this->hashKey] = self::fingerprint($user);
             $_SESSION['csrf'] = bin2hex(random_bytes(32));
             unset($_SESSION['failed_logins'], $_SESSION['blocked_until']);
             return true;

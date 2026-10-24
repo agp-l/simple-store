@@ -554,21 +554,25 @@ if (!str_contains($html, \SimpleStore\Rendering\Icon::render('edit') . ' Upravit
 }
 
 $screen = 'users';
-$usersError = '';
-$search = '';
-$offset = 0;
-$usersPage = ['items' => [['id' => 7, 'display_name' => 'Eva <script>',
-    'email' => 'eva@example.org', 'is_active' => 1, 'order_count' => 2]], 'nextOffset' => null];
-$customer = $usersPage['items'][0] + ['phone' => '', 'address_count' => 1];
-$customerOrders = [];
-ob_start();
-require dirname(__DIR__) . '/view/admin/layout.php';
-$html = ob_get_clean();
-if (!str_contains($html, 'Zákazníci') || !str_contains($html, 'name="action" value="customer-update"') ||
-    !str_contains($html, 'name="action" value="customer-active"') ||
-    !str_contains($html, 'name="action" value="customer-create"') ||
+$usersReady = true; $usersError = ''; $search = $roleFilter = $activeFilter = ''; $offset = 0;
+$showCreate = false; $actorId = 1; $method = 'GET'; $addressId = 0;
+$usersPage = ['items' => [['id' => 7, 'username' => 'eva', 'display_name' => 'Eva <script>',
+    'email' => 'eva@example.org', 'is_active' => 1, 'role' => 'admin', 'phone' => '',
+    'created_at' => '2026-10-24 12:00:00', 'order_count' => 2, 'revision' => str_repeat('a', 64)]], 'nextOffset' => null];
+$account = $accountForm = $usersPage['items'][0];
+$accountOrders = $accountAddresses = [];
+$addressForm = array_fill_keys(['label','recipient','company','street','city','postal_code','country','phone'], '');
+ob_start(); require dirname(__DIR__) . '/view/admin/layout.php'; $html = ob_get_clean();
+if (!str_contains($html, 'Účty a administrátoři') || !str_contains($html, 'name="action" value="user-update"') ||
+    !str_contains($html, 'name="action" value="user-password"') || !str_contains($html, 'name="action" value="user-delete"') ||
+    !str_contains($html, 'name="action" value="user-address-save"') || !str_contains($html, 'data-generate-password') ||
     !str_contains($html, 'Eva &lt;script&gt;') || str_contains($html, 'Eva <script>')) {
-    throw new RuntimeException('Customer administration is missing or exposes unescaped data.');
+    throw new RuntimeException('Account administration is missing or exposes unescaped data.');
+}
+$usersReady = false;
+ob_start(); require dirname(__DIR__) . '/view/admin/layout.php'; $html = ob_get_clean();
+if (!str_contains($html, 'aktualizuj SQL tabulky') || str_contains($html, 'name="action" value="user-update"')) {
+    throw new RuntimeException('Account management must wait for the session revocation migration.');
 }
 
 echo "Admin rendering tests passed.\n";
