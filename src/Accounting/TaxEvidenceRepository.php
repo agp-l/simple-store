@@ -250,9 +250,9 @@ final class TaxEvidenceRepository
     private static function assertReason(int $id, int $adminId, string $reason): void
     {
         $reason = trim($reason);
-        if ($id < 1 || $adminId < 1 || preg_match('/^.{8,190}$/usD', $reason) !== 1 ||
+        if ($id < 1 || $adminId < 1 || preg_match('/^.{1,190}$/usD', $reason) !== 1 ||
             preg_match('/\p{C}/u', $reason) !== 0) {
-            throw new InvalidArgumentException('Vyplň důvod opravy (8–190 znaků).');
+            throw new InvalidArgumentException('Stručně vyplň důvod opravy (nejvýše 190 znaků).');
         }
     }
 

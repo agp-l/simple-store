@@ -92,6 +92,20 @@ final class TaxRegisterRepository
         } catch (Throwable $e) { $this->db->rollback(); throw $e; }
     }
 
+    public function restore(int $id, int $version, int $adminId, string $reason): void
+    {
+        $reason = self::text($reason,190);
+        if ($adminId < 1 || $reason === '') throw new InvalidArgumentException('Doplň důvod obnovení.');
+        $this->db->startTransaction();
+        try {
+            $old = $this->db->queryFirstRow('SELECT * FROM shop_tax_balances WHERE id=%i FOR UPDATE', $id);
+            if ($old === null || $old['voided_at'] === null || (int) $old['version'] !== $version) throw new InvalidArgumentException('Záznam se změnil nebo není vyřazený.');
+            $this->db->update('shop_tax_balances', ['voided_at'=>null,'version'=>$version + 1], 'id=%i', $id);
+            $this->event($id,$old,$this->byId($id),$adminId,$reason);
+            $this->db->commit();
+        } catch (Throwable $e) { $this->db->rollback(); throw $e; }
+    }
+
     private function event(int $id, ?array $old, ?array $new, int $admin, string $reason): void
     {
         $this->db->insert('shop_tax_register_events', ['record_id' => $id, 'admin_id' => $admin, 'reason' => $reason,
@@ -99,7 +113,7 @@ final class TaxRegisterRepository
             'new_json' => json_encode($new, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)]);
     }
 
-    public function page(int $year, string $section, int $offset = 0, int $limit = 50): array
+    public function page(int $year, string $section, int $offset = 0, int $limit = 50, bool $includeVoided = false): array
     {
         TaxEvidenceRepository::year($year);
         if (!in_array($section, ['balances','closing'], true) || $offset < 0 || $limit < 1 || $limit > 200) throw new InvalidArgumentException('Neplatná stránka evidence.');
@@ -107,7 +121,7 @@ final class TaxRegisterRepository
             $where = "kind IN ('receivable','liability','asset') AND opened_on<%s AND (closed_on IS NULL OR closed_on>=%s)";
             $params = [($year + 1) . '-01-01', $year . '-01-01'];
         } else { $where = 'tax_year=%i'; $params = [$year]; }
-        $rows = $this->db->query('SELECT * FROM shop_tax_balances WHERE voided_at IS NULL AND ' . $where .
+        $rows = $this->db->query('SELECT * FROM shop_tax_balances WHERE ' . ($includeVoided ? '' : 'voided_at IS NULL AND ') . $where .
             ' ORDER BY kind,opened_on DESC,id DESC LIMIT %i OFFSET %i', ...array_merge($params, [$limit + 1, $offset]));
         $more = count($rows) > $limit;
         if ($more) array_pop($rows);

@@ -61,6 +61,9 @@ if ($result['before']['shop_product_revisions'] !== $result['after']['shop_produ
     $result['after']['tables']['shop_order_variant_reservations'] !== 0 ||
     (int) $db->queryFirstField('SELECT available_quantity FROM shop_product_variants WHERE product_key=%s AND variant_key=%s', $key, $variantId) !== 3 ||
     $result['after']['tables']['shop_orders'] !== 0 ||
+    $result['after']['tables']['shop_invoice_corrections'] !== 0 ||
+    $result['after']['tables']['shop_tax_register_events'] !== 0 ||
+    $result['after']['tables']['shop_tax_write_requests'] !== 0 ||
     $result['after']['tables']['shop_fio_matches'] !== 0 ||
     (int) $db->queryFirstField('SELECT available_quantity FROM shop_product_inventory
         WHERE product_key=%s', $key) !== 4 ||

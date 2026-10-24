@@ -83,6 +83,7 @@ jobs:
           php tests/order-shipping.php
           php tests/accounting.php
           php tests/tax-invoice-mail.php
+          php tests/tax-documents.php
           php tests/catalog-render.php
           php tests/footer-legal.php
           php tests/site-copy.php
@@ -260,6 +261,7 @@ jobs:
           node --test tests/product-sale-browser.mjs
           node --test tests/product-sales-mass-browser.mjs
           node --test tests/checkout-presentation-browser.mjs
+          node --test tests/tax-evidence-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -269,4 +271,5 @@ jobs:
             /tmp/sale-screenshots/
             /tmp/sales-mass-screenshots/
             /tmp/checkout-presentation/
+            /tmp/tax-evidence-screenshots/
           retention-days: 7

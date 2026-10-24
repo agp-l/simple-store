@@ -62,6 +62,9 @@ $adjustId=$register->save(0,['kind'=>'expense_add','opened_on'=>'2096-12-31','am
 $assert(abs((float)$register->adjustments($year)['expenses']-(float)$adjustBefore['expenses']-20.25)<0.0001,'Noncash adjustment missing.');
 $assert($tax->summary($year)['expenses']===$expenses,'Inventory or adjustment created fictitious cash payment.');
 $register->void($adjustId,1,1,'Chybný odpis');$assert($register->adjustments($year)===$adjustBefore,'Voided adjustment still counted.');
+$register->restore($adjustId,2,1,'Obnovení po kontrole');
+$assert($register->byId($adjustId)['voided_at']===null && count($register->history($adjustId))===3,'Register restore lost history.');
+$register->void($adjustId,3,1,'Vyřazení po testu');
 $db->insert('shop_invoices',['order_id'=>$id,'order_number'=>'EVID-'.$suffix,'document_number'=>'F-EVID-'.$suffix,'issue_date'=>$date,'due_date'=>$date,'seller_json'=>'{"name":"Podnikatel"}','buyer_json'=>'{"name":"Zákazník"}','items_json'=>'[]','subtotal_czk'=>122,'shipping_czk'=>0,'total_czk'=>122]);
 $invoiceId=(int)$db->insertId();$beforeCredit=$tax->summary($year);
 $credit=$corrections->issue($invoiceId,['amount_czk'=>'12,25','issue_date'=>$date,'reason'=>'Vrácení části služby','request_key'=>bin2hex(random_bytes(16))],1);

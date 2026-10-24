@@ -5,6 +5,9 @@ $taxMoney = static fn (mixed $value): string => \SimpleStore\Accounting\TaxMoney
 $today = (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format('Y-m-d');
 $taxKind = \SimpleStore\Accounting\TaxEvidenceRepository::KINDS;
 $balanceKind = ['receivable'=>'Pohledávka', 'liability'=>'Dluh', 'asset'=>'Majetek'];
+if ($accountingError !== '' && ($_POST['action'] ?? '') === 'tax-save-settings') {
+    foreach (array_keys($taxSettings) as $key) if (is_string($_POST[$key] ?? null)) $taxSettings[$key] = $_POST[$key];
+}
 $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? 'actual');
 ?>
 <?php if (!$taxReady || !$invoicesReady): ?>

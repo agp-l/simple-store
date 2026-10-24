@@ -3,7 +3,7 @@ declare(strict_types=1);
 $ledgerFilters ??= [];
 $ledgerSummary ??= $taxSummary;
 $editing = $taxEditEntry !== null;
-$entryDraft = $taxEditEntry ?? ['entry_date' => $today, 'direction' => 'income', 'account' => 'bank', 'tax_kind' => 'taxable', 'purpose' => 'manual', 'currency' => 'CZK', 'order_id' => $_GET['order_id'] ?? ''];
+$entryDraft = $taxEditEntry ?? ['entry_date' => substr($today,0,4) === (string) $taxYear ? $today : $taxYear . '-12-31', 'direction' => 'income', 'account' => 'bank', 'tax_kind' => 'taxable', 'purpose' => 'manual', 'currency' => 'CZK', 'order_id' => $_GET['order_id'] ?? ''];
 if ($accountingError !== '' && in_array($_POST['action'] ?? '', ['tax-add-entry','tax-amend-entry'], true)) $entryDraft = array_replace($entryDraft, $_POST);
 $field = static fn (string $key, mixed $fallback = ''): string => is_scalar($entryDraft[$key] ?? $fallback) ? (string) ($entryDraft[$key] ?? $fallback) : '';
 $accounts = \SimpleStore\Accounting\TaxEvidenceRepository::ACCOUNTS;
@@ -49,10 +49,10 @@ $ledgerUrl = $taxUrl . '&tab=money&year=' . $taxYear;
         <label>Původní částka / množství<input name="foreign_amount" inputmode="decimal" value="<?= $escape($field('foreign_amount')) ?>"></label>
         <label>Podklad ocenění v Kč<input name="valuation_note" maxlength="255" value="<?= $escape($field('valuation_note')) ?>" placeholder="Kurz, datum, zdroj, případně TXID"></label>
       </div><p class="panel-help">Korunovou hodnotu vyplň podle doloženého ocenění transakce. U rozdělené platby uveď ke každé části jen odpovídající množství. Pozdější směna krypta se eviduje zvlášť.</p></details>
-      <?php if ($editing): ?><label class="panel-evidence-wide">Důvod opravy<input name="reason" minlength="8" maxlength="190" value="<?= $escape($field('reason')) ?>" required></label><?php endif; ?>
+      <?php if ($editing): ?><label class="panel-evidence-wide">Důvod opravy<input name="reason" minlength="1" maxlength="190" value="<?= $escape($field('reason')) ?>" required></label><?php endif; ?>
       <div class="panel-ledger-actions panel-evidence-wide"><button class="panel-button" type="submit"><?= $editing ? 'Uložit opravu' : 'Přidat pohyb' ?></button><?php if ($editing): ?><a href="<?= $escape($ledgerUrl) ?>">Zavřít úpravu</a><?php endif; ?></div>
     </form>
-    <?php if ($editing): ?><details><summary>Vyřadit chybný zápis</summary><form class="panel-form" method="post" action="<?= $escape($ledgerUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="money"><input type="hidden" name="year" value="<?= (int) $taxYear ?>"><input type="hidden" name="action" value="tax-void-entry"><input type="hidden" name="id" value="<?= (int) $taxEditEntry['id'] ?>"><input type="hidden" name="version" value="<?= (int) $taxEditEntry['version'] ?>"><label>Důvod<input name="reason" minlength="8" maxlength="190" required></label><label class="panel-check"><input type="checkbox" name="confirmed" value="1" required> Vyřadit z deníku, ponechat v historii.</label><button class="panel-button">Vyřadit zápis</button></form></details><?php endif; ?>
+    <?php if ($editing): ?><details><summary>Vyřadit chybný zápis</summary><form class="panel-form" method="post" action="<?= $escape($ledgerUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="money"><input type="hidden" name="year" value="<?= (int) $taxYear ?>"><input type="hidden" name="action" value="tax-void-entry"><input type="hidden" name="id" value="<?= (int) $taxEditEntry['id'] ?>"><input type="hidden" name="version" value="<?= (int) $taxEditEntry['version'] ?>"><label>Důvod<input name="reason" minlength="1" maxlength="190" required></label><label class="panel-check"><input type="checkbox" name="confirmed" value="1" required> Vyřadit z deníku, ponechat v historii.</label><button class="panel-button">Vyřadit zápis</button></form></details><?php endif; ?>
   </details>
 </section>
 <details class="panel-panel" <?= $accountingError !== '' && ($_POST['action'] ?? '') === 'tax-transfer' ? 'open' : '' ?>><summary>Převod mezi vlastními korunovými účty</summary>

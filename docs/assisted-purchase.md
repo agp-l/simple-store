@@ -25,6 +25,8 @@ Před zapnutím platební brány pro tento model ověř její souhlas s přijím
 
 ## Doklady a evidence
 
+Aktualizace 24. 10. 2026: deník nyní podporuje haléře, rozdělené i částečné platby, dodavatelské úhrady a vratky, roční zůstatky, inventuru a opravné doklady. Postup a hranice jsou v [Evidenci OSVČ](osvc-evidence.md). Celočíselný katalog se tím nemění.
+
 Objednávka a brána přijímají celou cenu. Vlastní faktura obsahuje vlastní zboží, asistenci a sjednanou vlastní dopravu; svěřená kupní cena je samostatně popsána mimo její součet. Partnerův doklad za zboží předej zákazníkovi. U příkladu 1 800 Kč a dopravy 79 Kč: vlastní faktura 201 Kč, prostředky pro partnera 1 678 Kč, celá přijatá platba 1 879 Kč.
 
 Ruční zápis ověřeného bankovního příjmu rozdělí platbu na zdanitelný příjem za vlastní plnění a nezdanitelné svěřené prostředky. U platebních bran a BTC zůstává evidence vyúčtování a skutečných pohybů ruční jako dosud. Předání peněz partnerovi zaznamenej jako nedaňový výdaj; nevytvářej z této částky zároveň daňově uznatelný nákup vlastních zásob. Použití peněz, nevyčerpaný zůstatek, vrácení a doklad partnera je potřeba doložit. Změny skutečných nákupních cen či vratky po objednávce se neprovádějí přepisem jejího historického souhrnu.

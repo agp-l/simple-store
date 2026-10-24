@@ -132,10 +132,12 @@ if ($method === 'POST') {
                     $tax->addEntry($_POST);
                     $db->commit();
                 } catch (Throwable $error) { $db->rollback(); throw $error; }
+                $returnYear = (int) substr((string) $_POST['entry_date'],0,4);
                 $accountingTab = 'money';
                 break;
             case 'tax-amend-entry':
                 $tax->amendEntry($id, $_POST, (int) $admin['id'], (string) ($_POST['reason'] ?? ''));
+                $returnYear = (int) substr((string) $_POST['entry_date'],0,4);
                 $accountingTab = 'money';
                 break;
             case 'tax-void-entry':
@@ -157,6 +159,9 @@ if ($method === 'POST') {
             case 'tax-save-record':
                 $taxRegister->save($id, $_POST, (int) $admin['id']);
                 break;
+            case 'tax-restore-record':
+                $taxRegister->restore($id, (int) ($_POST['version'] ?? 0), (int) $admin['id'], (string) ($_POST['reason'] ?? ''));
+                break;
             case 'tax-void-record':
                 $taxRegister->void($id, (int) ($_POST['version'] ?? 0), (int) $admin['id'], (string) ($_POST['reason'] ?? ''));
                 break;
@@ -172,11 +177,13 @@ if ($method === 'POST') {
                 $returnInvoice = (int) $correction['invoice_id'];
                 break;
             case 'tax-add-balance':
-                $tax->addBalance($_POST);
+$taxRegister->save(0, $_POST, (int) $admin['id']);
                 $accountingTab = 'balances';
                 break;
             case 'tax-close-balance':
-                $tax->closeBalance($id, (string) ($_POST['closed_on'] ?? ''));
+                $record = $taxRegister->byId($id);
+                if ($record === null) throw new InvalidArgumentException('Záznam nebyl nalezen.');
+                $taxRegister->save($id, array_replace($record, ['closed_on'=>$_POST['closed_on'] ?? '', 'reason'=>'Uzavření záznamu']), (int) $admin['id']);
                 $accountingTab = 'balances';
                 break;
             case 'tax-link-payment':
@@ -305,7 +312,7 @@ try {
         if (in_array($accountingTab, ['balances','closing'], true)) {
             $registerOffset = filter_var($_GET['offset'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 1000000]]);
             if ($registerOffset === false) throw new InvalidArgumentException('Neplatná stránka evidence.');
-            $registerPage = $taxRegister->page($taxYear, $accountingTab, $registerOffset);
+            $registerPage = $taxRegister->page($taxYear, $accountingTab, $registerOffset, 50, ($_GET['show_voided'] ?? '') === '1');
             $registerEdit = $taxRegister->byId((int) ($_GET['edit_record'] ?? (($_POST['action'] ?? '') === 'tax-save-record' ? ($_POST['id'] ?? 0) : 0)));
             if ($registerEdit !== null) $registerHistory = $taxRegister->history((int) $registerEdit['id']);
         }
