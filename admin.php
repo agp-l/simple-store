@@ -240,13 +240,26 @@ try {
 
     $action = $method === 'POST' ? ($_POST['action'] ?? '') : '';
     $section = $_GET['section'] ?? '';
+    if (in_array($action, ['configuration-preview', 'configuration-apply'], true)) {
+        $kind = $_POST['backup_kind'] ?? '';
+        if (!in_array($kind, \SimpleStore\Admin\ConfigurationBackup::KINDS, true)) throw new InvalidArgumentException('Neplatná oblast zálohy.');
+        if ($kind === 'navigation') {
+            $section = ($_POST['section'] ?? '') === 'categories' ? 'categories' : 'menus';
+        } else {
+            $section = 'settings';
+            $_POST['tab'] = $kind === 'site-texts' ? 'appearance' : 'mail';
+        }
+        require __DIR__ . '/src/Admin/' . $section . '.php';
+        require __DIR__ . '/view/admin/layout.php';
+        exit;
+    }
     if (in_array($action, ['content-import-preview', 'content-import-save'], true) ||
         ($method === 'GET' && $section === 'content-import')) {
         require __DIR__ . '/src/Admin/content-import.php';
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }
-    if (in_array($action, ['category-create', 'category-update'], true) ||
+    if (in_array($action, ['category-create', 'category-update', 'category-order'], true) ||
         ($method !== 'POST' && $section === 'categories')) {
         require __DIR__ . '/src/Admin/categories.php';
         require __DIR__ . '/view/admin/layout.php';

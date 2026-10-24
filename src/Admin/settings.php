@@ -26,6 +26,10 @@ $paymentArea = $settingsTab === 'payment' && is_string($requestedPaymentArea) &&
 $copyLanguageInput = $_POST['language'] ?? $_GET['language'] ?? $site['default_language'];
 $copyLanguage = is_string($copyLanguageInput) && in_array($copyLanguageInput, $site['languages'], true)
     ? $copyLanguageInput : $site['default_language'];
+if (in_array($settingsTab, ['appearance', 'mail'], true)) {
+    $backupKind = $settingsTab === 'appearance' ? 'site-texts' : 'email-texts';
+    require __DIR__ . '/configuration-transfer.php';
+}
 $siteCopyStore = new SiteCopyRepository($db);
 $siteCopyValues = $siteCopyStore->load($copyLanguage);
 $example = require __DIR__ . '/../../config/checkout.example.php';
@@ -123,7 +127,7 @@ foreach ($shippingCatalog as $code => $definition) {
     $form['shipping_price'][$code] = (string) ($saved['price_czk'] ?? $definition['price_czk']);
     $form['shipping_enabled'][$code] = ($saved['enabled'] ?? true) === true ? '1' : '0';
 }
-if ($method === 'POST') {
+if ($method === 'POST' && !in_array($_POST['action'] ?? '', ['configuration-preview', 'configuration-apply'], true)) {
     try {
         if (($_POST['action'] ?? null) === 'fio-cron-rotate') {
             if ($settingsTab !== 'payment') throw new InvalidArgumentException('Neplatná stránka nastavení Fio.');

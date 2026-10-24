@@ -1,127 +1,72 @@
-      <?php $slotNames = ['primary' => 'Hlavní menu', 'category_tabs' => 'Podkategorie', 'utility' => 'Horní odkazy', 'footer' => 'Patička']; ?>
-      <div class="panel-intro">
-        <div><p class="panel-eyebrow">Navigace / umístění</p><h1>Menu webu</h1>
-          <p>Vyber místo na webu, zvol odkazy a uprav jejich text, cíl i pořadí.</p></div>
-        <form class="panel-language" method="get" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>">
-          <input type="hidden" name="section" value="menus"><input type="hidden" name="slot" value="<?= $escape($slot) ?>">
-          <label>Jazyk <select name="language"><?php foreach ($site['languages'] as $code): ?><option value="<?= $escape($code) ?>" <?= $language === $code ? 'selected' : '' ?>><?= $escape(strtoupper($code)) ?></option><?php endforeach; ?></select></label>
-          <button type="submit" class="panel-action"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit</button>
-        </form>
-      </div>
-      <?php if (!$menuReady): ?><p class="panel-error">Pro změny menu <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>. Výchozí menu zatím fungují dál.</p><?php endif; ?>
-      <?php if ($menuError !== ''): ?><p class="panel-error" role="alert"><?= $escape($menuError) ?></p><?php endif; ?>
-      <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Změna menu byla uložena.</p><?php endif; ?>
-      <div class="panel-grid panel-grid-catalog">
-        <aside class="panel-panel panel-list" aria-labelledby="menu-slots-title">
-          <h2 id="menu-slots-title">Kde se menu zobrazí</h2>
-          <div class="panel-menu-slots">
-            <?php foreach ($menuSlots as $name => $settings): ?>
-              <a class="panel-tree-row<?= $slot === $name ? ' is-active' : '' ?>" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $name])) ?>">
-                <span class="panel-tree-name"><?= $escape($slotNames[$name] ?? $name) ?></span>
-                <small><?= ['categories' => 'Kategorie', 'content' => 'Stránky', 'manual' => 'Vlastní odkazy'][$settings['source']] ?? 'Menu' ?></small>
-              </a>
-            <?php endforeach; ?>
-          </div>
-          <p class="panel-help">Patička má jedno menu. Odkazy na koncepty stránek se ukážou až po zveřejnění.</p>
-        </aside>
-        <div class="panel-workspace">
-          <section class="panel-panel" aria-labelledby="menu-settings-title">
-            <p class="panel-eyebrow">Nastavení</p><h2 id="menu-settings-title"><?= $escape($slotNames[$slot] ?? $slot) ?></h2>
-            <p class="panel-help">Vyber automatický obsah menu. Další vlastní odkazy můžeš přidat níže bez změny zdroje.</p>
-            <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $slot])) ?>">
-              <input type="hidden" name="action" value="menu-slot"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
-              <input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="slot" value="<?= $escape($slot) ?>">
-              <?php if ($slot === 'footer'): ?><label>Nadpis menu v patičce <input name="title" maxlength="80" required value="<?= $escape($activeSlot['title'] ?? 'Informace') ?>"></label><?php endif; ?>
-              <label>Co se zobrazí <select name="source">
-                <?php foreach (['manual' => 'Vlastní odkazy: přesné texty a pořadí', 'categories' => 'Kategorie produktů', 'content' => 'Publikované stránky označené do horního menu'] as $value => $label): ?>
-                  <option value="<?= $value ?>" <?= $activeSlot['source'] === $value ? 'selected' : '' ?>><?= $label ?></option>
-                <?php endforeach; ?>
-              </select></label>
-              <label>Začít od kategorie (jen při volbě Kategorie) <select name="parent_path"><option value="">Hlavní kategorie</option>
-                <?php if ($slot === 'category_tabs'): ?><option value="@context" <?= ($activeSlot['parent'] ?? '') === '@context' ? 'selected' : '' ?>>Podle otevřené kategorie</option><?php endif; ?>
-                <?php foreach ($categoryOptions as $category): ?><?php if ($categories->find($language, $category['path']) !== null): ?>
-                  <option value="<?= $escape($category['path']) ?>" <?= ($activeSlot['parent'] ?? '') === $category['path'] ? 'selected' : '' ?>><?= $escape(str_repeat('— ', (int) $category['depth']) . $category['title']) ?></option>
-                <?php endif; ?><?php endforeach; ?>
-              </select></label>
-              <label class="panel-check"><input type="checkbox" name="include_blog" value="1" <?= ($activeSlot['include_blog'] ?? false) ? 'checked' : '' ?>> Přidat odkaz na blog mezi stránky</label>
-              <p class="panel-help">Vlastní odkazy zůstanou na konci menu i po přepnutí zdroje. Volba Blog platí pouze pro zdroj Publikované stránky.</p>
-              <button class="panel-action panel-button" type="submit" <?= $menuReady ? '' : 'disabled' ?>><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit zdroj menu</button>
-            </form>
-          </section>
-          <?php if ($activeSlot['source'] === 'categories'): ?>
-            <section class="panel-panel panel-hint"><h2>Pořadí a názvy kategorií</h2>
-              <p>Odkazy se automaticky načítají z katalogu. Řazení, zobrazení a názvy upravíš ve správě kategorií.</p>
-              <a class="panel-text-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=categories&language=' . rawurlencode($language)) ?>">Spravovat kategorie →</a>
-            </section>
-          <?php endif; ?>
-            <section class="panel-panel" aria-labelledby="manual-items-title">
-              <div class="panel-panel-head"><h2 id="manual-items-title"><?= $activeSlot['source'] === 'manual' ? 'Vlastní odkazy' : 'Další odkazy' ?> <span><?= count($menuItems) ?></span></h2>
-                <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $slot]) . '#menu-item-form') ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('plus') ?> Nový odkaz</a></div>
-              <?php if ($activeSlot['source'] !== 'manual'): ?><p class="panel-help">Odkazy níže se zobrazí za automatickými <?= $activeSlot['source'] === 'categories' ? 'kategoriemi' : 'stránkami' ?>. Pro externí web zvol „Externí web nebo e-mail“ a vlož celou adresu https://.</p><?php endif; ?>
-              <?php if ($menuItems === []): ?><p class="panel-empty">Zatím prázdné menu. Přidej první odkaz níže.</p><?php endif; ?>
-              <div class="panel-tree"><?php foreach ($menuItems as $item): ?>
-                <a class="panel-tree-row<?= ($selectedItem['id'] ?? '') === $item['id'] ? ' is-active' : '' ?>" style="--indent:<?= min(5, (int) $item['depth']) * 17 ?>px" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $slot, 'item' => $item['id']])) ?>">
-                  <span class="panel-tree-name"><?= $escape($item['label']) ?></span>
-                  <small><?= $escape($item['target']) ?> · <?= (int) $item['sort_order'] ?></small>
-                </a>
-              <?php endforeach; ?></div>
-              <form class="panel-form panel-item-form" id="menu-item-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $slot, 'item' => $selectedItem['id'] ?? ''])) ?>">
-                <input type="hidden" name="action" value="menu-item-save"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
-                <input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="slot" value="<?= $escape($slot) ?>">
-                <input type="hidden" name="id" value="<?= $escape($selectedItem['id'] ?? '') ?>">
-                <h3><?= $selectedItem === null ? 'Přidat odkaz' : 'Upravit odkaz' ?></h3>
-                <label>Text odkazu <input name="label" maxlength="80" required value="<?= $escape($selectedItem['label'] ?? '') ?>"></label>
-                <?php $selectedType = ($selectedItem['target_type'] ?? '') === 'category' ? 'category' :
-                    (($selectedItem['target_type'] ?? '') === 'external' ? 'external' :
-                    (($selectedItem['target'] ?? null) === '' ? 'home' :
-                    (($selectedItem['target'] ?? '') === 'blog' ? 'blog' :
-                    (in_array($selectedItem['target'] ?? '', array_column($pageRows, 'slug'), true) || $selectedItem === null ? 'page' : 'custom')))); ?>
-                <label>Kam odkaz vede <select name="destination_type">
-                  <?php foreach (['page' => 'Stránka webu', 'category' => 'Kategorie produktů', 'home' => 'Úvodní stránka',
-                    'blog' => 'Blog', 'custom' => 'Jiná vnitřní cesta', 'external' => 'Externí web nebo e-mail'] as $value => $label): ?>
-                    <option value="<?= $value ?>" <?= $selectedType === $value ? 'selected' : '' ?>><?= $escape($label) ?></option>
-                  <?php endforeach; ?>
-                </select></label>
-                <p class="panel-help">Vyplň jen pole odpovídající vybranému typu cíle. Pro úvod a blog není potřeba nic dalšího.</p>
-                <label>Stránka <select name="destination_page"><option value="">Vyber stránku</option>
-                  <?php foreach ($pageRows as $page): ?><option value="<?= $escape($page['slug']) ?>" <?= $selectedType === 'page' && ($selectedItem['target'] ?? '') === $page['slug'] ? 'selected' : '' ?>><?= $escape($page['title']) ?><?= $page['published'] ? '' : ' (koncept)' ?></option><?php endforeach; ?>
-                </select></label>
-                <label>Kategorie <select name="destination_category"><option value="">Vyber kategorii</option>
-                  <?php foreach ($categoryOptions as $category): ?><option value="<?= $escape($category['path']) ?>" <?= $selectedType === 'category' && ($selectedItem['target'] ?? '') === $category['path'] ? 'selected' : '' ?>><?= $escape(str_repeat('— ', (int) $category['depth']) . $category['title']) ?></option><?php endforeach; ?>
-                </select></label>
-                <label>Jiná vnitřní cesta <input name="destination_custom" value="<?= $selectedType === 'custom' ? $escape($selectedItem['target']) : '' ?>" placeholder="např. kosik"></label>
-                <label>Externí odkaz nebo e-mail <input name="destination_external" value="<?= $selectedType === 'external' ? $escape($selectedItem['target']) : '' ?>" placeholder="https://priklad.cz nebo mailto:info@priklad.cz"></label>
-                <p class="panel-help">Externí web (https://) se otevře v nové záložce. E-mailový odkaz (mailto:) otevře poštovní aplikaci.</p>
-                <label>Vnořit pod odkaz <select name="parent_id"><option value="">Na hlavní úrovni</option>
-                  <?php foreach ($menuItems as $item): ?><option value="<?= $escape($item['id']) ?>" <?= ($selectedItem['parent_id'] ?? '') === $item['id'] ? 'selected' : '' ?>><?= $escape(str_repeat('— ', (int) $item['depth']) . $item['label']) ?></option><?php endforeach; ?>
-                </select></label>
-                <label>Pořadí (nižší číslo dříve) <input type="number" name="sort_order" min="0" max="65535" value="<?= (int) ($selectedItem['sort_order'] ?? (count($menuItems) * 10)) ?>" required></label>
-                <button class="panel-button" type="submit" <?= $menuReady ? '' : 'disabled' ?>><?= \SimpleStore\Rendering\Icon::render($selectedItem === null ? 'plus' : 'save') ?> <?= $selectedItem === null ? 'Přidat odkaz' : 'Uložit odkaz' ?></button>
-              </form>
-              <?php if ($selectedItem !== null): ?><form class="panel-remove-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=menus') ?>">
-                <input type="hidden" name="action" value="menu-item-remove"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
-                <input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="slot" value="<?= $escape($slot) ?>">
-                <input type="hidden" name="id" value="<?= $escape($selectedItem['id']) ?>">
-                <button type="submit" class="panel-action panel-action--danger"><?= \SimpleStore\Rendering\Icon::render('delete') ?> Odebrat odkaz</button><span>Jeho pododkazy se přesunou o úroveň výš.</span>
-              </form><?php endif; ?>
-            </section>
-          <?php if ($slot === 'utility'): ?>
-            <section class="panel-panel" aria-labelledby="menu-pages-title">
-              <p class="panel-eyebrow">Stránky</p><h2 id="menu-pages-title">Pořadí horních odkazů</h2>
-              <p class="panel-help">Tyto volby platí, když horní menu čte publikované stránky. Uložení vytvoří novou revizi stránky.</p>
-              <?php if ($pageRows === []): ?><p class="panel-empty">Zatím nejsou vytvořené stránky.</p><?php endif; ?>
-              <?php foreach ($pageRows as $page): ?>
-                <form class="panel-page-order" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=menus&slot=utility') ?>">
-                  <input type="hidden" name="action" value="page-menu"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
-                  <input type="hidden" name="slot" value="utility"><input type="hidden" name="language" value="<?= $escape($language) ?>">
-                  <input type="hidden" name="key" value="<?= $escape($page['document_key']) ?>"><input type="hidden" name="revision" value="<?= (int) $page['revision_number'] ?>">
-                  <div><strong><?= $escape($page['title']) ?></strong><small><?= $page['published'] ? 'Publikováno' : 'Koncept' ?> · <?= $escape($page['slug']) ?></small></div>
-                  <label class="panel-check"><input type="checkbox" name="visible_in_menu" value="1" <?= $page['visible_in_menu'] ? 'checked' : '' ?>> V menu</label>
-                  <label>Pořadí <input type="number" name="menu_order" min="0" max="65535" value="<?= (int) $page['menu_order'] ?>" required></label>
-                  <button type="submit" class="panel-action"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit</button>
-                </form>
-              <?php endforeach; ?>
-            </section>
-          <?php endif; ?>
-        </div>
-      </div>
+<?php
+use SimpleStore\Navigation\PanelUrl;
+use SimpleStore\Rendering\Icon;
+$slotNames = ['primary' => 'Hlavní menu', 'category_tabs' => 'Podkategorie', 'utility' => 'Horní odkazy', 'footer' => 'Patička'];
+$slotHelp = ['primary' => 'Hlavní navigace v hlavičce obchodu.', 'category_tabs' => 'Lišta nad produkty uvnitř katalogu.', 'utility' => 'Doplňkové odkazy v horní části webu.', 'footer' => 'Informační odkazy na konci stránky.'];
+$menuUrl = $adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $slot]);
+$menuPreviewLinks ??= []; $menuPreviewContext ??= ''; $menuEditIsExisting ??= $selectedItem !== null;
+$selectedType = ($selectedItem['target_type'] ?? '') === 'category' ? 'category' : (($selectedItem['target_type'] ?? '') === 'external' ? 'external' :
+    (($selectedItem['target'] ?? null) === '' ? 'home' : (($selectedItem['target'] ?? '') === 'blog' ? 'blog' :
+    (in_array($selectedItem['target'] ?? '', array_column($pageRows, 'slug'), true) || $selectedItem === null ? 'page' : 'custom'))));
+$parentItems = array_column($menuItems, null, 'id');
+$canBeParent = static function (string $id) use ($parentItems, $selectedItem): bool {
+    for ($depth = 0; $id !== '' && $depth <= count($parentItems); $depth++) {
+        if ($id === ($selectedItem['id'] ?? null)) return false;
+        $id = $parentItems[$id]['parent_id'] ?? '';
+    }
+    return true;
+};
+?>
+<link rel="stylesheet" href="<?= $escape($basePath . 'assets/admin-structure.css?v=' . filemtime(__DIR__ . '/../../assets/admin-structure.css')) ?>">
+<script defer src="<?= $escape($basePath . 'assets/admin-structure.js?v=' . filemtime(__DIR__ . '/../../assets/admin-structure.js')) ?>"></script>
+<div class="structure-workspace">
+<div class="panel-intro"><div><p class="panel-eyebrow">Navigace / odkazy</p><h1>Menu webu</h1><p>Vyber místo na webu, nastav automatické odkazy a případně přidej vlastní.</p></div>
+<form class="panel-language" method="get" action="<?= PanelUrl::escape($adminUrl) ?>"><input type="hidden" name="section" value="menus"><input type="hidden" name="slot" value="<?= $escape($slot) ?>"><label>Jazyk<select name="language"><?php foreach ($site['languages'] as $code): ?><option value="<?= $escape($code) ?>" <?= $language === $code ? 'selected' : '' ?>><?= $escape(strtoupper($code)) ?></option><?php endforeach; ?></select></label><button type="submit" class="panel-action">Zobrazit</button></form></div>
+<?php if (!$menuReady): ?><p class="panel-error">Nejdřív <a href="<?= PanelUrl::escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>. Výchozí menu zatím fungují dál.</p><?php endif; ?>
+<?php if ($menuError !== ''): ?><p class="panel-error" role="alert"><?= $escape($menuError) ?></p><?php endif; ?>
+<?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Menu bylo uloženo.</p><?php endif; ?>
+<h2 class="structure-step-title"><span>1</span> Kde se menu zobrazí</h2>
+<nav class="structure-slots" aria-label="Umístění menu"><?php foreach ($menuSlots as $name => $settings): ?>
+<a class="structure-slot" data-slot="<?= $escape($name) ?>" href="<?= PanelUrl::escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $name])) ?>" <?= $slot === $name ? 'aria-current="page"' : '' ?>><span class="structure-slot-map" aria-hidden="true"><i></i><i></i><i></i><i></i></span><span><strong><?= $escape($slotNames[$name] ?? $name) ?></strong><small><?= $escape($slotHelp[$name] ?? 'Další umístění menu.') ?></small><em><?= ['categories'=>'Automaticky z kategorií','content'=>'Automaticky ze stránek','manual'=>'Vlastní odkazy'][$settings['source']] ?? '' ?></em></span></a>
+<?php endforeach; ?></nav>
+<div class="structure-menu-layout">
+<section class="panel-panel"><h2 class="structure-step-title"><span>2</span> Z čeho menu vznikne</h2><p class="structure-note"><?= $escape($slotNames[$slot] ?? $slot) ?> · <?= $escape($slotHelp[$slot] ?? '') ?></p>
+<form class="panel-form" method="post" action="<?= PanelUrl::escape($menuUrl) ?>" data-menu-source>
+<input type="hidden" name="action" value="menu-slot"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="slot" value="<?= $escape($slot) ?>">
+<?php if ($slot === 'footer'): ?><label>Nadpis v patičce<input name="title" maxlength="80" required value="<?= $escape($activeSlot['title'] ?? 'Informace') ?>"></label><?php endif; ?>
+<label>Zdroj odkazů<select name="source"><option value="categories" <?= $activeSlot['source'] === 'categories' ? 'selected' : '' ?>>Kategorie — názvy a pořadí z katalogu</option><option value="content" <?= $activeSlot['source'] === 'content' ? 'selected' : '' ?>>Stránky — vybrané publikované stránky</option><option value="manual" <?= $activeSlot['source'] === 'manual' ? 'selected' : '' ?>>Pouze vlastní odkazy</option></select></label>
+<div data-source-fields="categories"><label>Které kategorie ukázat<select name="parent_path"><option value="">Hlavní kategorie a jejich podkategorie</option><?php if ($slot === 'category_tabs'): ?><option value="@context" <?= ($activeSlot['parent'] ?? '') === '@context' ? 'selected' : '' ?>>Podkategorie právě otevřené kategorie</option><?php endif; ?><?php foreach ($categoryOptions as $category): ?><option value="<?= $escape($category['path']) ?>" <?= ($activeSlot['parent'] ?? '') === $category['path'] ? 'selected' : '' ?>>Uvnitř: <?= $escape(str_repeat('— ', (int) $category['depth']) . $category['title']) ?></option><?php endforeach; ?></select></label><p class="panel-help">Skryté a prázdné podkategorie se zákazníkům neukážou. <a href="<?= PanelUrl::escape($adminUrl . '?section=categories&language=' . $language) ?>">Názvy, pořadí a viditelnost uprav v Kategoriích.</a></p></div>
+<div data-source-fields="content"><label class="panel-check"><input type="checkbox" name="include_blog" value="1" <?= !empty($activeSlot['include_blog']) ? 'checked' : '' ?>> Přidat Blog před stránky</label><p class="panel-help">Zobrazí se publikované stránky zaškrtnuté „V automatickém menu“. Jejich výběr a pořadí nastavíš níže. Výběr je společný pro všechna menu se zdrojem Stránky.</p></div>
+<p class="structure-inline-note">Vlastní odkazy z části 3 se přidají za automatické odkazy. Změna zdroje je nesmaže.</p>
+<button class="panel-action panel-button" type="submit" <?= $menuReady ? '' : 'disabled' ?>><?= Icon::render('save') ?> Uložit zdroj menu</button>
+</form></section>
+<section class="panel-panel structure-menu-preview"><p class="panel-eyebrow">Uložená podoba</p><h2>Co uvidí zákazník</h2><p class="panel-help">Přehled dostupných odkazů podle uloženého nastavení. Rozložení na webu závisí na zvoleném umístění.</p>
+<?php if (($activeSlot['parent'] ?? '') === '@context'): ?><p class="structure-context">Ukázka pro kategorii: <strong><?= $escape($menuPreviewContext !== '' ? ($categories->find($language, $menuPreviewContext)['title'] ?? $menuPreviewContext) : 'hlavní katalog') ?></strong>. Jinde lišta ukáže příslušné podkategorie.</p><?php endif; ?>
+<?php if ($menuPreviewLinks === []): ?><p class="panel-empty">Zatím není co zobrazit. Zkontroluj zdroj, viditelnost kategorií nebo publikování stránek.</p><?php else: ?>
+<?php $renderPreview = static function (array $links) use (&$renderPreview, $escape): void { ?><ul><?php foreach ($links as $link): ?><li><a href="<?= $escape($link['href']) ?>" target="_blank" rel="noopener noreferrer"><?= $escape($link['label']) ?> <?= Icon::render('external') ?></a><?php if ($link['children'] !== []) $renderPreview($link['children']); ?></li><?php endforeach; ?></ul><?php }; $renderPreview($menuPreviewLinks); ?>
+<?php endif; ?></section>
+</div>
+<section class="panel-panel" id="menu-links"><div class="structure-section-head"><div><h2 class="structure-step-title"><span>3</span> Vlastní odkazy <small><?= count($menuItems) ?></small></h2><p class="panel-help"><?= $activeSlot['source'] === 'manual' ? 'Těmito odkazy tvoříš celé menu.' : 'Tyto odkazy doplňují automatickou část menu.' ?> Odkazy mohou mít vlastní pododkazy.</p></div><a class="panel-action" href="<?= PanelUrl::escape($menuUrl . '#menu-item-form') ?>"><?= Icon::render('plus') ?> Přidat odkaz</a></div>
+<?php if ($menuItems === []): ?><p class="panel-empty">Žádné vlastní odkazy. Pro automatické menu je nemusíš přidávat.</p><?php else: ?><div class="structure-link-list"><?php foreach ($menuItems as $item): ?><a class="structure-link-row<?= ($selectedItem['id'] ?? '') === $item['id'] ? ' is-selected' : '' ?>" style="--depth:<?= (int) $item['depth'] ?>" href="<?= PanelUrl::escape($menuUrl . '&item=' . $item['id'] . '#menu-item-form') ?>"><span class="structure-link-title"><?= Icon::render($item['target_type'] === 'category' ? 'folder' : ($item['target_type'] === 'external' ? 'external' : 'document')) ?><strong><?= $escape($item['label']) ?></strong></span><span class="structure-link-target"><small><?= ['category'=>'Kategorie','external'=>'Externí odkaz','path'=>'Na webu'][$item['target_type']] ?></small><?= $escape($item['target'] === '' ? 'Úvodní stránka' : $item['target']) ?></span><span class="structure-badge">Pořadí <?= (int) $item['sort_order'] ?></span><?= Icon::render('edit') ?></a><?php endforeach; ?></div><?php endif; ?>
+</section>
+<section class="panel-panel structure-link-editor" id="menu-item-form"><p class="panel-eyebrow"><?= $menuEditIsExisting ? 'Úprava odkazu' : 'Nový odkaz' ?></p><h2><?= $menuEditIsExisting ? $escape($selectedItem['label']) : 'Přidat vlastní odkaz' ?></h2>
+<form class="panel-form" method="post" action="<?= PanelUrl::escape($menuUrl . '&item=' . ($selectedItem['id'] ?? '') . '#menu-item-form') ?>" data-menu-destination>
+<input type="hidden" name="action" value="menu-item-save"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="slot" value="<?= $escape($slot) ?>"><input type="hidden" name="id" value="<?= $escape($selectedItem['id'] ?? '') ?>">
+<div class="structure-form-columns"><label>Text pro zákazníka<input name="label" maxlength="80" required value="<?= $escape($selectedItem['label'] ?? '') ?>" placeholder="Například O nás"></label><label>Kam odkaz vede<select name="destination_type"><?php foreach (['page'=>'Stránka webu','category'=>'Kategorie produktů','home'=>'Úvodní stránka','blog'=>'Blog','custom'=>'Jiná vnitřní cesta','external'=>'Externí web nebo e-mail'] as $value=>$label): ?><option value="<?= $value ?>" <?= $selectedType === $value ? 'selected' : '' ?>><?= $label ?></option><?php endforeach; ?></select></label></div>
+<p class="panel-help" data-destination-help>Vyplň pouze cíl odpovídající vybranému typu. Úvodní stránka a Blog další adresu nepotřebují.</p>
+<div data-destination-fields="page"><label>Vybrat stránku<select name="destination_page"><option value="">Vyber stránku</option><?php foreach ($pageRows as $page): ?><option value="<?= $escape($page['slug']) ?>" <?= $selectedType === 'page' && ($selectedItem['target'] ?? '') === $page['slug'] ? 'selected' : '' ?>><?= $escape($page['title']) ?><?= $page['published'] ? '' : ' (koncept — nejdřív publikuj)' ?></option><?php endforeach; ?></select></label></div>
+<div data-destination-fields="category"><label>Vybrat kategorii<select name="destination_category"><option value="">Vyber kategorii</option><?php foreach ($categoryOptions as $category): ?><option value="<?= $escape($category['path']) ?>" <?= $selectedType === 'category' && ($selectedItem['target'] ?? '') === $category['path'] ? 'selected' : '' ?>><?= $escape(str_repeat('— ', (int) $category['depth']) . $category['title']) ?><?= $categories->find($language, $category['path']) === null ? ' (skrytá)' : '' ?></option><?php endforeach; ?></select></label></div>
+<div data-destination-fields="custom"><label>Cesta uvnitř tohoto webu<input name="destination_custom" value="<?= $selectedType === 'custom' ? $escape($selectedItem['target']) : '' ?>" placeholder="např. kosik"></label><p class="panel-help">Bez domény, jazyka a počátečního lomítka. Jazyk doplní obchod sám.</p></div>
+<div data-destination-fields="external"><label>Webová nebo e-mailová adresa<input name="destination_external" value="<?= $selectedType === 'external' ? $escape($selectedItem['target']) : '' ?>" placeholder="https://priklad.cz nebo mailto:info@priklad.cz"></label><p class="panel-help">Web https:// se otevře v nové záložce. Adresa mailto: otevře poštovní aplikaci.</p></div>
+<div class="structure-form-columns"><label>Zařadit odkaz<select name="parent_id"><option value="">Na hlavní úrovni menu</option><?php foreach ($menuItems as $item): if (!$canBeParent($item['id'])) continue; ?><option value="<?= $escape($item['id']) ?>" <?= ($selectedItem['parent_id'] ?? '') === $item['id'] ? 'selected' : '' ?>>Pod: <?= $escape(str_repeat('— ', (int) $item['depth']) . $item['label']) ?></option><?php endforeach; ?></select></label><label>Pořadí mezi sourozenci<input type="number" name="sort_order" min="0" max="65535" required value="<?= (int) ($selectedItem['sort_order'] ?? 10) ?>"></label></div>
+<div class="panel-form-actions"><button class="panel-action panel-button" type="submit" <?= $menuReady ? '' : 'disabled' ?>><?= Icon::render('save') ?> <?= $menuEditIsExisting ? 'Uložit odkaz' : 'Přidat odkaz' ?></button><?php if ($menuEditIsExisting): ?><a class="panel-text-link" href="<?= PanelUrl::escape($menuUrl . '#menu-links') ?>">Zrušit úpravu</a><?php endif; ?></div>
+</form>
+<?php if ($menuEditIsExisting): ?><form class="panel-remove-form" method="post" action="<?= PanelUrl::escape($menuUrl) ?>"><input type="hidden" name="action" value="menu-item-remove"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="slot" value="<?= $escape($slot) ?>"><input type="hidden" name="id" value="<?= $escape($selectedItem['id']) ?>"><button class="panel-action panel-action--danger" type="submit"><?= Icon::render('delete') ?> Odebrat odkaz</button><span>Pododkazy se přesunou o úroveň výš. Cílová stránka ani produkty se nemažou.</span></form><?php endif; ?>
+</section>
+<?php if ($activeSlot['source'] === 'content'): ?>
+<section class="panel-panel"><h2>Stránky v automatickém menu</h2><p class="structure-note">Tento společný výběr používají všechna menu se zdrojem Stránky v jazyce <?= $escape(strtoupper($language)) ?>. Koncept se zobrazí až po publikování. Vlastní odkazy z části 3 mají samostatné nastavení.</p>
+<?php if ($pageRows === []): ?><p class="panel-empty">Zatím nejsou vytvořené stránky.</p><?php endif; ?>
+<?php foreach ($pageRows as $page): ?><form class="panel-page-order" method="post" action="<?= PanelUrl::escape($menuUrl) ?>"><input type="hidden" name="action" value="page-menu"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="slot" value="<?= $escape($slot) ?>"><input type="hidden" name="key" value="<?= $escape($page['document_key']) ?>"><input type="hidden" name="revision" value="<?= (int) $page['revision_number'] ?>"><div><strong><?= $escape($page['title']) ?></strong><small><?= $page['published'] ? 'Publikováno' : 'Koncept' ?> · <?= $escape($page['slug']) ?></small></div><label class="panel-check"><input type="checkbox" name="visible_in_menu" value="1" <?= $page['visible_in_menu'] ? 'checked' : '' ?>> V automatickém menu</label><label>Pořadí<input type="number" name="menu_order" min="0" max="65535" required value="<?= (int) $page['menu_order'] ?>"></label><button type="submit" class="panel-action">Uložit</button></form><?php endforeach; ?></section>
+<?php endif; ?>
+<?php $backupKind = 'navigation'; require __DIR__ . '/configuration-transfer.php'; ?>
+</div>

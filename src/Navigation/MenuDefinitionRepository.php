@@ -205,6 +205,7 @@ final class MenuDefinitionRepository
     {
         return ($row['slot'] ?? '') === 'footer' && ($row['source'] ?? '') === 'categories' &&
             ($row['parent_path'] ?? '') === '' &&
+            !isset(json_decode($row['items_json'] ?? '[]', true)['title']) &&
             $this->decode($row['items_json'] ?? '[]') === [];
     }
 

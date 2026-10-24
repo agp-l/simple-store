@@ -19,7 +19,9 @@ if (!is_string($slot) || preg_match('/^[a-z][a-z0-9_]{0,39}$/D', $slot) !== 1) {
     throw new InvalidArgumentException('Neplatné umístění menu.');
 }
 
-if ($method === 'POST') {
+$backupKind = 'navigation';
+require __DIR__ . '/configuration-transfer.php';
+if ($method === 'POST' && !in_array($_POST['action'] ?? '', ['configuration-preview', 'configuration-apply'], true)) {
     try {
         $action = $_POST['action'] ?? '';
         if ($action === 'page-menu') {
@@ -82,6 +84,7 @@ if ($method === 'POST') {
         ])), true, 303);
         exit;
     } catch (InvalidArgumentException|RuntimeException $exception) {
+        http_response_code(422);
         $menuError = $exception->getMessage();
     }
 }
@@ -101,3 +104,19 @@ if (is_string($editItem)) {
 }
 $categoryOptions = $categories->installed() ? $categories->allForAdmin($language) : [];
 $pageRows = $content->pagesForMenu($language);
+
+$menuPreviewContext = '';
+if (($activeSlot['parent'] ?? '') === '@context') {
+    foreach ($categoryOptions as $category) {
+        if ($category['depth'] === 0 && $categories->find($language, $category['path']) !== null) {
+            $menuPreviewContext = $category['path']; break;
+        }
+    }
+}
+$previewUrl = new \SimpleStore\Navigation\UrlManager($basePath . $language, $basePath . 'index.php', $site['languages'], $site['default_language']);
+$storeMenus = \SimpleStore\Navigation\StorefrontMenus::load($db, $previewUrl, $content, $categories);
+$menuPreviewLinks = $slot === 'footer' ? $storeMenus['footerMenu'] : $storeMenus['manager']->links($slot, $menuPreviewContext);
+$menuEditIsExisting = $selectedItem !== null;
+if ($menuError !== '' && ($_POST['action'] ?? '') === 'menu-item-save') {
+    $selectedItem = is_array($input ?? null) ? array_intersect_key($input, array_flip(['id','label','target_type','target','parent_id','sort_order'])) : $selectedItem;
+}

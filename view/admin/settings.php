@@ -42,6 +42,7 @@ $btcpayWebhookSecretConfigured ??= false;
 <?php elseif ($settingsTab === 'mail'): ?>
 <?php require __DIR__ . '/settings-mail.php'; ?>
 <?php elseif ($settingsTab === 'appearance'): ?>
+<?php $backupKind = 'site-texts'; require __DIR__ . '/configuration-transfer.php'; ?>
 <form class="panel-form panel-settings-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=appearance') ?>">
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
   <input type="hidden" name="action" value="save-site-copy">

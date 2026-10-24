@@ -54,6 +54,14 @@ final class SiteCopyRepository
     {
         self::language($language);
         if (!$this->installed()) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky v sekci Databáze.');
+        $copy = self::validate($input);
+        $this->db->query('INSERT INTO shop_site_copy (language, copy_json) VALUES (%s,%s)
+            ON DUPLICATE KEY UPDATE copy_json=VALUES(copy_json)', $language,
+            json_encode($copy, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+    }
+
+    public static function validate(array $input): array
+    {
         $copy = [];
         foreach (self::DEFAULTS as $field => $fallback) {
             $value = $input[$field] ?? null;
@@ -64,9 +72,7 @@ final class SiteCopyRepository
             }
             $copy[$field] = $value;
         }
-        $this->db->query('INSERT INTO shop_site_copy (language, copy_json) VALUES (%s,%s)
-            ON DUPLICATE KEY UPDATE copy_json=VALUES(copy_json)', $language,
-            json_encode($copy, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
+        return $copy;
     }
 
     private static function valid(string $text, int $limit): bool

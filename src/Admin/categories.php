@@ -13,9 +13,21 @@ if (!is_string($language) || !in_array($language, $site['languages'], true)) {
     throw new InvalidArgumentException('Neplatný jazyk kategorií.');
 }
 
-if ($method === 'POST' && in_array($_POST['action'] ?? '', ['category-create', 'category-update'], true)) {
+$backupKind = 'navigation';
+require __DIR__ . '/configuration-transfer.php';
+if ($method === 'POST' && in_array($_POST['action'] ?? '', ['category-create', 'category-update', 'category-order'], true)) {
     try {
         if (!$categoryReady) throw new InvalidArgumentException('Nejdřív aktualizuj SQL tabulky v sekci Databáze.');
+        if ($_POST['action'] === 'category-order') {
+            $positions = $_POST['positions'] ?? null;
+            $version = $_POST['order_version'] ?? null;
+            if (!is_array($positions) || !is_string($version)) throw new InvalidArgumentException('Neplatné pořadí kategorií.');
+            $categories->saveOrder($language, $positions, $version);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?' . http_build_query([
+                'section' => 'categories', 'language' => $language, 'ordered' => 1,
+            ])), true, 303);
+            exit;
+        }
         $order = filter_var($_POST['sort_order'] ?? null, FILTER_VALIDATE_INT);
         $title = $_POST['title'] ?? null;
         if ($order === false || !is_string($title)) {
@@ -38,11 +50,13 @@ if ($method === 'POST' && in_array($_POST['action'] ?? '', ['category-create', '
         ])), true, 303);
         exit;
     } catch (InvalidArgumentException $exception) {
+        http_response_code(422);
         $categoryError = $exception->getMessage();
     }
 }
 
 $categoryRows = $categoryReady ? $categories->allForAdmin($language) : [];
+$categoryOrderVersion = CategoryRepository::orderVersion($categoryRows);
 $selectedPath = $_GET['edit'] ?? null;
 $selectedCategory = $categoryReady && is_string($selectedPath)
     ? $categories->findForAdmin($language, $selectedPath) : null;

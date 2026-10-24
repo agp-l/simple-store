@@ -27,6 +27,7 @@ foreach ($mailDefaults as $key => $value) {
   <div><h2>E-maily, které mluví za váš obchod</h2><p>Texty, podpis i drobné popisky na jednom místě. Náhled ukáže běžný nákup i dodání od partnera.</p></div>
   <a class="panel-text-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=mail') ?>">Fronta a doručování <?= \SimpleStore\Rendering\Icon::render('arrow-right') ?></a>
 </div>
+<?php $backupKind = 'email-texts'; require __DIR__ . '/configuration-transfer.php'; ?>
 <form class="panel-form panel-settings-form mail-editor" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($mailSettingsUrl) ?>" data-mail-form data-dirty="<?= $mailPreviewIsDraft ? 'true' : 'false' ?>">
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="mail">
   <section class="panel-panel mail-preview-controls">

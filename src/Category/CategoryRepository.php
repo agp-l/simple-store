@@ -202,6 +202,44 @@ final class CategoryRepository
         unset($this->cache[$language]);
     }
 
+    public static function orderVersion(array $rows): string
+    {
+        usort($rows, static fn (array $a, array $b): int => strcmp($a['path'], $b['path']));
+        return hash('sha256', json_encode(array_map(static fn (array $row): array =>
+            [$row['path'], $row['title'], (int) $row['sort_order'], (bool) $row['enabled']], $rows), JSON_THROW_ON_ERROR));
+    }
+
+    /** Reorder only: paths, hierarchy, visibility and product assignments never change. */
+    public function saveOrder(string $language, array $positions, string $expectedVersion): void
+    {
+        if (preg_match('/^[a-z]{2}$/D', $language) !== 1) throw new InvalidArgumentException('Neplatný jazyk.');
+        $this->db->startTransaction();
+        try {
+            $rows = $this->db->query('SELECT path, title, sort_order, enabled FROM shop_catalog_categories
+                WHERE language=%s ORDER BY path FOR UPDATE', $language);
+            if (!hash_equals(self::orderVersion($rows), $expectedVersion)) {
+                throw new InvalidArgumentException('Kategorie se mezitím změnily. Obnov stránku a zopakuj řazení.');
+            }
+            if (count($rows) !== count($positions)) throw new InvalidArgumentException('Pořadí neobsahuje všechny kategorie. Obnov stránku.');
+            foreach ($rows as $row) {
+                $value = $positions[$row['path']] ?? null;
+                if ((!is_int($value) && !is_string($value)) || !preg_match('/^[0-9]{1,5}$/D', (string) $value) || (int) $value > 65535) {
+                    throw new InvalidArgumentException('Pořadí musí být celé číslo od 0 do 65535.');
+                }
+            }
+            foreach ($rows as $row) {
+                if ((int) $positions[$row['path']] === (int) $row['sort_order']) continue;
+                $this->db->query('UPDATE shop_catalog_categories SET sort_order=%i WHERE language=%s AND path=%s',
+                    (int) $positions[$row['path']], $language, $row['path']);
+            }
+            $this->db->commit();
+            unset($this->cache[$language]);
+        } catch (\Throwable $error) {
+            $this->db->rollback();
+            throw $error;
+        }
+    }
+
     private function validate(string $language, string $path, string $title, int $order): void
     {
         if (preg_match('/^[a-z]{2}$/D', $language) !== 1 || !CategoryPath::valid($path) ||
