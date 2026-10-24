@@ -69,7 +69,7 @@ try {
             $paths = $library->storeUploaded($type, $key, $files);
         } elseif (($_POST['action'] ?? '') === 'media-attach') {
             $path = $_POST['path'] ?? null;
-            if (!is_string($path) || !ProductDetails::imagePath(trim($path))) {
+            if (!is_string($path) || !ProductDetails::imagePath(trim($path)) || (new \SimpleStore\Media\MediaCatalog(__DIR__ . '/../..'))->absolute(trim($path)) === null) {
                 throw new InvalidArgumentException('Vyber fotografii nahranou ve složce images/.');
             }
             $paths = [trim($path)];

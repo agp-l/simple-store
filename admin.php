@@ -232,6 +232,12 @@ try {
         require __DIR__ . '/src/Admin/product-suppliers.php';
         exit;
     }
+    if (($method === 'POST' && in_array($_POST['action'] ?? '', ['media-library-folder', 'media-library-upload', 'media-library-move', 'media-library-export', 'media-library-import'], true)) ||
+        ($method === 'GET' && ($_GET['section'] ?? '') === 'media' && (!isset($_GET['type']) || ($_GET['api'] ?? '') === 'library'))) {
+        require __DIR__ . '/src/Admin/media-library.php';
+        require __DIR__ . '/view/admin/layout.php';
+        exit;
+    }
     if (($method === 'POST' && in_array($_POST['action'] ?? '', ['media-upload', 'media-attach', 'media-delete'], true)) ||
         ($method === 'GET' && ($_GET['section'] ?? '') === 'media' && ($_GET['api'] ?? '') === 'list')) {
         require __DIR__ . '/src/Admin/media-api.php';

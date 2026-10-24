@@ -67,7 +67,7 @@ final class ContentImport
         $fields['type'] = $data['type'];
         $fields['language'] = $data['language'];
         $document = $data['content'];
-        self::keys($document, ['title', 'slug', 'summary', 'body', 'sections', 'published', 'visible_in_menu', 'menu_order']);
+        self::keys($document, ['title', 'slug', 'summary', 'body', 'sections', 'published', 'visible_in_menu', 'menu_order', 'cover_path']);
         foreach (['title', 'slug', 'summary'] as $field) {
             if (!array_key_exists($field, $document)) continue;
             if (!is_string($document[$field])) throw new InvalidArgumentException($field . ' musí být text.');
@@ -104,6 +104,14 @@ final class ContentImport
             $fields['body'] = $mode === 'update' && $document['sections'] === ContentBody::decode($current['body'])
                 ? $current['body'] : ContentBody::encode($document['sections']);
         }
+        $cover = $mode === 'update' ? ContentBody::coverSetting($current['body']) : null;
+        if (array_key_exists('cover_path', $document)) {
+            $cover = $document['cover_path'];
+            if ($cover !== null && !is_string($cover)) throw new InvalidArgumentException('cover_path musí být cesta k obrázku, prázdný text nebo null.');
+        }
+        if ($cover !== ContentBody::coverSetting($fields['body'])) {
+            $fields['body'] = ContentBody::encode(ContentBody::decode($fields['body']), $cover);
+        }
         if ($fields['slug'] === '') $fields['slug'] = Slugger::fromTitle($fields['title']);
         if (preg_match('/^.{1,255}$/usD', $fields['title']) !== 1 || strlen($fields['summary']) > 65535) {
             throw new InvalidArgumentException('Vyplň název (nejvýše 255 znaků) a zkontroluj délku úvodu.');
@@ -134,6 +142,7 @@ final class ContentImport
             'content' => [
                 'title' => $row['title'], 'slug' => $row['slug'], 'summary' => $row['summary'],
                 'published' => (bool) $row['published'], 'visible_in_menu' => (bool) $row['visible_in_menu'],
+                'cover_path' => ContentBody::coverSetting($row['body']),
                 'menu_order' => (int) $row['menu_order'], 'sections' => ContentBody::decode($row['body']),
             ],
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);

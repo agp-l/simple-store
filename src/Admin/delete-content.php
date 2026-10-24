@@ -12,5 +12,5 @@ if (!is_string($key) || !is_string($language) || !is_string($type) || !is_int($r
 }
 
 $content->deleteDocument($key, $language, $type, $revision);
-header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty(($type === 'post' ? $basePath . $language . '/blog?manage=1&deleted=1' :
-    $adminUrl . '?section=contents&type=page&language=' . rawurlencode($language) . '&deleted=1')), true, 303);
+header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty(($type === 'post' && ($_POST['return_admin'] ?? '') !== '1' ? $basePath . $language . '/blog?manage=1&deleted=1' :
+    $adminUrl . '?section=contents&type=' . $type . '&language=' . rawurlencode($language) . '&deleted=1')), true, 303);

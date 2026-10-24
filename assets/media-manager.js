@@ -12,6 +12,9 @@
     ? 'main-image' : 'section-add-image';
   let index = null;
   let busy = false;
+  let libraryOffset = 0;
+  let loadSequence = 0;
+  const libraryFilter = document.getElementById('media-library-filter');
   const maxUploadBytes = 12 * 1024 * 1024;
 
   function canvasBlob(canvas, type, quality) {
@@ -135,10 +138,10 @@
       title.textContent = file.label.replaceAll('-', ' ');
       const uses = document.createElement('span');
       uses.className = 'media-item-usage';
-      const roleLabels = {main: 'Hlavní fotografie', gallery: 'V galerii', section: 'V bloku'};
+      const roleLabels = {main: 'Hlavní fotografie', gallery: 'V galerii', section: 'V bloku', cover: 'Náhled článku'};
       uses.textContent = file.uses?.length
         ? file.uses.map(role => roleLabels[role] || role).join(' · ')
-        : file.used_elsewhere ? 'Použitá v jiné aktuální verzi' : 'V aktuální verzi nepoužitá';
+        : file.group ? 'Ze společné knihovny' : file.used_elsewhere ? 'Použitá v jiné aktuální verzi' : 'V aktuální verzi nepoužitá';
       const usageLine = document.createElement('div');
       usageLine.className = 'media-item-status';
       usageLine.append(uses);
@@ -170,7 +173,7 @@
       buttons.className = 'media-item-actions';
       const choose = document.createElement('button');
       choose.type = 'button';
-      choose.textContent = mode === 'main-image' ? 'Použít jako hlavní'
+      choose.textContent = mode === 'cover-image' ? 'Použít jako náhled' : mode === 'main-image' ? 'Použít jako hlavní'
         : promotesFirst() ? 'Nastavit jako první fotografii'
         : mode === 'gallery-add' ? 'Přidat do galerie'
         : mode === 'gallery-set' ? 'Nahradit v galerii'
@@ -218,12 +221,28 @@
     const url = new URL(context.endpoint, location.href);
     for (const [key, value] of Object.entries({section: 'media', api: 'list',
       type: context.type, key: context.key, language: context.language})) url.searchParams.set(key, value);
+    const sequence = ++loadSequence;
+    const global = libraryFilter?.elements.scope.value === 'all';
+    const search = libraryFilter?.elements.q.value.trim() || '';
+    if (global) {
+      url.searchParams.set('api', 'library');
+      url.searchParams.set('q', search);
+      url.searchParams.set('offset', String(libraryOffset));
+    }
     try {
       const response = await fetch(url, {credentials: 'same-origin', headers: {'Accept': 'application/json'}, cache: 'no-store'});
       const data = await response.json();
       if (!response.ok || !Array.isArray(data.files)) throw new Error(data.error || 'Fotografie se nepodařilo načíst.');
-      render(dialogGrid, data.files);
-      render(pageGrid, data.files);
+      if (sequence !== loadSequence) return false;
+      const files = global || !search ? data.files : data.files.filter(file => file.label.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
+      render(dialogGrid, files);
+      if (!global && !search) render(pageGrid, files);
+      const previous = dialog.querySelector('[data-media-prev]');
+      const next = dialog.querySelector('[data-media-next]');
+      if (previous) previous.hidden = !global || libraryOffset === 0;
+      if (next) next.hidden = !global || libraryOffset + data.files.length >= data.total;
+      const counter = dialog.querySelector('[data-media-count]');
+      if (counter) counter.textContent = global ? `${data.total} obrázků v knihovně` : `${files.length} fotografií tohoto obsahu`;
       return true;
     } catch (error) {
       status.textContent = error.message;
@@ -236,7 +255,9 @@
     mode = nextMode;
     index = nextIndex;
     status.textContent = '';
-    dialog.querySelector('.media-primary').textContent = promotesFirst()
+    const fileInput = dialog.querySelector('[type="file"]');
+    if (fileInput) fileInput.multiple = mode !== 'cover-image';
+    dialog.querySelector('.media-primary').textContent = mode === 'cover-image' ? 'Nahrát náhled' : promotesFirst()
       ? 'Nahrát · první jako hlavní' : mode === 'gallery-add'
         ? 'Nahrát do galerie' : mode === 'gallery-set'
           ? 'Nahrát · první nahradí snímek' : mode === 'section-image'
@@ -264,6 +285,10 @@
     const result = await request(fields);
     if (result.deleted !== path) throw new Error('Server smazání fotografie nepotvrdil. Obnov knihovnu.');
   }
+  libraryFilter?.addEventListener('submit', event => { event.preventDefault(); libraryOffset = 0; load(); });
+  libraryFilter?.elements.scope.addEventListener('change', () => { libraryOffset = 0; load(); });
+  dialog.querySelector('[data-media-prev]')?.addEventListener('click', () => { libraryOffset = Math.max(0, libraryOffset - 48); load(); });
+  dialog.querySelector('[data-media-next]')?.addEventListener('click', () => { libraryOffset += 48; load(); });
   window.SimpleStoreMedia = {open};
   dialog.querySelector('[data-media-close]').addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });

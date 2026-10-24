@@ -11,7 +11,7 @@ use SimpleStore\Product\ProductDetails;
 /** Apply a small edit to a complete page or article before saving another revision. */
 final class ContentInlineEditor
 {
-    private const FIELDS = ['title', 'slug', 'summary', 'menu_order', 'published', 'visible_in_menu'];
+    private const FIELDS = ['title', 'slug', 'summary', 'menu_order', 'published', 'visible_in_menu', 'cover_path'];
 
     public static function starter(string $type, string $language): array
     {
@@ -40,6 +40,7 @@ final class ContentInlineEditor
             'title' => $row['title'], 'slug' => $row['slug'],
             'summary' => $row['summary'] ?? '',
             'sections' => ContentBody::decode($row['body']),
+            'cover_path' => ContentBody::coverSetting($row['body']),
             'menu_order' => (int) $row['menu_order'],
             'published' => (bool) $row['published'],
             'visible_in_menu' => (bool) $row['visible_in_menu'],
@@ -48,8 +49,8 @@ final class ContentInlineEditor
 
     public static function snapshot(array $form): array
     {
-        $form['body'] = ContentBody::encode($form['sections']);
-        unset($form['sections']);
+        $form['body'] = ContentBody::encode($form['sections'], $form['cover_path'] ?? null);
+        unset($form['sections'], $form['cover_path']);
         return $form;
     }
 
@@ -66,7 +67,12 @@ final class ContentInlineEditor
             return $form;
         }
         if ($operation === 'set' && in_array($field, self::FIELDS, true)) {
-            if (in_array($field, ['published', 'visible_in_menu'], true)) {
+            if ($field === 'cover_path') {
+                if ($value !== '@auto' && $value !== '' && !ProductDetails::imagePath($value)) {
+                    throw new InvalidArgumentException('Vyber náhledový obrázek z knihovny.');
+                }
+                $form[$field] = $value === '@auto' ? null : $value;
+            } elseif (in_array($field, ['published', 'visible_in_menu'], true)) {
                 if (!in_array($value, ['0', '1'], true) ||
                     ($field === 'visible_in_menu' && $form['type'] !== 'page')) {
                     throw new InvalidArgumentException('Neplatné nastavení publikování nebo menu.');

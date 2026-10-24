@@ -189,6 +189,14 @@
       choices.hidden = !choices.hidden;
       return;
     }
+    if (action === 'cover-image') {
+      window.SimpleStoreMedia.open('cover-image', null, button.dataset.value);
+      return;
+    }
+    if (action === 'cover-auto' || action === 'cover-none') {
+      save('set', 'cover_path', action === 'cover-auto' ? '@auto' : '');
+      return;
+    }
     if (action === 'section-image') {
       window.SimpleStoreMedia.open('section-image', index, button.dataset.value);
       return;

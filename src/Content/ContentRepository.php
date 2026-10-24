@@ -169,7 +169,7 @@ final class ContentRepository
         }
         array_push($arguments, $limit + 1, $offset);
         $rows = $this->db->query(
-            'SELECT document_key, language, type, slug, title, revision_number, published, visible_in_menu, saved_at
+            'SELECT document_key, language, type, slug, title, summary, body, revision_number, published, visible_in_menu, saved_at
              FROM shop_content_revisions WHERE ' . implode(' AND ', $conditions) . '
              ORDER BY id DESC LIMIT %i OFFSET %i', ...$arguments
         );

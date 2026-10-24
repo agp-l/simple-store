@@ -29,4 +29,5 @@
   <?php if (in_array($page ?? '', ['catalog', 'product-record'], true)): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/product-selection.css?v=<?= filemtime(__DIR__ . '/../assets/product-selection.css') ?>"><?php endif; ?>
   <link rel="stylesheet" href="<?= $siteRoot ?>assets/prices.css?v=<?= filemtime(__DIR__ . '/../assets/prices.css') ?>">
   <?php if ($adminWorkspace ?? false): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/admin-layout.css?v=<?= filemtime(__DIR__ . '/../assets/admin-layout.css') ?>"><?php endif; ?>
+  <?php if (($adminWorkspace ?? false) && in_array($screen ?? '', ['editor', 'media'], true)): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/content-manager.css?v=<?= filemtime(__DIR__ . '/../assets/content-manager.css') ?>"><?php endif; ?>
 </head>

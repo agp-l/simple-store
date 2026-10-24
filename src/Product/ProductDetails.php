@@ -12,7 +12,7 @@ final class ProductDetails
     public static function imagePath(string $path): bool
     {
         return strlen($path) <= 1000 && (
-            preg_match('~^images/[A-Za-z0-9_-]+\.(?:webp|jpg|jpeg|png|avif)$~iD', $path) === 1 ||
+            preg_match('~^images/(?:[A-Za-z0-9_-]+/)*[A-Za-z0-9_-]+\.(?:webp|jpg|jpeg|png|avif|gif)$~iD', $path) === 1 ||
             MediaPath::isAsset($path)
         );
     }

@@ -3,13 +3,7 @@ use SimpleStore\Content\ContentBody;
 use SimpleStore\Media\MediaPath;
 
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-$cover = '';
-foreach (ContentBody::decode($post['body'] ?? '') as $block) {
-    if ($block['type'] === 'image') {
-        $cover = MediaPath::variant($block['body'], 'card');
-        break;
-    }
-}
+$cover = MediaPath::variant(ContentBody::cover($post['body'] ?? ''), 'card');
 $coverUrl = str_starts_with($cover, 'images/') ? $basePath . $cover : $cover;
 ?>
             <article>

@@ -8,7 +8,7 @@ final class MediaPath
 {
     public static function directory(string $type, string $key): string
     {
-        $folder = ['product' => 'products', 'page' => 'pages', 'post' => 'posts'][$type] ?? null;
+        $folder = ['product' => 'products', 'page' => 'pages', 'post' => 'posts', 'library' => 'library'][$type] ?? null;
         if ($folder === null || preg_match('/^[a-f0-9]{32}$/D', $key) !== 1) {
             throw new \InvalidArgumentException('Neplatný vlastník fotografie.');
         }
@@ -17,13 +17,13 @@ final class MediaPath
 
     public static function isManaged(string $path): bool
     {
-        return preg_match('~^images/media/(?:products|pages|posts)/[a-f0-9]{32}/[a-z0-9-]{1,50}--[a-f0-9]{24}\.(?:webp|jpg|png)$~D', $path) === 1;
+        return preg_match('~^images/media/(?:products|pages|posts|library)/[a-f0-9]{32}/[a-z0-9-]{1,50}--[a-f0-9]{24}\.(?:webp|jpg|png)$~D', $path) === 1;
     }
 
     public static function isAsset(string $path): bool
     {
         return self::isManaged($path) ||
-            preg_match('~^images/media/(?:products|pages|posts)/[a-f0-9]{32}/[a-z0-9-]{1,50}--[a-f0-9]{24}-(?:card|thumb)\.(?:webp|jpg|png)$~D', $path) === 1;
+            preg_match('~^images/media/(?:products|pages|posts|library)/[a-f0-9]{32}/[a-z0-9-]{1,50}--[a-f0-9]{24}-(?:card|thumb)\.(?:webp|jpg|png)$~D', $path) === 1;
     }
 
     public static function variant(string $path, string $size): string

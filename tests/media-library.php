@@ -146,7 +146,7 @@ if (ContentBody::decode($insertedFirst['body'])[0]['body'] !== $second) {
 $documentUses = MediaAttachment::withUsage($document, 'post', [
     ['path' => $first], ['path' => $second],
 ]);
-if ($documentUses[0]['uses'] !== ['section'] || $documentUses[1]['uses'] !== []) {
+if ($documentUses[0]['uses'] !== ['cover', 'section'] || $documentUses[1]['uses'] !== []) {
     throw new RuntimeException('Knihovna chybně označila použití snímků článku.');
 }
 

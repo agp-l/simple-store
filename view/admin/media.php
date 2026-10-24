@@ -1,9 +1,10 @@
 <?php
+if ($mediaCollection ?? false) { require __DIR__ . '/media-library.php'; return; }
 // $selectedMedia and $mediaFiles come from src/Admin/media.php.
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 ?>
 <section class="panel-panel">
-  <p class="panel-eyebrow">Knihovna fotografií</p><h1>Fotografie</h1>
+  <a class="panel-icon-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=media') ?>">← Celá knihovna médií</a><p class="panel-eyebrow">Knihovna fotografií</p><h1>Fotografie</h1>
   <?php if ($mediaError !== ''): ?><p class="panel-error" role="alert"><?= $escape($mediaError) ?></p><?php endif; ?>
   <?php if ($selectedMedia === null): ?>
     <p>Fotografie spravuj u konkrétního produktu, stránky nebo článku. Tam uvidíš, která je hlavní a kde je použitá. Otevři obsah a stiskni <strong>Fotografie</strong>.</p>

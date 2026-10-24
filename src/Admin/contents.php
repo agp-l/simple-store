@@ -54,13 +54,9 @@ if (isset($_GET['key'])) {
     exit;
 }
 
-if (($_GET['type'] ?? '') === 'post') {
-    header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($basePath . $site['default_language'] . '/blog?manage=1'), true, 303);
-    exit;
-}
-
 $filterLanguage = $_GET['language'] ?? '';
-$filterType = 'page';
+$filterType = $_GET['type'] ?? 'page';
+if (!in_array($filterType, ['page', 'post'], true)) throw new InvalidArgumentException('Vyber stránky nebo články.');
 $filterStatus = $_GET['status'] ?? '';
 $filterSearch = $_GET['q'] ?? '';
 $rawOffset = $_GET['offset'] ?? '0';
@@ -74,7 +70,7 @@ $filterSearch = trim($filterSearch);
 $pageSize = 24;
 $page = $content->managementPage(
     $filterLanguage === '' ? null : $filterLanguage,
-    'page',
+    $filterType,
     $filterStatus === '' ? null : $filterStatus === 'published',
     $filterSearch, $offset, $pageSize
 );

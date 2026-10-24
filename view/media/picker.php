@@ -7,6 +7,11 @@
     <button type="submit" class="media-primary">Nahrát a vložit</button>
   </form>
   <p data-media-dialog-status role="status" aria-live="polite"></p>
-  <h3>Už nahrané soubory</h3>
+  <form class="media-library-filter" id="media-library-filter">
+    <label>Kde hledat <select name="scope"><option value="owner">Fotografie tohoto obsahu</option><option value="all">Celá knihovna médií</option></select></label>
+    <label>Hledat <input type="search" name="q" maxlength="200" placeholder="Název fotografie"></label>
+    <button type="submit">Vyhledat</button>
+  </form>
+  <div class="media-actions"><button type="button" data-media-prev hidden>← Předchozí</button><span data-media-count></span><button type="button" data-media-next hidden>Další →</button></div>
   <div class="media-grid" id="media-dialog-grid"></div>
 </dialog>

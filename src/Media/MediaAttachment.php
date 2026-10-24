@@ -38,6 +38,10 @@ final class MediaAttachment
         }
         if (!in_array($type, ['page', 'post'], true)) throw new InvalidArgumentException('Neznámý typ obsahu.');
         $mode ??= 'section-add-image';
+        if ($mode === 'cover-image') {
+            if ($count !== 1) throw new InvalidArgumentException('Pro náhled vyber právě jeden obrázek.');
+            return;
+        }
         if (!in_array($mode, ['section-image', 'section-add-image'], true)) {
             throw new InvalidArgumentException('Neznámé umístění fotografie.');
         }
@@ -104,6 +108,10 @@ final class MediaAttachment
     {
         self::capacity($current, $current['type'], count($paths), $mode, $index);
         $form = ContentInlineEditor::fromRevision($current);
+        if ($mode === 'cover-image') {
+            $form['cover_path'] = $paths[0];
+            return ContentInlineEditor::snapshot($form);
+        }
         if ($mode === 'section-image') {
             $form['sections'][$index]['body'] = array_shift($paths);
             $insertAt = $index + 1;
@@ -131,6 +139,7 @@ final class MediaAttachment
             foreach ($details['gallery'] as $path) $roles[self::originalPath($path)]['gallery'] = true;
             $sections = $details['sections'];
         } else {
+            $roles[self::originalPath(\SimpleStore\Content\ContentBody::cover($current['body']))]['cover'] = true;
             $sections = ContentInlineEditor::fromRevision($current)['sections'];
         }
         foreach ($sections as $section) {

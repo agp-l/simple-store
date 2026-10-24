@@ -3,10 +3,7 @@
   <div class="catalog-stories-heading"><h2>Inspirace na cesty</h2><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . $language . '/blog') ?>">Všechny články <?= \SimpleStore\Rendering\Icon::render('arrow-right') ?></a></div>
   <div class="catalog-story-grid">
     <?php foreach ($catalogPosts as $story):
-      $storyCover = '';
-      foreach (\SimpleStore\Content\ContentBody::decode($story['body']) as $block) {
-          if ($block['type'] === 'image') { $storyCover = \SimpleStore\Media\MediaPath::variant($block['body'], 'card'); break; }
-      }
+      $storyCover = \SimpleStore\Media\MediaPath::variant(\SimpleStore\Content\ContentBody::cover($story['body']), 'card');
       if (str_starts_with($storyCover, 'images/')) $storyCover = $basePath . $storyCover;
     ?>
     <article class="catalog-story">

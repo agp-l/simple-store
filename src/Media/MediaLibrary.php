@@ -10,7 +10,7 @@ use RuntimeException;
 /** Re-encode untrusted uploads and make three immutable sizes. No original upload is served. */
 final class MediaLibrary
 {
-    private const MAX_BYTES = 12 * 1024 * 1024;
+    public const MAX_BYTES = 12 * 1024 * 1024;
     private const MAX_PIXELS = 20000000;
 
     public function __construct(private string $root) {}
@@ -81,32 +81,26 @@ final class MediaLibrary
             throw new InvalidArgumentException('Soubor je prázdný nebo příliš velký (nejvýše 12 MB).');
         }
         $info = @getimagesize($source);
+        $formats = [IMAGETYPE_JPEG => ['image/jpeg', 'imagecreatefromjpeg'], IMAGETYPE_PNG => ['image/png', 'imagecreatefrompng'],
+            IMAGETYPE_WEBP => ['image/webp', 'imagecreatefromwebp'], IMAGETYPE_GIF => ['image/gif', 'imagecreatefromgif']];
+        if (defined('IMAGETYPE_AVIF')) $formats[constant('IMAGETYPE_AVIF')] = ['image/avif', 'imagecreatefromavif'];
         if ($info === false || $info[0] < 1 || $info[1] < 1 ||
             $info[0] * $info[1] > self::MAX_PIXELS ||
-            !in_array($info[2], [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_WEBP], true)) {
+            !isset($formats[$info[2]])) {
             throw new InvalidArgumentException('Použij JPG, PNG nebo WebP s rozlišením nejvýše 20 megapixelů.');
         }
         $mime = (new \finfo(FILEINFO_MIME_TYPE))->file($source);
-        $expected = [IMAGETYPE_JPEG => 'image/jpeg', IMAGETYPE_PNG => 'image/png', IMAGETYPE_WEBP => 'image/webp'];
+        $expected = array_map(static fn (array $format): string => $format[0], $formats);
         if ($mime !== $expected[$info[2]]) {
             throw new InvalidArgumentException('Soubor neodpovídá formátu fotografie.');
         }
-        if ($info[2] === IMAGETYPE_WEBP && !function_exists('imagecreatefromwebp')) {
-            throw new InvalidArgumentException('Toto PHP neumí číst WebP. Nahraj fotografii jako JPG nebo PNG.');
-        }
-        if (($info[2] === IMAGETYPE_JPEG && !function_exists('imagecreatefromjpeg')) ||
-            ($info[2] === IMAGETYPE_PNG && !function_exists('imagecreatefrompng'))) {
-            throw new InvalidArgumentException('Toto PHP neumí číst vybraný formát fotografie.');
-        }
+        $decoder = $formats[$info[2]][1];
+        if (!function_exists($decoder)) throw new InvalidArgumentException('Hosting neumí přečíst tento formát. Použij JPG nebo PNG.');
         $format = function_exists('imagewebp') ? 'webp' : ($info[2] === IMAGETYPE_JPEG ? 'jpg' : 'png');
         if (!function_exists('image' . ($format === 'jpg' ? 'jpeg' : $format))) {
             throw new InvalidArgumentException('Toto PHP neumí uložit vybraný formát fotografie.');
         }
-        $image = match ($info[2]) {
-            IMAGETYPE_JPEG => @imagecreatefromjpeg($source),
-            IMAGETYPE_PNG => @imagecreatefrompng($source),
-            IMAGETYPE_WEBP => @imagecreatefromwebp($source),
-        };
+        $image = @$decoder($source);
         if (!$image instanceof GdImage) {
             throw new InvalidArgumentException('Fotografii se nepodařilo přečíst.');
         }

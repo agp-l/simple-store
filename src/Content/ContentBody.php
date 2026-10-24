@@ -28,9 +28,32 @@ final class ContentBody
         return $body === '' ? [] : [['type' => 'text', 'heading' => '', 'body' => $body]];
     }
 
-    public static function encode(array $sections): string
+    /** null = automatic first image, empty string = deliberately no cover. */
+    public static function coverSetting(string $body): ?string
     {
-        return json_encode(['format' => self::FORMAT, 'sections' => self::validate($sections)],
+        $data = json_decode($body, true);
+        $cover = is_array($data) && ($data['format'] ?? null) === self::FORMAT ? ($data['cover_path'] ?? null) : null;
+        return is_string($cover) && ($cover === '' || ProductDetails::readableImagePath($cover)) ? $cover : null;
+    }
+
+    public static function cover(string $body): string
+    {
+        $cover = self::coverSetting($body);
+        if ($cover !== null) return $cover;
+        foreach (self::decode($body) as $section) {
+            if ($section['type'] === 'image') return $section['body'];
+        }
+        return '';
+    }
+
+    public static function encode(array $sections, ?string $cover = null): string
+    {
+        if ($cover !== null && $cover !== '' && !ProductDetails::imagePath($cover)) {
+            throw new InvalidArgumentException('Náhled musí odkazovat na obrázek ve složce images/.');
+        }
+        $data = ['format' => self::FORMAT, 'sections' => self::validate($sections)];
+        if ($cover !== null) $data['cover_path'] = $cover;
+        return json_encode($data,
             JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     }
 

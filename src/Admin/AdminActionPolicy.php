@@ -34,6 +34,7 @@ final class AdminActionPolicy
         'inline-product', 'product-variants', 'set-product-stock', 'category-create', 'category-update', 'category-order',
         'configuration-preview', 'configuration-apply',
         'menu-slot', 'menu-item-save', 'menu-item-remove', 'page-menu',
+        'media-library-folder', 'media-library-upload', 'media-library-move', 'media-library-export', 'media-library-import',
         'media-upload', 'media-attach', 'media-delete', 'delete-product',
         'delete-content', 'homepage-product', 'product-selection', 'product-selection-order', 'product-supplier-link', 'product-sale', 'purchase-partner-save', 'product-relation', 'catalog-post',
         'products-sale-preview', 'products-sale-apply', 'products-mass-preview', 'products-mass-apply', 'products-variants-preview', 'products-variants-apply', 'save-checkout-settings', 'fio-cron-rotate', 'save-site-copy',
