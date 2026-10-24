@@ -313,7 +313,7 @@ try {
             $registerOffset = filter_var($_GET['offset'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 1000000]]);
             if ($registerOffset === false) throw new InvalidArgumentException('Neplatná stránka evidence.');
             $registerPage = $taxRegister->page($taxYear, $accountingTab, $registerOffset, 50, ($_GET['show_voided'] ?? '') === '1');
-            $registerEdit = $taxRegister->byId((int) ($_GET['edit_record'] ?? (($_POST['action'] ?? '') === 'tax-save-record' ? ($_POST['id'] ?? 0) : 0)));
+            $registerEdit = $taxRegister->byId((int) ($_GET['edit_record'] ?? (in_array($_POST['action'] ?? '', ['tax-save-record','tax-void-record','tax-restore-record'],true) ? ($_POST['id'] ?? 0) : 0)));
             if ($registerEdit !== null) $registerHistory = $taxRegister->history((int) $registerEdit['id']);
         }
         if ($accountingTab === 'funds') {
@@ -347,7 +347,7 @@ try {
             $taxEntriesNextUrl = $taxEntriesPage['nextOffset'] === null ? '' : $adminUrl . '?' .
                 http_build_query($moneyFilters + ['offset' => $taxEntriesPage['nextOffset']]);
             $taxEntryHistory = $tax->entryHistory($taxYear);
-            $editRaw = $_GET['edit_entry'] ?? (($_POST['action'] ?? '') === 'tax-amend-entry' ? ($_POST['id'] ?? null) : null);
+            $editRaw = $_GET['edit_entry'] ?? (in_array($_POST['action'] ?? '', ['tax-amend-entry','tax-void-entry'],true) ? ($_POST['id'] ?? null) : null);
             if (is_string($editRaw) && ctype_digit($editRaw)) {
                 $taxEditEntry = $tax->entry((int) $editRaw);
             }

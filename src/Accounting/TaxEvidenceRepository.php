@@ -20,7 +20,8 @@ final class TaxEvidenceRepository
     public function installed(): bool
     {
         foreach (['shop_tax_settings', 'shop_tax_entries', 'shop_tax_entry_events', 'shop_tax_balances',
-            'shop_stock_movements', 'shop_sale_lines', 'shop_deleted_sale_lines'] as $table) {
+            'shop_stock_movements', 'shop_sale_lines', 'shop_deleted_sale_lines',
+            'shop_tax_register_events', 'shop_invoice_corrections', 'shop_tax_write_requests'] as $table) {
             if ((int) $this->db->queryFirstField(
                 'SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s',
                 $table
