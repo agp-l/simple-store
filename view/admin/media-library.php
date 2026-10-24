@@ -13,7 +13,7 @@ $folderOptions = static function (string $selected = '') use ($mediaFolders, $es
 <?php if ($mediaError !== ''): ?><p class="panel-error" role="alert"><?= $escape($mediaError) ?></p><?php endif; ?>
 <?php if ($mediaNotice !== ''): ?><p class="library-notice" role="status"><?= $escape($mediaNotice) ?></p><?php endif; ?>
 <div class="library-workspace">
-  <aside class="library-sidebar" aria-label="Složky médií"><h2>Knihovna</h2>
+  <details class="library-folder-panel" data-library-folder-panel open><summary>Složky a organizace knihovny <span>⌄</span></summary><aside class="library-sidebar" aria-label="Složky médií"><h2>Knihovna</h2>
     <nav><?php foreach (\SimpleStore\Media\MediaCatalog::GROUPS as $id => $label): ?><a href="<?= $mediaLink(['folder' => $id]) ?>" <?= $mediaFolder === $id ? 'aria-current="page"' : '' ?>><?= \SimpleStore\Rendering\Icon::render($id === 'all' ? 'image' : 'folder') ?><span><?= $escape($label) ?></span></a><?php endforeach; ?></nav>
     <h2>Moje složky <span><?= count($mediaFolders) ?></span></h2>
     <nav><?php foreach ($mediaFolders as $id => $label): ?><a href="<?= $mediaLink(['folder' => $id]) ?>" <?= $mediaFolder === $id ? 'aria-current="page"' : '' ?>><?= \SimpleStore\Rendering\Icon::render('folder') ?><span><?= $escape($label) ?></span></a><?php endforeach; ?></nav>
@@ -24,7 +24,7 @@ $folderOptions = static function (string $selected = '') use ($mediaFolders, $es
       <label>Umístit do <select name="folder"><option value="">Hlavní úroveň</option><?php foreach ($mediaFolders as $id => $label): ?><option value="<?= $escape($id) ?>"><?= $escape($label) ?></option><?php endforeach; ?></select></label>
       <button class="panel-action panel-button">Vytvořit složku</button></form></details>
     <p class="library-hint">Složky slouží k organizaci. Zařazení ani přejmenování nemění adresy obrázků nebo jejich použití na webu.</p>
-  </aside>
+  </aside></details>
   <div class="library-main">
     <section class="library-upload panel-panel"><div><span class="library-feature-icon"><?= \SimpleStore\Rendering\Icon::render('upload') ?></span><h2>Nahrát fotografie</h2><p>Automaticky připravíme velký obrázek, kartu a miniaturu. Fotografie zůstane v knihovně, dokud ji sám nevybereš v obsahu.</p></div>
       <form method="post" action="<?= $mediaLink([]) ?>" enctype="multipart/form-data" class="panel-form" data-library-upload>

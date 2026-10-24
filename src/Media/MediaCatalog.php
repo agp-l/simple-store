@@ -58,6 +58,7 @@ final class MediaCatalog
         return $this->update(static function (array &$state) use ($name, $parent, $id): string {
             self::requireFolder($state, $parent);
             if ($id !== '') self::requireFolder($state, $id);
+            if ($id === '' && count($state['folders']) >= 500) throw new InvalidArgumentException('Knihovna může mít nejvýše 500 složek.');
             $id = $id === '' ? bin2hex(random_bytes(16)) : $id;
             $cursor = $parent;
             while ($cursor !== '') {

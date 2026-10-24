@@ -110,13 +110,15 @@ final class MediaArchive
                         $mapping[$id] = $target; unset($remaining[$id]);
                     }
                 }
+                if (count($state['folders']) > 500) throw new InvalidArgumentException('Po importu by knihovna přesáhla 500 složek.');
                 $hashes = [];
                 foreach ($catalog->files($state) as $file) {
                     $absolute = $catalog->absolute($file['path']);
                     if ($absolute === null) continue;
-                    $hashes[hash_file('sha256', $absolute)] = $file['path'];
+                    $storedHash = hash_file('sha256', $absolute);
+                    $hashes[$storedHash] = $file['path'];
                     $sourceHash = $state['files'][$file['path']]['source_hash'] ?? null;
-                    if (is_string($sourceHash)) $hashes[$sourceHash] = $file['path'];
+                    if (is_string($sourceHash) && ($state['files'][$file['path']]['stored_hash'] ?? null) === $storedHash) $hashes[$sourceHash] = $file['path'];
                 }
                 $reused = 0;
                 foreach ($staged as $file) {
@@ -125,7 +127,7 @@ final class MediaArchive
                         $path = $library->storeFile('library', bin2hex(random_bytes(16)), $file['temp'], basename($file['source']));
                         $new[] = $path; $hashes[$file['sha256']] = $path;
                     }
-                    $state['files'][$path] = ['folder' => $mapping[$file['folder']], 'source_hash' => $file['sha256']];
+                    $state['files'][$path] = ['folder' => $mapping[$file['folder']], 'source_hash' => $file['sha256'], 'stored_hash' => hash_file('sha256', $catalog->absolute($path))];
                 }
                 return ['added' => count($new), 'reused' => $reused, 'folders' => count($manifest['folders'])];
             });

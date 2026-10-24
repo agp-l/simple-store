@@ -19,7 +19,7 @@ $inside = $adminWorkspace;
         ['key' => 'users', 'label' => 'Účty a administrátoři', 'icon_name' => 'users', 'href' => $adminUrl . '?section=users'],
         ['key' => 'settings', 'label' => 'Nastavení obchodu', 'icon_name' => 'settings', 'href' => $adminUrl . '?section=settings'],
         ['key' => 'database', 'label' => 'Databáze', 'icon_name' => 'database', 'href' => $adminUrl . '?section=database'],
-        ['key' => 'media', 'label' => 'Fotografie', 'icon_name' => 'image', 'href' => $adminUrl . '?section=media'],
+        ['key' => 'media', 'label' => 'Fotografie a média', 'icon_name' => 'image', 'href' => $adminUrl . '?section=media'],
         ['key' => 'categories', 'label' => 'Kategorie', 'icon_name' => 'folder', 'href' => $adminUrl . '?section=categories'],
         ['key' => 'menus', 'label' => 'Menu', 'icon_name' => 'list', 'href' => $adminUrl . '?section=menus'],
     ];

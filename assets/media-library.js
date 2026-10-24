@@ -1,6 +1,10 @@
 (() => {
   const form = document.getElementById('media-selection');
   if (!form) return;
+  const folders = document.querySelector('[data-library-folder-panel]');
+  const mobile = window.matchMedia('(max-width: 800px)');
+  const adaptFolders = () => { if (folders) folders.open = !mobile.matches; };
+  adaptFolders(); mobile.addEventListener('change', adaptFolders);
   const boxes = [...document.querySelectorAll('input[form="media-selection"][name="paths[]"]')];
   const all = document.querySelector('[data-library-select-all]');
   const status = document.querySelector('[data-library-status]');

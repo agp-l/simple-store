@@ -227,6 +227,7 @@
     if (global) {
       url.searchParams.set('api', 'library');
       url.searchParams.set('q', search);
+      url.searchParams.set('folder', libraryFilter?.elements.folder?.value || 'all');
       url.searchParams.set('offset', String(libraryOffset));
     }
     try {
@@ -237,6 +238,18 @@
       const files = global || !search ? data.files : data.files.filter(file => file.label.toLocaleLowerCase().includes(search.toLocaleLowerCase()));
       render(dialogGrid, files);
       if (!global && !search) render(pageGrid, files);
+      const folderLabel = dialog.querySelector('[data-media-folder-label]');
+      if (folderLabel) folderLabel.hidden = !global;
+      const folderSelect = libraryFilter?.elements.folder;
+      if (global && folderSelect) {
+        const selected = folderSelect.value;
+        folderSelect.replaceChildren();
+        for (const [value, label] of Object.entries({all: 'Všechny složky', unfiled: 'Bez vlastní složky', ...(data.folders || {})})) {
+          const option = document.createElement('option'); option.value = value; option.textContent = label;
+          folderSelect.append(option);
+        }
+        if ([...folderSelect.options].some(option => option.value === selected)) folderSelect.value = selected;
+      }
       const previous = dialog.querySelector('[data-media-prev]');
       const next = dialog.querySelector('[data-media-next]');
       if (previous) previous.hidden = !global || libraryOffset === 0;
@@ -287,6 +300,7 @@
   }
   libraryFilter?.addEventListener('submit', event => { event.preventDefault(); libraryOffset = 0; load(); });
   libraryFilter?.elements.scope.addEventListener('change', () => { libraryOffset = 0; load(); });
+  libraryFilter?.elements.folder?.addEventListener('change', () => { libraryOffset = 0; load(); });
   dialog.querySelector('[data-media-prev]')?.addEventListener('click', () => { libraryOffset = Math.max(0, libraryOffset - 48); load(); });
   dialog.querySelector('[data-media-next]')?.addEventListener('click', () => { libraryOffset += 48; load(); });
   window.SimpleStoreMedia = {open};

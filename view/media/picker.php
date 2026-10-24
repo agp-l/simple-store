@@ -9,6 +9,7 @@
   <p data-media-dialog-status role="status" aria-live="polite"></p>
   <form class="media-library-filter" id="media-library-filter">
     <label>Kde hledat <select name="scope"><option value="owner">Fotografie tohoto obsahu</option><option value="all">Celá knihovna médií</option></select></label>
+    <label data-media-folder-label hidden>Složka <select name="folder"><option value="all">Všechny složky</option></select></label>
     <label>Hledat <input type="search" name="q" maxlength="200" placeholder="Název fotografie"></label>
     <button type="submit">Vyhledat</button>
   </form>
