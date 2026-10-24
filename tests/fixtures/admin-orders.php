@@ -24,6 +24,19 @@ if (($argv[1] ?? '') === 'states') {
     $orderPage['items'][] = array_replace($orderPage['items'][0], ['id' => 6, 'order_number' => 'GATEWAY-BLOCKED', 'payment_method' => 'btcpay', 'btcpay_payment_state' => 'processing']);
     $orderPage['items'][] = array_replace($orderPage['items'][0], ['id' => 7, 'order_number' => 'PACKETA-BLOCKED', 'status' => 'new', 'shipping_json' => json_encode(['method' => 'zasilkovna_pickup', 'label' => 'Zásilkovna'])]);
 }
+
+if (($argv[1] ?? '') === 'states') {
+    $manual = array_replace($orderPage['items'][0], ['id' => 8, 'order_number' => 'PACKETA-MANUAL', 'status' => 'new',
+        'shipping_json' => json_encode(['method' => 'zasilkovna_pickup', 'label' => 'Zásilkovna',
+            'pickup_source' => 'manual', 'pickup_verified' => false])]);
+    $orderPage['items'][] = $manual;
+    $orderPage['items'][] = array_replace($manual, ['id' => 9, 'order_number' => 'PACKETA-UNCERTAIN', 'shipment_status' => 'uncertain']);
+    $orderPage['items'][] = array_replace($manual, ['id' => 10, 'order_number' => 'HISTORICAL-TEST',
+        'status' => 'test', 'payment_status' => 'test', 'payment_method' => 'test']);
+    $fioConfigured = $fioReady = true;
+    $statusFilter = 'all'; $paymentFilter = 'bank_transfer'; $orderSearch = 'Eva & syn'; $offset = 25;
+}
+
 if (in_array($argv[1] ?? '', ['detail-home', 'detail-pickup'], true)) {
     $order = array_replace($orderPage['items'][1], [
         'created_at' => '2026-10-13 23:09:27', 'payment_due_at' => '2026-10-13 18:40:24',

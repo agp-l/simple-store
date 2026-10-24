@@ -456,13 +456,15 @@ final class OrderRepository
     }
 
     /** Manual fulfillment state; payment must be verified before shipping. */
-    public function setFulfillmentStatus(int $id, string $status, string $source = 'own', string $note = ''): void
+    public function setFulfillmentStatus(int $id, string $status, string $source = 'own', string $note = '',
+        ?string $expectedVersion = null): void
     {
-        $this->changeFulfillmentStatus($id, $status, $source, $note, false);
+        $this->changeFulfillmentStatus($id, $status, $source, $note, false, $expectedVersion);
     }
 
     private function changeFulfillmentStatus(
-        int $id, string $status, string $source, string $note, bool $overdueBankOnly
+        int $id, string $status, string $source, string $note, bool $overdueBankOnly,
+        ?string $expectedVersion = null
     ): void
     {
         if ($id < 1 || !in_array($status,
@@ -492,6 +494,10 @@ final class OrderRepository
             if ($overdueBankOnly && $row === null) {
                 throw new InvalidArgumentException('Objednávka už není po splatnosti nebo mezitím změnila stav platby. Obnov přehled.');
             }
+            if ($expectedVersion !== null && ($row === null ||
+                !hash_equals(OrderFulfillmentVersion::forOrder($row), $expectedVersion))) {
+                throw new InvalidArgumentException('Objednávka se mezitím změnila. Obnov stránku, zkontroluj aktuální platbu a expedici a změnu zadej znovu.');
+            }
             $allowed = match ($row['status'] ?? '') {
                 'new' => ['processing', 'ready_to_ship', 'shipped', 'cancelled'],
                 'processing' => ['processing', 'ready_to_ship', 'shipped'],
@@ -517,7 +523,7 @@ final class OrderRepository
                 throw new InvalidArgumentException('U odeslané objednávky už nelze změnit způsob expedice.');
             }
             if ($row['payment_method'] === 'gopay' &&
-                in_array($status, ['ready_to_ship', 'shipped', 'completed'], true)) {
+                in_array($status, ['processing', 'ready_to_ship', 'shipped', 'completed'], true)) {
                 (new GoPayPaidOrderGuard($this->db))->assertPaid($id,
                     (string) ($row['provider_reference'] ?? ''));
             }

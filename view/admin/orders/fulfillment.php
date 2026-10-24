@@ -4,7 +4,7 @@
       <?php $packetaMethod = in_array($shipping['method'] ?? '', ['zasilkovna_pickup', 'zasilkovna_home'], true);
       $fulfillmentSource = $order['fulfillment_source'] ?? 'own'; ?>
       <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
-        <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="set-order-status"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
+        <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="expected_fulfillment" value="<?= $escape(\SimpleStore\Checkout\OrderFulfillmentVersion::forOrder($order)) ?>"><input type="hidden" name="action" value="set-order-status"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
         <?php if ($paid && $order['status'] !== 'shipped' && $fulfillmentSourceReady): ?>
           <label>Expedici zajišťuje <select name="fulfillment_source">
             <option value="own" <?= $fulfillmentSource === 'own' ? 'selected' : '' ?>>Obchod</option>

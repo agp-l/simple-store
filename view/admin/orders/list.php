@@ -10,8 +10,8 @@
   };
   ?>
   <nav class="panel-quick panel-order-filters" aria-label="Filtrovat objednávky">
-    <?php foreach (['all' => 'Všechny', 'pending' => 'Čeká na platbu', 'overdue' => 'Po splatnosti', 'paid' => 'Zaplaceno', 'processing' => 'Připravuje se', 'ready_to_ship' => 'Připraveno', 'shipped' => 'Předáno dopravci', 'completed' => 'Dokončeno', 'cancelled' => 'Zrušeno', 'test' => 'Testovací'] as $filter => $label): ?>
-      <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&status=' . $filter . '&payment=' . rawurlencode($paymentFilter) . '&q=' . rawurlencode($orderSearch)) ?>" <?= $statusFilter === $filter ? 'aria-current="page"' : '' ?>><span class="admin-tab-icon" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render(['all' => 'list', 'pending' => 'clock', 'overdue' => 'clock', 'paid' => 'check', 'processing' => 'settings', 'ready_to_ship' => 'package', 'shipped' => 'truck', 'completed' => 'check', 'cancelled' => 'cancel', 'test' => 'settings'][$filter]) ?></span> <?= $escape($label) ?></a>
+    <?php foreach (['all' => 'Všechny', 'pending' => 'Čeká na platbu', 'overdue' => 'Po splatnosti', 'paid' => 'Zaplaceno', 'processing' => 'Připravuje se', 'ready_to_ship' => 'Připraveno', 'shipped' => 'Předáno dopravci', 'completed' => 'Dokončeno', 'cancelled' => 'Zrušeno'] as $filter => $label): ?>
+      <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&status=' . $filter . '&payment=' . rawurlencode($paymentFilter) . '&q=' . rawurlencode($orderSearch)) ?>" <?= $statusFilter === $filter ? 'aria-current="page"' : '' ?>><span class="admin-tab-icon" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render(['all' => 'list', 'pending' => 'clock', 'overdue' => 'clock', 'paid' => 'check', 'processing' => 'settings', 'ready_to_ship' => 'package', 'shipped' => 'truck', 'completed' => 'check', 'cancelled' => 'cancel'][$filter]) ?></span> <?= $escape($label) ?></a>
     <?php endforeach; ?>
   </nav>
   <form class="panel-order-search" method="get" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>" role="search">
@@ -33,7 +33,7 @@
   <?php if (($_GET['payment_saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Přijetí platby bylo potvrzeno.</p><?php endif; ?>
   <?php require __DIR__ . '/fio-result.php'; ?>
   <?php if (!empty($fioConfigured)): ?>
-    <?php if (!empty($fioReady)): ?><form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl) ?>" class="panel-order-search">
+    <?php if (!empty($fioReady)): ?><form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderPageUrl . '&offset=' . $offset) ?>" class="panel-order-search">
       <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="fio-sync">
       <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Zkontrolovat převody u Fio</button>
       <span class="panel-help">Ruční kontrola zahrne i objednávky po splatnosti. Čte nejvýše 89 dní zpět; další dotaz lze odeslat za 35 sekund. Cron kontroluje před splatností po 10 minutách, týden po splatnosti po hodině, starší už jen ručně. Bez vhodných objednávek banku nekontaktuje.</span>
@@ -73,9 +73,13 @@
         $listedShipping = is_array($listedShipping) ? $listedShipping : [];
         $listedSource = ($listed['fulfillment_source'] ?? 'own') === 'external' ? 'external' : 'own';
         $listedShippingMethod = $listedShipping['method'] ?? '';
+        $listedManualPickup = $listedShippingMethod === 'zasilkovna_pickup' &&
+            ($listedShipping['pickup_source'] ?? '') === 'manual' &&
+            ($listedShipping['pickup_verified'] ?? false) !== true &&
+            ($listed['shipment_status'] ?? null) === null;
         $listedPacketaBlocked = $listedSource === 'own' &&
             in_array($listedShippingMethod, ['zasilkovna_pickup', 'zasilkovna_home'], true) &&
-            ($listed['shipment_status'] ?? '') !== 'created';
+            ($listed['shipment_status'] ?? '') !== 'created' && !$listedManualPickup;
         $listedNext = match ($listedStatus) {
             'new' => $listedPaid ? ['processing', 'ready_to_ship', 'shipped'] : [],
             'processing' => $listedPaid ? ['ready_to_ship', 'shipped'] : [],
@@ -119,6 +123,7 @@
             <?php if ($listedNext !== []): ?>
               <form class="panel-order-quick-status" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($listedQuickUrl) ?>">
                 <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="set-order-status">
+                <input type="hidden" name="expected_fulfillment" value="<?= $escape(\SimpleStore\Checkout\OrderFulfillmentVersion::forOrder($listed)) ?>">
                 <input type="hidden" name="id" value="<?= $listedId ?>"><input type="hidden" name="return_list" value="1">
                 <input type="hidden" name="fulfillment_source" value="<?= $escape($listedSource) ?>">
                 <input type="hidden" name="fulfillment_note" value="<?= $escape($listed['fulfillment_note'] ?? '') ?>">
@@ -155,6 +160,7 @@
             <?php elseif ($listedStatus === 'new' && !$listedPaid && ($listed['payment_status'] ?? '') === 'pending'): ?>
               <form class="panel-order-inline panel-order-inline--danger" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($listedQuickUrl) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="set-order-status">
+                  <input type="hidden" name="expected_fulfillment" value="<?= $escape(\SimpleStore\Checkout\OrderFulfillmentVersion::forOrder($listed)) ?>">
                   <input type="hidden" name="id" value="<?= $listedId ?>"><input type="hidden" name="return_list" value="1">
                   <input type="hidden" name="order_status" value="cancelled">
                   <input type="hidden" name="fulfillment_source" value="<?= $escape($listedSource) ?>">

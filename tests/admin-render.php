@@ -250,6 +250,32 @@ if (str_contains($html, 'name="action" value="mark-order-paid"') ||
     !str_contains($html, 'value="external"')) {
     throw new RuntimeException('Paid bank transfers must not show the confirmation form.');
 }
+
+$beforeGatewayOrder = $order;
+$order['status'] = 'new';
+$order['payment_method'] = 'gopay';
+$order['provider_reference'] = '123456';
+foreach ([
+    [null, 'Platba k ověření', false],
+    [['status' => 'created', 'payment_id' => '123456'], 'Platba k ověření', false],
+    [['status' => 'paid', 'payment_id' => '999999'], 'Platba k ověření', false],
+    [['status' => 'refunded', 'payment_id' => '123456'], 'Platba vrácena', false],
+    [['status' => 'partially_refunded', 'payment_id' => '123456'], 'Platba částečně vrácena', false],
+    [['status' => 'paid', 'payment_id' => '123456'], 'Zaplaceno', true],
+] as [$goPayState, $expectedLabel, $canDispatch]) {
+    ob_start();
+    require dirname(__DIR__) . '/view/admin/layout.php';
+    $html = ob_get_clean();
+    if (!str_contains($html, 'panel-order-state ' . ($canDispatch ? 'is-paid' : 'is-pending') . '">' . $expectedLabel . '</p>') ||
+        str_contains($html, 'name="action" value="set-order-status"') !== $canDispatch ||
+        ($canDispatch && !str_contains($html, 'name="expected_fulfillment" value="' .
+            \SimpleStore\Checkout\OrderFulfillmentVersion::forOrder($order) . '"'))) {
+        throw new RuntimeException('GoPay detail must agree with the verified payment and fulfillment guard.');
+    }
+}
+$order = $beforeGatewayOrder;
+$goPayState = null;
+
 $order['shipping'] = ['method' => 'gls_pickup', 'label' => 'GLS ParcelShop',
     'recipient' => 'Eva Nová', 'phone' => '+420777123456',
     'pickup_code' => '26711-GLSCZ_DEPO47', 'pickup_point' => 'Brno',
@@ -426,6 +452,7 @@ if (!str_contains($html, 'DB-20260929-1') ||
     !str_contains($html, 'Zásilka vytvořena') ||
     !str_contains($html, 'status=all&amp;offset=25') ||
     str_contains($html, 'Nedávno smazané objednávky') ||
+    str_contains($html, 'status=test') ||
     !str_contains($html, 'Číslo objednávky, e-mail nebo VS') ||
     !str_contains($html, 'name="payment"') ||
     !str_contains($html, 'name="return_list" value="1"') ||

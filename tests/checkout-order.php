@@ -10,6 +10,7 @@ class MeekroDB
     public int $rollbacks = 0;
     public ?array $shipment = null;
     public array $gatewayAttempts = [];
+    public array $goPayStates = [];
     public array $outbox = [];
     public string $lastManagementSql = '';
     public array $lastManagementParameters = [];
@@ -50,6 +51,9 @@ class MeekroDB
             return $this->outbox[$values[0]] ?? null;
         }
         if (str_contains($sql, 'FROM shop_packeta_shipments')) return $this->shipment;
+        if (str_contains($sql, 'FROM shop_gopay_payments')) {
+            return $this->goPayStates[$values[0]][$values[1]] ?? null;
+        }
         foreach ($this->rows as $row) {
             if (str_contains($sql, 'payment_due_at < UTC_TIMESTAMP()') &&
                 ($row['payment_method'] !== 'bank_transfer' || $row['payment_status'] !== 'pending' ||
@@ -516,4 +520,81 @@ foreach ([
         throw new RuntimeException('Terminal unpaid provider attempt could not be cancelled.');
     }
 }
+
+// Stale tabs must not overwrite a changed owner, supplier note, stage or payment.
+$versioned = $repository->create(null, 'version@example.org', $items, $shipping, 100, bin2hex(random_bytes(32)));
+$versionedId = (int) $versioned['id'];
+$repository->markPaid($versionedId, 1);
+$baseline = $db->rows[$versionedId - 1];
+$version = \SimpleStore\Checkout\OrderFulfillmentVersion::forOrder($baseline);
+foreach (['status' => 'processing', 'payment_status' => 'pending',
+    'fulfillment_source' => 'external', 'fulfillment_note' => 'Nový dodavatel'] as $field => $value) {
+    $db->rows[$versionedId - 1] = array_replace($baseline, [$field => $value]);
+    $before = $db->rows;
+    $rollbacks = $db->rollbacks;
+    try {
+        $repository->setFulfillmentStatus($versionedId, 'processing', 'own', '', $version);
+        throw new RuntimeException('A stale form overwrote ' . $field . '.');
+    } catch (InvalidArgumentException $expected) {
+        if (!str_contains($expected->getMessage(), 'mezitím') || $db->rows !== $before ||
+            $db->rollbacks !== $rollbacks + 1) {
+            throw new RuntimeException('A stale form must roll back without changing the order.');
+        }
+    }
+}
+$db->rows[$versionedId - 1] = $baseline;
+$repository->setFulfillmentStatus($versionedId, 'processing', 'external', 'Dodavatel A', $version);
+$fresh = $repository->findById($versionedId);
+$repository->setFulfillmentStatus($versionedId, 'ready_to_ship', 'external', 'Dodavatel B',
+    \SimpleStore\Checkout\OrderFulfillmentVersion::forOrder($fresh));
+if ($db->rows[$versionedId - 1]['status'] !== 'ready_to_ship' ||
+    $db->rows[$versionedId - 1]['fulfillment_note'] !== 'Dodavatel B') {
+    throw new RuntimeException('A current form must allow intentional fulfillment edits.');
+}
+// HTTP handler must reject old forms without a version, not bypass the locked comparison.
+$orders = $repository;
+$ordersReady = true;
+$method = 'POST';
+foreach ([null, [], 'invalid', $version] as $submittedVersion) {
+    $_POST = ['action' => 'set-order-status', 'id' => (string) $versionedId,
+        'order_status' => 'processing', 'expected_fulfillment' => $submittedVersion];
+    $before = $db->rows;
+    $orderError = '';
+    require dirname(__DIR__) . '/src/Admin/orders/fulfillment.php';
+    if (http_response_code() !== 422 || $orderError === '' || $db->rows !== $before) {
+        throw new RuntimeException('An outdated admin form changed the order.');
+    }
+}
+$_POST = [];
+http_response_code(200);
+
+// GoPay processing has the same verified-attempt requirement as shipping.
+$gateway = $repository->create(null, 'guard@example.org', $items, $shipping, 100,
+    bin2hex(random_bytes(32)), 'gopay');
+$gatewayId = (int) $gateway['id'];
+$db->rows[$gatewayId - 1]['payment_status'] = 'paid';
+$db->rows[$gatewayId - 1]['provider_reference'] = '123456';
+$db->goPayStates[$gatewayId]['999999'] = ['status' => 'paid']; // Another attempt is insufficient.
+foreach ([null, 'created', 'refunded', 'partially_refunded'] as $providerStatus) {
+    $db->goPayStates[$gatewayId]['123456'] = $providerStatus === null ? null : ['status' => $providerStatus];
+    foreach (['processing', 'ready_to_ship', 'shipped', 'completed'] as $target) {
+        $db->rows[$gatewayId - 1]['status'] = $target === 'completed' ? 'shipped' : 'new';
+        $before = $db->rows;
+        try {
+            $repository->setFulfillmentStatus($gatewayId, $target);
+            throw new RuntimeException('Unverified GoPay payment allowed ' . $target . '.');
+        } catch (InvalidArgumentException $expected) {
+            if ($db->rows !== $before || !str_contains($expected->getMessage(), 'GoPay')) {
+                throw new RuntimeException('GoPay guard did not preserve the order.');
+            }
+        }
+    }
+}
+$db->rows[$gatewayId - 1]['status'] = 'new';
+$db->goPayStates[$gatewayId]['123456'] = ['status' => 'paid'];
+$repository->setFulfillmentStatus($gatewayId, 'processing');
+if ($db->rows[$gatewayId - 1]['status'] !== 'processing') {
+    throw new RuntimeException('Verified GoPay payment must allow preparation.');
+}
+
 echo "Checkout order and bank transfer tests passed.\n";

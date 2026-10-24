@@ -140,6 +140,15 @@ test('admin workspace: equal widths, accessible mobile navigation and customer i
       assert.equal(await row('GATEWAY-BLOCKED').locator('form').count(), 0);
       assert.match(await row('GATEWAY-BLOCKED').textContent(), /Platba k ověření/);
       assert.deepEqual(await row('PACKETA-BLOCKED').locator('select[name="order_status"] option').evaluateAll(options => options.map(o => o.value)), ['processing']);
+      assert.deepEqual(await row('PACKETA-MANUAL').locator('select[name="order_status"] option').evaluateAll(options => options.map(o => o.value)), ['processing', 'ready_to_ship', 'shipped']);
+      assert.deepEqual(await row('PACKETA-UNCERTAIN').locator('select[name="order_status"] option').evaluateAll(options => options.map(o => o.value)), ['processing']);
+      assert.equal(await row('HISTORICAL-TEST').count(), 1, 'Historical test orders stay visible.');
+      assert.equal(await page.getByRole('navigation', { name: 'Filtrovat objednávky' }).getByRole('link', { name: 'Testovací', exact: true }).count(), 0);
+      const fioAction = new URL(await page.locator('form').filter({ has: page.locator('input[name="action"][value="fio-sync"]') }).getAttribute('action'), url('orderStates'));
+      assert.equal(fioAction.searchParams.get('status'), 'all');
+      assert.equal(fioAction.searchParams.get('payment'), 'bank_transfer');
+      assert.equal(fioAction.searchParams.get('q'), 'Eva & syn');
+      assert.equal(fioAction.searchParams.get('offset'), '25');
       const posts = [];
       await page.route('**/admin/orders/**', async route => {
         posts.push(new URLSearchParams(route.request().postData()));
@@ -161,6 +170,7 @@ test('admin workspace: equal widths, accessible mobile navigation and customer i
         await page.getByText('Akce zachycena v testu').waitFor();
         const post = posts.at(-1);
         assert.equal(post.get('action'), action);
+        if (action === 'set-order-status') assert.match(post.get('expected_fulfillment'), /^[a-f0-9]{64}$/);
         assert.equal(post.get('csrf'), 'test-token');
         for (const [key, value] of Object.entries(expected)) assert.equal(post.get(key), value);
         await page.goto(url('orderStates'));
@@ -170,6 +180,7 @@ test('admin workspace: equal widths, accessible mobile navigation and customer i
       await fulfillment.getByRole('button', { name: /Uložit stav/ }).click();
       await page.getByText('Akce zachycena v testu').waitFor();
       assert.equal(posts.at(-1).get('order_status'), 'shipped');
+      assert.match(posts.at(-1).get('expected_fulfillment'), /^[a-f0-9]{64}$/);
       assert.equal(posts.at(-1).get('id'), '1');
       assert.equal(posts.at(-1).get('csrf'), 'test-token');
       await page.close();

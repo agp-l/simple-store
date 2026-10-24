@@ -8,13 +8,17 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'set-order-status') {
     $newStatus = $_POST['order_status'] ?? null;
     $source = $_POST['fulfillment_source'] ?? 'own';
     $note = $_POST['fulfillment_note'] ?? '';
+    $expectedVersion = $_POST['expected_fulfillment'] ?? null;
     if (!$ordersReady || $id === false || !is_string($newStatus) ||
         !is_string($source) || !is_string($note)) {
         http_response_code(422);
         $orderError = 'Vyber objednávku a platný stav.';
+    } elseif (!is_string($expectedVersion) || preg_match('/^[a-f0-9]{64}$/D', $expectedVersion) !== 1) {
+        http_response_code(422);
+        $orderError = 'Formulář objednávky už není aktuální. Obnov stránku a změnu zadej znovu.';
     } else {
         try {
-            $orders->setFulfillmentStatus($id, $newStatus, $source, $note);
+            $orders->setFulfillmentStatus($id, $newStatus, $source, $note, $expectedVersion);
             try { $orderMail->notifyStage($id, $newStatus, $orderMailSender); }
             catch (Throwable $mailError) { error_log('Order stage notification: ' . $mailError->getMessage()); }
             header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty((($_POST['return_list'] ?? null) === '1'

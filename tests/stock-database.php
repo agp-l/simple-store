@@ -108,7 +108,16 @@ $suppliedId = (int) $supplied['id'];
 $orders->markPaid($suppliedId, 1);
 expectStock((int) $db->queryFirstField('SELECT available_quantity FROM shop_product_inventory
     WHERE product_key=%s', $key) === 3, 'Supplier order was not initially reserved.');
-$orders->setFulfillmentStatus($suppliedId, 'processing', 'external', 'Dodavatel');
+$oldFulfillmentVersion = \SimpleStore\Checkout\OrderFulfillmentVersion::forOrder($orders->findById($suppliedId));
+$orders->setFulfillmentStatus($suppliedId, 'processing', 'external', 'Dodavatel', $oldFulfillmentVersion);
+try {
+    $orders->setFulfillmentStatus($suppliedId, 'shipped', 'own', '', $oldFulfillmentVersion);
+    throw new RuntimeException('A stale list form reclaimed and consumed supplier stock.');
+} catch (InvalidArgumentException $expected) {
+    expectStock(str_contains($expected->getMessage(), 'mezitím'), 'Unexpected stale form failure.');
+}
+expectStock($orders->findById($suppliedId)['fulfillment_source'] === 'external' &&
+    $orders->findById($suppliedId)['status'] === 'processing', 'Stale form changed supplier fulfillment.');
 expectStock((int) $db->queryFirstField('SELECT available_quantity FROM shop_product_inventory
     WHERE product_key=%s', $key) === 5, 'Supplier fulfillment kept local inventory reserved.');
 $stock->setAvailable($key, 5, 0);

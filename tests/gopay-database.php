@@ -217,7 +217,13 @@ foreach (['PARTIALLY_REFUNDED', 'REFUNDED'] as $refundedState) {
     } catch (InvalidArgumentException $expected) {
         $shippingBlocked = true;
     }
-    expectGoPay($guardBlocked && $draftBlocked && $shippingBlocked &&
+    $preparationBlocked = false;
+    try {
+        $orders->setFulfillmentStatus((int) $order['id'], 'processing');
+    } catch (InvalidArgumentException $expected) {
+        $preparationBlocked = true;
+    }
+    expectGoPay($guardBlocked && $draftBlocked && $shippingBlocked && $preparationBlocked &&
         $payments->state((int) $order['id'])['status'] === strtolower($refundedState) &&
         $orders->findById((int) $order['id'])['status'] === 'ready_to_ship',
         $refundedState . ' GoPay charge was allowed into GLS shipping or fulfillment.');

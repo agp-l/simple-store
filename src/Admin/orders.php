@@ -107,6 +107,17 @@ if (!is_string($statusFilter) || !in_array($statusFilter,
     $offset = 0;
 }
 $orderSearch = trim($orderSearch);
+// Retired navigation tab: old bookmarks now open the complete order history.
+if ($statusFilter === 'test') {
+    $statusFilter = 'all';
+    $offset = 0;
+    if ($method === 'GET' && !isset($_GET['id'])) {
+        header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl .
+            '?section=orders&status=all&payment=' . rawurlencode($paymentFilter) .
+            '&q=' . rawurlencode($orderSearch)), true, 302);
+        exit;
+    }
+}
 $orderListReturnUrl = $adminUrl . '?section=orders&status=' . rawurlencode($statusFilter) .
     '&payment=' . rawurlencode($paymentFilter) . '&q=' . rawurlencode($orderSearch) . '&offset=' . $offset;
 

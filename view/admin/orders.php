@@ -109,14 +109,14 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
   $btcpayDispatchBlocked = $btcpayPayment && $paid &&
       ($btcpayState === null || ($btcpayState['status'] ?? '') !== 'settled' ||
       (string) ($btcpayState['invoice_id'] ?? '') !== (string) ($order['provider_reference'] ?? ''));
-  $paymentHighlight = $paid && !$goPayRefunded && !$btcpayDispatchBlocked;
-  $paymentDisplayLabel = $goPayRefunded
-      ? (($goPayState['status'] ?? '') === 'refunded' ? 'Platba vrácena' : 'Platba částečně vrácena')
-      : ($btcpayDispatchBlocked ? 'Platba k ověření' : $orderPaymentLabel($order['payment_status'] ?? ''));
   $goPayDispatchBlocked = $goPayPayment && $paid &&
       ($goPayState === null || ($goPayState['status'] ?? '') !== 'paid' ||
       (string) ($goPayState['payment_id'] ?? '') !== (string) ($order['provider_reference'] ?? ''));
   $gatewayDispatchBlocked = $goPayDispatchBlocked || $btcpayDispatchBlocked;
+  $paymentHighlight = $paid && !$gatewayDispatchBlocked;
+  $paymentDisplayLabel = $goPayRefunded
+      ? (($goPayState['status'] ?? '') === 'refunded' ? 'Platba vrácena' : 'Platba částečně vrácena')
+      : ($gatewayDispatchBlocked ? 'Platba k ověření' : $orderPaymentLabel($order['payment_status'] ?? ''));
   $recipientName = trim((string) ($shipping['recipient'] ?? $shipping['name'] ?? ''));
   $contactEmail = trim((string) ($order['customer_email'] ?? $shipping['email'] ?? ''));
   $contactPhone = trim((string) ($shipping['phone'] ?? ''));
