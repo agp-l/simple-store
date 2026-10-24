@@ -14,7 +14,7 @@ $adminGroups = [
       <div class="admin-nav-group">
         <p class="admin-nav-label"><?= $escape($group) ?></p>
         <?php foreach ($keys as $key): $item = $adminLinks[$key]; ?>
-          <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($item['href']) ?>" <?= $panelCurrent === $key ? 'aria-current="page"' : '' ?>><span aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render($item['icon_name']) ?></span><?= $escape($item['label']) ?></a>
+          <a data-admin-link="<?= $escape($key) ?>" href="<?= \SimpleStore\Navigation\PanelUrl::escape($item['href']) ?>" <?= $panelCurrent === $key ? 'aria-current="page"' : '' ?>><span aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render($item['icon_name']) ?></span><?= $escape($item['label']) ?></a>
         <?php endforeach; ?>
       </div>
     <?php endforeach; ?>

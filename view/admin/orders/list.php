@@ -142,16 +142,16 @@
                 <button type="submit" class="panel-action"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit stav</button>
               </form>
             <?php elseif ($listedOverdue): ?>
-              <details class="panel-order-quick"><summary><?= \SimpleStore\Rendering\Icon::render('cancel') ?> Stornovat po splatnosti</summary>
+              <details class="panel-order-quick panel-order-quick--danger"><summary><?= \SimpleStore\Rendering\Icon::render('cancel') ?> Stornovat po splatnosti</summary>
                 <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($listedQuickUrl) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="cancel-overdue-bank-order">
                   <input type="hidden" name="id" value="<?= $listedId ?>">
                   <label><input type="checkbox" name="bank_checked" value="1" required> Ověřil/a jsem v bankovním výpisu, že platba nedorazila.</label>
-                  <button type="submit" class="panel-action"><?= \SimpleStore\Rendering\Icon::render('cancel') ?> Stornovat a uvolnit sklad</button>
+                  <button type="submit" class="panel-action panel-action--danger"><?= \SimpleStore\Rendering\Icon::render('cancel') ?> Stornovat a uvolnit sklad</button>
                 </form>
               </details>
             <?php elseif ($listedStatus === 'new' && !$listedPaid && ($listed['payment_status'] ?? '') === 'pending'): ?>
-              <details class="panel-order-quick"><summary><?= \SimpleStore\Rendering\Icon::render('cancel') ?> Stornovat</summary>
+              <details class="panel-order-quick panel-order-quick--danger"><summary><?= \SimpleStore\Rendering\Icon::render('cancel') ?> Stornovat</summary>
                 <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($listedQuickUrl) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="set-order-status">
                   <input type="hidden" name="id" value="<?= $listedId ?>"><input type="hidden" name="return_list" value="1">
@@ -160,7 +160,7 @@
                   <input type="hidden" name="fulfillment_note" value="<?= $escape($listed['fulfillment_note'] ?? '') ?>">
                   <?php if (in_array(($listed['payment_method'] ?? ''), ['comgate', 'gopay', 'btcpay'], true)): ?><p>Před stornem ověř, že všechny platby u brány jsou zrušené nebo zamítnuté. Aktivní transakci nelze stornovat.</p><?php endif; ?>
                   <label><input type="checkbox" required> Potvrzuji storno objednávky.</label>
-                  <button type="submit" class="panel-action"><?= \SimpleStore\Rendering\Icon::render('cancel') ?> Stornovat</button>
+                  <button type="submit" class="panel-action panel-action--danger"><?= \SimpleStore\Rendering\Icon::render('cancel') ?> Stornovat</button>
                 </form>
               </details>
             <?php endif; ?>
