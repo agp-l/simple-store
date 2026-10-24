@@ -3,6 +3,8 @@ declare(strict_types=1);
 
 use SimpleStore\Media\MediaArchive;
 use SimpleStore\Media\MediaCatalog;
+use SimpleStore\Media\MediaBrowse;
+use SimpleStore\Media\MediaOwners;
 
 // Reached only through the authenticated admin router, with CSRF checked for every POST.
 $screen = 'media';
@@ -10,11 +12,10 @@ $mediaCatalog = new MediaCatalog(__DIR__ . '/../..');
 $mediaError = '';
 $mediaNotice = $_SESSION['media_library_notice'] ?? '';
 unset($_SESSION['media_library_notice']);
-$mediaFolder = $_GET['folder'] ?? 'all';
-$mediaSearch = $_GET['q'] ?? '';
-$mediaOffset = filter_var($_GET['offset'] ?? '0', FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 100000]]);
-if (!is_string($mediaFolder) || !is_string($mediaSearch) || strlen($mediaSearch) > 200 || $mediaOffset === false) throw new InvalidArgumentException('Neplatný filtr médií.');
-$mediaSearch = trim($mediaSearch);
+$mediaOptions = MediaBrowse::options($_GET);
+$mediaFolder = $mediaOptions['folder'];
+$mediaSearch = $mediaOptions['q'];
+$mediaOffset = $mediaOptions['offset'];
 $mediaCollection = true;
 if ($method === 'POST') {
     try {
@@ -32,11 +33,17 @@ if ($method === 'POST') {
         } elseif ($mediaAction === 'media-library-move') {
             $paths = $_POST['paths'] ?? [];
             if (!is_array($paths)) throw new InvalidArgumentException('Vyber obrázky.');
-            $mediaCatalog->assign($paths, $target);
+            $scopes = $_POST['owners'] ?? [];
+            if (!is_array($scopes)) throw new InvalidArgumentException('Vyber platné složky.');
+            if ($scopes !== []) $paths = array_merge($paths, MediaBrowse::selectedPaths($mediaCatalog->files(), $scopes));
+            $mediaCatalog->assign(array_values(array_unique($paths)), $target);
             $mediaNotice = 'Obrázky byly zařazeny. Jejich použití na webu se nezměnilo.';
         } elseif ($mediaAction === 'media-library-export') {
             $folders = $_POST['folders'] ?? []; $paths = $_POST['paths'] ?? [];
             if (!is_array($folders) || !is_array($paths)) throw new InvalidArgumentException('Vyber složky nebo obrázky.');
+            $scopes = $_POST['owners'] ?? [];
+            if (!is_array($scopes)) throw new InvalidArgumentException('Vyber platné složky.');
+            if ($scopes !== []) $paths = array_merge($paths, MediaBrowse::selectedPaths($mediaCatalog->files(), $scopes));
             $archive = (new MediaArchive(__DIR__ . '/../..'))->export($folders, $paths);
             try {
                 header('Content-Type: application/zip');
@@ -61,13 +68,17 @@ if ($method === 'POST') {
     } catch (Throwable $error) {
         error_log((string) $error);
         $mediaError = $error instanceof InvalidArgumentException ? $error->getMessage() : 'Změnu se nepodařilo dokončit. Zkontroluj soubor a oprávnění úložiště.';
-        $mediaFolder = 'all';
+        $mediaOptions = MediaBrowse::options([]); $mediaFolder = 'all'; $mediaSearch = ''; $mediaOffset = 0;
     }
 }
-$mediaListing = $mediaCatalog->listing($mediaFolder, $mediaSearch, $mediaOffset);
-$mediaFolders = $mediaListing['folders'];
-$mediaState = $mediaCatalog->state();
 if (($_GET['api'] ?? '') === 'library') {
+    $mediaListing = $mediaCatalog->listing($mediaFolder, $mediaSearch, $mediaOffset);
     header('Content-Type: application/json; charset=utf-8'); header('Cache-Control: private, no-store');
     echo json_encode($mediaListing, JSON_THROW_ON_ERROR); exit;
 }
+$mediaState = $mediaCatalog->state();
+$mediaAllFiles = $mediaCatalog->files($mediaState);
+$mediaOwners = (new MediaOwners($db, $site['languages'], $site['default_language']))->names($mediaAllFiles);
+$mediaListing = MediaBrowse::listing($mediaAllFiles, $mediaState, $mediaOwners, $mediaOptions);
+$mediaFolders = $mediaListing['folders'];
+$mediaOffset = $mediaListing['offset'];

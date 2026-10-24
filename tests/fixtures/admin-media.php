@@ -10,16 +10,33 @@ if ($fixture === 'cover') {
     (new \SimpleStore\Rendering\PageRenderer(dirname(__DIR__, 2) . '/view'))->render('post', ['basePath' => '/', 'language' => 'cs', 'content' => $row, 'canEditContent' => true, 'contentEditMode' => true, 'editToken' => $csrf]);
     exit;
 }
-if ($fixture === 'media') {
+if (in_array($fixture, ['media', 'product-folders', 'product-photos', 'product-open', 'product-search', 'product-empty', 'page-folders', 'post-folders'], true)) {
     $screen = 'media'; $mediaCollection = true; $mediaFolder = 'all'; $mediaSearch = ''; $mediaOffset = 0; $mediaNotice = ''; $mediaError = '';
     $mediaFolders = [str_repeat('a', 32) => 'Podzimní výpravy', str_repeat('b', 32) => 'Podzimní výpravy / Krkonoše', str_repeat('c', 32) => 'Nové produkty'];
     $mediaState = ['folders' => []];
     foreach ($mediaFolders as $id => $name) $mediaState['folders'][$id] = ['name' => $name, 'parent' => ''];
     $files = [];
     foreach (['batoh.webp', 'kresadlo.webp', 'spacak.webp', 'batoh.webp', 'batoh.webp', 'kresadlo.webp'] as $i => $name) {
-        $files[] = ['path' => 'images/' . $name, 'thumb' => 'images/' . $name, 'card' => 'images/' . $name, 'label' => ['Vybavení na víkendovou výpravu', 'Pohorky do hor', 'Spací pytel', 'Kolekce podzim', 'Novinky do batohu', 'Na cestě'][$i], 'folder' => $i % 2 === 0 ? str_repeat('a', 32) : '', 'bytes' => 185000, 'group' => 'products'];
+        $files[] = ['path' => 'images/' . $name, 'thumb' => 'images/' . $name, 'card' => 'images/' . $name, 'label' => ['Vybavení na víkendovou výpravu', 'Pohorky do hor', 'Spací pytel', 'Kolekce podzim', 'Novinky do batohu', 'Na cestě'][$i], 'folder' => $i % 2 === 0 ? str_repeat('a', 32) : '', 'bytes' => 185000, 'created' => 1792880000 - $i, 'group' => 'products'];
     }
-    $mediaListing = ['files' => $files, 'total' => count($files), 'folders' => $mediaFolders];
+    $mediaOwners = [];
+    if ($fixture !== 'media') {
+        $mediaFolder = $fixture === 'page-folders' ? 'pages' : ($fixture === 'post-folders' ? 'posts' : 'products');
+        foreach ($files as $i => &$file) {
+            $key = str_repeat(dechex(intdiv($i, 2) + 1), 32);
+            $file['path'] = 'images/media/' . $mediaFolder . '/' . $key . '/obrazek--' . str_pad(dechex($i + 1), 24, '0', STR_PAD_LEFT) . '.webp';
+            $file['group'] = $mediaFolder;
+            if ($i < 4) $mediaOwners[$mediaFolder . ':' . $key] = ['title' => ['Batoh na víkendovou výpravu', 'Lehký stan do hor'][intdiv($i, 2)], 'image_path' => $file['path'], 'key' => $key, 'type' => \SimpleStore\Media\MediaOwners::TYPES[$mediaFolder], 'slug' => 'vybaveni-' . $key, 'language' => 'cs', 'published' => $i < 2, 'revision_number' => 3];
+        }
+        unset($file);
+    }
+    $mediaOptions = \SimpleStore\Media\MediaBrowse::options(['folder' => $mediaFolder,
+        'owner' => in_array($fixture, ['product-open', 'product-empty'], true) ? str_repeat('1', 32) : '',
+        'view' => $fixture === 'product-photos' ? 'photos' : ($fixture === 'media' ? 'photos' : 'folders'),
+        'q' => $fixture === 'product-search' ? 'STAN' : ($fixture === 'product-empty' ? 'Nenalezeno' : '')]);
+    $mediaSearch = $mediaOptions['q'];
+    $mediaListing = \SimpleStore\Media\MediaBrowse::listing($files, $mediaState, $mediaOwners, $mediaOptions);
+
 } else {
     $screen = 'editor'; $filterType = $fixture === 'posts' ? 'post' : 'page'; $filterLanguage = ''; $filterStatus = ''; $filterSearch = ''; $previousUrl = ''; $nextUrl = ''; $translations = [];
     $documents = [];

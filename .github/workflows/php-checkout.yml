@@ -116,6 +116,7 @@ jobs:
           php tests/inline-editor.php
           php tests/content-cover.php
           php tests/media-catalog.php
+          php tests/media-browse.php
           php tests/media-library.php
           php tests/content-management.php
           php tests/content-editor.php

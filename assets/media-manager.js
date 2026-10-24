@@ -8,8 +8,7 @@
   const dialogGrid = document.getElementById('media-dialog-grid');
   const status = dialog.querySelector('[data-media-dialog-status]');
   const pageStatus = document.querySelector('[data-media-status]');
-  let mode = pageSettings?.type === 'product'
-    ? 'main-image' : 'section-add-image';
+  let mode = pageSettings?.defaultMode || (pageSettings?.type === 'product' ? 'main-image' : 'section-add-image');
   let index = null;
   let busy = false;
   let libraryOffset = 0;
@@ -94,6 +93,7 @@
       ...config, getRevision: async () => config.revision,
       uploaded: (result, action) => {
         config.revision = result.revision;
+        if (config.reloadAfterUpload) { location.reload(); return; }
         const mainLink = document.querySelector('[data-media-main]');
         if (mainLink && result.paths?.[0]) {
           mainLink.href = absolute(result.paths[0]);
