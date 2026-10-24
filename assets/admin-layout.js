@@ -19,7 +19,7 @@
     if (opened) {
       sidebar.setAttribute('role', 'dialog');
       sidebar.setAttribute('aria-modal', 'true');
-      document.querySelectorAll('.admin-shortcuts[open]').forEach(item => { item.open = false; });
+      document.querySelectorAll('.admin-header details[open]').forEach(item => { item.open = false; });
       close.focus({ preventScroll: true });
     } else {
       sidebar.removeAttribute('role');
@@ -42,7 +42,7 @@
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape') {
       if (opened) { event.preventDefault(); setOpen(false); }
-      document.querySelectorAll('.admin-shortcuts[open]').forEach(item => { item.open = false; item.querySelector('summary').focus(); });
+      document.querySelectorAll('.admin-header details[open]').forEach(item => { item.open = false; item.querySelector('summary').focus(); });
     }
     if (!opened || event.key !== 'Tab') return;
     const focusable = [...sidebar.querySelectorAll('a[href], button:not(:disabled), input:not([type="hidden"]):not(:disabled)')]
@@ -52,8 +52,15 @@
     if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus(); }
   });
   document.addEventListener('click', event => {
-    document.querySelectorAll('.admin-shortcuts[open]').forEach(item => {
+    document.querySelectorAll('.admin-header details[open]').forEach(item => {
       if (!item.contains(event.target)) item.open = false;
     });
+  });
+  // Keep the selected tab visible without moving the page vertically.
+  document.querySelectorAll('.panel-settings-nav, .panel-accounting-nav, .panel-order-filters, .panel-order-tabs').forEach(nav => {
+    const active = nav.querySelector('[aria-current=page]');
+    if (active && nav.scrollWidth > nav.clientWidth) {
+      nav.scrollLeft = active.offsetLeft - nav.offsetLeft - 12;
+    }
   });
 })();

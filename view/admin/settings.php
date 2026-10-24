@@ -34,7 +34,7 @@ $btcpayWebhookSecretConfigured ??= false;
       ['mail', 'E-maily', 'SMTP, potvrzení objednávek a texty zpráv.'],
       ['legal', 'Obchodní podmínky', 'Odkaz na publikovanou stránku obchodních podmínek.'],
   ] as [$key, $title, $description]): ?>
-    <a class="panel-settings-card" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=' . $key) ?>"><strong><?= $escape($title) ?> →</strong><span><?= $escape($description) ?></span></a>
+    <a class="panel-settings-card" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=' . $key) ?>"><span class="admin-setting-icon" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render(['products'=>'package', 'appearance'=>'edit', 'delivery'=>'truck', 'carriers'=>'package', 'payment'=>'card', 'prices'=>'card', 'mail'=>'mail', 'legal'=>'document'][$key]) ?></span><span class="admin-setting-arrow" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?></span><strong><?= $escape($title) ?></strong><span><?= $escape($description) ?></span></a>
   <?php endforeach; ?>
 </div>
 <?php elseif ($settingsTab === 'products'): ?>

@@ -2,21 +2,11 @@
 // One full-width workspace for every authenticated administration section.
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $inside = $adminWorkspace;
-$panelPreviewControl = $inside && $csrf !== '' ? [
-    'active' => (bool) ($adminPreviewActive ?? false),
-    'csrf' => $csrf,
-    'return_to' => $basePath . $site['default_language'],
-    'action' => $adminUrl,
-] : null;
 ?>
 <div class="panel-area">
   <?php if ($inside): ?>
   <div class="panel-shell panel-wrap <?= $screen === 'accounting' ? 'panel-shell--evidence' : '' ?>">
     <?php
-    $panelHeading = 'Správa webu';
-    $panelSubtitle = 'OBCHOD A OBSAH';
-    $panelIdentity = 'Přihlášený správce';
-    $panelLogoutUrl = $adminUrl;
     $panelCurrent = $screen === 'content-import' ? 'product-import' : $screen;
     $panelLinks = [
         ['key' => 'editor', 'label' => 'Stránky', 'icon_name' => 'document', 'href' => $adminUrl . '?section=contents'],
@@ -33,7 +23,7 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
         ['key' => 'categories', 'label' => 'Kategorie', 'icon_name' => 'folder', 'href' => $adminUrl . '?section=categories'],
         ['key' => 'menus', 'label' => 'Menu', 'icon_name' => 'list', 'href' => $adminUrl . '?section=menus'],
     ];
-    require __DIR__ . '/../panel/sidebar.php';
+    require __DIR__ . '/sidebar.php';
     ?>
     <main class="panel-main" id="obsah">
   <?php else: ?>
@@ -109,6 +99,7 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
     <?php else: ?>
       <?php require __DIR__ . '/contents.php'; ?>
     <?php endif; ?>
+  <?php if ($inside): ?><footer class="admin-footer"><span>dobrodruzi <span aria-hidden="true">/</span> Správa obchodu</span><span>Na další cestu připraveni <?= \SimpleStore\Rendering\Icon::render('arrow-right') ?></span></footer><?php endif; ?>
   </main>
   <?php if ($inside): ?></div><?php endif; ?>
 </div>

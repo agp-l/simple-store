@@ -9,6 +9,8 @@ test('admin workspace: equal widths, accessible mobile navigation and customer i
     users: ['admin-users.php', 'detail'],
     accounting: ['evidence-workspace.php', 'overview', 'shell'],
     settings: ['product-sales-mass.php', 'start'],
+    overview: ['product-sales-mass.php', 'overview'],
+    orders: ['admin-orders.php'],
     customer: ['customer-layout.php'],
   };
   const files = [];
@@ -33,7 +35,7 @@ test('admin workspace: equal widths, accessible mobile navigation and customer i
       page.on('pageerror', error => errors.push(error.message));
       await page.route('https://**/*', route => route.abort());
       let expectedMain;
-      for (const name of ['users', 'accounting', 'settings']) {
+      for (const name of ['users', 'accounting', 'settings', 'overview', 'orders']) {
         await page.goto(url(name));
         const geometry = await page.evaluate(() => ({
           width: document.querySelector('.panel-main').getBoundingClientRect().width,
@@ -42,6 +44,9 @@ test('admin workspace: equal widths, accessible mobile navigation and customer i
           overflow: document.documentElement.scrollWidth > innerWidth + 1,
         }));
         assert.equal(geometry.overflow, false, `${name}: page overflow at ${width}px`);
+        if (width === 1440) {
+          assert.equal(await page.locator('.admin-navigation').evaluate(el => el.scrollHeight > el.clientHeight + 1), false, 'Menu fits a standard desktop without scrolling.');
+        }
         expectedMain ??= [geometry.width, geometry.left];
         assert.deepEqual([geometry.width, geometry.left], expectedMain, `Workspace differs for ${name} at ${width}px`);
         if (width > 1080) {
@@ -94,6 +99,25 @@ test('admin workspace: equal widths, accessible mobile navigation and customer i
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('.admin-shortcuts').evaluate(el => el.open), false);
 
+      await page.locator('.admin-store-menu > summary').click();
+      assert.equal(await page.getByRole('button', { name: 'Náhled jako návštěvník' }).isVisible(), true);
+      assert.equal(await sidebar.locator('form').count(), 1, 'Sidebar has only a compact logout; preview is in the header.');
+      await page.keyboard.press('Escape');
+      if (width === 390) {
+        let preview;
+        await page.route('**/admin/', async route => {
+          preview = new URLSearchParams(route.request().postData());
+          await route.fulfill({ body: '<p>Náhled otevřen</p>', contentType: 'text/html; charset=utf-8' });
+        });
+        await page.locator('.admin-store-menu > summary').click();
+        await page.getByRole('button', { name: 'Náhled jako návštěvník' }).click();
+        await page.getByText('Náhled otevřen').waitFor();
+        assert.equal(preview.get('action'), 'visitor-preview');
+        assert.equal(preview.get('csrf'), 'test-token');
+        assert.equal(preview.get('enabled'), '1');
+        assert.equal(preview.get('return_to'), '/cs');
+      }
+
       await page.goto(url('customer'));
       assert.equal(await page.locator('body.admin-page, #admin-sidebar, .admin-header, [href*="admin-layout.css"], [src*="admin-layout.js"]').count(), 0);
       assert.equal(await page.locator('.nav-band').count(), 1);
@@ -102,6 +126,16 @@ test('admin workspace: equal widths, accessible mobile navigation and customer i
       if (width === 390 || width === 1440) await page.screenshot({ animations: 'disabled', path: `/tmp/admin-layout-screenshots/customer-${width}.png` });
       await page.close();
     }
+    const short = await browser.newPage({ viewport: { width: 1280, height: 650 } });
+    await short.route('https://**/*', route => route.abort());
+    await short.goto(url('orders'));
+    const logout = short.getByRole('button', { name: 'Odhlásit se' });
+    const rect = await logout.boundingBox();
+    assert.ok(rect.y >= 0 && rect.y + rect.height <= 650, 'Logout remains visible on short screens.');
+    await short.locator('#admin-sidebar').getByRole('link', { name: 'Databáze', exact: true }).scrollIntoViewIfNeeded();
+    assert.equal(await short.evaluate(() => scrollY), 0, 'Sidebar scroll must not move the content.');
+    await short.screenshot({ animations: 'disabled', path: '/tmp/admin-layout-screenshots/short-desktop.png' });
+    await short.close();
     const noJs = await browser.newPage({ viewport: { width: 390, height: 900 }, javaScriptEnabled: false });
     await noJs.route('https://**/*', route => route.abort());
     await noJs.goto(url('users'));

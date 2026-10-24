@@ -6,7 +6,7 @@ set_error_handler(static function (int $severity, string $message): never { thro
 $case = $argv[1] ?? 'start';
 $basePath = '/'; $adminUrl = '/admin.php'; $csrf = 'test-token'; $error = '';
 $site = ['languages' => ['cs'], 'default_language' => 'cs'];
-$screen = 'settings'; $settingsTab = 'products'; $settingsError = ''; $form = [];
+$screen = 'settings'; $settingsTab = $case === 'overview' ? 'overview' : 'products'; $settingsError = ''; $form = [];
 $massNotice = null; $massCount = $case === 'empty' ? 0 : 100;
 $massValues = ['quantity' => '', 'stock_status' => '', 'visibility' => '']; $massPreview = null;
 $variantBulkQuantity = '10'; $variantBulkPreview = null;
