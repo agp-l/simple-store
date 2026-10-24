@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// The authenticated admin route supplies an immutable invoice snapshot.
+// The authenticated admin route supplies the selected stored invoice version.
 $printEscape = static fn (mixed $value): string => htmlspecialchars((string) $value,
     ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $printMoney = static fn (mixed $value): string => number_format((int) $value, 0, ',', ' ') . ' Kč';
@@ -45,6 +45,7 @@ $invoiceAssetRoot = (string) ($printAssetBase ?? $basePath ?? '/');
   <section><h2>Dodavatel</h2><p><strong><?= $printEscape($seller['name'] ?? '') ?></strong></p>
     <p><?= $printEscape($seller['street'] ?? '') ?><br><?= $printEscape(($seller['postal_code'] ?? '') . ' ' . ($seller['city'] ?? '')) ?></p>
     <p>IČO: <?= $printEscape($seller['ico'] ?? '') ?></p>
+    <?php if (($seller['registration'] ?? '') !== ''): ?><p><?= $printEscape($seller['registration']) ?></p><?php endif; ?>
     <?php if (($seller['email'] ?? '') !== ''): ?><p><?= $printEscape($seller['email']) ?></p><?php endif; ?>
     <?php if (($seller['phone'] ?? '') !== ''): ?><p><?= $printEscape($seller['phone']) ?></p><?php endif; ?>
   </section>
@@ -55,7 +56,9 @@ $invoiceAssetRoot = (string) ($printAssetBase ?? $basePath ?? '/');
   </section>
 </div>
 <div class="columns"><p>Datum vystavení: <strong><?= $printEscape($selectedInvoice['issue_date']) ?></strong><br>
-  Splatnost: <?= $printEscape($selectedInvoice['due_date']) ?></p>
+  Splatnost: <?= $printEscape($selectedInvoice['due_date']) ?>
+  <?php if(!empty($selectedInvoice['delivery_date'])):?><br>Datum prodeje / služby: <?= $printEscape($selectedInvoice['delivery_date']) ?><?php endif;?>
+  <?php if(!empty($selectedInvoice['paid_date'])):?><br>Skutečná úhrada: <?= $printEscape($selectedInvoice['paid_date']) ?><?php endif;?></p>
   <p>Platba: <?= match ($selectedInvoice['payment_method'] ?? 'bank_transfer') {
       'comgate' => 'online přes Comgate',
       'gopay' => 'online přes GoPay',

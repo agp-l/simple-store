@@ -22,8 +22,11 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
   <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit rok</button>
 </form>
 <?php endif; ?>
+<?php if (isset($workspaceReady) && !$workspaceReady): ?><p class="panel-notice">Pro novou společnou tabulku, přílohy a číselné řady <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
 <?php if ($taxReady): ?>
-  <?php if ($accountingTab === 'overview'): ?>
+  <?php if (($workspaceReady ?? false) && in_array($accountingTab, ['overview','documents','numbering','restart'],true)): ?>
+    <?php require __DIR__ . '/' . ['overview'=>'evidence-journal.php','documents'=>'evidence-document-edit.php','numbering'=>'evidence-numbering.php','restart'=>'evidence-restart.php'][$accountingTab]; ?>
+  <?php elseif ($accountingTab === 'overview'): ?>
     <section class="panel-panel">
       <h2>Jak postupovat u objednávky</h2>
       <p>1. Ověř platbu u objednávky. 2. Na jejím detailu vystav doklad. 3. Zapiš skutečný příjem podle banky či pokladny. U platební brány porovnej také vyúčtování a výplatu na účet. V tabulce níže hned uvidíš, co je hotové a co chybí. <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl . '&tab=guide&year=' . $taxYear) ?>">Podrobný postup pro OSVČ →</a></p>
@@ -105,6 +108,7 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
         <?php foreach ($invoiceHistory as $change): ?><p><?= $escape($change['old_number']) ?> → <?= $escape($change['new_number']) ?> · <?= $escape($change['created_at']) ?> UTC · <?= $escape($change['reason']) ?></p><?php endforeach; ?>
         <?php if ($selectedInvoice['emailed_at'] === null): ?><form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="mail"><input type="hidden" name="action" value="invoice-email"><input type="hidden" name="id" value="<?= (int) $selectedInvoice['id'] ?>"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('mail') ?> Odeslat fakturu e-mailem</button></form><?php endif; ?>
       </section>
+      <?php if ($workspaceReady ?? false) require __DIR__ . '/invoice-edit.php'; ?>
       <?php require __DIR__ . '/invoice-corrections.php'; ?>
     <?php endif; ?>
   <?php elseif ($accountingTab === 'mail'): ?>
@@ -133,13 +137,13 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
     </section>
   <?php elseif ($accountingTab === 'settings'): ?>
     <section class="panel-panel"><h2>Údaje prodávajícího</h2>
-      <p class="panel-help">Z těchto údajů vznikají nové faktury; již vystavené si ponechají původní podobu. Systém vytváří doklady neplátce DPH.</p>
+      <p class="panel-help">Z těchto údajů vznikají nové faktury; již vystavené si ponechají původní podobu. Systém vytváří doklady neplátce DPH. Doplň také údaj o zápisu, např. „Fyzická osoba zapsaná v živnostenském rejstříku“; u obchodního rejstříku včetně soudu, oddílu a vložky podle skutečnosti.</p>
       <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="settings"><input type="hidden" name="action" value="tax-save-settings">
         <input type="hidden" name="year" value="<?= (int) $taxYear ?>">
         <input type="hidden" name="mail_from" value="<?= $escape($taxSettings['mail_from'] ?? '') ?>">
         <label>Právní forma prodávajícího<select name="legal_form"><option value="sole_trader" <?= ($taxSettings['legal_form'] ?? 'sole_trader') === 'sole_trader' ? 'selected' : '' ?>>OSVČ</option><option value="company" <?= ($taxSettings['legal_form'] ?? '') === 'company' ? 'selected' : '' ?>>Společnost (např. s.r.o.)</option></select></label>
         <p class="panel-help">Pro s.r.o. není tato evidence OSVČ účetnictvím společnosti. Údaj změň podle skutečného prodávajícího.</p>
-        <?php foreach (['name'=>'Jméno a příjmení podnikatele', 'ico'=>'IČO', 'street'=>'Ulice a číslo sídla', 'city'=>'Město', 'postal_code'=>'PSČ', 'email'=>'Kontaktní e-mail', 'phone'=>'Telefon', 'bank_account'=>'Číslo účtu na faktuře'] as $key=>$label): ?><label><?= $escape($label) ?><input name="<?= $key ?>" value="<?= $escape($taxSettings[$key] ?? '') ?>" maxlength="<?= $key === 'ico' ? 8 : 254 ?>"></label><?php endforeach; ?>
+        <?php foreach (['name'=>'Jméno a příjmení podnikatele', 'ico'=>'IČO', 'street'=>'Ulice a číslo sídla', 'city'=>'Město', 'postal_code'=>'PSČ', 'email'=>'Kontaktní e-mail', 'phone'=>'Telefon', 'bank_account'=>'Číslo účtu na faktuře', 'registration'=>'Údaj o zápisu v rejstříku / evidenci'] as $key=>$label): ?><label><?= $escape($label) ?><input name="<?= $key ?>" value="<?= $escape($taxSettings[$key] ?? '') ?>" maxlength="<?= $key === 'ico' ? 8 : 254 ?>"></label><?php endforeach; ?>
         <p class="panel-help">Odesílání zákaznických zpráv a jejich obsah najdeš v <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=mail') ?>">nastavení obchodu → E-maily</a>.</p>
         <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit údaje prodávajícího</button>
       </form>

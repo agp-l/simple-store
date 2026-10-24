@@ -68,13 +68,12 @@ final class FlatTaxAdvanceRepository
 
         $this->db->startTransaction();
         try {
-            $this->db->insert('shop_tax_entries', [
+            $entryId = (new TaxEvidenceRepository($this->db))->addEntry([
                 'entry_date' => $date, 'direction' => 'expense', 'account' => $account,
                 'tax_kind' => 'nondeductible', 'amount_czk' => $amount,
                 'description' => $description, 'counterparty' => 'Finanční úřad',
                 'reference' => $reference, 'order_id' => null,
             ]);
-            $entryId = (int) $this->db->insertId();
             $this->db->insert('shop_flat_tax_advances', [
                 'tax_year' => $year, 'tax_month' => $month, 'entry_id' => $entryId,
             ]);

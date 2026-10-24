@@ -30,8 +30,11 @@ final class InvoiceCorrectionRepository
             }
             // Invoice lock serializes the per-invoice sequence, including voided documents.
             $sequence = 1 + (int) $this->db->queryFirstField('SELECT COUNT(*) FROM shop_invoice_corrections WHERE invoice_id=%i', $invoiceId);
+            $number='O-' . $invoiceId . '-' . $sequence;
+            $numbering=new DocumentNumbering($this->db);
+            if($numbering->installed())$number=$numbering->allocate('document',(int)substr($date,0,4))['document_number'];
             $this->db->insert('shop_invoice_corrections', ['invoice_id' => $invoiceId,
-                'document_number' => 'O-' . $invoiceId . '-' . $sequence, 'issue_date' => $date,
+                'document_number' => $number, 'issue_date' => $date,
                 'amount_czk' => TaxMoney::decimal($amount), 'reason' => $reason,
                 'invoice_json' => json_encode($invoice, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), 'admin_id' => $adminId]);
             $id = (int) $this->db->insertId();

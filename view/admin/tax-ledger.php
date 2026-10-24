@@ -28,12 +28,17 @@ $ledgerUrl = $taxUrl . '&tab=money&year=' . $taxYear;
   </dl><p class="panel-help">Součty odpovídají filtrům. Převody mezi vlastními účty jsou v obratech obou účtů; nejsou další tržbou.</p>
 </section>
 <section class="panel-panel" id="ledger-edit">
-  <details <?= $editing || ($accountingError !== '' && in_array($_POST['action'] ?? '', ['tax-add-entry','tax-amend-entry'], true)) ? 'open' : '' ?> class="panel-accounting-details">
+  <details <?= $editing || ($_GET['new'] ?? '') === '1' || ($accountingError !== '' && in_array($_POST['action'] ?? '', ['tax-add-entry','tax-amend-entry'], true)) ? 'open' : '' ?> class="panel-accounting-details">
     <summary><?= $editing ? 'Upravit zápis #' . (int) $taxEditEntry['id'] : '+ Přidat peněžní pohyb' ?></summary>
     <form class="panel-form panel-evidence-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($ledgerUrl . ($editing ? '&edit_entry=' . (int) $taxEditEntry['id'] : '')) ?>" data-ledger-form>
       <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="money"><input type="hidden" name="year" value="<?= (int) $taxYear ?>"><input type="hidden" name="action" value="<?= $editing ? 'tax-amend-entry' : 'tax-add-entry' ?>">
       <input type="hidden" name="request_key" value="<?= $escape($field('request_key', bin2hex(random_bytes(16)))) ?>">
       <?php if ($editing): ?><input type="hidden" name="id" value="<?= (int) $taxEditEntry['id'] ?>"><input type="hidden" name="version" value="<?= $escape($field('version', 1)) ?>"><input type="hidden" name="order_number" value="<?= $escape($field('order_number')) ?>"><?php endif; ?>
+      <?php if ($workspaceReady ?? false): ?>
+      <label>Číslo zápisu<input name="document_number" maxlength="40" value="<?= $escape($field('document_number')) ?>" placeholder="Přidělí se automaticky"></label>
+      <label>Číselná řada<select name="series_id"><option value="0">Výchozí pro peněžní zápisy</option><?php foreach($documentSeries as $series): if($series['kind']!=='entry')continue; ?><option value="<?= (int)$series['id'] ?>" <?= $field('series_id')===(string)$series['id']?'selected':'' ?>><?= $escape($series['name']) ?></option><?php endforeach;?></select></label>
+      <label>Činnost / e-shop<input name="activity" maxlength="120" value="<?= $escape($field('activity')) ?>" placeholder="Např. masáže"></label>
+      <?php endif;?>
       <label>Datum skutečné platby<input type="date" name="entry_date" value="<?= $escape($field('entry_date')) ?>" required></label>
       <label>Účet<select name="account"><?php foreach ($accounts as $key => $label): ?><option value="<?= $key ?>" <?= $field('account') === $key ? 'selected' : '' ?>><?= $escape($label) ?></option><?php endforeach; ?></select></label>
       <label>Účel<select name="purpose"><?php foreach ($purposes as $key => $label): ?><option value="<?= $key ?>" <?= $field('purpose') === $key ? 'selected' : '' ?>><?= $escape($label) ?></option><?php endforeach; ?></select></label>

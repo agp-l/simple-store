@@ -27,6 +27,8 @@ class MeekroDB
             $this->sequences, $this->entries, $this->entryEvents];
     }
 
+    public function insertId(): int { return (int) array_key_last($this->entries); }
+
     public function commit(): void { $this->snapshot = null; }
 
     public function rollback(): void
@@ -40,6 +42,7 @@ class MeekroDB
 
     public function queryFirstField(string $sql, mixed ...$args): mixed
     {
+        if (str_contains($sql, 'information_schema.TABLES') && ($args[0] ?? '') === 'shop_document_numbers') return 0; // Exercise migration-compatible legacy invoice issuance.
         if (str_contains($sql, 'information_schema.TABLES') ||
             str_contains($sql, 'information_schema.COLUMNS')) return 1;
         if (str_contains($sql, 'FROM shop_invoice_number_events')) {

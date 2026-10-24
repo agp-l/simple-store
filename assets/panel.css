@@ -1573,3 +1573,18 @@
 #account-management .panel-fields-two{align-items:start}
 .users-table td:first-child strong,.users-table td:first-child small{display:block}
 .users-table .panel-icon-link{position:relative}
+
+/* One readable workspace for cash records and their source documents. */
+.panel-shell.panel-shell--evidence{width:min(1720px,calc(100% - 40px));grid-template-columns:210px minmax(0,1fr)}
+.evidence-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:14px;margin:18px 0}.evidence-toolbar a{font-weight:600}.evidence-toolbar span{color:var(--muted);font-size:.85rem}
+.evidence-table-panel{padding:16px}.evidence-journal-table{min-width:1060px;width:100%;table-layout:auto}.evidence-journal-table th{white-space:normal;min-width:115px}.evidence-journal-table td{vertical-align:top;padding:18px 12px}.evidence-journal-table td:nth-child(2){min-width:180px;max-width:260px}.evidence-journal-table td:nth-child(3){min-width:245px}.evidence-journal-table small{display:block;margin-top:5px;font-size:.78rem;color:var(--muted);overflow-wrap:anywhere}.evidence-doc-links>a{display:block;margin-bottom:8px;overflow-wrap:anywhere}.evidence-number{font-weight:700}.evidence-amount{white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}.evidence-income{color:#286234}.evidence-expense{color:#904238}.evidence-document-row{background:#f7f8f5}.evidence-invoice-item{display:grid;grid-template-columns:minmax(150px,1fr) 100px 150px;gap:12px;margin:12px 0}.evidence-danger{border:1px solid #aa5145;padding:16px;margin-top:24px}.evidence-danger>summary{font-weight:700;color:#92372c;cursor:pointer}.evidence-danger button{background:#92372c;color:white}.evidence-overview .panel-ledger-filters{grid-template-columns:110px minmax(220px,1.5fr) minmax(170px,1fr) auto}.evidence-overview h2{margin-bottom:5px}
+@media(max-width:1080px){.panel-shell.panel-shell--evidence{grid-template-columns:1fr}.evidence-overview .panel-ledger-filters{grid-template-columns:1fr 1fr}}
+@media(max-width:560px){.panel-shell.panel-shell--evidence{width:calc(100% - 24px)}.evidence-overview .panel-ledger-filters,.evidence-invoice-item{grid-template-columns:1fr}.evidence-toolbar{gap:12px}.evidence-table-panel{padding:10px}}
+
+.evidence-invoice-item{grid-template-columns:minmax(180px,1fr) 95px 150px auto;align-items:end}@media(max-width:700px){.evidence-invoice-item{grid-template-columns:1fr 1fr}.evidence-invoice-item>label:first-child{grid-column:1/-1}}
+
+.panel-shell--evidence .panel-panel a:not(.panel-button){color:#386b3b;text-decoration-color:#a7c9a5;text-underline-offset:3px}
+.panel-shell--evidence .panel-panel a:not(.panel-button):hover{color:#204e25;text-decoration-color:currentColor}
+.evidence-doc-links a{line-height:1.35}.evidence-journal-table tbody tr:hover{background:#f6faf3}
+.evidence-journal-table th{white-space:normal}.evidence-journal-table td{vertical-align:top}
+.evidence-toolbar>a:not(.panel-button){padding:5px 0}.evidence-document-row{color:#59695e}

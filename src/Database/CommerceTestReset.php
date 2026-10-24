@@ -14,6 +14,8 @@ final class CommerceTestReset
     // Child tables precede their parents. Keep product, content, media, customer,
     // configuration and manually entered physical inventory outside this list.
     private const TABLES = [
+        'shop_evidence_files', 'shop_evidence_links', 'shop_evidence_events', 'shop_evidence_documents',
+        'shop_document_numbers', 'shop_document_counters',
         'shop_after_sales_events', 'shop_after_sales_cases',
         'shop_invoice_corrections', 'shop_invoice_number_events', 'shop_invoices', 'shop_invoice_sequence',
         'shop_flat_tax_advances', 'shop_tax_entry_events', 'shop_tax_entries',
@@ -59,7 +61,7 @@ final class CommerceTestReset
                 ? (int) $this->db->queryFirstField('SELECT COUNT(*) FROM shop_stock_movements') : null];
     }
 
-    public function apply(string $expectedDatabase): array
+    public function apply(string $expectedDatabase, bool $fullHistory = false): array
     {
         $before = $this->report();
         if ($expectedDatabase === '' || !hash_equals($before['database'], $expectedDatabase)) {
@@ -82,6 +84,7 @@ final class CommerceTestReset
             foreach (self::TABLES as $table) {
                 if ($this->exists($table)) $this->db->query('DELETE FROM ' . $table);
             }
+            if ($fullHistory && $this->exists('shop_stock_movements')) $this->db->query('DELETE FROM shop_stock_movements');
             if ($before['shop_product_revisions'] !== null && (int) $this->db->queryFirstField(
                 'SELECT COUNT(*) FROM shop_product_revisions') !== $before['shop_product_revisions']) {
                 throw new RuntimeException('Počet produktových revizí se změnil. Úklid byl vrácen zpět.');

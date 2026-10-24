@@ -35,7 +35,7 @@ final class TaxEvidenceRepository
     public function settings(): array
     {
         $defaults = ['name' => '', 'ico' => '', 'street' => '', 'city' => '',
-            'postal_code' => '', 'email' => '', 'phone' => '', 'bank_account' => '',
+            'postal_code' => '', 'registration' => '', 'email' => '', 'phone' => '', 'bank_account' => '',
             'mail_from' => '', 'legal_form' => 'sole_trader',
             'expense_method' => 'actual', 'expense_percentage' => 60];
         if (!$this->installed()) return $defaults;
@@ -65,7 +65,7 @@ final class TaxEvidenceRepository
         $fields = [];
         foreach (['name' => 120, 'ico' => 8, 'street' => 160, 'city' => 100,
             'postal_code' => 6, 'email' => 254, 'phone' => 40, 'bank_account' => 40,
-            'mail_from' => 254] as $key => $limit) {
+            'mail_from' => 254, 'registration' => 190] as $key => $limit) {
             $fields[$key] = self::text($input[$key] ?? '', $limit);
         }
         if (($fields['ico'] !== '' && preg_match('/^[0-9]{8}$/D', $fields['ico']) !== 1) ||
@@ -102,10 +102,27 @@ final class TaxEvidenceRepository
             ($settings['postal_code'] ?? '') !== '';
     }
 
-    public function addEntry(array $input): void
+    public function addEntry(array $input): int
     {
         $fields = $this->entryFields($input);
-        $this->db->insert('shop_tax_entries', $fields + ['order_id' => null]);
+        $numbers = new DocumentNumbering($this->db);
+        $numbered = $numbers->installed();
+        $ownsTransaction = $numbered && $this->db->transactionDepth() === 0;
+        if ($ownsTransaction) $this->db->startTransaction();
+        try {
+            if ($numbered) {
+                $number = trim((string) ($input['document_number'] ?? ''));
+                $allocation = $number === '' ? $numbers->allocate('entry', (int) substr($fields['entry_date'],0,4), (int) ($input['series_id'] ?? 0)) : [];
+                if ($number !== '') $numbers->reserve($number, (int) substr($fields['entry_date'],0,4));
+                $fields['document_number'] = $number !== '' ? $number : $allocation['document_number'];
+                $fields['activity'] = TaxRegisterRepository::text($input['activity'] ?? '',120);
+                if ($fields['activity']==='') $fields['activity']=$allocation['activity']??'';
+            }
+            $this->db->insert('shop_tax_entries', $fields + ['order_id' => null]);
+            $id = (int) $this->db->insertId();
+            if ($ownsTransaction) $this->db->commit();
+            return $id;
+        } catch (\Throwable $e) { if ($ownsTransaction) $this->db->rollback(); throw $e; }
     }
 
     public const ACCOUNTS = ['bank' => 'Banka', 'cash' => 'Hotovost',
@@ -199,6 +216,13 @@ final class TaxEvidenceRepository
                 $merged['order_id'] = null; // Deleted orders do not make historical entries uneditable.
             }
             $fields = $this->entryFields($merged);
+            if ((new DocumentNumbering($this->db))->installed()) {
+                $number = trim((string) ($merged['document_number'] ?? ''));
+                if ($number === '') $number = (new DocumentNumbering($this->db))->allocate('entry', (int) substr($fields['entry_date'],0,4))['document_number'];
+                elseif ($number !== ($old['document_number'] ?? '')) (new DocumentNumbering($this->db))->reserve($number,(int) substr($fields['entry_date'],0,4));
+                $fields['document_number'] = $number;
+                $fields['activity'] = TaxRegisterRepository::text($merged['activity'] ?? '',120);
+            }
             $fields['version'] = (int) ($old['version'] ?? 1) + 1;
             $this->db->update('shop_tax_entries', $fields, 'id=%i', $id);
             $this->recordEntryEvent($old, $fields, 'amended', $adminId, $reason);
@@ -284,8 +308,8 @@ final class TaxEvidenceRepository
                 'counterparty' => '', 'reference' => $reference !== '' ? $reference :
                     (string) ($order['variable_symbol'] ?? ''), 'order_id' => $orderId,
             ];
-            if ($receipt['amount_czk'] > 0) $this->db->insert('shop_tax_entries', $receipt);
-            if ($principal > 0) $this->db->insert('shop_tax_entries', array_replace($receipt, [
+            if ($receipt['amount_czk'] > 0) $this->addEntry($receipt);
+            if ($principal > 0) $this->addEntry(array_replace($receipt, [
                 'tax_kind' => 'nontaxable', 'amount_czk' => $principal, 'purpose' => 'principal_receipt',
                 'description' => 'Svěřené prostředky k nákupu · ' . $order['order_number'],
             ]));
