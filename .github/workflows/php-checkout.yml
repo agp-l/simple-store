@@ -6,9 +6,15 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Superseded checks must not occupy runners needed by the latest revision.
+concurrency:
+  group: php-checkout-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   php80-syntax:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
       - uses: shivammathur/setup-php@v2
@@ -28,6 +34,7 @@ jobs:
           done
   php:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -132,6 +139,7 @@ jobs:
 
   database:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       mysql:
         image: mysql:8.0
@@ -194,6 +202,7 @@ jobs:
 
   database-mariadb:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     services:
       mariadb:
         image: mariadb:10.11
@@ -248,6 +257,7 @@ jobs:
 
   variant-browser:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
       - uses: shivammathur/setup-php@v2
@@ -289,6 +299,7 @@ jobs:
 
   private-routes-apache:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
       - uses: shivammathur/setup-php@v2
