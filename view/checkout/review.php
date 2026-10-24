@@ -33,9 +33,9 @@ require __DIR__ . '/common.php';
       <?php if ($checkoutCanContinue && ($checkoutReady ?? false) && $summaryShippingPrice !== null): ?>
       <form class="checkout-place" method="post" action="<?= $checkoutEscape($checkoutUrl) ?>">
         <input type="hidden" name="csrf" value="<?= $checkoutEscape($cartToken) ?>"><input type="hidden" name="action" value="place">
+        <input type="hidden" name="review_token" value="<?= $checkoutEscape($reviewToken ?? '') ?>">
         <?php if (($hasOwnSale ?? true) && ($termsUrl ?? '') !== ''): ?><label><input type="checkbox" name="terms" value="1" required> Souhlasím s <a href="<?= $checkoutEscape($termsUrl) ?>" target="_blank" rel="noopener">obchodními podmínkami pro zboží prodávané přímo obchodem</a>.</label><?php endif; ?>
         <?php if ($hasAssisted ?? false): ?>
-          <input type="hidden" name="review_token" value="<?= $checkoutEscape($reviewToken) ?>">
           <label><input type="checkbox" name="assisted_terms" value="1" required> Souhlasím s <a href="<?= $checkoutEscape($assistedTermsUrl) ?>" target="_blank" rel="noopener">podmínkami asistovaného nákupu</a> a pověřuji vás nákupem označených položek mým jménem u uvedených prodávajících za zobrazených podmínek.</label>
           <label><input type="checkbox" name="early_start" value="1"> <?= $checkoutEscape(\SimpleStore\Checkout\AssistedPurchase::EARLY_REQUEST) ?></label>
           <p class="checkout-fineprint">Bez této žádosti nákup u partnera zahájíme až po uplynutí lhůty pro odstoupení. Smlouva o asistenci vzniká odesláním této objednávky.</p>

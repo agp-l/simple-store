@@ -99,14 +99,25 @@ try {
         $cart,$cartService,new \SimpleStore\Checkout\ShippingPolicy(['gls_home'=>['price_czk'=>79,'label'=>'GLS domů','requires_address'=>true]]),
         $orders,$bank,null,'/cs/obchodni-podminky',[],[],null,null,null,null,
         new \SimpleStore\Accounting\OrderMailQueue($db),'shop@example.test',null,null,null,null,null,$legal);
-    $_POST=['terms'=>'1','assisted_terms'=>'1','early_start'=>'1',
-        'review_token'=>A::reviewToken($summary,$delivery,79,'bank_transfer',$bundle['hash'],$cart->token())];
     $place=new ReflectionMethod($controller,'placeOrder');$place->setAccessible(true);
-    $reject(static fn()=> $place->invoke($controller));
     $_SERVER['REQUEST_METHOD']='GET';$_GET=['step'=>'review'];
     ob_start();$controller->handle(['name'=>'checkout']);$review=ob_get_clean();
     $check(str_contains($review,'name="assisted_terms"')&&str_contains($review,'name="review_token"')&&
         str_contains($review,'Partner &lt;test&gt;')&&str_contains($review,'1 700 Kč'), 'Final review lost seller, breakdown or explicit consent.');
+    preg_match('/name="review_token" value="([a-f0-9]{64})"/', $review, $approval);
+    $_POST=['terms'=>'1','assisted_terms'=>'1','early_start'=>'1','review_token'=>$approval[1]];
+    $orderCount=(int)$db->queryFirstField('SELECT COUNT(*) FROM shop_orders');
+    $sales->save($key,'cs',array_replace($input,['version'=>'2','partner_id'=>(string)$partnerId,'supplier_price_czk'=>'1701']));
+    $reject(static fn()=> $place->invoke($controller));
+    $sales->save($key,'cs',array_replace($input,['version'=>'3','mode'=>'own','partner_id'=>(string)$partnerId,'supplier_price_czk'=>'1700']));
+    $reject(static fn()=> $place->invoke($controller)); // assistance -> own must be reviewed again
+    ob_start();$controller->handle(['name'=>'checkout']);$ownReview=ob_get_clean();
+    preg_match('/name="review_token" value="([a-f0-9]{64})"/', $ownReview, $ownApproval);
+    $check(isset($ownApproval[1])&&!str_contains($ownReview,'name="assisted_terms"'),'Own checkout lacks its review protection.');
+    $_POST['review_token']=$ownApproval[1];
+    $sales->save($key,'cs',array_replace($input,['version'=>'4','partner_id'=>(string)$partnerId,'supplier_price_czk'=>'1700']));
+    $reject(static fn()=> $place->invoke($controller)); // own -> assistance cannot reuse an own-sale approval
+    $check((int)$db->queryFirstField('SELECT COUNT(*) FROM shop_orders')===$orderCount,'A stale review created an order.');
     ob_start();
     (new \SimpleStore\Rendering\PageRenderer(dirname(__DIR__).'/view'))->render('product-record',[
         'basePath'=>'/','language'=>'cs','editMode'=>true,'canEditProduct'=>true,'productSalesReady'=>true,
