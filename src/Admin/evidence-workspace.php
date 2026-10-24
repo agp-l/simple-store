@@ -102,6 +102,8 @@ if($workspaceReady && $evidenceActionHandled && $accountingError!=='') {
     if(($_POST['action']??'')==='evidence-document-save') {
         $accountingTab='documents';$evidenceDocument=$documentRepository->byId((int)($_POST['id']??0));
         $documentEntryOptions=$documentRepository->recentEntries();$documentSeries=$numbering->all();
+        $selectedIds=is_array($_POST['entry_ids']??null)?array_filter(array_map(static fn($id)=>is_scalar($id)?filter_var($id,FILTER_VALIDATE_INT):false,$_POST['entry_ids'])):[];
+        foreach(array_diff($selectedIds,array_map('intval',array_column($documentEntryOptions,'id'))) as $entryId){$entry=$tax->entry((int)$entryId);if($entry!==null)$documentEntryOptions[]=$entry;}
         if($evidenceDocument!==null){$documentFiles=$documentRepository->files((int)$evidenceDocument['id']);$documentHistory=$documentRepository->history('document',(int)$evidenceDocument['id']);}
     }
     if(($_POST['action']??'')==='evidence-commerce-reset'){$accountingTab='restart';$resetReport=(new CommerceTestReset($db))->report();}

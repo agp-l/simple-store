@@ -48,7 +48,7 @@ $match=array_values(array_filter($rows,fn($r)=>(int)$r['id']===$entry&&$r['kind'
 $linked=$journal->links($match);$assert((int)$linked['documents'][0]['id']===$doc&&count($linked['documents'][0]['files'])===1,'Statement/original links absent');
 $assert(count($journal->page($year,0,'HYPERLINK',$activity)['items'])===1,'Journal search failed');
 $csv=fopen('php://temp','w+b');$journal->csv($csv,$year,'',$activity);rewind($csv);$csvText=stream_get_contents($csv);fclose($csv);
-$assert(str_contains($csvText,"'=HYPERLINK")&&str_contains($csvText,'doklady/'.$doc.'.html')&&str_contains($csvText,'-100.10'),'CSV links, formula escaping or refund lost');
+$assert(str_contains($csvText,"'=HYPERLINK")&&str_contains($csvText,'doklady/'.$doc.'.html')&&str_contains($csvText,';-100.10;')&&!str_contains($csvText,"'-100.10"),'CSV links, formula escaping or refund lost');
 // Editing the original order invoice cannot alter orders or cash.
 $db->insert('shop_orders',['order_number'=>'WS-'.$suffix,'status'=>'shipped','customer_email'=>'test@example.test','subtotal_czk'=>100,'shipping_czk'=>0,'total_czk'=>100,'items_json'=>'[]','shipping_json'=>'{}','payment_method'=>'bank_transfer','payment_status'=>'paid']);$order=(int)$db->insertId();
 $db->insert('shop_invoices',['order_id'=>$order,'order_number'=>'WS-'.$suffix,'document_number'=>'WS-F-'.$suffix,'issue_date'=>'2095-10-01','due_date'=>'2095-10-10','seller_json'=>json_encode($seller,JSON_THROW_ON_ERROR),'buyer_json'=>'{"name":"Klient"}','items_json'=>'[{"name":"Služba","quantity":1,"unit_price_czk":100}]','subtotal_czk'=>100,'shipping_czk'=>0,'total_czk'=>100,'activity'=>$activity]);$invoice=(int)$db->insertId();

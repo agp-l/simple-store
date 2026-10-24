@@ -4,6 +4,7 @@ $filter=['tab'=>'overview','year'=>$taxYear,'q'=>$journalSearch,'activity'=>$jou
 ?>
 <section class="panel-panel evidence-overview">
   <div class="panel-panel-head"><div><h2>Daňová evidence · <?= (int)$taxYear ?></h2><p>Platby, daňové členění a všechny související doklady na jednom místě.</p></div><a class="panel-button" href="<?= $u('&tab=money&year='.$taxYear.'&new=1#ledger-edit') ?>">+ Peněžní pohyb</a></div>
+  <p class="panel-help">Režim roku: <strong><?= $escape(['actual'=>'Skutečné výdaje','percentage'=>'Výdaje procentem z příjmů','flat_tax'=>'Paušální daň'][$selectedMethod]??$selectedMethod) ?></strong> · <a href="<?= $u('&tab=settings&year='.$taxYear) ?>">Nastavit / potvrdit režim</a>. Součty plateb nejsou hotovým daňovým přiznáním.</p>
   <div class="evidence-toolbar"><a class="panel-button" href="<?= $u('&tab=documents&year='.$taxYear) ?>">+ Doklad / bankovní výpis</a><a href="<?= $u('&download=journal-csv&'.http_build_query($filter)) ?>">Stáhnout tabulku CSV</a><a href="<?= $u('&download=documents-zip&year='.$taxYear) ?>">Doklady a tabulka za rok · ZIP</a><a href="<?= $u('&download=documents-zip&scope=all&year='.$taxYear) ?>">Všechny roky · ZIP</a></div>
   <form class="panel-ledger-filters" method="get" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>"><input type="hidden" name="section" value="accounting"><input type="hidden" name="tab" value="overview">
     <label>Rok<input type="number" name="year" min="2000" max="2100" value="<?= (int)$taxYear ?>" required></label>

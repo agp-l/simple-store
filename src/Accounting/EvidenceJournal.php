@@ -94,7 +94,9 @@ final class EvidenceJournal
                 foreach($links['invoices'] as $i){$paths[]=$url('faktury/'.$i['id'].'.html','tab=invoices&invoice_id='.$i['id']);foreach($i['corrections'] as $c)$paths[]=$url('opravy/'.$c['id'].'.html','print_correction='.$c['id']);}
                 $docNames=array_merge(array_column($links['documents'],'document_number'),array_column($links['invoices'],'document_number'));
                 $values=[$row['date'],$row['document_number']?:'Zápis #'.$row['id'],$row['description'],$amounts['income'],$amounts['expense'],$amounts['nonincome'],$amounts['nonexpense'],$row['activity'],$row['counterparty'],$row['kind'],$row['reference'],$row['order_number'],implode(' | ',$docNames),implode(' | ',$paths)];
-                fputcsv($stream,array_map(static fn($v)=>TaxEvidenceRepository::safeCsvCell((string)$v),$values),';','"','');
+                // Amount columns are generated integer-cent decimals, never user formulas. Keep returns numeric.
+                foreach($values as $index=>$value)if($index<3 || $index>6)$values[$index]=TaxEvidenceRepository::safeCsvCell((string)$value);
+                fputcsv($stream,$values,';','"','');
             }
             $offset=$page['nextOffset'];
         } while($offset!==null);

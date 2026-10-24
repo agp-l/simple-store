@@ -73,3 +73,17 @@ if ($result['before']['shop_product_revisions'] !== $result['after']['shop_produ
     throw new RuntimeException('Commerce reset altered the catalog or local inventory incorrectly.');
 }
 echo "Test commerce reset preserved the catalog and released reservations.\n";
+// The explicit full-history UI action also removes new private documents and stock history.
+$numbering=new \SimpleStore\Accounting\DocumentNumbering($db);
+$seriesId=$numbering->save(0,['name'=>'Zachovaná řada','kind'=>'document','pattern'=>'RESET-{YYYY}-{SEQ:4}'],1);
+$docs=new \SimpleStore\Accounting\EvidenceDocumentRepository($db);
+$docId=$docs->save(0,['kind'=>'other','issue_date'=>'2026-10-24','description'=>'Testovací podklad','series_id'=>$seriesId,'amount_czk'=>'0'],[],1,\SimpleStore\Accounting\EvidenceDocumentRepository::fileData('test.csv',"test;data\n1;2\n"));
+$usersBefore=(int)$db->queryFirstField('SELECT COUNT(*) FROM shop_users');
+$full=$reset->apply('simple_store',true);
+foreach($full['after']['tables']as$table=>$count)if($count!==0)throw new RuntimeException('Full restart left history in '.$table);
+if((int)$db->queryFirstField('SELECT COUNT(*) FROM shop_stock_movements')!==0 ||
+ (int)$db->queryFirstField('SELECT COUNT(*) FROM shop_users')!==$usersBefore ||
+ (int)$db->queryFirstField('SELECT COUNT(*) FROM shop_document_series WHERE id=%i',$seriesId)!==1 ||
+ (int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$key)!==4)
+ throw new RuntimeException('Full reset removed accounts/series/inventory or retained stock history.');
+echo "Full commerce restart cleared private originals and history while preserving accounts, series and inventory.\n";
