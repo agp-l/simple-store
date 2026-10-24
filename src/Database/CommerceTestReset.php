@@ -15,9 +15,9 @@ final class CommerceTestReset
     // configuration and manually entered physical inventory outside this list.
     private const TABLES = [
         'shop_after_sales_events', 'shop_after_sales_cases',
-        'shop_invoice_number_events', 'shop_invoices', 'shop_invoice_sequence',
+        'shop_invoice_corrections', 'shop_invoice_number_events', 'shop_invoices', 'shop_invoice_sequence',
         'shop_flat_tax_advances', 'shop_tax_entry_events', 'shop_tax_entries',
-        'shop_tax_balances', 'shop_tax_year_regimes',
+        'shop_tax_register_events', 'shop_tax_balances', 'shop_tax_write_requests', 'shop_tax_year_regimes',
         'shop_mail_outbox', 'shop_order_legal_snapshots', 'shop_order_tracking',
         'shop_sale_lines', 'shop_order_variant_reservations', 'shop_order_stock_reservations',
         'shop_packeta_cancelled_shipments', 'shop_packeta_shipments', 'shop_carrier_shipments',

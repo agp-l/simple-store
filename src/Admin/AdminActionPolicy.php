@@ -19,6 +19,8 @@ final class AdminActionPolicy
         'tax-add-entry', 'tax-add-balance', 'tax-close-balance', 'tax-link-payment',
         'invoice-issue', 'invoice-renumber', 'invoice-email', 'mail-retry',
         'mail-reconcile', 'tax-amend-entry', 'tax-void-entry',
+        'tax-order-movement', 'tax-transfer', 'tax-save-record', 'tax-void-record', 'tax-restore-record',
+        'invoice-correction', 'invoice-void-correction',
     ];
 
     public const RETURNS = ['return-update', 'return-refund', 'return-delete'];

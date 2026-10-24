@@ -2,6 +2,10 @@
 declare(strict_types=1);
 
 use SimpleStore\Accounting\AccountingRepository;
+use SimpleStore\Accounting\OrderFundsRepository;
+use SimpleStore\Accounting\TaxRegisterRepository;
+use SimpleStore\Accounting\InvoiceCorrectionRepository;
+use SimpleStore\Accounting\TaxWriteGuard;
 use SimpleStore\Accounting\TaxEvidenceRepository;
 use SimpleStore\Accounting\InvoiceRepository;
 use SimpleStore\Accounting\OrderMailQueue;
@@ -14,6 +18,17 @@ use SimpleStore\Product\ProductStockRepository;
 $screen = 'accounting';
 $accounting = new AccountingRepository($db);
 $tax = new TaxEvidenceRepository($db);
+$orderFunds = new OrderFundsRepository($db);
+$taxRegister = new TaxRegisterRepository($db);
+$corrections = new InvoiceCorrectionRepository($db);
+$fundsPage = $registerPage = ['items' => [], 'nextOffset' => null];
+$fundsOrder = $registerEdit = null;
+$fundsRefunds = $fundsTotals = $fundsEntries = $registerHistory = $invoiceCorrections = [];
+$taxAdjustments = ['income' => '0.00', 'expenses' => '0.00'];
+$ledgerFilters = array_intersect_key($_GET, array_flip(['q','from','to','account','tax_kind','purpose','order_id']));
+$registerOffset = $fundsOffset = 0;
+$fundsSearch = is_string($_GET['q'] ?? null) ? $_GET['q'] : '';
+$fundsMode = is_string($_GET['mode'] ?? null) ? $_GET['mode'] : 'assisted';
 $invoicesRepository = new InvoiceRepository($db);
 $mailQueue = new OrderMailQueue($db);
 $taxReady = $tax->installed();
@@ -26,10 +41,10 @@ $flatTaxAdvances = new FlatTaxAdvanceRepository($db);
 $flatTaxAdvancesReady = $flatTaxAdvances->installed();
 $accountingTab = $_POST['tab'] ?? $_GET['tab'] ?? 'overview';
 if (!is_string($accountingTab) || !in_array($accountingTab,
-    ['overview', 'money', 'balances', 'stock', 'invoices', 'mail', 'orders', 'settings', 'guide'], true)) {
+    ['overview', 'money', 'balances', 'closing', 'funds', 'stock', 'invoices', 'mail', 'orders', 'settings', 'guide'], true)) {
     $accountingTab = 'overview';
 }
-$rawYear = $_GET['year'] ?? (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format('Y');
+$rawYear = $_POST['year'] ?? $_GET['year'] ?? (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format('Y');
 $taxYear = is_string($rawYear) && ctype_digit($rawYear) ? (int) $rawYear : 0;
 $taxEntries = $taxBalances = $taxProducts = $saleLines = $stockMovements = [];
 $taxEntriesPage = ['items' => [], 'nextOffset' => null];
@@ -73,7 +88,10 @@ if ($method === 'POST') {
         $admin = $auth->user();
         if ($admin === null) throw new RuntimeException('Přihlášení správce vypršelo.');
         $returnOrder = 0;
-        $returnYear = null;
+        TaxEvidenceRepository::year($taxYear);
+        $returnYear = $taxYear;
+        $returnFundsOrder = 0;
+        $returnInvoice = 0;
         switch ($action) {
             case 'tax-save-year-mode':
                 if (!$taxYearRegimeReady) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky.');
@@ -108,26 +126,64 @@ if ($method === 'POST') {
                 $accountingTab = 'settings';
                 break;
             case 'tax-add-entry':
-                $tax->addEntry($_POST);
+                $db->startTransaction();
+                try {
+                    TaxWriteGuard::claim($db, $_POST);
+                    $tax->addEntry($_POST);
+                    $db->commit();
+                } catch (Throwable $error) { $db->rollback(); throw $error; }
+                $returnYear = (int) substr((string) $_POST['entry_date'],0,4);
                 $accountingTab = 'money';
                 break;
             case 'tax-amend-entry':
                 $tax->amendEntry($id, $_POST, (int) $admin['id'], (string) ($_POST['reason'] ?? ''));
+                $returnYear = (int) substr((string) $_POST['entry_date'],0,4);
                 $accountingTab = 'money';
                 break;
             case 'tax-void-entry':
                 if (($_POST['confirmed'] ?? '') !== '1') {
                     throw new InvalidArgumentException('Potvrď vyřazení chybného zápisu.');
                 }
-                $tax->voidEntry($id, (int) $admin['id'], (string) ($_POST['reason'] ?? ''));
+                $tax->voidEntry($id, (int) $admin['id'], (string) ($_POST['reason'] ?? ''), isset($_POST['version']) ? (int) $_POST['version'] : null);
                 $accountingTab = 'money';
                 break;
+            case 'tax-order-movement':
+                $orderFunds->record($id, $_POST);
+                $accountingTab = 'funds';
+                $returnFundsOrder = $id;
+                break;
+            case 'tax-transfer':
+                $orderFunds->transfer($_POST);
+                $accountingTab = 'money';
+                break;
+            case 'tax-save-record':
+                $taxRegister->save($id, $_POST, (int) $admin['id']);
+                break;
+            case 'tax-restore-record':
+                $taxRegister->restore($id, (int) ($_POST['version'] ?? 0), (int) $admin['id'], (string) ($_POST['reason'] ?? ''));
+                break;
+            case 'tax-void-record':
+                $taxRegister->void($id, (int) ($_POST['version'] ?? 0), (int) $admin['id'], (string) ($_POST['reason'] ?? ''));
+                break;
+            case 'invoice-correction':
+                $corrections->issue($id, $_POST, (int) $admin['id']);
+                $accountingTab = 'invoices';
+                $returnInvoice = $id;
+                break;
+            case 'invoice-void-correction':
+                $correction = $corrections->byId($id);
+                $corrections->void($id, (string) ($_POST['reason'] ?? ''), (int) $admin['id']);
+                $accountingTab = 'invoices';
+                $returnInvoice = (int) $correction['invoice_id'];
+                break;
             case 'tax-add-balance':
-                $tax->addBalance($_POST);
+$taxRegister->save(0, $_POST, (int) $admin['id']);
                 $accountingTab = 'balances';
                 break;
             case 'tax-close-balance':
-                $tax->closeBalance($id, (string) ($_POST['closed_on'] ?? ''));
+                $record = $taxRegister->byId($id);
+                if ($record === null) throw new InvalidArgumentException('Záznam nebyl nalezen.');
+                $taxRegister->save($id, array_replace($record, ['closed_on'=>$_POST['closed_on'] ?? '', 'reason'=>'Uzavření záznamu']), (int) $admin['id']);
                 $accountingTab = 'balances';
                 break;
             case 'tax-link-payment':
@@ -192,7 +248,9 @@ if ($method === 'POST') {
         header('Location: ' . ($returnOrder > 0 ?
             $adminUrl . '?section=orders&id=' . $returnOrder . '&tax_saved=1' :
             $accountingBaseUrl . '&tab=' . rawurlencode($accountingTab) .
-                ($returnYear === null ? '' : '&year=' . $returnYear) . '&saved=1'), true, 303);
+                ($returnYear === null ? '' : '&year=' . $returnYear) .
+                ($returnFundsOrder > 0 ? '&order_id=' . $returnFundsOrder : '') .
+                ($returnInvoice > 0 ? '&invoice_id=' . $returnInvoice : '') . '&saved=1'), true, 303);
         exit;
     } catch (InvalidArgumentException $exception) {
         http_response_code(422);
@@ -210,13 +268,28 @@ try {
         $flatTaxAdvanceRows = $flatTaxAdvances->forYear($taxYear);
     }
     $taxDownload = $_GET['download'] ?? '';
+    if ($taxReady && in_array($taxDownload, ['balances', 'closing', 'funds'], true)) {
+        $stream = fopen('php://temp/maxmemory:2097152', 'w+b');
+        if ($stream === false) throw new RuntimeException('Export se nepodařilo připravit.');
+        try {
+            if ($taxDownload === 'funds') $orderFunds->writeBalancesCsv($stream, $taxYear);
+            else $taxRegister->writeCsv($stream, $taxYear, $taxDownload);
+            rewind($stream);
+            header('Content-Type: text/csv; charset=UTF-8');
+            header('Content-Disposition: attachment; filename="evidence-' . $taxDownload . '-' . $taxYear . '.csv"');
+            header('Cache-Control: private, no-store');
+            header('X-Content-Type-Options: nosniff');
+            fpassthru($stream);
+        } finally { fclose($stream); }
+        exit;
+    }
     if (($taxDownload === 'ledger' && $accountingTab === 'money') ||
         (in_array($taxDownload, ['sales', 'stock'], true) && $accountingTab === 'stock')) {
         if (!$taxReady) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky.');
         $stream = fopen('php://temp/maxmemory:2097152', 'w+b');
         if ($stream === false) throw new RuntimeException('CSV se nepodařilo připravit.');
         try {
-            if ($taxDownload === 'ledger') $tax->writeLedgerCsv($stream, $taxYear);
+            if ($taxDownload === 'ledger') $tax->writeLedgerCsv($stream, $taxYear, $ledgerFilters);
             elseif ($taxDownload === 'sales') $tax->writeSalesCsv($stream, $taxYear);
             else $tax->writeStockCsv($stream, $taxYear);
             rewind($stream);
@@ -235,20 +308,46 @@ try {
     if ($taxReady) {
         $taxSettings = $tax->settings();
         $taxSummary = $tax->summary($taxYear);
+        if (in_array($accountingTab, ['overview','closing'], true)) $taxAdjustments = $taxRegister->adjustments($taxYear);
+        if (in_array($accountingTab, ['balances','closing'], true)) {
+            $registerOffset = filter_var($_GET['offset'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 1000000]]);
+            if ($registerOffset === false) throw new InvalidArgumentException('Neplatná stránka evidence.');
+            $registerPage = $taxRegister->page($taxYear, $accountingTab, $registerOffset, 50, ($_GET['show_voided'] ?? '') === '1');
+            $registerEdit = $taxRegister->byId((int) ($_GET['edit_record'] ?? (in_array($_POST['action'] ?? '', ['tax-save-record','tax-void-record','tax-restore-record'],true) ? ($_POST['id'] ?? 0) : 0)));
+            if ($registerEdit !== null) $registerHistory = $taxRegister->history((int) $registerEdit['id']);
+        }
+        if ($accountingTab === 'funds') {
+            $fundsOffset = filter_var($_GET['offset'] ?? 0, FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 1000000]]);
+            if ($fundsOffset === false) throw new InvalidArgumentException('Neplatná stránka vyúčtování.');
+            $fundsOrder = $orderFunds->order((int) ($_GET['order_id'] ?? $_POST['id'] ?? 0));
+            if ($fundsOrder !== null) {
+                $fundsTotals = $orderFunds->totals((int) $fundsOrder['id']);
+                $fundsEntries = $orderFunds->entries((int) $fundsOrder['id']);
+                $fundsRefunds = $orderFunds->refundCases((int) $fundsOrder['id']);
+            }
+            $fundsPage = $orderFunds->page($fundsOffset, $fundsSearch, $fundsMode);
+            if (($_GET['print_funds'] ?? '') === '1') {
+                if ($fundsOrder === null) throw new InvalidArgumentException('Objednávka nebyla nalezena.');
+                header('Cache-Control: private, no-store');
+                require __DIR__ . '/../../view/admin/funds-print.php';
+                exit;
+            }
+        }
         if ($accountingTab === 'money') {
             $moneyOffsetRaw = $_GET['offset'] ?? '0';
             $moneyOffset = is_string($moneyOffsetRaw) ? filter_var($moneyOffsetRaw, FILTER_VALIDATE_INT,
                 ['options' => ['min_range' => 0, 'max_range' => 1000000]]) : false;
             if ($moneyOffset === false) throw new InvalidArgumentException('Neplatná stránka peněžního deníku.');
-            $taxEntriesPage = $tax->entriesPage($taxYear, $moneyOffset);
+            $taxEntriesPage = $tax->entriesPage($taxYear, $moneyOffset, 50, $ledgerFilters);
+            $ledgerSummary = $tax->summary($taxYear, $ledgerFilters);
             $taxEntries = $taxEntriesPage['items'];
-            $moneyFilters = ['section' => 'accounting', 'tab' => 'money', 'year' => $taxYear];
+            $moneyFilters = ['section' => 'accounting', 'tab' => 'money', 'year' => $taxYear] + $ledgerFilters;
             $taxEntriesPreviousUrl = $moneyOffset > 0 ? $adminUrl . '?' . http_build_query(
                 $moneyFilters + ['offset' => max(0, $moneyOffset - 50)]) : '';
             $taxEntriesNextUrl = $taxEntriesPage['nextOffset'] === null ? '' : $adminUrl . '?' .
                 http_build_query($moneyFilters + ['offset' => $taxEntriesPage['nextOffset']]);
             $taxEntryHistory = $tax->entryHistory($taxYear);
-            $editRaw = $_GET['edit_entry'] ?? null;
+            $editRaw = $_GET['edit_entry'] ?? (in_array($_POST['action'] ?? '', ['tax-amend-entry','tax-void-entry'],true) ? ($_POST['id'] ?? null) : null);
             if (is_string($editRaw) && ctype_digit($editRaw)) {
                 $taxEditEntry = $tax->entry((int) $editRaw);
             }
@@ -297,10 +396,18 @@ try {
             http_build_query($invoiceFilters + ['offset' => $invoicePage['nextOffset']]);
     }
     if ($accountingTab === 'mail' && $mailReady) $mailRows = $mailQueue->recent();
-    $rawInvoice = $_GET['invoice_id'] ?? null;
+    $rawInvoice = $_GET['invoice_id'] ?? (($_POST['action'] ?? '') === 'invoice-correction' ? ($_POST['id'] ?? null) : null);
     if (is_string($rawInvoice) && ctype_digit($rawInvoice) && $invoicesReady) {
         $selectedInvoice = $invoicesRepository->byId((int) $rawInvoice);
+        if ($selectedInvoice !== null && $taxReady) $invoiceCorrections = $corrections->forInvoice((int) $rawInvoice);
         if ($selectedInvoice !== null) $invoiceHistory = $invoicesRepository->numberHistory((int) $rawInvoice);
+    }
+    if (isset($_GET['print_correction']) && $taxReady) {
+        $selectedCorrection = $corrections->byId((int) $_GET['print_correction']);
+        if ($selectedCorrection === null) throw new InvalidArgumentException('Opravný doklad nebyl nalezen.');
+        header('Cache-Control: private, no-store');
+        require __DIR__ . '/../../view/admin/correction-print.php';
+        exit;
     }
     if (($_GET['print'] ?? '') === '1') {
         if ($selectedInvoice === null) throw new InvalidArgumentException('Faktura nebyla nalezena.');

@@ -21,7 +21,7 @@ $accountingFulfillmentLabel = static fn (mixed $status): string => match ($statu
 $accountingTab ??= 'overview';
 $taxYear ??= (int) date('Y');
 $accountingTitles = ['overview' => 'Přehled', 'money' => 'Peněžní deník',
-    'balances' => 'Pohledávky a majetek', 'stock' => 'Starší skladové podklady',
+    'balances' => 'Majetek a dluhy', 'closing' => 'Inventura a uzávěrka', 'funds' => 'Platby a asistovaný nákup', 'stock' => 'Starší skladové podklady',
     'invoices' => 'Faktury', 'orders' => 'Kontrola plateb objednávek',
     'mail' => 'E-mailová fronta', 'settings' => 'Podnikatel a režim',
     'guide' => 'Jak vést evidenci'];
@@ -32,8 +32,8 @@ $accountingYearMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'
     <p><?= $accountingTab === 'overview' ? 'Objednávky, faktury a skutečně zapsané peněžní pohyby pohromadě. Stav „zaplaceno“ ani hodnota objednávky samy o sobě neprokazují příjem na účtu.' : 'Tento pohled navazuje na doklady, objednávky a peněžní deník.' ?></p></div>
 </div>
 <nav class="panel-accounting-nav" aria-label="Evidence podnikání">
-  <?php foreach (['overview', 'money', 'invoices', 'guide', 'settings'] as $key): ?>
-    <a href="<?= $escape($adminUrl . '?section=accounting&tab=' . $key . '&year=' . $taxYear) ?>" <?= $accountingTab === $key ? 'aria-current="page"' : '' ?>><?= \SimpleStore\Rendering\Icon::render(['overview' => 'list', 'money' => 'card', 'invoices' => 'document', 'guide' => 'book', 'settings' => 'settings'][$key]) ?> <?= $escape($accountingTitles[$key]) ?></a>
+  <?php foreach (['overview', 'money', 'funds', 'balances', 'closing', 'invoices', 'guide', 'settings'] as $key): ?>
+    <a href="<?= $escape($adminUrl . '?section=accounting&tab=' . $key . '&year=' . $taxYear) ?>" <?= $accountingTab === $key ? 'aria-current="page"' : '' ?>><?= \SimpleStore\Rendering\Icon::render(['overview' => 'list', 'money' => 'card', 'funds' => 'card', 'balances' => 'list', 'closing' => 'list', 'invoices' => 'document', 'guide' => 'book', 'settings' => 'settings'][$key]) ?> <?= $escape($accountingTitles[$key]) ?></a>
   <?php endforeach; ?>
 </nav>
 <?php if ($accountingTab === 'overview' && in_array($accountingYearMethod, ['actual', 'percentage'], true)): ?>

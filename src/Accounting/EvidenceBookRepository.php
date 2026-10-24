@@ -65,13 +65,13 @@ final class EvidenceBookRepository
         // cannot multiply the order row: prefer an entry dated in this year.
         $sql = <<<'SQL'
 SELECT book.*, book.document_number AS invoice_number,
-    CASE WHEN book.kind='order' THEN book.entry_id ELSE NULL END AS receipt_id,
-    CASE WHEN book.kind='order' THEN book.entry_date ELSE NULL END AS receipt_date,
+    CASE WHEN book.kind='order' AND book.entry_amount_czk IS NOT NULL THEN book.entry_id ELSE NULL END AS receipt_id,
+    CASE WHEN book.kind='order' AND book.entry_amount_czk IS NOT NULL THEN book.entry_date ELSE NULL END AS receipt_date,
     CASE WHEN book.kind='order' THEN book.entry_amount_czk ELSE NULL END AS receipt_amount_czk
 FROM (
     SELECT 'order' AS kind, o.id AS record_id,
         CASE
-            WHEN e.entry_date >= %s AND e.entry_date < %s THEN e.entry_date
+            WHEN a.entry_date >= %s AND a.entry_date < %s THEN a.entry_date
             WHEN i.issue_date >= %s AND i.issue_date < %s THEN i.issue_date
             WHEN o.payment_paid_at >= %s AND o.payment_paid_at < %s THEN DATE(o.payment_paid_at)
             ELSE DATE(o.created_at)
@@ -84,9 +84,8 @@ FROM (
         i.issue_date AS invoice_issue_date,
         e.id AS entry_id, e.entry_date, e.direction AS entry_direction,
         e.account AS entry_account, e.tax_kind AS entry_tax_kind,
-        CASE WHEN LOCATE('"sale_mode":"assisted"', o.items_json)>0 AND e.direction='income'
-            THEN (SELECT SUM(te.amount_czk) FROM shop_tax_entries te WHERE te.order_id=o.id AND te.direction='income')
-            ELSE e.amount_czk END AS entry_amount_czk, COALESCE(e.reference, '') AS entry_reference,
+        (SELECT SUM(te.amount_czk) FROM shop_tax_entries te WHERE te.order_id=o.id AND te.direction='income'
+            AND te.purpose IN ('own_receipt','principal_receipt')) AS entry_amount_czk, COALESCE(e.reference, '') AS entry_reference,
         o.total_czk AS amount_czk, '' AS direction,
         COALESCE(NULLIF(JSON_UNQUOTE(JSON_EXTRACT(i.buyer_json, '$.name')), ''),
             CONVERT(o.customer_email USING utf8mb4), '') COLLATE utf8mb4_unicode_ci AS counterparty,
@@ -95,13 +94,18 @@ FROM (
     LEFT JOIN shop_invoices i ON i.order_id=o.id
     LEFT JOIN shop_tax_entries e ON e.id=(
         SELECT te.id FROM shop_tax_entries te WHERE te.order_id=o.id
-        ORDER BY (te.entry_date >= %s AND te.entry_date < %s) DESC, te.id DESC LIMIT 1
+            AND te.direction='income' AND te.purpose IN ('own_receipt','principal_receipt')
+        ORDER BY te.entry_date,te.id LIMIT 1
+    )
+    LEFT JOIN shop_tax_entries a ON a.id=(
+        SELECT ta.id FROM shop_tax_entries ta WHERE ta.order_id=o.id
+        ORDER BY (ta.entry_date >= %s AND ta.entry_date < %s) DESC,ta.entry_date DESC,ta.id DESC LIMIT 1
     )
     WHERE o.status <> 'test' AND o.payment_method <> 'test' AND (
         (o.created_at >= %s AND o.created_at < %s)
         OR (o.payment_paid_at >= %s AND o.payment_paid_at < %s)
         OR (i.issue_date >= %s AND i.issue_date < %s)
-        OR (e.entry_date >= %s AND e.entry_date < %s)
+        OR (a.entry_date >= %s AND a.entry_date < %s)
     )
     UNION ALL
     SELECT 'entry', e.id, e.entry_date,
@@ -157,8 +161,14 @@ SQL;
         $items = array_slice($rows, 0, self::PAGE_SIZE);
         foreach ($items as &$item) {
             foreach (['record_id', 'order_id', 'invoice_id', 'entry_id', 'receipt_id',
-                'amount_czk', 'total_czk', 'entry_amount_czk', 'receipt_amount_czk'] as $key) {
+                'total_czk'] as $key) {
                 if ($item[$key] !== null) $item[$key] = (int) $item[$key];
+            }
+        }
+        unset($item);
+        foreach ($items as &$item) {
+            foreach (['amount_czk','entry_amount_czk','receipt_amount_czk'] as $key) {
+                if ($item[$key] !== null) $item[$key] = TaxMoney::number((string) $item[$key]);
             }
         }
         unset($item);

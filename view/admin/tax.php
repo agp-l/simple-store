@@ -1,11 +1,13 @@
 <?php
 declare(strict_types=1);
 $taxUrl = $adminUrl . '?section=accounting';
-$taxMoney = static fn (mixed $value): string => number_format((int) $value, 0, ',', ' ') . ' Kč';
+$taxMoney = static fn (mixed $value): string => \SimpleStore\Accounting\TaxMoney::format($value);
 $today = (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format('Y-m-d');
-$taxKind = ['taxable'=>'Zdanitelný příjem', 'nontaxable'=>'Nezdanitelný příjem',
-    'deductible'=>'Daňový výdaj', 'nondeductible'=>'Nedaňový výdaj'];
+$taxKind = \SimpleStore\Accounting\TaxEvidenceRepository::KINDS;
 $balanceKind = ['receivable'=>'Pohledávka', 'liability'=>'Dluh', 'asset'=>'Majetek'];
+if ($accountingError !== '' && ($_POST['action'] ?? '') === 'tax-save-settings') {
+    foreach (array_keys($taxSettings) as $key) if (is_string($_POST[$key] ?? null)) $taxSettings[$key] = $_POST[$key];
+}
 $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? 'actual');
 ?>
 <?php if (!$taxReady || !$invoicesReady): ?>
@@ -13,7 +15,7 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
 <?php endif; ?>
 <?php if ($accountingError !== ''): ?><p class="panel-error" role="alert"><?= $escape($accountingError) ?></p><?php endif; ?>
 <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Změna byla uložena.</p><?php endif; ?>
-<?php if (in_array($accountingTab, ['money', 'balances', 'stock', 'invoices'], true)): ?>
+<?php if (in_array($accountingTab, ['money', 'balances', 'closing', 'stock', 'invoices'], true)): ?>
 <form class="panel-search" method="get" action="<?= $escape($adminUrl) ?>">
   <input type="hidden" name="section" value="accounting"><input type="hidden" name="tab" value="<?= $escape($accountingTab) ?>">
   <label>Rok evidence<input type="number" name="year" min="2000" max="2100" value="<?= (int) $taxYear ?>"></label>
@@ -43,6 +45,7 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
       <?php if ($selectedMethod === 'flat_tax' && !($taxYearMode['flat_tax_confirmed'] ?? false)): ?><p class="panel-notice">Paušální režim je zatím jen naplánovaný. Potvrď v <a href="<?= $escape($taxUrl . '&tab=settings&year=' . $taxYear) ?>">nastavení roku</a>, že vstup byl skutečně oznámen finančnímu úřadu. E-shop tvou účast neumí ověřit.</p><?php endif; ?>
       <?php if (!\SimpleStore\Accounting\TaxEvidenceRepository::invoiceReady($taxSettings)): ?><p class="panel-notice">Pro vystavování dokladů doplň <a href="<?= $escape($taxUrl . '&tab=settings') ?>">údaje podnikatele</a>.</p><?php endif; ?>
     </section>
+    <section class="panel-panel"><h2>Uzávěrkové podklady</h2><p><a href="<?= $escape($taxUrl . '&tab=funds&year=' . $taxYear) ?>">Vyúčtování asistovaného nákupu</a> · <a href="<?= $escape($taxUrl . '&tab=balances&year=' . $taxYear) ?>">Majetek a dluhy</a> · <a href="<?= $escape($taxUrl . '&tab=closing&year=' . $taxYear) ?>">Inventura a úpravy roku</a></p><p class="panel-help">Samostatně zapsané uzávěrkové úpravy: příjmy <?= $taxMoney($taxAdjustments['income'] ?? 0) ?>, výdaje <?= $taxMoney($taxAdjustments['expenses'] ?? 0) ?>. Nejsou zahrnuté do peněžních součtů výše.</p></section>
     <?php require __DIR__ . '/evidence-book.php'; ?>
     <?php if ($selectedMethod === 'flat_tax'): ?>
       <?php require __DIR__ . '/flat-tax-advances.php'; ?>
@@ -51,106 +54,11 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
       <p><a href="<?= $escape($taxUrl . '&tab=orders&year=' . $taxYear) ?>">Kontrola potvrzených plateb a oprav</a> slouží k dohledání zásahů v objednávkách; není součtem peněžních příjmů. <a href="<?= $escape($taxUrl . '&tab=stock&year=' . $taxYear) ?>">Starší skladové podklady a CSV</a> ponecháváme pro dříve uložená data. Aktuální kusy se spravují u produktů; tato sestava nenahrazuje inventuru.</p>
     </details>
   <?php elseif ($accountingTab === 'money'): ?>
-    <section class="panel-panel"><h2>Peněžní pohyby podle výpisu</h2>
-      <p>Příjem z objednávky placené převodem zapiš na <a href="<?= $escape($adminUrl . '?section=orders') ?>">jejím detailu</a>, aby se k ní automaticky připojil. Výplaty platebních bran a jejich poplatky zapisuj podle skutečného vyúčtování. U procentních výdajů jednotlivé nákupy nesnižují daňový základ nad rámec procenta.</p>
-      <?php if ($selectedMethod === 'flat_tax'): ?><p class="panel-notice">Paušální zálohy zapisuj v <a href="<?= $escape($taxUrl . '&tab=overview&year=' . $taxYear) ?>">přehledu roku</a>. Odtud se automaticky vloží i do tohoto deníku; stejnou platbu zde znovu nevkládej.</p><?php endif; ?>
-      <p class="panel-help"><a href="<?= $escape($taxUrl . '&tab=guide') ?>">Co znamená daňové zařazení? →</a> Doklady a výpisy uschovej; formulář nyní ukládá referenci, nikoli soubor s originálem dokladu.</p>
-      <?php foreach (['income' => ['Přidat příjem', 'Zdanitelný příjem', 'Nezdanitelný příjem'], 'expense' => ['Přidat výdaj', 'Daňový výdaj', 'Nedaňový výdaj']] as $direction => [$heading, $primaryKind, $secondaryKind]): ?>
-        <details class="panel-entry-add"><summary><?= $escape($heading) ?></summary>
-          <form class="panel-form" method="post" action="<?= $escape($taxUrl) ?>">
-            <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="money"><input type="hidden" name="action" value="tax-add-entry"><input type="hidden" name="direction" value="<?= $direction ?>">
-            <label>Datum skutečné platby<input type="date" name="entry_date" value="<?= $escape($today) ?>" required></label>
-            <label>Kde se peníze pohnuly<select name="account"><option value="bank">Bankovní účet</option><option value="cash">Pokladna</option></select></label>
-            <label>Vliv na daň z příjmů<select name="tax_kind">
-              <?php if ($direction === 'expense' && $selectedMethod !== 'actual'): ?>
-                <option value="nondeductible">Nedaňový výdaj – <?= $selectedMethod === 'flat_tax' ? 'v paušálním režimu' : 'při procentních výdajích' ?></option>
-                <option value="deductible">Daňový výdaj – jen pro rok se skutečnými výdaji</option>
-              <?php else: ?>
-                <option value="<?= $direction === 'income' ? 'taxable' : 'deductible' ?>"><?= $escape($primaryKind) ?></option>
-                <option value="<?= $direction === 'income' ? 'nontaxable' : 'nondeductible' ?>"><?= $escape($secondaryKind) ?></option>
-              <?php endif; ?>
-            </select></label>
-            <label>Částka v Kč<input type="number" name="amount_czk" min="1" required></label>
-            <label>Co se stalo<input name="description" maxlength="255" required></label>
-            <label>Od koho / komu<input name="counterparty" maxlength="190"></label>
-            <label>Číslo dokladu nebo reference z výpisu<input name="reference" maxlength="100"></label>
-            <button class="panel-button" type="submit"><?= $escape($heading) ?></button>
-          </form>
-        </details>
-      <?php endforeach; ?>
-    </section>
-    <?php if ($taxEditEntry !== null): ?>
-      <section class="panel-panel"><h2>Opravit peněžní zápis #<?= (int) $taxEditEntry['id'] ?></h2>
-        <p class="panel-help">Oprava zachová původní údaje a důvod v historii. U úhrady objednávky po opravě ověř soulad s výpisem banky.</p>
-        <form class="panel-form" method="post" action="<?= $escape($taxUrl) ?>">
-          <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="tax-amend-entry"><input type="hidden" name="id" value="<?= (int) $taxEditEntry['id'] ?>">
-          <label>Datum<input type="date" name="entry_date" value="<?= $escape($taxEditEntry['entry_date']) ?>" required></label>
-          <label>Pohyb<select name="direction"><option value="income" <?= $taxEditEntry['direction'] === 'income' ? 'selected' : '' ?>>Příjem</option><option value="expense" <?= $taxEditEntry['direction'] === 'expense' ? 'selected' : '' ?>>Výdaj</option></select></label>
-          <label>Účet<select name="account"><option value="bank" <?= $taxEditEntry['account'] === 'bank' ? 'selected' : '' ?>>Banka</option><option value="cash" <?= $taxEditEntry['account'] === 'cash' ? 'selected' : '' ?>>Hotovost</option></select></label>
-          <label>Vliv na daň z příjmů<select name="tax_kind"><?php foreach ($taxKind as $value=>$label): ?><option value="<?= $escape($value) ?>" <?= $taxEditEntry['tax_kind'] === $value ? 'selected' : '' ?>><?= $escape($label) ?></option><?php endforeach; ?></select></label>
-          <label>Částka Kč<input type="number" name="amount_czk" min="1" value="<?= (int) $taxEditEntry['amount_czk'] ?>" required></label>
-          <label>Popis<input name="description" maxlength="255" value="<?= $escape($taxEditEntry['description']) ?>" required></label>
-          <label>Protistrana<input name="counterparty" maxlength="190" value="<?= $escape($taxEditEntry['counterparty']) ?>"></label>
-          <label>Doklad / reference<input name="reference" maxlength="100" value="<?= $escape($taxEditEntry['reference']) ?>"></label>
-          <label>Důvod opravy<textarea name="reason" minlength="8" maxlength="190" required></textarea></label>
-          <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit opravu</button>
-        </form>
-        <form class="panel-form" method="post" action="<?= $escape($taxUrl) ?>">
-          <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="tax-void-entry"><input type="hidden" name="id" value="<?= (int) $taxEditEntry['id'] ?>">
-          <label>Důvod vyřazení chybného záznamu<textarea name="reason" minlength="8" maxlength="190" required></textarea></label>
-          <label class="panel-check"><input type="checkbox" name="confirmed" value="1" required> Potvrzuji, že tento zápis nemá být v peněžním deníku.</label>
-          <button class="panel-button panel-action panel-action--danger" type="submit"><?= \SimpleStore\Rendering\Icon::render('delete') ?> Vyřadit chybný zápis</button>
-        </form>
-      </section>
-    <?php endif; ?>
-    <section class="panel-panel"><div class="panel-panel-head"><h2>Peněžní deník <?= (int) $taxYear ?></h2><a class="panel-icon-link panel-button" href="<?= $escape($taxUrl . '&tab=money&year=' . $taxYear . '&download=ledger') ?>"><?= \SimpleStore\Rendering\Icon::render('download') ?> Stáhnout CSV</a></div>
-      <?php if ($taxEntries === []): ?><p class="panel-empty">Zatím tu nejsou peněžní pohyby.</p><?php endif; ?>
-      <div class="panel-table-wrap"><table class="panel-table"><thead><tr><th>Datum</th><th>Účet / doklad</th><th>Popis / protistrana</th><th>Zařazení</th><th>Částka</th><th>Úprava</th></tr></thead><tbody>
-      <?php foreach ($taxEntries as $entry): ?><tr><td><?= $escape($entry['entry_date']) ?></td>
-        <td><?= $escape($entry['account'] === 'bank' ? 'Banka' : 'Hotovost') ?><br><small><?= $escape($entry['reference']) ?></small></td>
-        <td><strong><?= $escape($entry['description']) ?></strong><br><small><?= $escape($entry['counterparty']) ?><?php if ($entry['order_id'] !== null): ?> · <a href="<?= $escape($adminUrl . '?section=orders&id=' . (int) $entry['order_id']) ?>">Objednávka #<?= (int) $entry['order_id'] ?></a><?php endif; ?></small></td>
-        <td><?= $escape($taxKind[$entry['tax_kind']] ?? $entry['tax_kind']) ?></td>
-        <td class="panel-table-money"><?= $entry['direction'] === 'income' ? '+' : '−' ?><?= $taxMoney($entry['amount_czk']) ?></td>
-        <td><a href="<?= $escape($taxUrl . '&tab=money&year=' . $taxYear . '&edit_entry=' . (int) $entry['id']) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('edit') ?> Opravit</a></td></tr><?php endforeach; ?>
-      </tbody></table></div>
-      <nav class="panel-quick panel-order-pages" aria-label="Stránky peněžního deníku">
-        <?php if ($taxEntriesPreviousUrl !== ''): ?><a href="<?= $escape($taxEntriesPreviousUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-left') ?> Předchozí</a><?php endif; ?>
-        <?php if ($taxEntriesNextUrl !== ''): ?><a href="<?= $escape($taxEntriesNextUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?> Další</a><?php endif; ?>
-      </nav>
-      <p class="panel-help">Zobrazuje se 50 pohybů na stránku. Export CSV zahrnuje celý vybraný rok.</p>
-    </section>
-    <section class="panel-panel"><h2>Historie oprav deníku</h2>
-      <?php if ($taxEntryHistory === []): ?><p class="panel-empty">Žádné opravy ve vybraném roce.</p><?php endif; ?>
-      <?php foreach ($taxEntryHistory as $change): ?><p>Zápis #<?= (int) $change['entry_id'] ?> · <?= $change['action'] === 'voided' ? 'Vyřazeno' : 'Opraveno' ?> · <?= $escape($change['created_at']) ?> UTC · správce #<?= (int) $change['admin_id'] ?><br><?= $escape($change['reason']) ?></p><?php endforeach; ?>
-    </section>
-  <?php elseif ($accountingTab === 'balances'): ?>
-    <section class="panel-panel"><h2>Nový majetek, pohledávka nebo dluh</h2>
-      <form class="panel-form" method="post" action="<?= $escape($taxUrl) ?>">
-        <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="balances"><input type="hidden" name="action" value="tax-add-balance">
-        <label>Druh<select name="kind"><option value="receivable">Pohledávka</option><option value="liability">Dluh</option><option value="asset">Majetek</option></select></label>
-        <label>Vznik<input type="date" name="opened_on" value="<?= $escape($today) ?>" required></label>
-        <label>Hodnota Kč<input type="number" name="amount_czk" min="1" required></label>
-        <label>Popis<input name="description" maxlength="255" required></label>
-        <label>Protistrana<input name="counterparty" maxlength="190"></label>
-        <label>Číslo dokladu<input name="reference" maxlength="100"></label>
-        <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('plus') ?> Přidat záznam</button>
-      </form>
-    </section>
-    <section class="panel-panel"><h2>Objednávky čekající na platbu</h2>
-      <p class="panel-help">Provozní seznam nejnovějších objednávek; neúplný přehled pohledávek za rok. Pro úplnou uzávěrku ověř vlastní podklady, částečné platby a další pohledávky mimo e-shop.</p>
-      <?php if ($taxReceivables === []): ?><p class="panel-empty">Žádné neuhrazené objednávky.</p><?php endif; ?>
-      <div class="panel-order-list"><?php foreach ($taxReceivables as $receivable): ?>
-        <a class="panel-order-row" href="<?= $escape($adminUrl . '?section=orders&id=' . (int) $receivable['id']) ?>"><strong><?= $escape($receivable['order_number']) ?></strong><span><?= $escape($receivable['customer_email']) ?></span><strong><?= $taxMoney($receivable['total_czk']) ?></strong></a>
-      <?php endforeach; ?></div>
-    </section>
-    <section class="panel-panel"><h2>Ostatní majetek a dluhy</h2>
-      <?php if ($taxBalances === []): ?><p class="panel-empty">Žádné další záznamy.</p><?php endif; ?>
-      <?php foreach ($taxBalances as $balance): ?>
-        <div class="panel-order-row"><span><strong><?= $escape($balanceKind[$balance['kind']] ?? $balance['kind']) ?></strong><small><?= $escape($balance['opened_on']) ?> · <?= $escape($balance['reference']) ?></small></span>
-          <span><?= $escape($balance['description']) ?> · <?= $escape($balance['counterparty']) ?></span><strong><?= $taxMoney($balance['amount_czk']) ?></strong>
-          <?php if ($balance['closed_on'] === null): ?><form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="balances"><input type="hidden" name="action" value="tax-close-balance"><input type="hidden" name="id" value="<?= (int) $balance['id'] ?>"><input type="date" name="closed_on" value="<?= $escape($today) ?>" required><button class="panel-button panel-action" type="submit"><?= \SimpleStore\Rendering\Icon::render('check') ?> Uzavřít</button></form><?php else: ?>Uzavřeno <?= $escape($balance['closed_on']) ?><?php endif; ?></div>
-      <?php endforeach; ?>
-    </section>
+    <?php require __DIR__ . '/tax-ledger.php'; ?>
+  <?php elseif ($accountingTab === 'funds'): ?>
+    <?php require __DIR__ . '/tax-funds.php'; ?>
+  <?php elseif (in_array($accountingTab, ['balances','closing'], true)): ?>
+    <?php require __DIR__ . '/tax-register.php'; ?>
   <?php elseif ($accountingTab === 'stock'): ?>
     <section class="panel-panel"><div class="panel-panel-head"><h2>Sklad produktů a starší podklady</h2><div><a class="panel-button" href="<?= $escape($taxUrl . '&tab=stock&year=' . $taxYear . '&download=stock') ?>">Skladové pohyby CSV</a> <a class="panel-button" href="<?= $escape($taxUrl . '&tab=stock&year=' . $taxYear . '&download=sales') ?>">Prodané kusy CSV</a></div></div>
       <p class="panel-notice">Údaj „Volné kusy v e-shopu“ se čte ze skutečného skladu produktů. Starý ruční přehled níže není propojený s tímto skladem; jeho rozdíl proto <strong>není aktuální dostupnost</strong>. Počet kusů nastavuj na <a href="<?= $escape($adminUrl . '?section=products') ?>">kartě produktu</a>. Historické záznamy a CSV zde zůstávají ke kontrole.</p>
@@ -197,6 +105,7 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
         <?php foreach ($invoiceHistory as $change): ?><p><?= $escape($change['old_number']) ?> → <?= $escape($change['new_number']) ?> · <?= $escape($change['created_at']) ?> UTC · <?= $escape($change['reason']) ?></p><?php endforeach; ?>
         <?php if ($selectedInvoice['emailed_at'] === null): ?><form method="post" action="<?= $escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="mail"><input type="hidden" name="action" value="invoice-email"><input type="hidden" name="id" value="<?= (int) $selectedInvoice['id'] ?>"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('mail') ?> Odeslat fakturu e-mailem</button></form><?php endif; ?>
       </section>
+      <?php require __DIR__ . '/invoice-corrections.php'; ?>
     <?php endif; ?>
   <?php elseif ($accountingTab === 'mail'): ?>
     <section class="panel-panel"><h2>Oznámení zákazníkům</h2>

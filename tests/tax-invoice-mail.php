@@ -15,6 +15,12 @@ class MeekroDB
     public array $btcpayPayments = [];
     private ?array $snapshot = null;
 
+    public function update(string $table, array $row, string $where, int $id): void
+    {
+        if ($table !== 'shop_tax_entries') throw new RuntimeException('Unexpected table update.');
+        $this->entries[$id] = array_replace($this->entries[$id], $row);
+    }
+
     public function startTransaction(): void
     {
         $this->snapshot = [$this->invoices, $this->history, $this->outbox,
@@ -144,7 +150,7 @@ class MeekroDB
         } elseif (str_contains($sql, 'FROM shop_tax_entries WHERE entry_date')) {
             $rows = array_values(array_filter($this->entries, static fn (array $row): bool =>
                 $row['entry_date'] >= $args[0] && $row['entry_date'] < $args[1]));
-            return array_slice($rows, $args[3], $args[2]);
+            return count($args) === 3 ? array_slice($rows, $args[2], 200) : array_slice($rows, $args[3], $args[2]);
         } elseif (str_contains($sql, 'FROM shop_tax_entry_events WHERE created_at')) {
             return array_reverse($this->entryEvents);
         } elseif (str_contains($sql, 'FROM shop_deleted_sale_lines')) {
@@ -358,7 +364,7 @@ try {
 } catch (InvalidArgumentException $expected) {}
 $tax->amendEntry(1, array_replace($movement, ['amount_czk' => 995,
     'description' => 'Opravená úhrada']), 1, 'Oprava podle banky');
-if ($db->entries[1]['amount_czk'] !== 995 || count($db->entryEvents) !== 1 ||
+if ($db->entries[1]['amount_czk'] !== '995.00' || count($db->entryEvents) !== 1 ||
     !str_contains($db->entryEvents[0]['old_json'], '=PAYLOAD')) {
     throw new RuntimeException('Journal correction lost the previous entry.');
 }

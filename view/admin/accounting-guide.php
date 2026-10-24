@@ -4,6 +4,18 @@ declare(strict_types=1);
 $accountingGuideUrl = $adminUrl . '?section=accounting&tab=';
 ?>
 <section class="panel-panel">
+  <h2>Asistovaný nákup: od přijetí platby po vyúčtování</h2>
+  <p>Otevři <a href="<?= $escape($accountingGuideUrl . 'funds') ?>">Platby a asistovaný nákup</a> a vyber objednávku. Příjem rozděl na vlastní plnění a peníze svěřené na nákup. U příkladu 1 800 Kč je 122 Kč vlastní příjem a 1 678 Kč svěřeno. Úhrada 1 678 Kč dodavateli je nedaňový výdaj; kupující u dodavatele musí být skutečně zákazník. Vlastní přeprodej takto neeviduj.</p>
+  <p>U vratky zapiš zvlášť vracenou vlastní a svěřenou část. Doklad se opravuje v detailu faktury; jeho vystavení samo nezapisuje platbu. Vratky potvrzené v reklamacích porovnej s deníkem. Zůstatek svěřených peněz i jeho roční export najdeš ve vyúčtování. Doklad partnera předej zákazníkovi a uschovej podklady zastoupení.</p>
+  <p>Deník přijímá haléře, cizí měnu i BTC s podkladem ocenění. U brány eviduj hrubý příjem, poplatek a nedaňový převod výplaty na banku. U krypta zapiš skutečné množství a doloženou hodnotu v Kč; pozdější směna a pořizovací hodnota vyžadují samostatné podklady. Aktuální kurz na cenovce se pro evidenci nepoužívá.</p>
+</section>
+<section class="panel-panel">
+  <h2>Opravy a roční inventura</h2>
+  <p>Záznamy můžeš upravovat s historií, majetek a dluhy také uzavřít, znovu otevřít, vyřadit a obnovit. Chyba ve formuláři zachová vyplněné údaje. Přehledy a deník lze exportovat do CSV; originály dokladů uschovej pod uvedenými referencemi.</p>
+  <p>V <a href="<?= $escape($accountingGuideUrl . 'closing') ?>">Inventuře a uzávěrce</a> zaznamenej skutečné roční stavy a ocenění. Daňové odpisy a další nepeněžní úpravy zapisuj samostatně s podkladem. Inventura není automatický peněžní výdaj a nabídka zboží partnerů není tvou zásobou. Program nevypočítává odpisové plány, daňové přiznání ani DPH.</p>
+  <p class="panel-help">Právní rámec: <a href="https://e-sbirka.gov.cz/sb/1992/586" target="_blank" rel="noopener noreferrer">zákon o daních z příjmů, zejména § 7b</a>. Daňovou evidenci a originální podklady uchovávej za období, u nichž neuplynula lhůta pro stanovení daně. Pravidelně zálohuj i databázi s historií.</p>
+</section>
+<section class="panel-panel">
   <h2>Nejdřív urči svůj daňový režim</h2>
   <p>OSVČ může uplatňovat <strong>skutečné výdaje</strong>, <strong>výdaje procentem z příjmů</strong>, nebo po oznámení finančnímu úřadu vstoupit do <strong>paušálního režimu</strong>. Výdaje procentem a paušální daň nejsou totéž: u paušální daně platíš podle zvoleného pásma společnou měsíční zálohu na daň, sociální a zdravotní pojištění. Volba v <a href="<?= $escape($accountingGuideUrl . 'settings') ?>">nastavení</a> pouze upravuje tvoji interní evidenci; aplikace žádné oznámení úřadům nepodává ani za tebe zálohy neplatí.</p>
   <div class="panel-table-wrap"><table class="panel-table"><thead><tr><th>Režim</th><th>Co vést pro daň z příjmů</th><th>Co tu použít</th></tr></thead><tbody>

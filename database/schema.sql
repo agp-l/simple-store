@@ -1257,3 +1257,74 @@ CREATE TABLE IF NOT EXISTS shop_product_redirects (
         target_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
         PRIMARY KEY (language,source_slug), KEY target_product (target_key)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- OSVC evidence: exact CZK amounts, explicit entrusted-funds movements and audit versions.
+SET @ledger_version_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_tax_entries' AND COLUMN_NAME='version');
+SET @ledger_upgrade = IF(@ledger_version_exists=0,
+  'ALTER TABLE shop_tax_entries MODIFY amount_czk DECIMAL(13,2) UNSIGNED NOT NULL,
+   ADD purpose VARCHAR(32) NOT NULL DEFAULT ''manual'',
+   ADD order_number VARCHAR(40) NOT NULL DEFAULT '''',
+   ADD currency VARCHAR(3) NOT NULL DEFAULT ''CZK'',
+   ADD foreign_amount DECIMAL(20,8) NULL,
+   ADD valuation_note VARCHAR(255) NOT NULL DEFAULT '''',
+   ADD version INT UNSIGNED NOT NULL DEFAULT 1', 'SELECT 1');
+PREPARE ledger_upgrade_stmt FROM @ledger_upgrade;
+EXECUTE ledger_upgrade_stmt;
+DEALLOCATE PREPARE ledger_upgrade_stmt;
+-- Only run legacy classification on the first upgrade; never rewrite an admin's later edits.
+SET @ledger_backfill = IF(@ledger_version_exists=0,
+  'UPDATE shop_tax_entries e LEFT JOIN shop_orders o ON o.id=e.order_id
+   SET e.order_number=COALESCE(o.order_number, ''''),
+       e.purpose=CASE WHEN e.direction=''income'' AND e.tax_kind=''taxable'' THEN ''own_receipt''
+                     WHEN e.direction=''income'' AND e.tax_kind=''nontaxable'' THEN ''principal_receipt''
+                     ELSE ''manual'' END
+   WHERE e.order_id IS NOT NULL', 'SELECT 1');
+PREPARE ledger_backfill_stmt FROM @ledger_backfill;
+EXECUTE ledger_backfill_stmt;
+DEALLOCATE PREPARE ledger_backfill_stmt;
+
+SET @balance_version_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_tax_balances' AND COLUMN_NAME='version');
+SET @balance_upgrade = IF(@balance_version_exists=0,
+  'ALTER TABLE shop_tax_balances MODIFY kind VARCHAR(32) NOT NULL,
+   MODIFY amount_czk DECIMAL(13,2) UNSIGNED NOT NULL,
+   ADD tax_year SMALLINT UNSIGNED NULL,
+   ADD book_value_czk DECIMAL(13,2) UNSIGNED NOT NULL DEFAULT 0,
+   ADD quantity VARCHAR(40) NOT NULL DEFAULT '''',
+   ADD note TEXT NULL,
+   ADD version INT UNSIGNED NOT NULL DEFAULT 1,
+   ADD voided_at DATETIME NULL', 'SELECT 1');
+PREPARE balance_upgrade_stmt FROM @balance_upgrade;
+EXECUTE balance_upgrade_stmt;
+DEALLOCATE PREPARE balance_upgrade_stmt;
+
+CREATE TABLE IF NOT EXISTS shop_tax_register_events (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  record_id BIGINT UNSIGNED NOT NULL,
+  old_json LONGTEXT NULL, new_json LONGTEXT NULL,
+  admin_id BIGINT UNSIGNED NOT NULL, reason VARCHAR(190) NOT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY register_record (record_id,id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shop_invoice_corrections (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  invoice_id BIGINT UNSIGNED NOT NULL,
+  document_number VARCHAR(40) NOT NULL,
+  issue_date DATE NOT NULL, amount_czk DECIMAL(13,2) UNSIGNED NOT NULL,
+  reason VARCHAR(255) NOT NULL,
+  invoice_json LONGTEXT NOT NULL,
+  admin_id BIGINT UNSIGNED NOT NULL,
+  voided_at DATETIME NULL, void_reason VARCHAR(190) NOT NULL DEFAULT '',
+  void_admin_id BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY correction_number (document_number),
+  KEY correction_invoice (invoice_id,id),
+  CONSTRAINT correction_invoice_fk FOREIGN KEY (invoice_id) REFERENCES shop_invoices(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shop_tax_write_requests (
+  request_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

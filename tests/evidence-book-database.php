@@ -63,7 +63,7 @@ try {
     $db->insert('shop_tax_entries', [
         'entry_date' => '2098-06-05', 'direction' => 'income', 'account' => 'bank',
         'tax_kind' => 'taxable', 'amount_czk' => 500,
-        'description' => 'Úhrada objednávky', 'counterparty' => 'Eva Dokladová',
+        'purpose' => 'own_receipt', 'description' => 'Úhrada objednávky', 'counterparty' => 'Eva Dokladová',
         'reference' => 'BANK-' . $suffix, 'order_id' => $linkedId,
     ]);
     $db->insert('shop_tax_entries', [
@@ -158,7 +158,7 @@ try {
     $db->insert('shop_tax_entries', [
         'entry_date' => '2100-01-05', 'direction' => 'income', 'account' => 'bank',
         'tax_kind' => 'taxable', 'amount_czk' => 500,
-        'description' => 'Pozdní bankovní zápis', 'counterparty' => 'Eva Dokladová',
+        'purpose' => 'own_receipt', 'description' => 'Pozdní bankovní zápis', 'counterparty' => 'Eva Dokladová',
         'reference' => 'BANK-CROSS-' . $suffix, 'order_id' => $crossId,
     ]);
     foreach ([2097 => '2097-12-31', 2098 => '2098-01-03',
