@@ -35,7 +35,8 @@
       : `Vlastní cenu má ${ownPrices} z ${rows.length} variant. Ostatní přebírají cenu produktu.`;
     root.dataset.dirty = recovered || JSON.stringify(collect()) !== initial ? 'true' : 'false';
     state.hidden = root.dataset.dirty !== 'true';
-    state.textContent = 'Neuložené změny variant — potvrď tlačítkem Uložit celou tabulku variant.';
+    root.querySelector('[data-variant-save-top]').hidden = state.hidden;
+    state.textContent = 'Neuložené změny variant — potvrď tlačítkem Uložit změny variant.';
     undo.hidden = previousPrices === null;
   }
   rows.forEach(row => {

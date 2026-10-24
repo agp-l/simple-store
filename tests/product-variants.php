@@ -31,6 +31,17 @@ $invalid(static fn () => $service->add($cart, $key, 'cs', [], 1, str_repeat('f',
 $idA = $service->add($cart, $key, 'cs', [], 3, $rows[0]['id']);
 $idB = $service->add($cart, $key, 'cs', [], 1, $rows[1]['id']);
 $check($idA !== $idB && $service->summary($cart)['subtotal_czk'] === 3900, 'Variants share a price or identity.');
+$originalInventory = $product['variant_inventory']; $originalPrice = $product['price_czk'];
+$product['variant_inventory'] = \SimpleStore\Product\ProductVariantForm::inheritPrices($originalInventory);
+$product['price_czk'] = 1800;
+$check($service->summary($cart)['subtotal_czk'] === 7200, 'Cart did not inherit the shared price after clearing exceptions.');
+$product['price_czk'] = 1900;
+$check($service->summary($cart)['subtotal_czk'] === 7600, 'Inherited prices were copied rather than following later edits.');
+$product['variant_inventory']['items'][1]['price_czk'] = 2100;
+$check($service->summary($cart)['subtotal_czk'] === 7800, 'A single explicit exception no longer overrides the shared price.');
+$check($product['variant_inventory']['items'][0]['quantity'] === 3 && $product['variant_inventory']['items'][0]['sku'] === 'BLUE-S' &&
+    !$product['variant_inventory']['items'][2]['enabled'], 'Price inheritance changed stock or variant identity.');
+$product['variant_inventory'] = $originalInventory; $product['price_czk'] = $originalPrice;
 $invalid(static fn () => $service->add($cart, $key, 'cs', [], 1, $rows[0]['id']));
 $check($service->summary($cart)['items'][0]['variant_sku'] === 'BLUE-S', 'Cart lost variant SKU.');
 $product['variant_inventory']['items'][0]['quantity'] = 2;

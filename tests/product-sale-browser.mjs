@@ -68,6 +68,10 @@ test('sale editor: responsive layout, drafts, fees, selected partner and safe su
       await variant.locator('input').fill('1900');
       assert.equal(await variant.locator('input').getAttribute('aria-invalid'), 'true');
       await variant.locator('input').fill('1750');
+      await form.getByRole('button', { name: 'Použít společnou nákupní cenu u všech variant' }).click();
+      assert.equal(await variant.locator('input').inputValue(), '');
+      assert.match(await variant.locator('output').textContent(), /100/);
+      assert.equal(await cost.inputValue(), '1700');
       let submitted;
       await page.route('**/admin.php', async route => {
         submitted = new URLSearchParams(route.request().postData());
@@ -79,6 +83,7 @@ test('sale editor: responsive layout, drafts, fees, selected partner and safe su
       assert.equal(submitted.get('supplier_price_czk'), '1700');
       assert.equal(submitted.get('partner_id'), '1');
       assert.equal(submitted.get('mode'), 'assisted');
+      assert.ok(Array.from(submitted).filter(([key]) => key.startsWith('variant_price[')).every(([, value]) => value === ''));
       assert.ok(submitted.has('csrf') && submitted.has('version'));
       assert.deepEqual(errors, []);
       await page.close();

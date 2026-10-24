@@ -27,6 +27,7 @@ foreach ($details['options'] as $group) $variantGroups[] = $group['name'] . ': '
       <button class="inline-small" type="submit">Použít společnou cenu u všech variant</button>
       <button class="inline-small" type="button" data-variant-prices-undo hidden>Vrátit původní ceny</button>
       <p data-variant-price-count>Jinou cenu vyplň jen u variant, které mají stát jinak. Prázdné pole znamená společnou cenu.</p>
+      <button class="inline-small" type="submit" form="variant-batch" data-variant-save-top hidden>Uložit změny variant</button>
     </form>
   </div>
   <p data-variant-save-state role="status" hidden></p>
