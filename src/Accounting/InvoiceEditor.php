@@ -20,7 +20,7 @@ final class InvoiceEditor
             foreach(['delivery_date','paid_date'] as $key) $fields[$key]=($input[$key]??'')===''?null:TaxRegisterRepository::date($input[$key]);
             foreach(['seller','buyer'] as $party) {
                 $values=json_decode($old[$party.'_json'],true,512,JSON_THROW_ON_ERROR);
-                foreach(['name','ico','street','city','postal_code','email','phone','bank_account'] as $key) if (isset($input[$party.'_'.$key])) $values[$key]=TaxRegisterRepository::text($input[$party.'_'.$key],190);
+                foreach(['name','ico','street','city','postal_code','registration','email','phone','bank_account'] as $key) if (isset($input[$party.'_'.$key])) $values[$key]=TaxRegisterRepository::text($input[$party.'_'.$key],190);
                 if (($values['name']??'')==='') throw new InvalidArgumentException('Vyplň dodavatele a odběratele.');
                 $fields[$party.'_json']=json_encode($values,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
                 if ($party==='seller') $fields['bank_account']=$values['bank_account']??'';

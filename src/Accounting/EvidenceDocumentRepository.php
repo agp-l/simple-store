@@ -80,7 +80,7 @@ final class EvidenceDocumentRepository
             $fields['seller_json']=$old['seller_json']??json_encode($seller,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
             if (isset($input['seller_name'])) {
                 $party=$old===null?$seller:json_decode($old['seller_json'],true,512,JSON_THROW_ON_ERROR);
-                foreach(['name','ico','street','city','postal_code','email','phone','bank_account'] as $key) $party[$key]=TaxRegisterRepository::text($input['seller_'.$key]??($party[$key]??''),190);
+                foreach(['name','ico','street','city','postal_code','registration','email','phone','bank_account'] as $key) $party[$key]=TaxRegisterRepository::text($input['seller_'.$key]??($party[$key]??''),190);
                 $fields['seller_json']=json_encode($party,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR);
             }
             $fields['version']=$old===null?1:(int)$old['version']+1;

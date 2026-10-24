@@ -114,3 +114,6 @@ Právní rámec a odkazy: § 7b zákona 586/1992 Sb., § 148 daňového řádu,
 § 31 odst. 14 živnostenského zákona a § 16 zákona o ochraně spotřebitele.
 Konkrétní číslo/formát není pro OSVČ v § 7b předepsán; samostatné řady jsou
 praktická organizace evidence, nikoli oddělení daňového subjektu.
+
+Údaje podnikatele obsahují i zápis v rejstříku/evidenci podle § 435 občanského
+zákoníku. Nové doklady jej přebírají do snímku vystavitele, historické se nemění.

@@ -35,7 +35,7 @@ final class TaxEvidenceRepository
     public function settings(): array
     {
         $defaults = ['name' => '', 'ico' => '', 'street' => '', 'city' => '',
-            'postal_code' => '', 'email' => '', 'phone' => '', 'bank_account' => '',
+            'postal_code' => '', 'registration' => '', 'email' => '', 'phone' => '', 'bank_account' => '',
             'mail_from' => '', 'legal_form' => 'sole_trader',
             'expense_method' => 'actual', 'expense_percentage' => 60];
         if (!$this->installed()) return $defaults;
@@ -65,7 +65,7 @@ final class TaxEvidenceRepository
         $fields = [];
         foreach (['name' => 120, 'ico' => 8, 'street' => 160, 'city' => 100,
             'postal_code' => 6, 'email' => 254, 'phone' => 40, 'bank_account' => 40,
-            'mail_from' => 254] as $key => $limit) {
+            'mail_from' => 254, 'registration' => 190] as $key => $limit) {
             $fields[$key] = self::text($input[$key] ?? '', $limit);
         }
         if (($fields['ico'] !== '' && preg_match('/^[0-9]{8}$/D', $fields['ico']) !== 1) ||

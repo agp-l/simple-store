@@ -45,6 +45,7 @@ $invoiceAssetRoot = (string) ($printAssetBase ?? $basePath ?? '/');
   <section><h2>Dodavatel</h2><p><strong><?= $printEscape($seller['name'] ?? '') ?></strong></p>
     <p><?= $printEscape($seller['street'] ?? '') ?><br><?= $printEscape(($seller['postal_code'] ?? '') . ' ' . ($seller['city'] ?? '')) ?></p>
     <p>IČO: <?= $printEscape($seller['ico'] ?? '') ?></p>
+    <?php if (($seller['registration'] ?? '') !== ''): ?><p><?= $printEscape($seller['registration']) ?></p><?php endif; ?>
     <?php if (($seller['email'] ?? '') !== ''): ?><p><?= $printEscape($seller['email']) ?></p><?php endif; ?>
     <?php if (($seller['phone'] ?? '') !== ''): ?><p><?= $printEscape($seller['phone']) ?></p><?php endif; ?>
   </section>

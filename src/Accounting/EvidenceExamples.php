@@ -15,6 +15,6 @@ final class EvidenceExamples
         ];
         if (!isset($examples[$kind])) throw new InvalidArgumentException('Neznámý vzor.');
         [$number,$issued,$delivered,$due,$paid,$description,$amount,$notes]=$examples[$kind];
-        return ['example'=>true,'kind'=>$kind,'document_number'=>$number,'issue_date'=>$issued,'delivery_date'=>$delivered,'due_date'=>$due,'paid_date'=>$paid,'description'=>$description,'amount_czk'=>$amount,'notes'=>$notes,'activity'=>$kind==='receipt'?'Masáže':'E-shop','counterparty'=>'Ukázkový zákazník / dodavatel – fiktivní údaje','seller_json'=>json_encode(['name'=>'VZOR – podnikatel','ico'=>'00000000','street'=>'Ukázková 1','city'=>'Ukázkové město','postal_code'=>'00000'],JSON_THROW_ON_ERROR)];
+        return ['example'=>true,'kind'=>$kind,'document_number'=>$number,'issue_date'=>$issued,'delivery_date'=>$delivered,'due_date'=>$due,'paid_date'=>$paid,'description'=>$description,'amount_czk'=>$amount,'notes'=>$notes,'activity'=>$kind==='receipt'?'Masáže':'E-shop','counterparty'=>'Ukázkový zákazník / dodavatel – fiktivní údaje','seller_json'=>json_encode(['name'=>'VZOR – podnikatel','ico'=>'00000000','street'=>'Ukázková 1','city'=>'Ukázkové město','postal_code'=>'00000','registration'=>'VZOR – údaj o zápisu podnikatele v příslušné evidenci'],JSON_THROW_ON_ERROR)];
     }
 }

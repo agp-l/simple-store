@@ -137,13 +137,13 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
     </section>
   <?php elseif ($accountingTab === 'settings'): ?>
     <section class="panel-panel"><h2>Údaje prodávajícího</h2>
-      <p class="panel-help">Z těchto údajů vznikají nové faktury; již vystavené si ponechají původní podobu. Systém vytváří doklady neplátce DPH.</p>
+      <p class="panel-help">Z těchto údajů vznikají nové faktury; již vystavené si ponechají původní podobu. Systém vytváří doklady neplátce DPH. Doplň také údaj o zápisu, např. „Fyzická osoba zapsaná v živnostenském rejstříku“; u obchodního rejstříku včetně soudu, oddílu a vložky podle skutečnosti.</p>
       <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="settings"><input type="hidden" name="action" value="tax-save-settings">
         <input type="hidden" name="year" value="<?= (int) $taxYear ?>">
         <input type="hidden" name="mail_from" value="<?= $escape($taxSettings['mail_from'] ?? '') ?>">
         <label>Právní forma prodávajícího<select name="legal_form"><option value="sole_trader" <?= ($taxSettings['legal_form'] ?? 'sole_trader') === 'sole_trader' ? 'selected' : '' ?>>OSVČ</option><option value="company" <?= ($taxSettings['legal_form'] ?? '') === 'company' ? 'selected' : '' ?>>Společnost (např. s.r.o.)</option></select></label>
         <p class="panel-help">Pro s.r.o. není tato evidence OSVČ účetnictvím společnosti. Údaj změň podle skutečného prodávajícího.</p>
-        <?php foreach (['name'=>'Jméno a příjmení podnikatele', 'ico'=>'IČO', 'street'=>'Ulice a číslo sídla', 'city'=>'Město', 'postal_code'=>'PSČ', 'email'=>'Kontaktní e-mail', 'phone'=>'Telefon', 'bank_account'=>'Číslo účtu na faktuře'] as $key=>$label): ?><label><?= $escape($label) ?><input name="<?= $key ?>" value="<?= $escape($taxSettings[$key] ?? '') ?>" maxlength="<?= $key === 'ico' ? 8 : 254 ?>"></label><?php endforeach; ?>
+        <?php foreach (['name'=>'Jméno a příjmení podnikatele', 'ico'=>'IČO', 'street'=>'Ulice a číslo sídla', 'city'=>'Město', 'postal_code'=>'PSČ', 'email'=>'Kontaktní e-mail', 'phone'=>'Telefon', 'bank_account'=>'Číslo účtu na faktuře', 'registration'=>'Údaj o zápisu v rejstříku / evidenci'] as $key=>$label): ?><label><?= $escape($label) ?><input name="<?= $key ?>" value="<?= $escape($taxSettings[$key] ?? '') ?>" maxlength="<?= $key === 'ico' ? 8 : 254 ?>"></label><?php endforeach; ?>
         <p class="panel-help">Odesílání zákaznických zpráv a jejich obsah najdeš v <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=mail') ?>">nastavení obchodu → E-maily</a>.</p>
         <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit údaje prodávajícího</button>
       </form>
