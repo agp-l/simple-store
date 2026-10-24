@@ -119,6 +119,8 @@ $sharedPrices = \SimpleStore\Product\ProductVariantForm::inheritPrices($beforePr
 $variants->save($key, $sharedPrices);
 $reject(static fn () => $variants->save($key, $sharedPrices)); // stale page must not overwrite newer stock
 $inherited = $variants->snapshot($key);
+$check(array_filter($inherited['items'], static fn (array $variant): bool => $variant['price_czk'] !== null) === [],
+    'Shared prices must remain NULL in storage rather than being copied to each variant.');
 $check(array_column($inherited['items'], 'quantity') === array_column($beforePrices['items'], 'quantity') &&
     array_column($inherited['items'], 'sku') === array_column($beforePrices['items'], 'sku') &&
     array_column($inherited['items'], 'image_path') === array_column($beforePrices['items'], 'image_path'), 'Unifying prices changed unrelated row data.');
@@ -129,7 +131,8 @@ $current = $products->current($key, 'cs');
 $check($current['offer_price_czk'] === 1800 && !$current['price_varies'], 'Catalog still advertises old fixed variant prices.');
 foreach ($inherited['items'] as $variant) {
     if (!$variant['enabled']) continue;
-    $check(ProductVariantRepository::resolve($current, $variant['id'])['price_czk'] === 1800,
+    // Base product columns can be returned as numeric strings by MeekroDB.
+    $check((int) ProductVariantRepository::resolve($current, $variant['id'])['price_czk'] === 1800,
         'Stored inheritance does not resolve to the latest shared product price.');
 }
 foreach ([$source, $key] as $cleanup) {
