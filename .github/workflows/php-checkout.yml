@@ -255,6 +255,7 @@ jobs:
         run: |
           node --test tests/product-variants-browser.mjs
           node --test tests/product-sale-browser.mjs
+          node --test tests/product-sales-mass-browser.mjs
           node --test tests/checkout-presentation-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
@@ -263,5 +264,6 @@ jobs:
           path: |
             /tmp/variant-screenshots/
             /tmp/sale-screenshots/
+            /tmp/sales-mass-screenshots/
             /tmp/checkout-presentation/
           retention-days: 7

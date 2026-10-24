@@ -25,7 +25,7 @@ $btcpayWebhookSecretConfigured ??= false;
 <?php if ($settingsTab === 'overview'): ?>
 <div class="panel-settings-overview">
   <?php foreach ([
-      ['products', 'Hromadná úprava produktů', 'Společný počet kusů, dostupnost a zveřejnění všech produktů.'],
+      ['products', 'Hromadná úprava produktů', 'Způsob prodeje, společný počet kusů, dostupnost a zveřejnění produktů.'],
       ['appearance', 'Texty webu', 'Hlavička, výpis produktů a patička.'],
       ['delivery', 'Doprava', 'Ceník a dostupnost výdejních míst i doručení na adresu.'],
       ['carriers', 'Dopravci', 'Widgety výdejních míst a údaje pro podávání zásilek.'],
