@@ -33,11 +33,11 @@ $invalid(static fn () => A::snapshot(array_replace($sale, ['supplier_price_czk' 
 $invalid(static fn () => A::snapshot(array_replace($sale, ['seller' => []]), 1800));
 $check(A::snapshot($sale, 1678)['assistance_fee_czk'] === 0 && A::snapshot(['mode' => 'own'], 1800) === [], 'Zero fee or legacy mode failed.');
 $summary = ['items' => $items];
-$token = A::reviewToken($summary, ['email' => 'a@example.test'], 79, 'bank_transfer', 'legal-v1', 'secret');
+$token = \SimpleStore\Checkout\CheckoutReview::token($summary, ['email' => 'a@example.test'], 79, 'bank_transfer', 'legal-v1', 'secret');
 foreach ([['items' => [$own]], ['items' => [array_replace($assisted, ['supplier_price_czk' => 1600]), $own]]] as $changed) {
-    $check($token !== A::reviewToken($changed, ['email' => 'a@example.test'], 79, 'bank_transfer', 'legal-v1', 'secret'), 'Changed contract retained review approval.');
+    $check($token !== \SimpleStore\Checkout\CheckoutReview::token($changed, ['email' => 'a@example.test'], 79, 'bank_transfer', 'legal-v1', 'secret'), 'Changed contract retained review approval.');
 }
-$check($token !== A::reviewToken($summary, ['email' => 'a@example.test'], 79, 'bank_transfer', 'legal-v2', 'secret'), 'Changed terms retained review approval.');
+$check($token !== \SimpleStore\Checkout\CheckoutReview::token($summary, ['email' => 'a@example.test'], 79, 'bank_transfer', 'legal-v2', 'secret'), 'Changed terms retained review approval.');
 $order = ['items' => $items, 'total_czk' => 3879, 'subtotal_czk' => 3800, 'shipping_czk' => 79,
     'shipping' => ['assisted_purchase' => ['early_start' => true, 'early_request_text' => A::EARLY_REQUEST]]];
 $mail = OrderEmailComposer::compose('order', $order, MailSettingsRepository::EVENTS['order']);

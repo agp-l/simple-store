@@ -73,14 +73,6 @@ final class AssistedPurchase
         return $items;
     }
 
-    /** A signed review binds seller, prices, delivery, payment and legal versions. */
-    public static function reviewToken(array $summary, array $delivery, ?int $shipping, string $payment,
-        string $legalVersion, string $secret): string
-    {
-        return hash_hmac('sha256', json_encode([$summary['items'], $delivery, $shipping, $payment,
-            $legalVersion], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), $secret);
-    }
-
     public static function description(array $item): string
     {
         if (($item['sale_mode'] ?? 'own') !== 'assisted') return '';

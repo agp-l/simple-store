@@ -243,7 +243,12 @@ final class CheckoutController
             !$this->orders->installed()) {
             throw new InvalidArgumentException('Objednávku nyní nelze dokončit. Zkontrolujte košík, doručení a nastavení obchodu.');
         }
-        $delivery = $this->pickup->revalidate($methodCode, $delivery);
+        $verifiedDelivery = $this->pickup->revalidate($methodCode, $delivery);
+        if ($verifiedDelivery !== $delivery) {
+            // The next review must show the new carrier address, not repeatedly sign the old one.
+            $this->cart->setDelivery($verifiedDelivery);
+            throw new InvalidArgumentException('Údaje výdejního místa se změnily. Zkontrolujte souhrn a objednejte znovu.');
+        }
         if ($summary['subtotal_czk'] + $price > 9999999) {
             throw new InvalidArgumentException('Celková částka objednávky přesahuje dostupný limit.');
         }
@@ -252,16 +257,13 @@ final class CheckoutController
             throw new InvalidArgumentException('Doprava není dostupná.');
         }
         $shipping = $delivery;
-        if (!AssistedPurchase::has($summary['items']) && isset($_POST['review_token'])) {
-            throw new InvalidArgumentException('Způsob prodeje se změnil. Zkontrolujte prosím souhrn znovu.');
+        $assisted = AssistedPurchase::has($summary['items']);
+        $bundle = $assisted ? $this->assistanceBundle($summary['items']) : null;
+        $expected = $this->reviewToken($summary, $delivery, $selected, $paymentMethod, $bundle['hash'] ?? '');
+        if (!is_string($_POST['review_token'] ?? null) || !hash_equals($expected, $_POST['review_token'])) {
+            throw new InvalidArgumentException('Cena, doprava, způsob prodeje nebo údaje objednávky se změnily, případně platnost souhrnu vypršela. Zkontrolujte souhrn a objednejte znovu.');
         }
-        if (AssistedPurchase::has($summary['items'])) {
-            $bundle = $this->assistanceBundle($summary['items']);
-            $expected = AssistedPurchase::reviewToken($summary, $delivery, $price, $paymentMethod,
-                $bundle['hash'], $this->cart->token());
-            if (!is_string($_POST['review_token'] ?? null) || !hash_equals($expected, $_POST['review_token'])) {
-                throw new InvalidArgumentException('Cena, prodávající nebo údaje objednávky se změnily. Zkontrolujte souhrn a objednejte znovu.');
-            }
+        if ($assisted) {
             if (($_POST['assisted_terms'] ?? '') !== '1') throw new InvalidArgumentException('Potvrďte podmínky asistovaného nákupu.');
             $shipping['assisted_purchase'] = ['early_start' => ($_POST['early_start'] ?? '') === '1',
                 'early_request_text' => AssistedPurchase::EARLY_REQUEST, 'terms_hash' => $bundle['hash']];
@@ -400,15 +402,13 @@ final class CheckoutController
         $ready = $baseReady && $this->paymentAvailable($paymentMethod);
         $assisted = AssistedPurchase::has($summary['items']);
         $reviewToken = '';
-        if ($assisted) {
-            try {
-                $bundle = $this->assistanceBundle($summary['items']);
-                $reviewToken = AssistedPurchase::reviewToken($summary, is_array($delivery) ? $delivery : [],
-                    $price, $paymentMethod, $bundle['hash'], $this->cart->token());
-            } catch (InvalidArgumentException $exception) {
-                $ready = false;
-                if ($error === '') $error = $exception->getMessage();
-            }
+        try {
+            $bundle = $assisted ? $this->assistanceBundle($summary['items']) : null;
+            $reviewToken = $this->reviewToken($summary, is_array($delivery) ? $delivery : [],
+                $selected, $paymentMethod, $bundle['hash'] ?? '');
+        } catch (InvalidArgumentException $exception) {
+            $ready = false;
+            if ($error === '') $error = $exception->getMessage();
         }
         $data = array_merge($this->shared, [
             'title' => match ($step) {
@@ -454,6 +454,14 @@ final class CheckoutController
             throw new InvalidArgumentException('Neplatné pole formuláře: ' . $name . '.');
         }
         return trim($value);
+    }
+
+    private function reviewToken(array $summary, array $delivery, ?array $shipping, string $paymentMethod, string $legalHash): string
+    {
+        // checkoutKey stays server-side and rotates with cart/contact/payment edits and successful checkout.
+        // The CSRF token is public form data and must not be the HMAC secret.
+        return CheckoutReview::token($summary, $delivery, $shipping['price_czk'] ?? null, $paymentMethod,
+            json_encode([$this->termsUrl, $legalHash], JSON_THROW_ON_ERROR), $this->cart->checkoutKey(), $shipping['label'] ?? '');
     }
 
     private function assistanceBundle(array $items): array
