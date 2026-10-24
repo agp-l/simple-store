@@ -1337,3 +1337,124 @@ SET @users_auth_version_upgrade = IF(@users_auth_version_exists=0,
 PREPARE users_auth_version_statement FROM @users_auth_version_upgrade;
 EXECUTE users_auth_version_statement;
 DEALLOCATE PREPARE users_auth_version_statement;
+
+-- Document workspace: independent series, private attachments and traceable edits.
+CREATE TABLE IF NOT EXISTS shop_document_series (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ name VARCHAR(120) NOT NULL,
+ kind VARCHAR(24) NOT NULL,
+ pattern VARCHAR(80) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ activity VARCHAR(120) NOT NULL DEFAULT '',
+ is_default TINYINT NOT NULL DEFAULT 0,
+ version INT UNSIGNED NOT NULL DEFAULT 1,
+ KEY document_series_kind (kind, is_default)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_document_counters (
+ series_id BIGINT UNSIGNED NOT NULL,
+ calendar_year SMALLINT UNSIGNED NOT NULL,
+ next_number INT UNSIGNED NOT NULL DEFAULT 1,
+ PRIMARY KEY (series_id, calendar_year)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_document_numbers (
+ document_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
+ series_id BIGINT UNSIGNED NULL,
+ calendar_year SMALLINT UNSIGNED NOT NULL,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_evidence_documents (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ kind VARCHAR(24) NOT NULL,
+ document_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ external_number VARCHAR(100) NOT NULL DEFAULT '',
+ activity VARCHAR(120) NOT NULL DEFAULT '',
+ issue_date DATE NOT NULL,
+ delivery_date DATE NULL,
+ due_date DATE NULL,
+ paid_date DATE NULL,
+ description VARCHAR(255) NOT NULL,
+ counterparty VARCHAR(500) NOT NULL DEFAULT '',
+ amount_czk DECIMAL(13,2) NOT NULL DEFAULT 0,
+ notes TEXT NOT NULL,
+ seller_json LONGTEXT NOT NULL,
+ order_id BIGINT UNSIGNED NULL,
+ invoice_id BIGINT UNSIGNED NULL,
+ related_id BIGINT UNSIGNED NULL,
+ version INT UNSIGNED NOT NULL DEFAULT 1,
+ voided_at DATETIME NULL,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ UNIQUE KEY evidence_document_number (document_number),
+ KEY evidence_document_date (issue_date,id),
+ KEY evidence_document_order (order_id,id),
+ KEY evidence_document_invoice (invoice_id,id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_evidence_links (
+ document_id BIGINT UNSIGNED NOT NULL,
+ entry_id BIGINT UNSIGNED NOT NULL,
+ PRIMARY KEY (document_id,entry_id),
+ KEY evidence_links_entry (entry_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_evidence_files (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ document_id BIGINT UNSIGNED NOT NULL,
+ filename VARCHAR(190) NOT NULL,
+ mime_type VARCHAR(80) CHARACTER SET ascii NOT NULL,
+ file_size INT UNSIGNED NOT NULL,
+ sha256 CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+ file_data LONGBLOB NOT NULL,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ KEY evidence_files_document (document_id,id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_evidence_events (
+ id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+ entity_kind VARCHAR(16) CHARACTER SET ascii NOT NULL,
+ entity_id BIGINT UNSIGNED NOT NULL,
+ old_json LONGTEXT NOT NULL,
+ new_json LONGTEXT NOT NULL,
+ reason VARCHAR(190) NOT NULL,
+ admin_id BIGINT UNSIGNED NOT NULL,
+ created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ KEY evidence_events_entity (entity_kind,entity_id,id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SET @ev_document_number_shop_tax_entries_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_tax_entries' AND COLUMN_NAME='document_number');
+SET @ev_document_number_shop_tax_entries_sql = IF(@ev_document_number_shop_tax_entries_exists=0, 'ALTER TABLE shop_tax_entries ADD COLUMN document_number VARCHAR(40) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT ''''', 'SELECT 1');
+PREPARE ev_statement FROM @ev_document_number_shop_tax_entries_sql;
+EXECUTE ev_statement;
+DEALLOCATE PREPARE ev_statement;
+
+SET @ev_activity_shop_tax_entries_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_tax_entries' AND COLUMN_NAME='activity');
+SET @ev_activity_shop_tax_entries_sql = IF(@ev_activity_shop_tax_entries_exists=0, 'ALTER TABLE shop_tax_entries ADD COLUMN activity VARCHAR(120) NOT NULL DEFAULT ''''', 'SELECT 1');
+PREPARE ev_statement FROM @ev_activity_shop_tax_entries_sql;
+EXECUTE ev_statement;
+DEALLOCATE PREPARE ev_statement;
+
+SET @ev_delivery_date_shop_invoices_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_invoices' AND COLUMN_NAME='delivery_date');
+SET @ev_delivery_date_shop_invoices_sql = IF(@ev_delivery_date_shop_invoices_exists=0, 'ALTER TABLE shop_invoices ADD COLUMN delivery_date DATE NULL', 'SELECT 1');
+PREPARE ev_statement FROM @ev_delivery_date_shop_invoices_sql;
+EXECUTE ev_statement;
+DEALLOCATE PREPARE ev_statement;
+
+SET @ev_paid_date_shop_invoices_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_invoices' AND COLUMN_NAME='paid_date');
+SET @ev_paid_date_shop_invoices_sql = IF(@ev_paid_date_shop_invoices_exists=0, 'ALTER TABLE shop_invoices ADD COLUMN paid_date DATE NULL', 'SELECT 1');
+PREPARE ev_statement FROM @ev_paid_date_shop_invoices_sql;
+EXECUTE ev_statement;
+DEALLOCATE PREPARE ev_statement;
+
+SET @ev_version_shop_invoices_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_invoices' AND COLUMN_NAME='version');
+SET @ev_version_shop_invoices_sql = IF(@ev_version_shop_invoices_exists=0, 'ALTER TABLE shop_invoices ADD COLUMN version INT UNSIGNED NOT NULL DEFAULT 1', 'SELECT 1');
+PREPARE ev_statement FROM @ev_version_shop_invoices_sql;
+EXECUTE ev_statement;
+DEALLOCATE PREPARE ev_statement;
+
+-- Keep existing documents and old numbers reserved; never silently renumber them.
+INSERT IGNORE INTO shop_document_numbers (document_number,calendar_year) SELECT document_number,YEAR(issue_date) FROM shop_invoices;
+INSERT IGNORE INTO shop_document_numbers (document_number,calendar_year) SELECT old_number,YEAR(created_at) FROM shop_invoice_number_events;
+INSERT IGNORE INTO shop_document_numbers (document_number,calendar_year) SELECT new_number,YEAR(created_at) FROM shop_invoice_number_events;
+
+SET @ev_activity_shop_invoices_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_invoices' AND COLUMN_NAME='activity');
+SET @ev_activity_shop_invoices_sql = IF(@ev_activity_shop_invoices_exists=0, 'ALTER TABLE shop_invoices ADD COLUMN activity VARCHAR(120) NOT NULL DEFAULT ''''', 'SELECT 1');
+PREPARE ev_statement FROM @ev_activity_shop_invoices_sql;
+EXECUTE ev_statement;
+DEALLOCATE PREPARE ev_statement;
+
+INSERT IGNORE INTO shop_document_numbers (document_number,calendar_year) SELECT document_number,YEAR(issue_date) FROM shop_invoice_corrections;

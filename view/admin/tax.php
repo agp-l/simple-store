@@ -22,8 +22,11 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
   <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit rok</button>
 </form>
 <?php endif; ?>
+<?php if (isset($workspaceReady) && !$workspaceReady): ?><p class="panel-notice">Pro novou společnou tabulku, přílohy a číselné řady <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
 <?php if ($taxReady): ?>
-  <?php if ($accountingTab === 'overview'): ?>
+  <?php if (($workspaceReady ?? false) && in_array($accountingTab, ['overview','documents','numbering','restart'],true)): ?>
+    <?php require __DIR__ . '/' . ['overview'=>'evidence-journal.php','documents'=>'evidence-document-edit.php','numbering'=>'evidence-numbering.php','restart'=>'evidence-restart.php'][$accountingTab]; ?>
+  <?php elseif ($accountingTab === 'overview'): ?>
     <section class="panel-panel">
       <h2>Jak postupovat u objednávky</h2>
       <p>1. Ověř platbu u objednávky. 2. Na jejím detailu vystav doklad. 3. Zapiš skutečný příjem podle banky či pokladny. U platební brány porovnej také vyúčtování a výplatu na účet. V tabulce níže hned uvidíš, co je hotové a co chybí. <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl . '&tab=guide&year=' . $taxYear) ?>">Podrobný postup pro OSVČ →</a></p>
@@ -105,6 +108,7 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
         <?php foreach ($invoiceHistory as $change): ?><p><?= $escape($change['old_number']) ?> → <?= $escape($change['new_number']) ?> · <?= $escape($change['created_at']) ?> UTC · <?= $escape($change['reason']) ?></p><?php endforeach; ?>
         <?php if ($selectedInvoice['emailed_at'] === null): ?><form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="mail"><input type="hidden" name="action" value="invoice-email"><input type="hidden" name="id" value="<?= (int) $selectedInvoice['id'] ?>"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('mail') ?> Odeslat fakturu e-mailem</button></form><?php endif; ?>
       </section>
+      <?php if ($workspaceReady ?? false) require __DIR__ . '/invoice-edit.php'; ?>
       <?php require __DIR__ . '/invoice-corrections.php'; ?>
     <?php endif; ?>
   <?php elseif ($accountingTab === 'mail'): ?>

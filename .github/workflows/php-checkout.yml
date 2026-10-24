@@ -85,6 +85,7 @@ jobs:
           php tests/accounting.php
           php tests/tax-invoice-mail.php
           php tests/tax-documents.php
+          php tests/evidence-workspace.php
           php tests/catalog-render.php
           php tests/footer-legal.php
           php tests/site-copy.php
@@ -186,6 +187,7 @@ jobs:
           php tests/product-prompt-database.php
           php tests/supplier-links-database.php
           php tests/password-reset-database.php
+          php tests/evidence-workspace-database.php
           php tests/commerce-reset-database.php
           php tests/table-prefix-database.php
           php tests/admin-users-database.php
@@ -239,6 +241,7 @@ jobs:
           php tests/product-prompt-database.php
           php tests/supplier-links-database.php
           php tests/fio-database.php
+          php tests/evidence-workspace-database.php
           php tests/commerce-reset-database.php
           php tests/table-prefix-database.php
           php tests/admin-users-database.php

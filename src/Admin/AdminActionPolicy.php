@@ -21,6 +21,7 @@ final class AdminActionPolicy
         'mail-reconcile', 'tax-amend-entry', 'tax-void-entry',
         'tax-order-movement', 'tax-transfer', 'tax-save-record', 'tax-void-record', 'tax-restore-record',
         'invoice-correction', 'invoice-void-correction',
+        'evidence-document-save', 'evidence-series-save', 'evidence-invoice-save', 'evidence-commerce-reset',
     ];
 
     public const RETURNS = ['return-update', 'return-refund', 'return-delete'];

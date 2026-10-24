@@ -41,7 +41,7 @@ $flatTaxAdvances = new FlatTaxAdvanceRepository($db);
 $flatTaxAdvancesReady = $flatTaxAdvances->installed();
 $accountingTab = $_POST['tab'] ?? $_GET['tab'] ?? 'overview';
 if (!is_string($accountingTab) || !in_array($accountingTab,
-    ['overview', 'money', 'balances', 'closing', 'funds', 'stock', 'invoices', 'mail', 'orders', 'settings', 'guide'], true)) {
+    ['overview', 'money', 'balances', 'closing', 'funds', 'stock', 'invoices', 'mail', 'orders', 'settings', 'guide', 'documents', 'numbering', 'restart'], true)) {
     $accountingTab = 'overview';
 }
 $rawYear = $_POST['year'] ?? $_GET['year'] ?? (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format('Y');
@@ -77,7 +77,9 @@ $evidencePreviousUrl = $evidenceNextUrl = '';
 $evidenceSearch = '';
 [$accountingFrom, $accountingTo] = AccountingRepository::period(null, null);
 
-if ($method === 'POST') {
+require __DIR__ . '/evidence-workspace.php';
+
+if ($method === 'POST' && !$evidenceActionHandled) {
     try {
         if (!$taxReady) {
             throw new RuntimeException('Nejdřív aktualizuj SQL tabulky v sekci Databáze.');
@@ -364,7 +366,7 @@ try {
             $stockMovements = $tax->stockMovements();
         }
     }
-    if ($accountingTab === 'overview' && $taxReady && $invoicesReady && $accountingReady) {
+    if ($accountingTab === 'overview' && !$workspaceReady && $taxReady && $invoicesReady && $accountingReady) {
         $rawSearch = $_GET['q'] ?? '';
         if (!is_string($rawSearch) || strlen($rawSearch) > 150) {
             throw new InvalidArgumentException('Hledaný výraz je příliš dlouhý.');

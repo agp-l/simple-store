@@ -60,3 +60,57 @@ Potvrzené vratky z reklamací jsou ve vyúčtování vidět pro kontrolu. Autom
 ## Technické ověření
 
 `tests/osvc-evidence-database.php`: split 1 800/1 678/122, částečné platby a vratky s haléři, dodavatelské vratky nezkreslující příjem objednávky, převod bez druhého zdanění, replay a rollback, konfliktní verze, CSV a ochrana před vzorci, krypto s oceněním, majetek/inventura a opravy dokladů. Běží na MySQL i MariaDB. `tests/tax-evidence-browser.mjs`: desktop/mobil, zobrazení a zachování rozepsaného formuláře, přesné částky a pomocné ovládání; bez závislosti na produkčním účtu. Migrace je opakovatelná, nedělá automatickou uzávěrku ani fiktivní doplnění starých plateb.
+
+
+## Společná tabulka, originály a číslování
+
+Hlavní záložka **Daňová evidence** má šest širokých sloupců: datum, číslo dokladu,
+popis, daňové příjmy, daňové výdaje, nedaňové příjmy/výdaje. Sčítá pouze skutečné
+pohyby, včetně záporného dopadu vratek. Faktury a podklady bez propojené platby
+zobrazuje samostatně s nulovým peněžním dopadem. Rok, hledání a činnost filtrují
+CSV i tabulku; ZIP vždy obsahuje celý rok nebo všechny roky, nikoli jen stránku.
+
+**Číslování** podporuje více řad pro faktury, peněžní zápisy a ostatní doklady,
+např. `ESH-{YYYY}-{SEQ:4}` a `MAS-{YYYY}-{SEQ:4}`. Lze nastavit další číslo a
+výchozí řadu každého druhu. Bez roku je počítadlo průběžné. Přidělení čísla je
+transakční, použité číslo zůstává rezervované i po opravě. Existující doklady se
+nepřečíslují. Na jiných instalacích používej odlišné prefixy, synchronizace mezi
+eshopy není součástí modulu. Do společné evidence zapisuj i činnosti mimo e-shop.
+
+**Doklad / bankovní výpis** dovoluje založit samostatnou fakturu neplátce,
+výzvu k platbě, pokladní doklad, přijatou fakturu/účtenku, bankovní výpis,
+pověření nebo navazující opravu. Uchovává naše i původní číslo dodavatele,
+činnost, vystavení, prodej/službu, splatnost a skutečnou úhradu jako různá data.
+K dokladu lze připojit více souborů a více peněžních pohybů. K jedné platbě tedy
+patří faktura i bankovní výpis. Soubor se stahuje pouze přes přihlášeného správce,
+nikoli z veřejné složky. Podporovány jsou PDF, PNG/JPG, CSV, TXT, JSON a XML do
+10 MB na soubor; ověřuje se obsah, ne pouze přípona. Hosting musí mít PHP
+fileinfo a pro archiv také ZIP. Bankovní výpis nahraj z Fio; nahrání není import
+jednotlivých transakcí a dosavadní Fio párování nearchivuje bankovní PDF.
+
+Přímá změna dokladu i obsahu objednávkové faktury ukládá staré a nové hodnoty,
+důvod a správce. Nezapisuje platbu, nemění objednávku ani neodesílá e-mail.
+U cenové opravy je dostupný samostatný navazující doklad. Původní nahrané
+soubory se nepřepisují. Chybně připojený doklad lze vyřadit a znovu obnovit.
+
+**ZIP** obsahuje offline index s odkazy, CSV, tiskové HTML (PDF uloží prohlížeč),
+nahrané originály a historii změn v JSON. Všechny roky navíc obsahují strukturované
+obchodní záznamy, včetně majetku, dluhů, inventur a objednávek bez dokladu. Je to
+soukromý finanční archiv s osobními údaji, nikoli úplná obnovitelná záloha aplikace.
+Limit jednoho exportu je 512 MB nekomprimovaných podkladů / 50 000 souborů;
+u větší evidence exportuj roky a uchovej i databázovou zálohu.
+
+**Restart historie** je zvláštní POST akce s CSRF, aktuálním heslem správce,
+přesným potvrzovacím textem a kontrolou počtů proti náhledu. Transakčně odstraní
+obchodní záznamy, historii a přílohy, uvolní rezervace a při úplném restartu smaže
+i historii skladových pohybů. Zachová katalog, uživatele, konfiguraci a definice
+číselných řad; prodané kusy se na sklad automaticky nevracejí. Workery a prodej
+musí být před restartem pozastavené. Akce se nikdy nespouští migrací ani instalací
+nové verze. Archivní povinnost skutečných dokladů zůstává i po změně e-shopu.
+
+V **Jak vést evidenci** jsou fiktivní tiskové vzory a příklad s rozdílnými daty
+objednání, inkasa, prodeje a vratky. Vzory nevytvářejí žádné záznamy v databázi.
+Právní rámec a odkazy: § 7b zákona 586/1992 Sb., § 148 daňového řádu,
+§ 31 odst. 14 živnostenského zákona a § 16 zákona o ochraně spotřebitele.
+Konkrétní číslo/formát není pro OSVČ v § 7b předepsán; samostatné řady jsou
+praktická organizace evidence, nikoli oddělení daňového subjektu.

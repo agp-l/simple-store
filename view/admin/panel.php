@@ -11,7 +11,7 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
 ?>
 <div class="panel-area">
   <?php if ($inside): ?>
-  <div class="panel-shell panel-wrap">
+  <div class="panel-shell panel-wrap <?= $screen === 'accounting' ? 'panel-shell--evidence' : '' ?>">
     <?php
     $panelHeading = 'Správa webu';
     $panelSubtitle = 'OBCHOD A OBSAH';

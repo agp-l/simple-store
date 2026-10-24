@@ -69,6 +69,12 @@ final class InvoiceRepository
             }
             $today = new DateTimeImmutable('now', new DateTimeZone('Europe/Prague'));
             $year = (int) $today->format('Y');
+            $numbering = new DocumentNumbering($this->db);
+            $additional=[];
+            if ($numbering->installed()) {
+                $allocated=$numbering->allocate('invoice', $year, (int) ($buyerInput['series_id'] ?? 0));
+                $number=$allocated['document_number'];$additional['activity']=$allocated['activity'];
+            } else {
             $this->db->query('INSERT IGNORE INTO shop_invoice_sequence (calendar_year, next_number) VALUES (%i, %i)',
                 $year, 1);
             $sequence = $this->db->queryFirstRow(
@@ -82,8 +88,9 @@ final class InvoiceRepository
             } while ((int) $taken > 0 && $next <= 999999);
             if ((int) $taken > 0) throw new InvalidArgumentException('Číselná řada faktur je vyčerpaná.');
             $this->db->query('UPDATE shop_invoice_sequence SET next_number=%i WHERE calendar_year=%i', $next, $year);
+            }
             $buyer['email'] = (string) $order['customer_email'];
-            $this->db->insert('shop_invoices', [
+            $this->db->insert('shop_invoices', $additional + [
                 'order_id' => $orderId, 'order_number' => $order['order_number'],
                 'document_number' => $number, 'issue_date' => $today->format('Y-m-d'),
                 'due_date' => $today->format('Y-m-d'),
@@ -127,7 +134,8 @@ final class InvoiceRepository
                      WHERE old_number=%s OR new_number=%s', $newNumber, $newNumber) > 0) {
                 throw new InvalidArgumentException('Doklad neexistuje nebo je nové číslo již obsazené.');
             }
-            $this->db->query('UPDATE shop_invoices SET document_number=%s WHERE id=%i', $newNumber, $id);
+            if ((new DocumentNumbering($this->db))->installed()) (new DocumentNumbering($this->db))->reserve($newNumber,(int) date('Y'));
+            $this->db->query('UPDATE shop_invoices SET document_number=%s'.((new DocumentNumbering($this->db))->installed()?',version=version+1':'').' WHERE id=%i', $newNumber, $id);
             $this->db->insert('shop_invoice_number_events', [
                 'invoice_id' => $id, 'old_number' => $row['document_number'],
                 'new_number' => $newNumber, 'reason' => $reason, 'admin_id' => $adminId,
