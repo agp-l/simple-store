@@ -11,10 +11,10 @@ foreach ($flatTaxAdvanceRows as $advance) $advanceByMonth[(int) $advance['tax_mo
 ?>
 <section class="panel-panel">
   <div class="panel-panel-head"><h2>Paušální zálohy · <?= (int) $taxYear ?></h2>
-    <a href="<?= $escape($taxUrl . '&tab=guide&year=' . $taxYear) ?>">Podmínky a pásma ↗</a></div>
+    <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl . '&tab=guide&year=' . $taxYear) ?>">Podmínky a pásma ↗</a></div>
   <p>Jde o tvoje <strong>ručně zapsané skutečné platby</strong>, ne o stav účtu u finančního úřadu. Zapsaná záloha se současně vloží do peněžního deníku jako nedaňový výdaj. Z této tabulky nelze určit nedoplatek ani splnění podmínek režimu.</p>
   <?php if (!$flatTaxAdvancesReady): ?>
-    <p class="panel-error">Pro evidenci záloh <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
+    <p class="panel-error">Pro evidenci záloh <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
   <?php else: ?>
     <?php if ($monthlyReference !== null): ?>
       <p class="panel-help">Publikovaná měsíční záloha <?= (int) $taxYear ?> pro pásmo <?= (int) $taxYearMode['flat_tax_band'] ?>: <strong><?= $taxMoney($monthlyReference) ?></strong>. V prvním pásmu byla částka za leden až červen původně vyšší a později zpětně snížena; přeplatek může být započten. Proto se záznamy níže automaticky neoznačují jako zaplacené či dlužné.</p>
@@ -31,7 +31,7 @@ foreach ($flatTaxAdvanceRows as $advance) $advanceByMonth[(int) $advance['tax_mo
             <?php else: ?>
               <?= $escape($advance['entry_date']) ?> · <strong><?= $taxMoney($advance['amount_czk']) ?></strong>
               <?php if ($advance['reference'] !== ''): ?> · <?= $escape($advance['reference']) ?><?php endif; ?>
-              · <a href="<?= $escape($taxUrl . '&tab=money&year=' . substr((string) $advance['entry_date'], 0, 4) . '&edit_entry=' . (int) $advance['entry_id']) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit v deníku</a><br>
+              · <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl . '&tab=money&year=' . substr((string) $advance['entry_date'], 0, 4) . '&edit_entry=' . (int) $advance['entry_id']) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit v deníku</a><br>
             <?php endif; ?>
           <?php endforeach; ?>
         </td></tr>
@@ -39,7 +39,7 @@ foreach ($flatTaxAdvanceRows as $advance) $advanceByMonth[(int) $advance['tax_mo
     </tbody></table></div>
     <?php if ($taxYearMode['flat_tax_confirmed']): ?>
       <details class="panel-entry-add"><summary><?= \SimpleStore\Rendering\Icon::render('save') ?> Zapsat skutečně uhrazenou zálohu</summary>
-        <form class="panel-form" method="post" action="<?= $escape($taxUrl) ?>">
+        <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl) ?>">
           <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="tax-add-flat-advance"><input type="hidden" name="year" value="<?= (int) $taxYear ?>">
           <label>Měsíc, kterého se platba týká<select name="tax_month"><?php foreach ($advanceMonths as $monthNumber => $monthName): ?><option value="<?= $monthNumber ?>"><?= $escape($monthName) ?></option><?php endforeach; ?></select></label>
           <label>Datum skutečné úhrady<input name="entry_date" type="date" value="<?= $escape($today) ?>" required></label>
@@ -52,7 +52,7 @@ foreach ($flatTaxAdvanceRows as $advance) $advanceByMonth[(int) $advance['tax_mo
         </form>
       </details>
     <?php else: ?>
-      <p class="panel-help">Formulář pro úhradu zpřístupníš potvrzením oznámeného režimu v <a href="<?= $escape($taxUrl . '&tab=settings&year=' . $taxYear) ?>">nastavení roku</a>.</p>
+      <p class="panel-help">Formulář pro úhradu zpřístupníš potvrzením oznámeného režimu v <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl . '&tab=settings&year=' . $taxYear) ?>">nastavení roku</a>.</p>
     <?php endif; ?>
   <?php endif; ?>
 </section>

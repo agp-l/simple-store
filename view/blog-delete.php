@@ -4,7 +4,7 @@ if (!$canManageContent || $adminCsrf === '' ||
     !isset($deletablePost['document_key'], $deletablePost['revision_number'])) return;
 ?>
 <details class="inline-blog-delete"><summary aria-label="Smazat článek <?= $escape($deletablePost['title']) ?>">▣ Smazat</summary>
-  <form method="post" action="<?= $escape($basePath . 'admin.php') ?>">
+  <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($basePath . 'admin/') ?>">
     <input type="hidden" name="csrf" value="<?= $escape($adminCsrf) ?>">
     <input type="hidden" name="action" value="delete-content">
     <input type="hidden" name="type" value="post">

@@ -8,6 +8,11 @@ RewriteRule (^|/)\. - [F,END]
 RewriteRule ^(?:src|config|database|docs|tools|tests|view|vendor)(?:/|$) - [F,END,NC]
 RewriteRule ^(?:README\.md|composer\.(?:json|lock)|index\.html|produkt-topo-terraventure\.(?:html|php))$ - [F,END,NC]
 
+# Private zones keep their existing PHP controllers and session boundaries.
+# Route the original request in PHP; POST bodies must never be redirected here.
+RewriteRule ^admin(?:/.*)?$ admin.php [QSA,END]
+RewriteRule ^account(?:/.*)?$ account.php [QSA,END]
+
 # Existing assets and PHP entry points remain directly accessible.
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d

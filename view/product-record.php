@@ -10,7 +10,7 @@ $editing = (bool) ($editMode ?? false);
 $canEdit = (bool) ($canEditProduct ?? false);
 $imageUrl = static fn (string $path): string => str_starts_with($path, 'images/') ? $basePath . $path : $path;
 $image = $imageUrl($product['image_path']);
-$mediaLibraryUrl = $basePath . 'admin.php?' . http_build_query([
+$mediaLibraryUrl = $basePath . 'admin/?' . http_build_query([
     'section' => 'media', 'type' => 'product', 'key' => $product['product_key'], 'language' => $language,
 ]);
 $details = ProductDetails::decode($product['details_json'] ?? null, $product['sizes'] ?? '');
@@ -34,8 +34,8 @@ $editable = static function (string $field, string $value, ?int $index = null, s
 ?>
   <main class="wrap detail-page<?= $editing ? ' is-editing' : '' ?>" id="produkty">
     <?php require __DIR__ . '/manage/product-panel.php'; ?>
-    <nav class="breadcrumbs" aria-label="Drobečková navigace"><a href="<?= $escape($siteRoot . $language) ?>">Úvod</a>
-      <?php foreach ($categoryTrail as $crumb): ?><span>/</span><a href="<?= $escape($siteRoot . $language . '/kategorie-produktu/' . $crumb['path']) ?>"><?= $escape($crumb['title']) ?></a><?php endforeach; ?>
+    <nav class="breadcrumbs" aria-label="Drobečková navigace"><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . $language) ?>">Úvod</a>
+      <?php foreach ($categoryTrail as $crumb): ?><span>/</span><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . $language . '/kategorie-produktu/' . $crumb['path']) ?>"><?= $escape($crumb['title']) ?></a><?php endforeach; ?>
       <span>/</span><span><?= $escape($product['name']) ?></span></nav>
     <div class="product-detail">
       <div class="detail-media">
@@ -55,8 +55,8 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         <?php if ($editing): ?><textarea class="detail-lead inline-summary-editor" data-editor-input="summary" maxlength="<?= CardSummary::MAX_CHARACTERS ?>" rows="3" aria-label="Perex produktu" aria-describedby="product-summary-hint" placeholder="Krátký popis produktu…"><?= $escape($product['summary'] ?? '') ?></textarea>
           <small class="inline-summary-hint" id="product-summary-hint">Perex na kartě: nejvýše <?= CardSummary::MAX_CHARACTERS ?> znaků; v katalogu se zobrazí maximálně tři řádky. <output data-summary-counter></output></small>
         <?php elseif ($product['summary'] !== ''): ?><p class="detail-lead"><?= $escape($product['summary']) ?></p><?php endif; ?>
-        <?php if (($product['sale_mode'] ?? 'own') === 'assisted'): ?><p class="assisted-label">Asistovaný nákup · služba v ceně. <a href="<?= $escape($siteRoot . $language . '/obchodni-podminky-asistovaneho-nakupu') ?>">Jak nákup funguje</a></p><?php endif; ?>
-        <form method="post" action="<?= $escape($cartUrl) ?>" class="product-purchase">
+        <?php if (($product['sale_mode'] ?? 'own') === 'assisted'): ?><p class="assisted-label">Asistovaný nákup · služba v ceně. <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . $language . '/obchodni-podminky-asistovaneho-nakupu') ?>">Jak nákup funguje</a></p><?php endif; ?>
+        <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($cartUrl) ?>" class="product-purchase">
           <input type="hidden" name="action" value="add"><input type="hidden" name="csrf" value="<?= $escape($cartToken) ?>">
           <input type="hidden" name="product_key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
         <?php if ($product['variant_inventory']['enabled'] ?? false): ?>
@@ -130,9 +130,9 @@ $editable = static function (string $field, string $value, ?int $index = null, s
       <?php foreach ($productHistory as $revision): ?><div class="inline-revision"><span>Revize <?= (int) $revision['revision_number'] ?> · <?= $escape($revision['saved_at']) ?> · <?= $escape($revision['name']) ?></span>
         <?php if ($revision['active_product_key'] === null): ?><button class="inline-small" type="button" data-editor-action="restore" data-editor-value="<?= (int) $revision['revision_number'] ?>">Obnovit jako novou revizi</button><?php else: ?><small>Aktuální</small><?php endif; ?>
       </div><?php endforeach; ?></details><?php endif; ?>
-    <p><a href="<?= $escape($siteRoot . $language . ($categoryTrail !== [] ? '/kategorie-produktu/' . $categoryPath : '')) ?>#produkty">← Zpět na produkty</a></p>
+    <p><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . $language . ($categoryTrail !== [] ? '/kategorie-produktu/' . $categoryPath : '')) ?>#produkty">← Zpět na produkty</a></p>
     <?php if ($editing): ?><script type="application/json" id="inline-editor-config"><?= json_encode([
-        'endpoint' => $basePath . 'admin.php', 'key' => $product['product_key'],
+        'endpoint' => $basePath . 'admin/', 'basePath' => $basePath, 'key' => $product['product_key'],
         'type' => 'product', 'language' => $language, 'revision' => (int) $product['revision_number'],
         'csrf' => $editToken,
       ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script>

@@ -28,7 +28,8 @@ header('X-Frame-Options: DENY');
 header('Referrer-Policy: no-referrer');
 
 $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/admin.php'), '/') . '/';
-$adminUrl = $basePath . 'admin.php';
+$adminUrl = $basePath . 'admin/';
+\SimpleStore\Navigation\PanelUrl::dispatch('admin', $basePath);
 $screen = 'login';
 $error = '';
 $documents = [];
@@ -107,7 +108,7 @@ try {
                     ? 'Příliš mnoho pokusů. Zkus to znovu za ' . (int) ceil($remaining / 60) . ' min.'
                     : 'Nesprávné přihlašovací údaje. Zkontroluj e-mail správce a heslo nebo použij obnovu hesla.';
             } else {
-                header('Location: ' . $adminUrl, true, 303);
+                header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl), true, 303);
                 exit;
             }
         } elseif ($action === 'reset-request' && !$auth->signedIn()) {
@@ -117,7 +118,7 @@ try {
                     throw new InvalidArgumentException('Zadej platný e-mail správce.');
                 }
                 (new PasswordResetService($db))->request('admin', is_string($_POST['email'] ?? null) ? $_POST['email'] : '', 'admin.php', $entryUrl);
-                header('Location: ' . $adminUrl . '?mode=forgot&sent=1', true, 303);
+                header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?mode=forgot&sent=1'), true, 303);
                 exit;
             } catch (InvalidArgumentException | RuntimeException $exception) {
                 $error = $exception->getMessage();
@@ -128,14 +129,14 @@ try {
                     is_string($_POST['token'] ?? null) ? $_POST['token'] : '',
                     is_string($_POST['password'] ?? null) ? $_POST['password'] : '',
                     is_string($_POST['password_confirm'] ?? null) ? $_POST['password_confirm'] : '');
-                header('Location: ' . $adminUrl . '?mode=reset&done=1', true, 303);
+                header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?mode=reset&done=1'), true, 303);
                 exit;
             } catch (InvalidArgumentException $exception) {
                 $error = $exception->getMessage();
             }
         } elseif ($action === 'logout' && $auth->signedIn()) {
             $auth->signOut();
-            header('Location: ' . $adminUrl, true, 303);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl), true, 303);
             exit;
         } elseif ($action === 'visitor-preview' && $auth->signedIn()) {
             $enabled = $_POST['enabled'] ?? null;
@@ -149,7 +150,7 @@ try {
             $returnUrl = (new StorefrontReturnUrl($basePath, $site['languages'], $site['default_language']))
                 ->fromRequest($_POST['return_to'] ?? null);
             $auth->setVisitorPreview($enabled === '1');
-            header('Location: ' . $returnUrl, true, 303);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($returnUrl), true, 303);
             exit;
         } elseif (!is_string($action) || !AdminActionPolicy::allows($action) || !$auth->signedIn()) {
             if (in_array($action, ['inline-product', 'inline-content', 'media-upload', 'media-attach', 'media-delete', 'product-bulk-step', 'product-zip-step'], true)) {

@@ -1,7 +1,7 @@
 <?php if ($canEdit): ?>
 <section class="content-admin-panel" aria-label="Správa produktu">
     <?php if ($canEdit && !$editing): ?>
-      <div class="product-admin-read"><span>Produkt prohlížíš bez úprav.</span><a href="<?= $escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1') ?>"><?= \SimpleStore\Rendering\Icon::render('edit') ?> Upravit produkt</a></div>
+      <div class="product-admin-read"><span>Produkt prohlížíš bez úprav.</span><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1') ?>"><?= \SimpleStore\Rendering\Icon::render('edit') ?> Upravit produkt</a></div>
     <?php endif; ?>
     <?php if ($editing): ?>
       <div class="inline-toolbar product-edit-toolbar" id="inline-toolbar">
@@ -10,10 +10,10 @@
         <div class="product-edit-toolbar-actions">
           <button type="button" class="inline-small" data-editor-action="publish" data-value="<?= $product['published'] ? '0' : '1' ?>"><?= \SimpleStore\Rendering\Icon::render('eye') ?> <?= $product['published'] ? 'Skrýt produkt' : 'Publikovat produkt' ?></button>
           <button type="button" class="inline-small" data-editor-action="media-library"><?= \SimpleStore\Rendering\Icon::render('image') ?> Fotografie</button>
-          <a class="inline-small" href="<?= $escape($mediaLibraryUrl) ?>"><?= \SimpleStore\Rendering\Icon::render('image') ?> Knihovna fotografií</a>
+          <a class="inline-small" href="<?= \SimpleStore\Navigation\PanelUrl::escape($mediaLibraryUrl) ?>"><?= \SimpleStore\Rendering\Icon::render('image') ?> Knihovna fotografií</a>
           <a class="inline-small" href="#supplier-links"><?= \SimpleStore\Rendering\Icon::render('external') ?> Dodavatelé</a>
-          <a class="inline-small" href="<?= $escape($basePath . 'admin.php?' . http_build_query(['section' => 'product-import', 'language' => $language, 'key' => $product['product_key']])) ?>"><?= \SimpleStore\Rendering\Icon::render('document') ?> JSON pro AI</a>
-          <?php if ($product['published']): ?><a href="<?= $escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug'])) ?>"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit bez úprav</a><?php endif; ?>
+          <a class="inline-small" href="<?= \SimpleStore\Navigation\PanelUrl::escape($basePath . 'admin/?' . http_build_query(['section' => 'product-import', 'language' => $language, 'key' => $product['product_key']])) ?>"><?= \SimpleStore\Rendering\Icon::render('document') ?> JSON pro AI</a>
+          <?php if ($product['published']): ?><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug'])) ?>"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit bez úprav</a><?php endif; ?>
         </div>
       </div>
     <?php endif; ?>
@@ -34,14 +34,14 @@
         </select></label><?php endif; ?>
         <?php if (($product['variant_inventory']['enabled'] ?? false)): ?><a class="inline-small" href="#product-variants">Upravit sklad variant ↓</a>
         <?php elseif ($stockReady ?? false): ?>
-          <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>" class="inline-stock-form">
+          <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>" class="inline-stock-form">
             <input type="hidden" name="action" value="set-product-stock"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>">
             <input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
             <input type="hidden" name="expected" value="<?= (int) ($product['stock_quantity'] ?? 0) ?>">
             <label>Volné kusy skladem <input type="number" name="quantity" min="0" max="1000000" value="<?= (int) ($product['stock_quantity'] ?? 0) ?>" required inputmode="numeric"></label>
             <button type="submit" class="inline-small"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit sklad</button>
           </form>
-        <?php else: ?><a href="<?= $escape($siteRoot . 'admin.php?section=database') ?>">Pro počet kusů aktualizuj SQL tabulky ↗</a><?php endif; ?>
+        <?php else: ?><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/?section=database') ?>">Pro počet kusů aktualizuj SQL tabulky ↗</a><?php endif; ?>
         <label class="product-admin-address">Adresa produktu <span class="inline-address-prefix">/<?= $escape($language) ?>/produkt/</span><input type="text" data-editor-input="slug" value="<?= $escape($product['slug']) ?>" pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="190" required spellcheck="false" autocomplete="off"></label>
       </div>
       </section>
@@ -55,7 +55,7 @@
   <?php if ($editing): ?>
       <details class="inline-delete-product"><summary><?= \SimpleStore\Rendering\Icon::render('delete') ?> Odstranit produkt</summary>
         <p>Smazání odstraní produkt a všechny jeho revize v tomto jazyce. Nahrané obrázky zůstanou na disku, protože mohou mít zkopírované odkazy.</p>
-        <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>">
+        <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>">
           <input type="hidden" name="action" value="delete-product"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>">
           <input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
           <input type="hidden" name="revision" value="<?= (int) $product['revision_number'] ?>">

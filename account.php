@@ -23,7 +23,8 @@ header('X-Frame-Options: DENY');
 header('Referrer-Policy: no-referrer');
 
 $basePath = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/account.php'), '/') . '/';
-$accountUrl = $basePath . 'account.php';
+$accountUrl = $basePath . 'account/';
+\SimpleStore\Navigation\PanelUrl::dispatch('account', $basePath);
 $checkoutReturn = ($_GET['checkout'] ?? '') === '1'
     ? $basePath . $site['default_language'] . '/pokladna?step=shipping' : $accountUrl;
 $screen = 'login';
@@ -95,7 +96,7 @@ try {
         return $value;
     };
     $redirect = static function (string $url): void {
-        header('Location: ' . $url, true, 303);
+        header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($url), true, 303);
         exit;
     };
 

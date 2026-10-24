@@ -4,7 +4,7 @@
             <summary>Podání zásilky <?= $carrierBalik ? 'Balíkovnou' : 'GLS' ?><?php if ($carrierShipment !== null): ?> · <?= $carrierShipment['status'] === 'registered' ? 'číslo ' . $escape($carrierShipment['tracking_number']) : 'podklady uloženy' ?><?php endif; ?></summary>
           <div class="panel-packeta-dispatch">
             <?php if (!$carrierReady): ?>
-              <p class="panel-help">Nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
+              <p class="panel-help">Nejdřív <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
             <?php else: ?>
               <?php if (($_GET['carrier_saved'] ?? '') === 'carrier-save'): ?><p class="panel-notice" role="status">Podklady byly uloženy. Zásilka ještě nevznikla u dopravce.</p><?php endif; ?>
               <?php if (($_GET['carrier_saved'] ?? '') === 'carrier-register'): ?><p class="panel-notice" role="status">Číslo zásilky od dopravce bylo uloženo. Objednávku označ jako odeslanou až po předání balíku.</p><?php endif; ?>
@@ -20,7 +20,7 @@
                     <div><dt>Výdejní místo</dt><dd><?= $escape($carrierShipment['draft']['pickup_point'] ?? '') ?> · <?= $escape($carrierShipment['draft']['pickup_address'] ?? '') ?><br>ID <?= $escape($carrierShipment['draft']['pickup_code'] ?? '') ?> · PSČ <?= $escape($carrierShipment['draft']['postal_code'] ?? '') ?></dd></div>
                     <div><dt>Hmotnost</dt><dd><?= $escape($carrierShipment['draft']['weight_kg'] ?? '') ?> kg</dd></div>
                   </dl>
-                <?php elseif (!$gatewayDispatchBlocked): ?><p><a class="panel-icon-link panel-button" href="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id'] . '&carrier_csv=1') ?>"><?= \SimpleStore\Rendering\Icon::render('download') ?> Stáhnout CSV pro GLS e-Balík</a></p><?php endif; ?>
+                <?php elseif (!$gatewayDispatchBlocked): ?><p><a class="panel-icon-link panel-button" href="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id'] . '&carrier_csv=1') ?>"><?= \SimpleStore\Rendering\Icon::render('download') ?> Stáhnout CSV pro GLS e-Balík</a></p><?php endif; ?>
               <?php endif; ?>
               <?php if ($carrierBalik): ?>
                 <p class="panel-help">Vyhledávací mapa Balíkovny pouze vrací vybrané místo; sama nevytváří zásilku ani čárový kód. Údaje níže si připrav pro <a href="https://www.balikovna.cz/cs/web/guest/poslat-balik" target="_blank" rel="noopener noreferrer">podání na webu Balíkovny ↗</a>. Po vytvoření zásilky tam získáš štítek nebo podací kód. Tento e-shop bez podání u dopravce platný štítek nevytvoří.</p>
@@ -42,7 +42,7 @@
                         (is_string($savedDraft[$key] ?? null) ? $savedDraft[$key] : $default);
                   ?>
                   <?php if ($carrierShipment !== null): ?><details class="panel-order-accordion panel-order-edit-draft" <?= $enteredDraft !== [] ? 'open' : '' ?>><summary><?= \SimpleStore\Rendering\Icon::render('edit') ?> Upravit podklady k podání</summary><?php endif; ?>
-                  <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+                  <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                     <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="carrier-save"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                     <label>Příjemce / kontaktní osoba<input name="recipient" value="<?= $escape($draftValue('recipient', (string) ($shipping['recipient'] ?? $shipping['name'] ?? ''))) ?>" maxlength="140" required></label>
                     <label>E-mail<input type="email" name="email" value="<?= $escape($draftValue('email', (string) ($order['customer_email'] ?? ''))) ?>" maxlength="254" required></label>
@@ -65,7 +65,7 @@
                 <?php endif; ?>
               <?php endif; ?>
               <?php if ($carrierShipment !== null && $carrierShipment['status'] === 'draft' && !$gatewayDispatchBlocked): ?>
-                <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+                <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="carrier-register"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                   <label>Skutečné číslo zásilky od dopravce<input name="tracking_number" autocomplete="off" minlength="6" maxlength="50" required></label>
                   <label class="panel-check"><input type="checkbox" name="carrier_confirmed" value="1" required> Zkontroloval/a jsem podání u dopravce a opisuji číslo skutečně vytvořené zásilky.</label>

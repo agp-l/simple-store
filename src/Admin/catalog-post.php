@@ -8,5 +8,5 @@ if (!is_string($language) || !is_string($key) || !is_string($operation) || !is_s
 $expected = json_decode($rawExpected, true);
 if (!is_array($expected)) throw new InvalidArgumentException('Neplatný výběr.');
 (new \SimpleStore\Content\CatalogPostSelection($db, $site['languages']))->change($language, $operation, $key, $expected);
-header('Location: ' . $basePath . $language . '#kategorie', true, 303);
+header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($basePath . $language . '#kategorie'), true, 303);
 exit;

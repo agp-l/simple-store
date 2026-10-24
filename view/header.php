@@ -12,7 +12,7 @@
             <path d="m15.5 15.5 5 5" />
           </svg><input type="search" id="search-input" name="search" value="<?= htmlspecialchars($searchTerm, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="Hledat produkty" placeholder="Co hledáte do výbavy?"
             autocomplete="off"><button type="submit">Hledat</button></form>
-        <div class="header-actions"><a class="account" href="<?= $siteRoot ?>account.php" aria-label="Přihlásit se nebo otevřít můj účet"><span class="account-desktop">Přihlášení</span><span class="account-mobile" aria-hidden="true">Účet</span></a><a class="account account-register" href="<?= $siteRoot ?>account.php?mode=register">Registrace</a><a class="cart-button"
+        <div class="header-actions"><a class="account" href="<?= $siteRoot ?>account/" aria-label="Přihlásit se nebo otevřít můj účet"><span class="account-desktop">Přihlášení</span><span class="account-mobile" aria-hidden="true">Účet</span></a><a class="account account-register" href="<?= $siteRoot ?>account/register/">Registrace</a><a class="cart-button"
             href="<?= htmlspecialchars($cartUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="Otevřít košík"><svg viewBox="0 0 24 24"
               aria-hidden="true">
               <path d="M3 4h2l2 11h11l3-8H6M9 20h.01M18 20h.01" />
@@ -45,7 +45,7 @@
             <?php if ($link['children'] !== []): ?><?php require __DIR__ . '/nav-dropdown.php'; ?>
             <?php else: ?><a href="<?= htmlspecialchars($link['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" <?= $link['active'] ? 'aria-current="page"' : '' ?><?= !empty($link['newTab']) ? ' target="_blank" rel="noopener noreferrer"' : '' ?>><?= htmlspecialchars($link['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a><?php endif; ?>
           <?php endforeach; ?>
-          <?php if ($canManageMenu && !($canManageCatalog ?? false) && !($canEditProduct ?? false)): ?><a class="menu-admin-shortcut" href="<?= htmlspecialchars($menuAdminUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">✎ Upravit menu</a><?php endif; ?>
+          <?php if ($canManageMenu && !($canManageCatalog ?? false) && !($canEditProduct ?? false)): ?><a class="menu-admin-shortcut" href="<?= \SimpleStore\Navigation\PanelUrl::escape($menuAdminUrl) ?>">✎ Upravit menu</a><?php endif; ?>
         </nav>
       </div>
       <?php require __DIR__ . '/menu.php'; ?>
@@ -58,7 +58,7 @@
     </div>
   </header>
   <?php if ($adminPreview !== null && $adminCreate === null): ?>
-    <form class="visitor-preview-toggle" method="post" action="<?= $siteRoot ?>admin.php">
+    <form class="visitor-preview-toggle" method="post" action="<?= $siteRoot ?>admin/">
       <input type="hidden" name="csrf" value="<?= htmlspecialchars($adminPreview['csrf'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
       <input type="hidden" name="enabled" value="<?= $adminPreview['active'] ? '0' : '1' ?>">
       <input type="hidden" name="return_to" value="<?= htmlspecialchars($adminPreview['return_to'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">

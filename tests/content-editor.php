@@ -148,7 +148,7 @@ $admin = ob_get_clean();
 if (!str_contains($admin, '/shop/cs/moje-adresa?edit=1') ||
     !str_contains($admin, 'name="q"') ||
     !str_contains($admin, 'value="draft"') ||
-    !str_contains($admin, 'section=contents&amp;offset=24') ||
+    !str_contains($admin, 'contents/?offset=24') ||
     !str_contains($admin, 'value="create-translation"') ||
     !str_contains($admin, '<option value="en">en</option>') ||
     !str_contains($admin, 'value="create-content"') ||

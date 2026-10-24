@@ -22,7 +22,7 @@ test('bulk sale modes: responsive admin preview and explicit no-JS confirmation'
       const page = await browser.newPage({ viewport: { width, height: 1000 }, javaScriptEnabled: false });
       await page.route('https://**/*', route => route.abort());
       let submitted;
-      await page.route('**/admin.php?**', async route => {
+      await page.route('**/admin/**', async route => {
         submitted = new URLSearchParams(route.request().postData());
         await route.fulfill({ body: '<p>Odesláno ve fixture</p>', contentType: 'text/html; charset=utf-8' });
       });

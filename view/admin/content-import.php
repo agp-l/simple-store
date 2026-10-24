@@ -2,15 +2,15 @@
   <div><p class="panel-eyebrow">Obsah webu</p><h1>Import a export stránek a článků</h1>
     <p>Stáhni dokument jako JSON, uprav ho třeba pomocí AI a nahraj zpět. Můžeš také vytvořit nový koncept.</p></div>
   <div class="panel-quick">
-    <a class="panel-icon-link" href="<?= $escape($adminUrl . '?section=contents') ?>">Stránky</a>
-    <a class="panel-icon-link" href="<?= $escape($basePath . $site['default_language'] . '/blog?manage=1') ?>">Články</a>
-    <a class="panel-icon-link" href="<?= $escape($adminUrl . '?section=product-import') ?>">Import produktů</a>
+    <a class="panel-icon-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=contents') ?>">Stránky</a>
+    <a class="panel-icon-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($basePath . $site['default_language'] . '/blog?manage=1') ?>">Články</a>
+    <a class="panel-icon-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=product-import') ?>">Import produktů</a>
   </div>
 </div>
 <section class="panel-panel">
   <?php if ($importError !== ''): ?><p class="panel-error" role="alert"><?= $escape($importError) ?></p><?php endif; ?>
-  <?php if ($exportUrl !== ''): ?><p><a class="panel-action panel-icon-link" href="<?= $escape($exportUrl) ?>"><?= \SimpleStore\Rendering\Icon::render('download') ?> Stáhnout aktuální JSON</a></p><?php endif; ?>
-  <form class="panel-form" method="post" enctype="multipart/form-data" action="<?= $escape($adminUrl . '?section=content-import') ?>">
+  <?php if ($exportUrl !== ''): ?><p><a class="panel-action panel-icon-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($exportUrl) ?>"><?= \SimpleStore\Rendering\Icon::render('download') ?> Stáhnout aktuální JSON</a></p><?php endif; ?>
+  <form class="panel-form" method="post" enctype="multipart/form-data" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=content-import') ?>">
     <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
     <label>Způsob importu
       <select name="mode">

@@ -22,7 +22,7 @@ test('accounts: responsive forms, password generation and explicit deletions', a
       const errors=[]; page.on('pageerror',error=>errors.push(error.message));
       await page.route('https://**/*', route=>route.abort());
       let submitted;
-      await page.route('**/admin.php?**', async route=>{
+      await page.route('**/admin/**', async route=>{
         submitted=new URLSearchParams(route.request().postData());
         await route.fulfill({body:'<p>Formulář přijat</p>',contentType:'text/html; charset=utf-8'});
       });

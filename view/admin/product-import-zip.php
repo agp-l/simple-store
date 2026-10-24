@@ -2,7 +2,7 @@
 <h2>ZIP s produkty a fotografiemi</h2>
 <p>Každá složka obsahuje <code>product.json</code> a <code>images/</code>. Nejdřív nahraj balíček, potom spusť import. Chyba jednoho produktu nezastaví ostatní; vadný produkt se neuloží.</p>
 <?php if ($zipError !== ''): ?><p class="panel-error" role="alert"><?= $escape($zipError) ?></p><?php endif; ?>
-<form class="panel-form" method="post" enctype="multipart/form-data" action="<?= $escape($adminUrl . '?section=product-import&tab=zip#zip-import') ?>">
+<form class="panel-form" method="post" enctype="multipart/form-data" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=product-import&tab=zip#zip-import') ?>">
 <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="product-zip-upload">
 <label>Balíček ZIP<input name="package" type="file" accept=".zip,application/zip" required></label>
 <label>Pokud produkt již existuje<select name="duplicate_mode"><?php foreach (\SimpleStore\Product\ProductZipConflictPolicy::LABELS as $value => $label): ?><option value="<?= $escape($value) ?>" <?= $zipMode === $value ? 'selected' : '' ?>><?= $escape($label) ?></option><?php endforeach; ?></select></label>

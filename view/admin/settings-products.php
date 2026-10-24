@@ -1,14 +1,14 @@
 <?php declare(strict_types=1); ?>
 <section class="panel-panel panel-settings-block"><h2>Prodávající pro asistovaný nákup</h2>
 <p>Spravuj společné profily prodávajících a rozpracované kontakty pro výběr u produktů.</p>
-<a class="panel-icon-link" href="<?= $escape($adminUrl . '?section=purchase-partners') ?>">Seznam prodávajících a nový prodávající</a></section>
+<a class="panel-icon-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=purchase-partners') ?>">Seznam prodávajících a nový prodávající</a></section>
 <?php if (is_string($massNotice)): ?><p class="panel-notice" role="status"><?= $escape($massNotice) ?></p><?php endif; ?>
 <?php require __DIR__ . '/settings-product-sales.php'; ?>
 <section class="panel-panel panel-settings-block">
   <h2><?= \SimpleStore\Rendering\Icon::render('package') ?> Hromadná úprava produktů</h2>
   <p>Změna platí pro všechny produkty včetně konceptů a všech jazyků. Počet produktů: <strong><?= (int) $massCount ?></strong>.</p>
   <p class="panel-help">Počet znamená volné kusy k prodeji. U produktu se skladem variant se zadaný počet i dostupnost nastaví každé nabízené variantě zvlášť. Překlady sdílejí stejný sklad. Po inventuře zadej počet bez kusů rezervovaných pro objednávky. Rezervace se nemění; při stornu objednávky se její rezervované kusy vrátí na sklad.</p>
-  <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=settings&tab=products') ?>">
+  <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=products') ?>">
     <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
     <input type="hidden" name="tab" value="products">
     <input type="hidden" name="action" value="products-mass-preview">
@@ -36,13 +36,13 @@
     <?php if ($massPreview['choices']['visibility'] !== ''): ?><li><strong><?= $massPreview['choices']['visibility'] === 'public' ? 'Zveřejnit všechny produkty včetně konceptů.' : 'Skrýt všechny produkty.' ?></strong></li><?php endif; ?>
   </ul>
   <p>Ostatní údaje, fotografie a dodavatelé zůstanou zachované.</p>
-  <form method="post" action="<?= $escape($adminUrl . '?section=settings&tab=products') ?>">
+  <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=products') ?>">
     <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
     <input type="hidden" name="tab" value="products">
     <input type="hidden" name="action" value="products-mass-apply">
     <input type="hidden" name="preview_token" value="<?= $escape($massPreview['token']) ?>">
     <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Potvrdit hromadnou změnu</button>
-    <a class="panel-action" href="<?= $escape($adminUrl . '?section=settings&tab=products') ?>">Zrušit</a>
+    <a class="panel-action" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=products') ?>">Zrušit</a>
   </form>
 </section>
 <?php endif; ?>
@@ -52,7 +52,7 @@
   <?php if (($settingsError ?? '') !== '' && in_array($_POST['action'] ?? '', ['products-variants-preview', 'products-variants-apply'], true)): ?><p class="panel-error" role="alert"><?= $escape($settingsError) ?></p><?php endif; ?>
   <p>Pro začátek obchodu: vytvoří všechny kombinace uložených voleb, například velikostí a barev, u produktů, které zatím nemají varianty. Každá nová varianta dostane zadaný počet volných kusů.</p>
   <p class="panel-help">Existující varianty se přeskočí. Produkty bez voleb a produkty s rezervovanými kusy se také přeskočí. Zahrnou se i koncepty; zůstanou skryté. Volby se čtou z výchozího jazyka obchodu, případně z prvního dostupného překladu. Cena i fotografie se převezmou z hlavního produktu; konkrétní obrázky můžeš přiřadit později.</p>
-  <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=settings&tab=products#bulk-product-variants') ?>">
+  <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=products#bulk-product-variants') ?>">
     <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="products"><input type="hidden" name="action" value="products-variants-preview">
     <label>Volné kusy každé nové varianty<input name="variant_quantity" type="number" min="0" max="1000000" step="1" required value="<?= $escape($variantBulkQuantity) ?>"></label>
     <p class="panel-help">Například 3 velikosti × 2 barvy = 6 variant. Při 10 kusech vznikne sklad 60 kusů. Dosavadní společný počet se při přepnutí vynuluje, nepřičítá se. Nejvýše 1 000 kombinací na produkt.</p>
@@ -63,7 +63,7 @@
   <p>Každá nová varianta: <strong><?= (int) $variantBulkPreview['quantity'] ?> volných kusů</strong>, dostupnost Skladem (při nule ji nelze koupit). Celkem <?= number_format($variantBulkPreview['variant_count'] * $variantBulkPreview['quantity'], 0, ',', ' ') ?> kusů. Viditelnost produktů se nezmění.</p>
   <?php if ($variantBulkPreview['products'] !== []): ?>
   <ul><?php foreach ($variantBulkPreview['products'] as $bulkProduct): ?><li><?= $escape($bulkProduct['name']) ?>: <strong><?= (int) $bulkProduct['variants'] ?> variant</strong>; původní společný sklad <?= (int) $bulkProduct['previous_quantity'] ?> ks → 0 ks.</li><?php endforeach; ?></ul>
-  <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=settings&tab=products#bulk-product-variants') ?>">
+  <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=products#bulk-product-variants') ?>">
     <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="products"><input type="hidden" name="action" value="products-variants-apply"><input type="hidden" name="preview_token" value="<?= $escape($variantBulkPreview['token']) ?>">
     <label><input type="checkbox" name="confirm_variants" value="1" required> Ověřil jsem kombinace i počet kusů. Zapnout sklad variant a nahradit dosavadní společné počty podle náhledu.</label>
     <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Vytvořit varianty hromadně</button>

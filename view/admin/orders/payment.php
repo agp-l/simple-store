@@ -23,7 +23,7 @@
         <strong>Faktura</strong>
         <?php if ($orderInvoice !== null): ?>
           <span>Číslo <?= $escape($orderInvoice['document_number']) ?></span>
-          <div class="panel-order-head-actions"><a class="panel-icon-link panel-button" href="<?= $escape($invoiceDetailUrl . '&print=1') ?>" target="_blank" rel="noopener noreferrer"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit fakturu</a><a class="panel-icon-link panel-text-link" href="<?= $escape($invoiceDetailUrl) ?>"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Detail a odeslání</a></div>
+          <div class="panel-order-head-actions"><a class="panel-icon-link panel-button" href="<?= \SimpleStore\Navigation\PanelUrl::escape($invoiceDetailUrl . '&print=1') ?>" target="_blank" rel="noopener noreferrer"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit fakturu</a><a class="panel-icon-link panel-text-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($invoiceDetailUrl) ?>"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Detail a odeslání</a></div>
         <?php else: ?><span>Dosud nevystavena</span><?php endif; ?>
       </div>
       <?php if ($goPayPayment && $goPayState !== null && in_array($goPayState['status'] ?? '', ['creating', 'uncertain'], true)): ?>
@@ -33,7 +33,7 @@
         <p class="panel-error" role="alert">Založení faktury má nejasný výsledek. Před dalším pokusem ji vyhledej v BTCPay Serveru podle čísla objednávky.</p>
       <?php endif; ?>
       <?php if ($bankTransfer && !$paid && ($order['payment_status'] ?? '') === 'pending' && !in_array($order['status'], ['cancelled', 'test'], true)): ?>
-        <form class="panel-order-confirm" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+        <form class="panel-order-confirm" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
           <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
           <input type="hidden" name="action" value="mark-order-paid">
           <input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
@@ -43,19 +43,19 @@
       <?php endif; ?>
       <?php if ($onlineGateway && !empty($order['provider_reference'])): ?>
         <?php if ($gatewayConfigured): ?>
-          <form class="panel-order-confirm" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+          <form class="panel-order-confirm" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
             <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
             <input type="hidden" name="action" value="<?= $btcpayPayment ? 'btcpay-refresh' : ($goPayPayment ? 'gopay-refresh' : 'comgate-refresh') ?>">
             <input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
             <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Ověřit stav u <?= $gatewayName ?></button>
           </form>
-        <?php else: ?><p class="panel-help">Pro opětovné ověření stavu u <?= $gatewayName ?> vyplň přihlašovací údaje v <a href="<?= $escape($adminUrl . '?section=settings') ?>">nastavení obchodu</a>.</p><?php endif; ?>
+        <?php else: ?><p class="panel-help">Pro opětovné ověření stavu u <?= $gatewayName ?> vyplň přihlašovací údaje v <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings') ?>">nastavení obchodu</a>.</p><?php endif; ?>
       <?php endif; ?>
       <?php if ($bankTransfer && $paid && $orderControlsReady): ?>
         <details class="panel-order-accordion panel-order-controls" aria-label="Oprava platby">
           <summary><?= \SimpleStore\Rendering\Icon::render('edit') ?> Opravit chybně potvrzenou platbu</summary>
           <p class="panel-help">Vrátí stav na „Čeká na platbu“. Bankovní pohyb se tím nemění. Původní potvrzení, částka a důvod zůstanou v účetních zásazích.</p>
-          <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+          <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
             <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="correct-order-payment"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="confirmation" value="not_received">
             <label>Důvod opravy <textarea name="reason" minlength="8" maxlength="190" required placeholder="Například platba označena jako přijatá omylem"></textarea></label>
             <label class="panel-check"><input type="checkbox" name="verified" value="1" required> Ověřil/a jsem výpis a opravuji ručně potvrzený stav platby.</label>
@@ -65,16 +65,16 @@
       <?php endif; ?>
       <?php if ($bankTransfer): ?><p class="panel-help"><?= !empty($fioConfigured) ? 'Převody na propojený účet Fio lze ověřit tlačítkem v přehledu objednávek. Pravidelnou kontrolu lze spouštět z cronu; jiné účty kontroluj ručně.' : 'Platbu zkontroluj ve výpisu banky, nebo zapni ověřování Fio v nastavení plateb.' ?></p><?php endif; ?>
       <?php if ($onlineGateway): ?><p class="panel-help">Stav platby potvrzuje <?= $gatewayName ?>. Samotný návrat zákazníka na web platbu nepotvrzuje.</p><?php endif; ?>
-      <?php if ($orderTaxReady && ($order['status'] ?? '') !== 'test'): ?><p><a class="panel-button" href="<?= $escape($adminUrl . '?section=accounting&tab=funds&order_id=' . (int) $order['id']) ?>">Platby, dodavatelé a vratky v evidenci</a></p><?php endif; ?>
+      <?php if ($orderTaxReady && ($order['status'] ?? '') !== 'test'): ?><p><a class="panel-button" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=funds&order_id=' . (int) $order['id']) ?>">Platby, dodavatelé a vratky v evidenci</a></p><?php endif; ?>
       <?php if (($bankTransfer || $onlineGateway) && $paid && $orderTaxReady && ($order['status'] ?? '') !== 'test'): ?>
         <details class="panel-order-accordion panel-order-controls" aria-label="Daňová evidence objednávky">
           <summary>Daňová evidence a vystavení faktury</summary>
           <?php if ($bankTransfer): ?>
           <?php if ($orderReceipt !== null): ?>
-            <p class="panel-notice">Příjem <?= \SimpleStore\Accounting\TaxMoney::format($orderReceipt['amount_czk']) ?> ze dne <?= $escape($orderReceipt['entry_date']) ?> je zapsaný v <a href="<?= $escape($adminUrl . '?section=accounting&tab=money') ?>">peněžním deníku</a>.</p>
+            <p class="panel-notice">Příjem <?= \SimpleStore\Accounting\TaxMoney::format($orderReceipt['amount_czk']) ?> ze dne <?= $escape($orderReceipt['entry_date']) ?> je zapsaný v <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=money') ?>">peněžním deníku</a>.</p>
           <?php else: ?>
             <p class="panel-help">Zaplaceno je stav objednávky. Do deníku zapiš skutečné datum připsání částky podle bankovního výpisu.</p>
-            <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=accounting') ?>">
+            <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting') ?>">
               <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="tax-link-payment"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
               <label>Datum připsání<input type="date" name="entry_date" required></label>
               <label>Bankovní reference<input name="reference" maxlength="100" value="<?= $escape($order['variable_symbol'] ?? '') ?>"></label>
@@ -82,17 +82,17 @@
             </form>
           <?php endif; ?>
           <?php elseif ($btcpayPayment): ?>
-            <p class="panel-help">BTCPay potvrdil úhradu zákazníka. Příjem bitcoinu a jeho hodnotu v Kč zapiš do <a href="<?= $escape($adminUrl . '?section=accounting&tab=money') ?>">peněžního deníku</a> podle skutečných podkladů.</p>
+            <p class="panel-help">BTCPay potvrdil úhradu zákazníka. Příjem bitcoinu a jeho hodnotu v Kč zapiš do <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=money') ?>">peněžního deníku</a> podle skutečných podkladů.</p>
           <?php else: ?>
-            <p class="panel-help"><?= $gatewayName ?> potvrdil úhradu zákazníka. Výplatu a poplatky zaznamenej v <a href="<?= $escape($adminUrl . '?section=accounting&tab=money') ?>">peněžním deníku</a> podle skutečného vyúčtování brány a bankovního výpisu; mohou zahrnovat více objednávek.</p>
+            <p class="panel-help"><?= $gatewayName ?> potvrdil úhradu zákazníka. Výplatu a poplatky zaznamenej v <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=money') ?>">peněžním deníku</a> podle skutečného vyúčtování brány a bankovního výpisu; mohou zahrnovat více objednávek.</p>
           <?php endif; ?>
           <?php if ($orderInvoice !== null): ?>
-            <p>Faktura <strong><?= $escape($orderInvoice['document_number']) ?></strong> · <a href="<?= $escape($invoiceDetailUrl) ?>">detail, tisk a e-mail</a></p>
+            <p>Faktura <strong><?= $escape($orderInvoice['document_number']) ?></strong> · <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($invoiceDetailUrl) ?>">detail, tisk a e-mail</a></p>
           <?php elseif ($gatewayDispatchBlocked): ?>
             <p class="panel-help">Před vystavením faktury nejprve ověř u <?= $gatewayName ?> její aktuální stav a případné vrácení platby.</p>
           <?php elseif ($orderInvoiceReady && \SimpleStore\Accounting\TaxEvidenceRepository::invoiceReady($sellerSettings)): ?>
             <h3>Vystavit fakturu</h3>
-            <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=accounting') ?>">
+            <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting') ?>">
               <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="invoice-issue"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
               <label>Odběratel<input name="buyer_name" value="<?= $escape($shipping['recipient'] ?? $shipping['name'] ?? '') ?>" maxlength="120" required></label>
               <label>Ulice a číslo<input name="buyer_street" value="<?= $escape($shipping['street'] ?? '') ?>" maxlength="160"></label>
@@ -102,7 +102,7 @@
               <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('plus') ?> Vystavit a připravit e-mail s fakturou</button>
               <p class="panel-help">Zkontroluj fakturační údaje. Tiskový doklad lze uložit jako PDF v prohlížeči.</p>
             </form>
-          <?php else: ?><p class="panel-help">Před vystavením faktury doplň <a href="<?= $escape($adminUrl . '?section=accounting&tab=settings') ?>">údaje OSVČ</a> a aktualizuj SQL tabulky.</p><?php endif; ?>
+          <?php else: ?><p class="panel-help">Před vystavením faktury doplň <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=settings') ?>">údaje OSVČ</a> a aktualizuj SQL tabulky.</p><?php endif; ?>
         </details>
       <?php endif; ?>
       <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Stav vyřízení objednávky byl uložen.</p><?php endif; ?>

@@ -27,7 +27,7 @@ if ($method === 'POST' && $action === 'purchase-partner-save') {
     $partnerForm['id'] = $partnerId;
     try {
         $partnerId = $partnersRepository->save($partnerId, $_POST);
-        header('Location: ' . $adminUrl . '?section=purchase-partners&id=' . $partnerId . '&saved=1#partner-form', true, 303);
+        header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=purchase-partners&id=' . $partnerId . '&saved=1#partner-form'), true, 303);
         exit;
     } catch (InvalidArgumentException $exception) {
         $partnerError = $exception->getMessage();

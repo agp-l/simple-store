@@ -20,7 +20,7 @@ if ($product === null) throw new InvalidArgumentException('Produkt už neexistuj
 $returnUrl = $basePath . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1';
 $links = new ProductSupplierLinkRepository($db);
 if (!$links->installed()) {
-    header('Location: ' . $returnUrl . '&supplier_error=missing#supplier-links', true, 303);
+    header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($returnUrl . '&supplier_error=missing#supplier-links'), true, 303);
     exit;
 }
 try {
@@ -38,5 +38,5 @@ try {
 } catch (InvalidArgumentException $exception) {
     $returnUrl .= '&supplier_error=' . rawurlencode($exception->getMessage());
 }
-header('Location: ' . $returnUrl . '#supplier-links', true, 303);
+header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($returnUrl . '#supplier-links'), true, 303);
 exit;

@@ -33,7 +33,7 @@ final class CaseNotificationService
                 $base = rtrim((string) $settings['public_base_url'], '/');
                 if ($base !== '' && filter_var($base, FILTER_VALIDATE_URL) &&
                     parse_url($base, PHP_URL_SCHEME) === 'https') {
-                    $body .= 'Administrace: ' . $base . '/admin.php?section=returns&id=' . (int) $case['id'] . "\n";
+                    $body .= 'Administrace: ' . $base . '/admin/returns/?id=' . (int) $case['id'] . "\n";
                 }
                 $this->enqueue($case, 'after-sales:' . $case['id'] . ':admin',
                     ['subject' => 'Nové podání ' . $case['case_number'], 'text' => $body,

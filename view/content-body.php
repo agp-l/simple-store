@@ -22,7 +22,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
     <nav class="breadcrumbs" aria-label="Drobečková navigace">
       <a href="<?= $siteRoot . $escape($language) ?>">Úvod</a><span aria-hidden="true">/</span>
       <?php if ($page === 'post'): ?>
-        <a href="<?= $escape($backLink) ?>">Blog</a><span aria-hidden="true">/</span>
+        <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($backLink) ?>">Blog</a><span aria-hidden="true">/</span>
       <?php endif; ?>
       <span><?= $escape($content['title']) ?></span>
     </nav>
@@ -79,7 +79,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         <?php if ($revision['active_document_key'] === null): ?><button class="inline-small" type="button" data-content-action="restore" data-value="<?= (int) $revision['revision_number'] ?>">Obnovit jako novou revizi</button><?php else: ?><small>Aktuální</small><?php endif; ?>
       </div><?php endforeach; ?></details><?php endif; ?>
     <?php if ($editing): ?><script type="application/json" id="content-editor-config"><?= json_encode([
-        'endpoint' => $basePath . 'admin.php', 'key' => $content['document_key'],
+        'endpoint' => $basePath . 'admin/', 'basePath' => $basePath, 'key' => $content['document_key'],
         'type' => $page, 'language' => $language, 'revision' => (int) $content['revision_number'],
         'csrf' => $editToken,
       ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script>

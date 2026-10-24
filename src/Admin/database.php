@@ -14,17 +14,17 @@ $tablePrefixMigration = new LegacyTablePrefixMigration($db);
 try {
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'table-prefix-migrate') {
         $changed = $tablePrefixMigration->apply();
-        header('Location: ' . $adminUrl . '?section=database&prefix_updated=' . ($changed ? '1' : '0'), true, 303);
+        header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=database&prefix_updated=' . ($changed ? '1' : '0')), true, 303);
         exit;
     }
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'table-prefix-cleanup') {
         $changed = $tablePrefixMigration->removeLegacyViews();
-        header('Location: ' . $adminUrl . '?section=database&prefix_cleaned=' . ($changed ? '1' : '0'), true, 303);
+        header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=database&prefix_cleaned=' . ($changed ? '1' : '0')), true, 303);
         exit;
     }
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'schema-apply') {
         $changed = $updater->apply();
-        header('Location: ' . $adminUrl . '?section=database&updated=' . ($changed ? '1' : '0'), true, 303);
+        header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=database&updated=' . ($changed ? '1' : '0')), true, 303);
         exit;
     }
     $databaseStatus = $updater->status();

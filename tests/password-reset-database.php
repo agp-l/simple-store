@@ -73,7 +73,7 @@ $service->request('admin', 'not-owner@example.test', 'admin.php');
 if (count($messages) !== 1) throw new RuntimeException('Arbitrary address can recover an admin account.');
 $service->request('admin', 'owner@example.test', 'admin.php');
 if (count($messages) !== 2 || $messages[1][0] !== 'owner@example.test' ||
-    !str_contains($messages[1][1], '/shop/admin.php?mode=reset&token=')) {
+    !str_contains($messages[1][1], '/shop/admin/reset-password/?token=')) {
     throw new RuntimeException('Admin recovery did not use the configured owner address.');
 }
 preg_match('/\?mode=reset&token=([a-f0-9]{64})/', $messages[1][1], $matches);

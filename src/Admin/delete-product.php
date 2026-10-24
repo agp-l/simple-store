@@ -13,4 +13,4 @@ if (!is_string($key) || !is_string($language) || !is_int($revision) ||
 }
 
 (new ProductRepository($db, $site['languages']))->deleteProduct($key, $language, $revision);
-header('Location: ' . $basePath . $language . '?manage=1&deleted=1#produkty', true, 303);
+header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($basePath . $language . '?manage=1&deleted=1#produkty'), true, 303);

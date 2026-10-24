@@ -23,5 +23,5 @@ if (!$stock->installed()) {
 $product = (new ProductRepository($db, $site['languages']))->current($key, $language);
 if ($product === null) throw new InvalidArgumentException('Produkt už neexistuje.');
 $stock->setAvailable($key, (int) $expected, (int) $quantity);
-header('Location: ' . $basePath . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1&stock_saved=1', true, 303);
+header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($basePath . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1&stock_saved=1'), true, 303);
 exit;

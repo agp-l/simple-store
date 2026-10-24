@@ -45,7 +45,7 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
         <p>Nejdřív importuj <code>database/schema.sql</code>, pak v kořeni projektu spusť <code>php tools/admin.php create --email=tvuj@email.cz</code>. Příkaz jednou vypíše přístupové heslo; ulož si ho. Pokud už účet existoval v souboru, můžeš jej převést příkazem <code>php tools/admin.php --migrate --email=tvuj@email.cz</code>.</p>
       </section>
     <?php elseif ($screen === 'forbidden'): ?>
-      <section class="panel-panel panel-centered"><h1>Přístup odepřen</h1><p role="alert"><?= $escape($error) ?></p><p><a href="<?= $escape($adminUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?> Přejít do administrace</a></p></section>
+      <section class="panel-panel panel-centered"><h1>Přístup odepřen</h1><p role="alert"><?= $escape($error) ?></p><p><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?> Přejít do administrace</a></p></section>
     <?php elseif ($screen === 'error'): ?>
       <section class="panel-panel panel-centered"><h1>Administraci se nepodařilo načíst</h1><p class="panel-error"><?= $escape($error) ?></p></section>
     <?php elseif ($screen === 'login'): ?>
@@ -53,22 +53,22 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
         <p class="panel-eyebrow">Redakční systém</p><h1>Přihlášení správce</h1>
         <?php if (($_GET['account_changed'] ?? '') === '1'): ?><p class="panel-notice">Přihlašovací údaje byly změněny. Přihlas se aktuálním e-mailem a heslem.</p><?php endif; ?>
         <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
-        <form method="post" action="<?= $escape($adminUrl) ?>">
+        <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>">
           <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
           <label>E-mail správce<input type="email" name="email" maxlength="254" autocomplete="username" required autofocus></label>
           <label>Heslo<input type="password" name="password" autocomplete="current-password" required></label>
           <button class="panel-action panel-button" name="action" value="login"><?= \SimpleStore\Rendering\Icon::render('lock') ?> Přihlásit se</button>
         </form>
-        <p><a href="<?= $escape($adminUrl . '?mode=forgot') ?>">Zapomenuté heslo?</a></p>
+        <p><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?mode=forgot') ?>">Zapomenuté heslo?</a></p>
       </section>
     <?php elseif ($screen === 'reset-request'): ?>
       <section class="panel-panel panel-centered"><h1>Obnovit heslo správce</h1>
         <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
         <?php if (($_GET['sent'] ?? '') === '1'): ?><p class="panel-notice" role="status">Pokud existuje aktivní správce s tímto e-mailem, obdrží odkaz pro obnovu hesla.</p><?php endif; ?>
-        <form method="post" action="<?= $escape($adminUrl . '?mode=forgot') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="reset-request">
+        <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?mode=forgot') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="reset-request">
           <label>E-mail správce<input type="email" name="email" maxlength="254" autocomplete="username" required></label><p>Každý správce obnovuje vlastní účet. Další zprávu lze poslat nejdříve za pět minut.</p>
           <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('mail') ?> Poslat odkaz</button></form>
-        <p><a href="<?= $escape($adminUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-left') ?> Zpět na přihlášení</a></p>
+        <p><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-left') ?> Zpět na přihlášení</a></p>
         <p>Pokud nemáš přístup k e-mailu, na serveru lze spustit <code>php tools/admin.php --reset --email=tvuj@email.cz</code>.</p>
       </section>
     <?php elseif ($screen === 'reset-complete'): ?>
@@ -76,11 +76,11 @@ $panelPreviewControl = $inside && $csrf !== '' ? [
         <?php if (($_GET['done'] ?? '') === '1'): ?><p class="panel-notice" role="status">Heslo bylo změněno. Přihlas se novým heslem.</p>
         <?php else: ?>
           <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
-          <?php if ($resetToken !== ''): ?><form method="post" action="<?= $escape($adminUrl . '?mode=reset') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="reset-complete"><input type="hidden" name="token" value="<?= $escape($resetToken) ?>">
+          <?php if ($resetToken !== ''): ?><form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?mode=reset') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="reset-complete"><input type="hidden" name="token" value="<?= $escape($resetToken) ?>">
             <label>Nové heslo<input type="password" name="password" minlength="10" maxlength="72" autocomplete="new-password" required></label>
             <label>Potvrdit nové heslo<input type="password" name="password_confirm" minlength="10" maxlength="72" autocomplete="new-password" required></label>
             <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('edit') ?> Změnit heslo</button></form><?php endif; ?>
-        <?php endif; ?><p><a href="<?= $escape($adminUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('lock') ?> Přihlásit se</a></p>
+        <?php endif; ?><p><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('lock') ?> Přihlásit se</a></p>
       </section>
     <?php elseif ($screen === 'content-import'): ?>
       <?php require __DIR__ . '/content-import.php'; ?>

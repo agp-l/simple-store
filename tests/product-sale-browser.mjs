@@ -73,7 +73,7 @@ test('sale editor: responsive layout, drafts, fees, selected partner and safe su
       assert.match(await variant.locator('output').textContent(), /100/);
       assert.equal(await cost.inputValue(), '1700');
       let submitted;
-      await page.route('**/admin.php', async route => {
+      await page.route('**/admin/', async route => {
         submitted = new URLSearchParams(route.request().postData());
         await route.fulfill({ body: '<p>Uloženo ve fixture</p>', contentType: 'text/html; charset=utf-8' });
       });
@@ -95,7 +95,7 @@ test('sale editor: responsive layout, drafts, fees, selected partner and safe su
     assert.equal(await page.locator('[data-sale-assistance]').isVisible(), true, 'Failed fields must remain accessible even for own mode.');
     assert.equal(await page.locator('[name="partner_name"]').inputValue(), 'Nový rozpracovaný partner');
     let draft;
-    await page.route('**/admin.php', async route => {
+    await page.route('**/admin/', async route => {
       draft = new URLSearchParams(route.request().postData());
       await route.fulfill({ body: '<p>Nový uložen</p>', contentType: 'text/html; charset=utf-8' });
     });
@@ -112,7 +112,7 @@ test('sale editor: responsive layout, drafts, fees, selected partner and safe su
     await editing.goto(url(files[0]));
     await editing.locator('[name="supplier_price_czk"]').fill('1700');
     const savedPrices = [];
-    await editing.route('**/admin.php', async route => {
+    await editing.route('**/admin/', async route => {
       const post = new URLSearchParams(route.request().postData());
       assert.equal(post.get('action'), 'inline-product');
       assert.equal(post.get('field'), 'price_czk');

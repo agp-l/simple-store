@@ -35,7 +35,7 @@ try {
         $token = ProductImportJob::fromItems($items);
         if (isset($_SESSION['product_json_job'])) (new ProductImportJob($_SESSION['product_json_job']))->remove();
         $_SESSION['product_json_job'] = $token;
-        header('Location: ' . $adminUrl . '?section=product-import&tab=bulk#import-results', true, 303);
+        header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=product-import&tab=bulk#import-results'), true, 303);
         exit;
     }
     if ($method === 'POST' && in_array($action, ['product-bulk-step', 'product-bulk-clear'], true)) {

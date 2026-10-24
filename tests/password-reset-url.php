@@ -68,7 +68,7 @@ namespace {
     $service->request('admin', 'owner@example.test', 'admin.php',
         'https://other.example.test/shop/admin.php');
     if ($db->insertions !== 1 || count($messages) !== 1 ||
-        !str_contains($messages[0], 'https://other.example.test/shop/admin.php?mode=reset&token=')) {
+        !str_contains($messages[0], 'https://other.example.test/shop/admin/reset-password/?token=')) {
         throw new \RuntimeException('A matching installation did not send a recovery link.');
     }
     $service->request('admin', '', 'admin.php', 'https://other.example.test/shop/admin.php');

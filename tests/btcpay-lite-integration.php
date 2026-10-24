@@ -195,7 +195,7 @@ try {
     $processes[] = liteIntegrationStart([PHP_BINARY, '-S', substr($liteUrl, 7), __FILE__],
         $temporary . '/lite.log', ['SIMPLE_STORE_LITE_FIXTURE' => $fixturePath]);
     $processes[] = liteIntegrationStart([PHP_BINARY, '-d', 'sendmail_path=' . $sendmail,
-        '-S', substr($shopUrl, 7), '-t', $webRoot], $temporary . '/shop.log', []);
+        '-S', substr($shopUrl, 7), '-t', $webRoot, $storeRoot . '/tests/fixtures/panel-router.php'], $temporary . '/shop.log', []);
     foreach ([$liteUrl . '/api/v1/health', $shopUrl . '/btcpay-callback.php'] as $url) {
         $ready = false;
         for ($attempt = 0; $attempt < 100; $attempt++) {
@@ -270,17 +270,17 @@ try {
         'Lite leaked an invoice across store authentication boundaries.');
     echo "[PASS] Real HTTP create/read/payment-methods, CZK metadata, XPUB/BIP21, scoped auth, one order/invoice\n";
 
-    $adminUrl = $shopUrl . '/simple-store/admin.php';
+    $adminUrl = $shopUrl . '/simple-store/admin/';
     $adminCookies = $temporary . '/admin.cookies'; $anonymousCookies = $temporary . '/anonymous.cookies';
     $login = liteIntegrationForm(liteIntegrationRequest('GET', $adminUrl, '', [], $adminCookies)['body'], 'login');
     $loggedIn = liteIntegrationRequest('POST', $shopUrl . $login['url'], http_build_query(array_replace($login['fields'],
         ['email' => 'integration-admin@example.test', 'password' => 'test-only-password'])), [], $adminCookies);
-    liteIntegrationCheck($loggedIn['status'] === 303 && in_array('Location: /simple-store/admin.php', $loggedIn['headers'], true),
+    liteIntegrationCheck($loggedIn['status'] === 303 && in_array('Location: /simple-store/admin/', $loggedIn['headers'], true),
         'Production administrator login did not retain the subdirectory session.');
-    $detailUrl = $adminUrl . '?section=orders&id=' . $order['id'];
+    $detailUrl = $adminUrl . 'orders/?id=' . $order['id'];
     $detail = liteIntegrationRequest('GET', $detailUrl, '', [], $adminCookies);
     $refreshForm = liteIntegrationForm($detail['body'], 'btcpay-refresh');
-    liteIntegrationCheck($detail['status'] === 200 && $refreshForm['url'] === '/simple-store/admin.php?section=orders&id=' . $order['id'] &&
+    liteIntegrationCheck($detail['status'] === 200 && $refreshForm['url'] === '/simple-store/admin/orders/?id=' . $order['id'] &&
         $refreshForm['fields']['id'] === (string) $order['id'], 'Admin payment form lost its session path or order ID.');
     $refreshUrl = $shopUrl . $refreshForm['url'];
     $refresh = static fn (array $overrides = []): array => liteIntegrationRequest('POST', $refreshUrl,
@@ -292,7 +292,7 @@ try {
         $refresh(['csrf' => 'wrong-token'])['status'] === 403 && $refresh(['action' => 'unknown-admin-action'])['status'] === 403,
         'Payment refresh bypassed administrator authentication, CSRF or the action allowlist.');
     $checked = $refresh();
-    liteIntegrationCheck($checked['status'] === 303 && in_array('Location: /simple-store/admin.php?section=orders&id=' . $order['id'] .
+    liteIntegrationCheck($checked['status'] === 303 && in_array('Location: /simple-store/admin/orders/?id=' . $order['id'] .
         '&payment_checked=1', $checked['headers'], true) && $orders->findById((int) $order['id'])['payment_status'] === 'pending',
         'Logged-in administrator cannot refresh the pending BTCPay invoice through the real entry point.');
     $checkedDetail = liteIntegrationRequest('GET', $detailUrl . '&payment_checked=1', '', [], $adminCookies);

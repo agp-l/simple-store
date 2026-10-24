@@ -20,5 +20,5 @@ try {
     $params['homepage_error'] = $error->getMessage();
 }
 if (trim($pick) !== '') $params['pick'] = trim($pick);
-header('Location: ' . $basePath . $language . '?' . http_build_query($params) . '#homepage-editor', true, 303);
+header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($basePath . $language . '?' . http_build_query($params) . '#homepage-editor'), true, 303);
 exit;

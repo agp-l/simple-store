@@ -24,15 +24,15 @@ $html = ob_get_clean();
 if (substr_count($html, '<footer class="foot">') !== 1 ||
     substr_count($html, '<header id="nahoru"') !== 1 ||
     !str_contains($html, 'name="password_confirm"') ||
-    !str_contains($html, 'href="/simple-store/account.php"')) {
+    !str_contains($html, 'href="/simple-store/account/"')) {
     throw new RuntimeException('Registration must reuse the store shell and provide an account form.');
 }
 $checkoutReturn = '/simple-store/cs/pokladna?step=shipping';
 ob_start();
 require dirname(__DIR__) . '/view/account/layout.php';
 $html = ob_get_clean();
-if (!str_contains($html, 'action="/simple-store/account.php?mode=register&amp;checkout=1"') ||
-    !str_contains($html, '/simple-store/account.php?checkout=1')) {
+if (!str_contains($html, 'action="/simple-store/account/register/?checkout=1"') ||
+    !str_contains($html, '/simple-store/account/?checkout=1')) {
     throw new RuntimeException('Registration during checkout lost its return destination.');
 }
 

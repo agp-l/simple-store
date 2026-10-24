@@ -76,7 +76,7 @@
     let data;
     try { data = JSON.parse(body); }
     catch {
-      throw new Error(`Server nevrátil platné JSON (HTTP ${response.status}). Zkontroluj odpověď požadavku admin.php v nástrojích pro vývojáře a chybový log PHP.`);
+      throw new Error(`Server nevrátil platné JSON (HTTP ${response.status}). Zkontroluj odpověď požadavku /admin/ v nástrojích pro vývojáře a chybový log PHP.`);
     }
     if (!response.ok) throw new Error(data.error || `Nahrávání selhalo (HTTP ${response.status}).`);
     if (!Number.isInteger(data.revision) || data.revision < 1) {
