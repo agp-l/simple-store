@@ -28,6 +28,7 @@ $selectedCategory = $categoryRows[0];
 $newParent = 'spani';
 $categories = new class {
     public function visibility(string $language, string $path): string { return 'visible'; }
+    public function productCount(string $language, string $path): int { return 3; }
     public function find(string $language, string $path): ?array
     {
         return $path === 'spani' ? ['path' => $path] : null;
@@ -83,7 +84,7 @@ if (!str_contains($html, 'value="menu-slot"') ||
     !str_contains($html, 'value="menu-item-save"') ||
     !str_contains($html, 'destination_external') ||
     !str_contains($html, 'value="page-menu"') ||
-    !str_contains($html, 'Pořadí horních odkazů') ||
+    !str_contains($html, 'Stránky v automatickém menu') ||
     str_contains($html, 'Prozkoumat') || str_contains($html, 'Na cestu')) {
     throw new RuntimeException('Menu administration must include placement and page ordering.');
 }

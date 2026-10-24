@@ -247,13 +247,29 @@ Hlavní menu nahoře ukazuje jen šest kořenových kategorií. Na stránce `/cs
 
 ### Správa kategorií a menu v administraci
 
-Po přihlášení otevři **Kategorie** na `admin.php?section=categories`. Můžeš vytvořit hlavní sekci nebo podkategorii, změnit název, pořadí mezi sousedy a zobrazení. Pořadí je číslo; menší číslo se ukáže dřív. Adresa `path` se po vytvoření nemění: produkty a další větve na ni odkazují. Skrytí rodiče skryje na webu také jeho podkategorie, v administraci zůstanou dostupné. Na stránce kategorie má přihlášený správce odkazy **Upravit kategorie** a **Přidat podkategorii**; v horních odkazech webu najde **Upravit menu**. Tyto zkratky otevřou stejný editor jako administrace.
+Po přihlášení otevři **Kategorie** na `admin.php?section=categories`. Strom má celou šířku pracovní plochy; ukazuje počet publikovaných produktů včetně podkategorií a skutečnou viditelnost. Hledání zachovává potřebné nadřazené větve. Podkategorie lze sbalit. Celou větev přesuneš úchytem (myší i dotykem), šipkami nebo změnou čísla a tlačítkem **Uložit pořadí**. Přesun je mezi sourozenci stejného rodiče; mění pouze pořadí, nikoli stálé adresy či zařazení produktů. Číselné řazení funguje i bez JavaScriptu. Souběžnou změnu stromu server rozpozná a vyžádá obnovení stránky.
 
-Na `admin.php?section=menus` nastavíš pro hlavičku, horní odkazy, podkategorie a patičku zdroj **Kategorie**, **Publikované stránky** nebo **Vlastní odkazy**. U kategorií měníš jejich skutečné pořadí ve správě kategorií. Horní odkazy se stránkami mají přímo v editoru menu pole **V menu** a **Pořadí**; uložení vytvoří novou revizi stránky. Pod automatickými odkazy lze přidat další odkazy bez přepnutí zdroje: otevři **Horní odkazy → Další odkazy → Nový odkaz**, zvol **Externí web nebo e-mail**, vyplň název a celou adresu `https://…`. HTTPS odkaz se otevře v nové záložce; `mailto:` otevře poštovní aplikaci. Totéž funguje u **Hlavního menu** za kategoriemi. Další odkazy mohou vést i na kategorii, stránku či blog, lze je vnořit a seřadit; po změně zdroje zůstávají vidět za automatickými odkazy. Vnořené vlastní odkazy v hlavičce se otevírají rozbalovacím prvkem, v patičce se vypisují pod rodičem a mezi podkategoriemi se zobrazí jako další odkazy. Nové pojmenované místo lze založit v administraci, ale jeho výpis v další části webu vyžaduje zavolat `MenuManager::links('nazev')` v odpovídající šabloně.
+Skrytí rodiče skryje i jeho podkategorie v navigaci. Zboží zůstane dostupné v katalogu či nadřazené kategorii. Prázdné podkategorie se skrývají automaticky, aniž by se měnila uložená volba viditelnosti. Novou kategorii vytvoříš pod stromem nebo přes ikonu + u rodiče; názvy a viditelnost upravíš přes ikonu tužky.
 
-Pro správu menu aktualizuj tabulky v administraci; tabulka `navigation_menus` uchovává vlastní odkazy. Všechny změny kategorií a menu ověřuje přihlášení správce a CSRF token.
+**Menu** na `admin.php?section=menus` má tři kroky: **Kde se menu zobrazí**, **Z čeho menu vznikne** a **Vlastní odkazy**. Karty umístění ukazují hlavičku, podkategorie, horní odkazy a patičku. Vedle zdroje je přehled odkazů z uloženého nastavení; u kontextové lišty je uvedena ukázková kategorie. Změna formuláře ovlivní web až po uložení.
 
-Kontroly bez databáze: `/opt/lampp/bin/php tests/url-manager.php`, `/opt/lampp/bin/php tests/category-editor.php`, `/opt/lampp/bin/php tests/menu-definitions.php` a `/opt/lampp/bin/php tests/menu-manager.php`. Po importu také `/opt/lampp/bin/php tests/category-navigation.php`.
+Zdroj **Kategorie** přebírá názvy, hierarchii a pořadí z katalogu. Zdroj **Stránky** čte společný výběr publikovaných stránek v daném jazyce; výběr a pořadí lze upravit přímo v libovolném menu s tímto zdrojem. Změna umístění stránky tvoří její novou revizi. Zdroj **Pouze vlastní odkazy** používá jen ručně sestavený seznam. Vlastní odkazy se u automatických zdrojů připojí za automatický obsah a přepnutím zdroje nezmizí. Pole cíle se přizpůsobují zvolenému typu. Vnoření nenabízí samotný odkaz ani jeho potomky. HTTPS odkaz se otevře v nové záložce; `mailto:` otevře poštovní aplikaci. Skrytou kategorii lze do menu připravit; veřejný odkaz se zobrazí až při její skutečné viditelnosti.
+
+### Zálohy navigace a textů v JSON
+
+V **Menu** a **Kategoriích** je stejná **Záloha menu a kategorií**: export všech umístění, vlastních odkazů, kategorií a voleb zařazení stránek ve všech nastavených jazycích. **Nastavení → Texty webu** a **Nastavení → E-maily** mají vlastní oddělené zálohy. Exportuje se uložené nastavení, nikoli rozepsaný formulář. Formát je `simple-store-settings`, `version: 1`, druh `navigation`, `site-texts` nebo `email-texts`.
+
+1. Stáhni JSON jako zálohu před úpravami.
+2. Pro obnovu vyber soubor `.json` do 2 MiB (nebo vlož JSON) a zobraz přehled nových, změněných a shodných položek. U změn lze porovnat původní a nové hodnoty. Náhled nic neukládá.
+3. Potvrď **Importovat změny**. Import se uloží v jedné transakci; chyba vrátí všechny zápisy. Změní-li se od náhledu nastavení nebo soubor, je nutný nový náhled.
+
+Menu se obnovuje podle jazyka a umístění; jeho vlastní odkazy se **nahradí seznamem ze zálohy**, nepřidávají se znovu. Kategorie se sloučí podle jazyka a stálé adresy, chybějící se doplní a kategorie mimo zálohu zůstanou zachované. Produkty, jejich varianty, historické revize a objednávky se nemění. Vložit tutéž zálohu opakovaně nevytváří duplicity ani další revize nezměněných stránek. Záloha neobsahuje obsah stránek; chybějící stránku je před obnovou jejího zařazení nutné obnovit samostatným importem stránek. Neexistující rodiče, cyklické odkazy, nepodporované jazyky a nebezpečné cíle se odmítnou před zápisem.
+
+Texty webu se aktualizují podle jazyka a názvu pole; texty e-mailů podle šablony a společného popisku. Přenášejí se pouze uvedené texty. SMTP přihlašovací údaje, identity odesílatele, kontaktní adresy, vypínače automatického odesílání a již vytvořené zprávy se neexportují ani nepřepisují. Import neposílá e-maily. Povinné zástupné značky pro ceny a jiné údaje podléhají stejné kontrole jako běžný editor.
+
+Správa používá existující tabulky; tato změna nepotřebuje novou migraci. Zápisy vyžadují přihlášeného správce a CSRF token. Náhled importu je navíc podepsaný pro konkrétní obsah a stav nastavení.
+
+Kontroly: `php tests/category-editor.php`, `php tests/menu-definitions.php`, `php tests/configuration-backup.php`, databázový `php tests/configuration-backup-database.php` a `node --test tests/admin-structure-browser.mjs`. CI ověřuje MySQL i MariaDB, opakovaný import, vrácení částečné změny, ochranu produktů a tajných údajů, mobilní přetažení, číselné řazení i formulář bez JavaScriptu.
 
 ## První stránka, článek a historie
 

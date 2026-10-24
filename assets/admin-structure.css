@@ -147,3 +147,13 @@
  .admin-page .structure-tree-toolbar label { min-width: 0; flex-basis: 100%; }
  .admin-page .structure-category-name { font-size: 15px; }
 }
+
+.admin-page .structure-compare { flex-basis: 100%; font-size: 14px; }
+.admin-page .structure-compare > summary { color: #265e77; cursor: pointer; padding: 5px 0; }
+.admin-page .structure-compare > div { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 16px; margin: 12px 0; }
+.admin-page .structure-compare section { background: #f1f5f8; padding: 14px 16px; border: 1px solid #dbe4ec; min-width: 0; }
+.admin-page .structure-compare section + section { background: #edf6f2; border-color: #cbded5; }
+.admin-page .structure-compare h4 { margin: 0 0 8px; font-size: 14px; color: #1f3547; }
+.admin-page .structure-compare p { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.admin-page .structure-tree[data-tree-level="5"] { margin-left: 0; padding-left: 0; border-left: 0; }
+@media(max-width:600px) { .admin-page .structure-compare > div { grid-template-columns: 1fr; } }

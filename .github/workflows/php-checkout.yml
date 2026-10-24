@@ -97,6 +97,7 @@ jobs:
           php tests/catalog-render.php
           php tests/footer-legal.php
           php tests/site-copy.php
+          php tests/configuration-backup.php
           php tests/menu-definitions.php
           php tests/menu-manager.php
           php tests/storefront-footer.php
@@ -184,6 +185,7 @@ jobs:
           php tests/homepage-database.php
           php tests/product-import-database.php
           php tests/content-import-database.php
+          php tests/configuration-backup-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
           php tests/product-sales-mass-database.php
@@ -239,6 +241,7 @@ jobs:
           php tests/homepage-database.php
           php tests/product-import-database.php
           php tests/content-import-database.php
+          php tests/configuration-backup-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
           php tests/product-sales-mass-database.php
@@ -285,6 +288,7 @@ jobs:
           node --test tests/admin-layout-browser.mjs
           node --test tests/admin-order-detail-browser.mjs
           node --test tests/admin-mail-browser.mjs
+          node --test tests/admin-structure-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -300,6 +304,7 @@ jobs:
             /tmp/admin-layout-screenshots/
             /tmp/admin-order-detail-screenshots/
             /tmp/admin-mail-screenshots/
+            /tmp/admin-structure-screenshots/
           retention-days: 7
 
   private-routes-apache:

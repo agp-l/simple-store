@@ -70,6 +70,10 @@ final class MenuDefinitionRepository
             ($parent !== '' && $parent !== '@context' && !CategoryPath::valid($parent))) {
             throw new InvalidArgumentException('Neplatný zdroj nebo kořen menu.');
         }
+        if ($source === 'categories' && !in_array($parent, ['', '@context'], true) && $this->categories !== null &&
+            $this->categories->findForAdmin($language, $parent) === null) {
+            throw new InvalidArgumentException('Vyber existující kořenovou kategorii menu.');
+        }
         $existing = $this->row($language, $slot);
         $title ??= $existing === null ? ($this->defaults[$slot]['title'] ?? 'Informace')
             : $this->title($existing['items_json'], $this->defaults[$slot]['title'] ?? 'Informace');
@@ -121,8 +125,8 @@ final class MenuDefinitionRepository
             throw new InvalidArgumentException('Zkontroluj název, cíl a pořadí odkazu.');
         }
         if ($type === 'category' && $this->categories !== null &&
-            $this->categories->find($language, $target) === null) {
-            throw new InvalidArgumentException('Cílová kategorie neexistuje nebo není zapnutá.');
+            $this->categories->findForAdmin($language, $target) === null) {
+            throw new InvalidArgumentException('Cílová kategorie neexistuje.');
         }
         if ($id !== null && !isset($items[$id])) {
             throw new InvalidArgumentException('Odkaz k úpravě neexistuje.');

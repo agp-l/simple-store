@@ -46,7 +46,7 @@ final class ConfigurationBackup
                     }
                     $data[$language]['menus'][$slot] = ['source' => $settings['source'],
                         'parent' => $settings['parent'] ?? '', 'include_blog' => (bool) ($settings['include_blog'] ?? false),
-                        'title' => $settings['title'] ?? 'Informace', 'items' => $items];
+                        'title' => $settings['title'] ?? 'Informace', 'items' => self::orderedItems($items)];
                 }
                 foreach ($content->pagesForMenu($language) as $page) {
                     $data[$language]['pages'][$page['slug']] = ['visible' => (bool) $page['visible_in_menu'], 'sort_order' => (int) $page['menu_order']];
@@ -112,7 +112,7 @@ final class ConfigurationBackup
                 foreach (['categories', 'menus', 'pages'] as $key) if (!is_array($data[$key] ?? null)) throw new InvalidArgumentException('Záloze chybí kategorie, menu nebo nastavení stránek.');
                 if (count($data['categories']) > 5000 || count($data['pages']) > 5000) throw new InvalidArgumentException('Záloha obsahuje příliš mnoho položek.');
                 foreach ($data['categories'] as $path => $category) {
-                    if (!is_string($path) || !CategoryPath::valid($path) || !is_array($category)) throw new InvalidArgumentException('Neplatná adresa kategorie.');
+                    if (!CategoryPath::valid((string) $path) || !is_array($category)) throw new InvalidArgumentException('Neplatná adresa kategorie.');
                     self::keys($category, ['title', 'sort_order', 'enabled']);
                     self::text($category['title'] ?? null, 160); self::order($category['sort_order'] ?? null);
                     if (!is_bool($category['enabled'] ?? null)) throw new InvalidArgumentException('Neplatná viditelnost kategorie.');
@@ -121,9 +121,10 @@ final class ConfigurationBackup
                 foreach ($data['menus'] as $slot => $menu) {
                     if (!in_array($slot, $allowedSlots, true) || !is_array($menu)) throw new InvalidArgumentException('Neznámé umístění menu.');
                     self::validateMenu($slot, $menu);
+                    $data['menus'][$slot]['items'] = self::orderedItems($menu['items']);
                 }
                 foreach ($data['pages'] as $slug => $page) {
-                    if (!is_string($slug) || !CategoryPath::valid($slug) || str_contains($slug, '/') || !is_array($page)) throw new InvalidArgumentException('Neplatná stránka v menu.');
+                    if (!CategoryPath::valid((string) $slug) || str_contains((string) $slug, '/') || !is_array($page)) throw new InvalidArgumentException('Neplatná stránka v menu.');
                     self::keys($page, ['visible', 'sort_order']); self::order($page['sort_order'] ?? null);
                     if (!is_bool($page['visible'] ?? null)) throw new InvalidArgumentException('Neplatná viditelnost stránky.');
                 }
@@ -168,6 +169,17 @@ final class ConfigurationBackup
         }
     }
 
+    private static function orderedItems(array $items): array
+    {
+        usort($items, static fn (array $a, array $b): int => ($a['sort_order'] <=> $b['sort_order']) ?: strcmp($a['label'], $b['label']) ?: strcmp($a['id'], $b['id']));
+        $ordered = [];
+        $visit = static function (string $parent) use (&$visit, &$ordered, $items): void {
+            foreach ($items as $item) if ($item['parent_id'] === $parent) { $ordered[] = $item; $visit($item['id']); }
+        };
+        $visit('');
+        return $ordered;
+    }
+
     /** The preview and the application use exactly the same operation list. */
     public function plan(array $backup): array
     {
@@ -183,6 +195,7 @@ final class ConfigurationBackup
                 $old = $current['data'][$language];
                 $categories = $data['categories'] + $old['categories'];
                 foreach ($data['categories'] as $path => $category) {
+                    $path = (string) $path;
                     $parent = CategoryPath::parent($path);
                     if ($parent !== '' && !isset($categories[$parent])) throw new InvalidArgumentException('Chybí nadřazená kategorie: ' . $parent);
                     $add('category', $language, $path, $category['title'] . ' · ' . $path, $old['categories'][$path] ?? null, $category);
@@ -194,6 +207,7 @@ final class ConfigurationBackup
                     $add('menu', $language, $slot, self::slotLabel($slot) . ' · ' . count($menu['items']) . ' vlastních odkazů', $old['menus'][$slot] ?? null, $menu);
                 }
                 foreach ($data['pages'] as $slug => $page) {
+                    $slug = (string) $slug;
                     if (!isset($old['pages'][$slug])) throw new InvalidArgumentException('Chybí stránka „' . $slug . '“. Nejdřív ji obnov v importu stránek; tato záloha obsahuje pouze její umístění v menu.');
                     $add('page', $language, $slug, 'Stránka: ' . $slug, $old['pages'][$slug], $page);
                 }
@@ -202,7 +216,9 @@ final class ConfigurationBackup
             foreach ($backup['data'] as $language => $data) foreach ($data as $key => $value) $add('site-copy', $language, $key, self::siteLabel($key), $current['data'][$language][$key], $value);
         } else {
             foreach ($backup['data']['templates'] as $key => $value) $add('template', '', $key, MailContent::definitions()[$key]['label'], $current['data']['templates'][$key], $value);
-            foreach ($backup['data']['copy'] as $key => $value) $add('mail-copy', '', $key, $key, $current['data']['copy'][$key], $value);
+            $labels = [];
+            foreach (MailContent::GROUPS as $group => $fields) foreach ($fields as $key => [$label]) $labels[$key] = $group . ': ' . $label;
+            foreach ($backup['data']['copy'] as $key => $value) $add('mail-copy', '', $key, $labels[$key] ?? (MailContent::defaults()[$key] ?? $key), $current['data']['copy'][$key], $value);
         }
         return ['changes' => $changes, 'counts' => $counts, 'version' => hash('sha256', self::canonical($current))];
     }
@@ -218,11 +234,12 @@ final class ConfigurationBackup
         try {
             // Lock before the fresh read. A stale preview cannot overwrite newer settings.
             $tables = match ($backup['kind']) {
-                'navigation' => ['shop_catalog_categories', 'shop_navigation_menus', 'shop_content_revisions'],
-                'site-texts' => ['shop_site_copy'],
-                'email-texts' => ['shop_mail_settings', 'shop_mail_templates'],
+                'navigation' => ['shop_catalog_categories' => 'path', 'shop_navigation_menus' => 'slot', 'shop_content_revisions' => 'id'],
+                'site-texts' => ['shop_site_copy' => 'language'],
+                'email-texts' => ['shop_mail_settings' => 'id', 'shop_mail_templates' => 'event_code'],
             };
-            foreach ($tables as $table) $this->db->query('SELECT * FROM ' . $table . ' FOR UPDATE');
+            foreach ($tables as $table => $key) $this->db->query('SELECT ' . $key . ' FROM ' . $table .
+                ($table === 'shop_content_revisions' ? ' WHERE active_document_key IS NOT NULL AND type=\'page\'' : '') . ' FOR UPDATE');
             $plan = $this->plan($backup);
             if (!hash_equals(self::token($backup, $plan['version'], $csrf), $token)) throw new InvalidArgumentException('Nastavení nebo soubor se od náhledu změnily. Zobraz nový náhled importu.');
             $mail = $backup['kind'] === 'email-texts' ? (new MailSettingsRepository($this->db))->load() : null;
@@ -302,5 +319,25 @@ final class ConfigurationBackup
         return ['hero_title' => 'Hlavička: nadpis', 'hero_subtitle' => 'Hlavička: podnadpis', 'catalog_home_title' => 'Úvod: nadpis výběru',
             'catalog_title' => 'Katalog: nadpis', 'catalog_home_intro' => 'Úvod: text výběru', 'catalog_all_intro' => 'Katalog: úvod',
             'catalog_category_intro' => 'Kategorie: úvod', 'footer_intro' => 'Patička: úvod', 'footer_closing' => 'Patička: závěr'][$key] ?? $key;
+    }
+
+    public static function describe(string $type, mixed $value): string
+    {
+        if ($value === null) return 'Dosud neexistuje.';
+        if (is_string($value)) return $value;
+        if ($type === 'template') return 'Předmět: ' . $value['subject'] . "\n\n" . $value['message'];
+        if ($type === 'category') return $value['title'] . "\nPořadí: " . $value['sort_order'] . "\nViditelnost: " . ($value['enabled'] ? 'zapnuto' : 'skryto');
+        if ($type === 'page') return 'V automatickém menu: ' . ($value['visible'] ? 'ano' : 'ne') . "\nPořadí: " . $value['sort_order'];
+        $source = ['categories' => 'Kategorie', 'content' => 'Stránky', 'manual' => 'Vlastní odkazy'][$value['source']];
+        $lines = ['Zdroj: ' . $source, 'Nadpis: ' . ($value['title'] ?? 'Informace')];
+        if ($value['source'] === 'categories') $lines[] = 'Kategorie: ' . (($value['parent'] ?? '') === '@context' ? 'podle otevřené kategorie' : (($value['parent'] ?? '') ?: 'hlavní kategorie'));
+        if ($value['source'] === 'content') $lines[] = 'Přidat Blog: ' . (!empty($value['include_blog']) ? 'ano' : 'ne');
+        $items = array_column($value['items'], null, 'id');
+        foreach ($value['items'] as $item) {
+            $lines[] = $item['label'] . ' → ' . ($item['target'] ?: 'Úvodní stránka') . ' · pořadí ' . ($item['sort_order'] ?? 0) .
+                (empty($item['parent_id']) ? '' : ' · pod ' . ($items[$item['parent_id']]['label'] ?? $item['parent_id']));
+        }
+        if ($items === []) $lines[] = 'Žádné vlastní odkazy.';
+        return implode("\n", $lines);
     }
 }

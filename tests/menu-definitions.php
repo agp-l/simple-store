@@ -166,3 +166,11 @@ try {
 }
 
 echo "Menu definition tests passed.\n";
+
+$menus->saveSlot('cs', 'footer', 'categories', '', false, 'Kategorie');
+$all = $menus->itemsForAdmin('cs', 'footer');
+foreach ($all as $item) $menus->removeItem('cs', 'footer', $item['id']);
+if ($menus->settings('cs')['footer']['source'] !== 'categories' || $menus->itemsForAdmin('cs', 'footer') !== []) {
+    throw new RuntimeException('Explicit category footer was mistaken for the legacy default.');
+}
+echo "Explicit footer category source is preserved OK\n";

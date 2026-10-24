@@ -8,6 +8,11 @@ class MeekroDB
         'cs:spani/spacaky' => ['path' => 'spani/spacaky', 'title' => 'Spacáky', 'sort_order' => 2, 'enabled' => 1],
     ];
 
+    private array $saved = [];
+    public function startTransaction(): void { $this->saved = $this->categories; }
+    public function commit(): void {}
+    public function rollback(): void { $this->categories = $this->saved; }
+
     public function queryFirstField(string $sql, mixed ...$args): int { return 1; }
 
     public function query(string $sql, mixed ...$args): array
@@ -18,6 +23,10 @@ class MeekroDB
         if (str_contains($sql, 'SELECT path, title, sort_order FROM shop_catalog_categories')) {
             return array_values(array_filter($this->categories,
                 static fn (array $row): bool => $row['enabled'] === 1));
+        }
+        if (str_contains($sql, 'UPDATE shop_catalog_categories SET sort_order')) {
+            $this->categories[$args[1] . ':' . $args[2]]['sort_order'] = $args[0];
+            return [];
         }
         if (str_contains($sql, 'UPDATE shop_catalog_categories')) {
             $this->categories[$args[3] . ':' . $args[4]] = [
@@ -61,3 +70,30 @@ try {
 }
 
 echo "Category editor tests passed.\n";
+
+$rows = $categories->allForAdmin('cs');
+$version = CategoryRepository::orderVersion($rows);
+$positions = array_column($rows, 'sort_order', 'path');
+$positions['spani/spacaky'] = 0;
+$before = $db->categories;
+$categories->saveOrder('cs', $positions, $version);
+if ($db->categories['cs:spani/spacaky']['sort_order'] !== 0 ||
+    array_keys($db->categories) !== array_keys($before) ||
+    $db->categories['cs:' . $path]['enabled'] !== 0) throw new RuntimeException('Reordering changed paths or visibility.');
+$rejectOrder = static function (array $values, string $version) use ($categories, $db): void {
+    $before = $db->categories;
+    try { $categories->saveOrder('cs', $values, $version); }
+    catch (InvalidArgumentException $expected) {
+        if ($db->categories !== $before) throw new RuntimeException('Rejected ordering changed the tree.');
+        return;
+    }
+    throw new RuntimeException('Invalid category ordering accepted.');
+};
+$rejectOrder($positions, $version); // stale page
+$version = CategoryRepository::orderVersion($categories->allForAdmin('cs'));
+$bad = $positions; unset($bad['spani/spacaky']); $rejectOrder($bad, $version);
+$bad = $positions; $bad['unknown'] = 1; $rejectOrder($bad, $version);
+foreach (['1.5', '-2', '65536', ['not a number']] as $value) {
+    $bad = $positions; $bad['spani'] = $value; $rejectOrder($bad, $version);
+}
+echo "Category reorder: whole-tree validation, stable paths and stale edits OK\n";
