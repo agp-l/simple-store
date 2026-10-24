@@ -68,8 +68,13 @@ try {
     $check((int)$order['total_czk']===3879&&$order['items'][0]['assistance_fee_czk']===122,'Order snapshot differs from approval.');
     $check($orders->create(null,'buyer@example.test',$summary['items'],$shipping,79,$requestKey)['id']===$order['id'],'Duplicate contract created.');
     $outbox=$db->queryFirstRow('SELECT * FROM shop_mail_outbox WHERE event_key=%s','order:'.$order['id']);
-    $check($outbox!==null&&str_contains($outbox['terms_attachment'],A::TERMS_SLUG)&&str_contains($outbox['terms_attachment'],OrderLegalDocuments::TERMS_SLUG)
-        &&str_contains($outbox['body_text'],'1 678 Kč + služba 122 Kč')&&str_contains($outbox['body_text'],A::EARLY_REQUEST),'Durable confirmation lost contract data.');
+    $check($outbox!==null&&str_contains($outbox['terms_attachment'],A::TERMS_SLUG)&&str_contains($outbox['terms_attachment'],OrderLegalDocuments::TERMS_SLUG),
+        'Durable confirmation lost its terms attachment.');
+    foreach (['Zboží 1 678 Kč + zajištění nákupu 122 Kč', 'Partner <test>', 'partner@example.test', A::EARLY_REQUEST, A::DELIVERY_POLICY] as $contractText) {
+        $check(str_contains($outbox['body_text'],$contractText), 'Durable confirmation lost a price, seller, consent or delivery agreement.');
+        $check(str_contains($outbox['body_html'],htmlspecialchars($contractText,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8')),
+            'HTML confirmation differs from the saved purchase agreement.');
+    }
     $check((int)$db->queryFirstField('SELECT COUNT(*) FROM shop_sale_lines WHERE order_id=%i',$order['id'])===1,'Partner goods entered our goods ledger.');
     $partners = new \SimpleStore\Product\PurchasePartnerRepository($db);
     $profile = $partners->find($partnerId);

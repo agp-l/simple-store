@@ -167,8 +167,6 @@ if ($db->queryFirstField('SELECT state FROM shop_mail_outbox WHERE id=%i', $miss
     $manual->dispatchDue(1)['selected'] !== 0 || !$manual->dispatch($missingId)) {
     throw new RuntimeException('Verified non-acceptance should allow a manual retry, with cron backoff.');
 }
-echo "Live customer mail settings and tracking OK\n";
-
 // Exercise the real settings controller: draft previews must not save settings or queue mail.
 $previewConfiguration = (new MailSettingsRepository($db))->load();
 $previewInput = ['action' => 'preview-mail', 'tab' => 'mail', 'preview_code' => 'invoice', 'preview_mode' => 'mixed',
@@ -203,4 +201,5 @@ if ($db->queryFirstField('SELECT settings_json FROM shop_mail_settings WHERE id=
     throw new RuntimeException('Preview mutated settings or the mail queue.');
 }
 $_POST = $_GET = []; http_response_code(200);
+echo "Live customer mail settings and tracking OK\n";
 echo "Draft mail controller is read-only and retains invalid edits OK\n";
