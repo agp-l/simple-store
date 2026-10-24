@@ -18,8 +18,8 @@ $mailSettingsUrl = $adminUrl . '?section=settings&tab=mail';
     <label>Adresa pro odpovědi (nepovinná)<input type="email" name="reply_to" value="<?= $escape($mailForm['reply_to']) ?>" maxlength="254" placeholder="podpora@dobrodruzi.cz"></label>
     <label>Veřejná HTTPS adresa obchodu<input type="url" name="public_base_url" value="<?= $escape($mailForm['public_base_url']) ?>" maxlength="500" placeholder="https://eshop.dobrodruzi.cz"></label>
     <p class="panel-help">Z této adresy se vytvoří soukromý odkaz na objednávku a odkazy na publikované obchodní podmínky, vrácení zboží a reklamace. Vyplň kořen instalace bez /cs. Ukládá se do databáze stejně jako ostatní hodnoty níže.</p>
-    <label>E-mail správce pro přihlášení a obnovu hesla<input type="email" name="admin_recovery_email" value="<?= $escape($mailForm['admin_recovery_email']) ?>" maxlength="254" autocomplete="email" placeholder="spravce@dobrodruzi.cz" required></label>
-    <p class="panel-help">Po uložení se správce přihlašuje touto adresou a obnovovací odkaz chodí sem. Záložní obnova na serveru zůstává: <code>php tools/admin.php --reset</code>.</p>
+    <label>Kontaktní e-mail obchodu (oznámení)<input type="email" name="admin_recovery_email" value="<?= $escape($mailForm['admin_recovery_email']) ?>" maxlength="254" autocomplete="email" placeholder="spravce@dobrodruzi.cz" required></label>
+    <p class="panel-help">Sem chodí oznámení obchodu. Přihlašovací e-maily a hesla správců měň v sekci Účty a administrátoři. Původní správce do prvního uložení svého účtu v nové správě používá k přihlášení tuto adresu.</p>
     <h3>SMTP server schránky</h3>
     <div class="panel-fields-two"><label>Server SMTP<input name="smtp_host" value="<?= $escape($mailForm['smtp_host']) ?>" maxlength="253" placeholder="smtp.example.cz" autocomplete="off"></label>
     <label>Port<input type="number" name="smtp_port" value="<?= (int) $mailForm['smtp_port'] ?>" min="1" max="65535" required></label></div>

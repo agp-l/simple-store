@@ -1328,3 +1328,12 @@ CREATE TABLE IF NOT EXISTS shop_tax_write_requests (
   request_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin PRIMARY KEY,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Revocation survives blocking/re-enabling an account or changing its role/email.
+SET @users_auth_version_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_users' AND COLUMN_NAME='auth_version');
+SET @users_auth_version_upgrade = IF(@users_auth_version_exists=0,
+  'ALTER TABLE shop_users ADD COLUMN auth_version BIGINT UNSIGNED NOT NULL DEFAULT 0', 'SELECT 1');
+PREPARE users_auth_version_statement FROM @users_auth_version_upgrade;
+EXECUTE users_auth_version_statement;
+DEALLOCATE PREPARE users_auth_version_statement;

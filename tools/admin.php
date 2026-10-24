@@ -24,22 +24,20 @@ try {
     if (!is_file($root . '/vendor/autoload.php') || !is_file($root . '/config/database.php')) {
         throw new RuntimeException('Run composer install and configure config/database.php first.');
     }
-    $users = new AdminUserRepository(ConnectionFactory::create(require $root . '/config/database.php'));
+    $database = ConnectionFactory::create(require $root . '/config/database.php');
+    $users = new AdminUserRepository($database);
     if (!$users->installed()) {
         throw new RuntimeException('Import database/schema.sql into the configured database first (shop_users table missing).');
     }
-    $configuredEmail = $users->loginEmail();
-    $loginEmail = $configuredEmail;
     if ($emailOption !== null && filter_var($emailOption, FILTER_VALIDATE_EMAIL) === false) {
         throw new RuntimeException('Enter a valid administrator email.');
     }
-    if ($loginEmail !== null && $emailOption !== null && strcasecmp($loginEmail, $emailOption) !== 0) {
-        throw new RuntimeException('A different administrator email is configured in the shop mail settings. Change it there first.');
+    if ($command === '--reset' && $emailOption === null &&
+        (int) $database->queryFirstField('SELECT COUNT(*) FROM shop_users WHERE role=%s AND is_active=1', 'admin') > 1) {
+        throw new RuntimeException('Multiple administrators exist. Select one with --email=owner@example.com.');
     }
-    $loginEmail ??= $emailOption;
-    if ($loginEmail === null) {
-        throw new RuntimeException('Set the administrator email with --email=owner@example.com.');
-    }
+    $loginEmail = $emailOption === null ? $users->loginEmail() : strtolower(trim($emailOption));
+    if ($loginEmail === null) throw new RuntimeException('Specify the administrator with --email=owner@example.com.');
 
     if ($command === '--migrate') {
         if ($users->hasAdmin()) {
@@ -54,26 +52,26 @@ try {
             !is_string($old['password_hash'] ?? null)) {
             throw new RuntimeException('Invalid legacy administrator file. Use --reset to create a new password.');
         }
-        $users->createAdmin($old['username'], $old['password_hash'], $configuredEmail === null ? $loginEmail : null);
+        $users->createAdmin($old['username'], $old['password_hash'], $loginEmail);
         echo "Administrator migrated. Email: {$loginEmail}. The old password still works. config/admin.php is no longer read by the web.\n";
         exit;
     }
 
-    $existing = $users->findAdminByUsername('admin');
+    $existing = $users->findAdminByEmail($loginEmail);
     if ($command === 'create' && $users->hasAdmin()) {
-        throw new RuntimeException('An administrator already exists. Use --reset to replace the password.');
+        throw new RuntimeException('An administrator already exists. Add more accounts in Administration > Accounts or use --reset --email=... to reset one account.');
     }
     if ($command === '--reset' && $existing === null && $users->hasAdmin()) {
-        throw new RuntimeException('An administrator with another username exists. No account was changed.');
+        throw new RuntimeException('No active administrator has this email. No account was changed.');
     }
 
     // Generate a password without putting it in shell history or process arguments.
     $password = rtrim(strtr(base64_encode(random_bytes(24)), '+/', '-_'), '=');
     $hash = password_hash($password, PASSWORD_DEFAULT);
     if ($existing === null) {
-        $users->createAdmin('admin', $hash, $configuredEmail === null ? $loginEmail : null);
+        $users->createAdmin('admin', $hash, $loginEmail);
     } else {
-        if ($configuredEmail === null) $users->setEmail((int) $existing['id'], $loginEmail);
+        $users->setEmail((int) $existing['id'], $loginEmail);
         $users->replacePassword((int) $existing['id'], $hash);
     }
     echo "Email: {$loginEmail}\nPassword: {$password}\nSave the password now; it will not be displayed again.\n";

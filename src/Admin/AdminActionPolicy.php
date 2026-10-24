@@ -25,6 +25,8 @@ final class AdminActionPolicy
 
     public const RETURNS = ['return-update', 'return-refund', 'return-delete'];
 
+    public const USERS = ['user-create', 'user-update', 'user-password', 'user-delete', 'user-address-save', 'user-address-delete'];
+
     private const OTHER = [
         'content-import-preview', 'content-import-save',
         'product-prompt-save', 'product-bulk-export', 'product-bulk-prepare', 'product-bulk-step', 'product-bulk-clear', 'product-zip-upload', 'product-zip-step', 'product-zip-clear', 'product-import-preview', 'product-import-save', 'create-content', 'create-translation', 'inline-content', 'create-product',
@@ -33,14 +35,14 @@ final class AdminActionPolicy
         'media-upload', 'media-attach', 'media-delete', 'delete-product',
         'delete-content', 'homepage-product', 'product-selection', 'product-selection-order', 'product-supplier-link', 'product-sale', 'purchase-partner-save', 'product-relation', 'catalog-post',
         'products-sale-preview', 'products-sale-apply', 'products-mass-preview', 'products-mass-apply', 'products-variants-preview', 'products-variants-apply', 'save-checkout-settings', 'fio-cron-rotate', 'save-site-copy',
-        'save-mail-settings', 'mail-test', 'customer-create', 'customer-update',
-        'customer-active', 'customer-password', 'schema-apply',
+        'save-mail-settings', 'mail-test', 'schema-apply',
         'table-prefix-migrate', 'table-prefix-cleanup',
     ];
 
     public static function allows(string $action): bool
     {
         return in_array($action, self::OTHER, true) ||
+            in_array($action, self::USERS, true) ||
             in_array($action, self::ORDERS, true) ||
             in_array($action, self::ACCOUNTING, true) ||
             in_array($action, self::RETURNS, true);
