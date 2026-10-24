@@ -56,7 +56,7 @@ $accountingGroups = [
   <div class="accounting-nav-group"><p><?= $escape($group) ?></p>
     <nav class="panel-accounting-nav" aria-label="<?= $escape($group) ?>">
     <?php foreach ($tabs as $key): ?>
-      <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=' . $key . '&year=' . $taxYear) ?>" <?= $accountingTab === $key ? 'aria-current="page"' : '' ?>><?= \SimpleStore\Rendering\Icon::render(['overview'=>'list', 'money'=>'card', 'invoices'=>'document', 'documents'=>'plus', 'funds'=>'users', 'balances'=>'package', 'closing'=>'check', 'numbering'=>'list', 'settings'=>'settings', 'guide'=>'book'][$key]) ?> <?= $escape($accountingTitles[$key]) ?></a>
+      <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=' . $key . '&year=' . $taxYear) ?>" <?= $accountingTab === $key ? 'aria-current="page"' : '' ?>><span class="admin-tab-icon" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render(['overview'=>'list', 'money'=>'card', 'invoices'=>'document', 'documents'=>'plus', 'funds'=>'users', 'balances'=>'package', 'closing'=>'check', 'numbering'=>'list', 'settings'=>'settings', 'guide'=>'book'][$key]) ?></span> <?= $escape($accountingTitles[$key]) ?></a>
     <?php endforeach; ?>
     </nav>
   </div>

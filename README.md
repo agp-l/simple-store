@@ -1,6 +1,6 @@
 # Dobrodruzi — jednoduchý obchod a CMS
 
-Jednoduchý obchod, redakční systém a zákaznický účet v PHP 8.1+ a MySQL. Obchod, administrace i účet používají stejnou hlavičku a patičku z `view/`. Architektura a důvody jednotlivých rozhodnutí jsou popsané v [docs/architecture.md](docs/architecture.md).
+Jednoduchý obchod, redakční systém a zákaznický účet v PHP 8.1+ a MySQL. Obchod a zákaznický účet sdílejí hlavičku a patičku z `view/`; přihlášená administrace má vlastní šablonu. Architektura a důvody jednotlivých rozhodnutí jsou popsané v [docs/architecture.md](docs/architecture.md).
 
 Online platby: [Comgate](docs/comgate.md), [GoPay](docs/gopay.md) a [BTCPay Server](docs/btcpay.md). GoPay používá oficiální PHP SDK; BTCPay komunikuje se serverem přes Greenfield API.
 
@@ -381,4 +381,4 @@ The category administrator shows an eye icon and distinguishes manual hiding fro
 
 Navigace rozlišuje každodenní práci, uzavření roku a nastavení. Restart historie je pod Údržbou v nastavení evidence; původní adresy zůstávají funkční. Číselné řady mají přehled výchozích řad pro každý druh, sbalené úpravy, průvodce zkratka/rok/počet číslic a živý náhled. Náhled nic nerezervuje. Existující vlastní formáty se otevřením nemění a formulář funguje i bez JavaScriptu. Hledání ve společné evidenci dohledá platbu také podle propojeného čísla faktury či výpisu.
 
-Administrace má antracitové menu a neutrální plochy. Barevné ikonky, záložky a ovládací prvky v `admin-layout.css` rozlišují prodej, obsah, finance a nastavení. Barvy navigace jsou navázané na klíče sekcí, nikoli jejich pořadí; zelená zůstává pro úspěšné stavy a příjmy. Vzhled zákaznického webu je oddělený. Příjmy Fio a jejich omezení popisuje [docs/fio.md](docs/fio.md). Program není účetnictví s.r.o., nepřipravuje DPH ani automatické přiznání a neodhaduje neznámé výdaje, inventuru či skutečné datum dodání.
+Administrace má antracitové menu, téměř černý text a ploché bílé karty s jasnými rámečky bez stínování. Horizontální navigace používá větší ikonky ve samostatných barevných políčkách. Seznam objednávek spojuje zákazníka, platbu s fakturou, doručení s vyřízením a přímé akce do čtyř sloupců; na menších obrazovkách se mění na karty. Potvrzení platby, storno i změna stavu jsou dostupné bez rozbalování, s původními povinnými potvrzeními a kontrolami. Barevné ikonky, záložky a ovládací prvky v `admin-layout.css` rozlišují prodej, obsah, finance a nastavení. Barvy navigace jsou navázané na klíče sekcí, nikoli jejich pořadí; zelená zůstává pro úspěšné stavy a příjmy. Vzhled zákaznického webu je oddělený. Příjmy Fio a jejich omezení popisuje [docs/fio.md](docs/fio.md). Program není účetnictví s.r.o., nepřipravuje DPH ani automatické přiznání a neodhaduje neznámé výdaje, inventuru či skutečné datum dodání.

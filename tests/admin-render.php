@@ -424,7 +424,7 @@ if (!str_contains($html, 'DB-20260929-1') ||
     str_contains($html, 'Eva <script>') ||
     !str_contains($html, 'Objednávky') ||
     !str_contains($html, 'href="/shop/cs/objednavka/' . str_repeat('a', 64) . '"') ||
-    !str_contains($html, 'Zobrazit objednávku')) {
+    !str_contains($html, 'Pohled zákazníka')) {
     throw new RuntimeException('Admin order queue must display separate payment and fulfillment controls, invoices, filters and pagination.');
 }
 $refundStart = strpos($html, 'DB-20260929-GOPAY');

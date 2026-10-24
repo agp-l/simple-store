@@ -11,6 +11,7 @@ test('admin workspace: equal widths, accessible mobile navigation and customer i
     settings: ['product-sales-mass.php', 'start'],
     overview: ['product-sales-mass.php', 'overview'],
     orders: ['admin-orders.php'],
+    orderStates: ['admin-orders.php', 'states'],
     customer: ['customer-layout.php'],
   };
   const files = [];
@@ -124,6 +125,53 @@ test('admin workspace: equal widths, accessible mobile navigation and customer i
       assert.equal(await page.locator('footer.foot').count(), 1);
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth + 1), false);
       if (width === 390 || width === 1440) await page.screenshot({ animations: 'disabled', path: `/tmp/admin-layout-screenshots/customer-${width}.png` });
+      await page.close();
+    }
+    // The compact queue must keep the existing guarded actions usable without disclosures.
+    for (const width of [390, 1440]) {
+      const page = await browser.newPage({ viewport: { width, height: 900 } });
+      await page.route('https://**/*', route => route.abort());
+      await page.goto(url('orderStates'));
+      assert.equal(await page.locator('.panel-order-table details').count(), 0);
+      assert.equal(await page.locator('.panel-order-table thead th').count(), 4);
+      const row = number => page.locator('.panel-order-table tbody tr').filter({ has: page.getByRole('link', { name: number, exact: true }) });
+      assert.equal(await row('PAID-AFTER-CANCEL').locator('form').count(), 0);
+      assert.match(await row('PAID-AFTER-CANCEL').textContent(), /Zaplaceno po stornu/);
+      assert.equal(await row('GATEWAY-BLOCKED').locator('form').count(), 0);
+      assert.match(await row('GATEWAY-BLOCKED').textContent(), /Platba k ověření/);
+      assert.deepEqual(await row('PACKETA-BLOCKED').locator('select[name="order_status"] option').evaluateAll(options => options.map(o => o.value)), ['processing']);
+      const posts = [];
+      await page.route('**/admin/orders/**', async route => {
+        posts.push(new URLSearchParams(route.request().postData()));
+        await route.fulfill({ body: '<p>Akce zachycena v testu</p>', contentType: 'text/html; charset=utf-8' });
+      });
+      for (const [number, action, checkbox, expected] of [
+        ['OVERDUE', 'mark-order-paid', 'bank_checked', { id: '4', bank_checked: '1', return_list: '1' }],
+        ['OVERDUE', 'cancel-overdue-bank-order', 'bank_checked', { id: '4', bank_checked: '1' }],
+        ['DB-20261024-002', 'set-order-status', '', { id: '2', order_status: 'cancelled', return_list: '1' }],
+      ]) {
+        const form = row(number).locator('form').filter({ has: page.locator(`input[name="action"][value="${action}"]`) });
+        assert.equal(await form.getByRole('button').isVisible(), true);
+        assert.equal(await form.evaluate(el => el.checkValidity()), false);
+        const count = posts.length;
+        await form.getByRole('button').click();
+        assert.equal(posts.length, count, 'Unchecked confirmation must prevent submission.');
+        await form.locator(checkbox ? `input[name="${checkbox}"]` : 'input[type="checkbox"]').check();
+        await form.getByRole('button').click();
+        await page.getByText('Akce zachycena v testu').waitFor();
+        const post = posts.at(-1);
+        assert.equal(post.get('action'), action);
+        assert.equal(post.get('csrf'), 'test-token');
+        for (const [key, value] of Object.entries(expected)) assert.equal(post.get(key), value);
+        await page.goto(url('orderStates'));
+      }
+      const fulfillment = row('DB-20261024-001').locator('form');
+      await fulfillment.locator('select').selectOption('shipped');
+      await fulfillment.getByRole('button', { name: /Uložit stav/ }).click();
+      await page.getByText('Akce zachycena v testu').waitFor();
+      assert.equal(posts.at(-1).get('order_status'), 'shipped');
+      assert.equal(posts.at(-1).get('id'), '1');
+      assert.equal(posts.at(-1).get('csrf'), 'test-token');
       await page.close();
     }
     const short = await browser.newPage({ viewport: { width: 1280, height: 650 } });

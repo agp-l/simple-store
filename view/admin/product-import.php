@@ -3,7 +3,7 @@
 <p><a class="panel-icon-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=content-import') ?>"><?= \SimpleStore\Rendering\Icon::render('document') ?> Import a export stránek a článků</a></p></div></div>
 <nav class="panel-order-tabs product-transfer-tabs" aria-label="Import a export">
 <?php foreach (['export' => 'Export a seznam pro AI', 'bulk' => 'Hromadný JSON', 'single' => 'Jeden produkt', 'zip' => 'ZIP s fotografiemi', 'help' => 'Zadání pro AI'] as $tab => $label): ?>
-<a <?= $importTab === $tab ? 'aria-current="page"' : '' ?> href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=product-import&tab=' . $tab . '&language=' . $language) ?>"><?= \SimpleStore\Rendering\Icon::render(['export' => 'download', 'bulk' => 'list', 'single' => 'plus', 'zip' => 'package', 'help' => 'edit'][$tab]) ?><span><?= $escape($label) ?></span></a>
+<a <?= $importTab === $tab ? 'aria-current="page"' : '' ?> href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=product-import&tab=' . $tab . '&language=' . $language) ?>"><span class="admin-tab-icon" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render(['export' => 'download', 'bulk' => 'list', 'single' => 'plus', 'zip' => 'package', 'help' => 'edit'][$tab]) ?></span><span><?= $escape($label) ?></span></a>
 <?php endforeach; ?></nav>
 <?php if ($importError !== ''): ?><p class="panel-error" role="alert"><?= $escape($importError) ?></p><?php endif; ?>
 <?php if ($transferError !== ''): ?><p class="panel-error" role="alert"><?= $escape($transferError) ?></p><?php endif; ?>

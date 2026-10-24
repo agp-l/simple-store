@@ -14,6 +14,14 @@ foreach (['paid', 'pending', 'paid'] as $i => $payment) {
         'payment_status' => $payment, 'status' => ['processing', 'new', 'shipped'][$i],
         'total_czk' => [3490, 1850, 6290][$i], 'variable_symbol' => '2026000' . ($i + 1),
         'customer_email' => ['eva@example.test', 'petr@example.test', 'jana@example.test'][$i],
+        'order_token' => str_repeat((string) ($i + 1), 64),
+        'invoice_id' => $i === 0 ? 12 : null, 'invoice_number' => $i === 0 ? 'FA-2026-0012' : null,
         'shipping_json' => json_encode(['recipient' => ['Eva Nová', 'Petr Veselý', 'Jana Malá'][$i], 'label' => 'PPL ParcelShop', 'method' => 'ppl_pickup'])];
+}
+if (($argv[1] ?? '') === 'states') {
+    $orderPage['items'][] = array_replace($orderPage['items'][1], ['id' => 4, 'order_number' => 'OVERDUE', 'payment_due_at' => '2020-01-01 12:00:00']);
+    $orderPage['items'][] = array_replace($orderPage['items'][0], ['id' => 5, 'order_number' => 'PAID-AFTER-CANCEL', 'status' => 'cancelled']);
+    $orderPage['items'][] = array_replace($orderPage['items'][0], ['id' => 6, 'order_number' => 'GATEWAY-BLOCKED', 'payment_method' => 'btcpay', 'btcpay_payment_state' => 'processing']);
+    $orderPage['items'][] = array_replace($orderPage['items'][0], ['id' => 7, 'order_number' => 'PACKETA-BLOCKED', 'status' => 'new', 'shipping_json' => json_encode(['method' => 'zasilkovna_pickup', 'label' => 'Zásilkovna'])]);
 }
 require dirname(__DIR__, 2) . '/view/admin/layout.php';
