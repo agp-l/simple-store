@@ -17,12 +17,15 @@
     all.checked = boxes.length > 0 && selected.length === boxes.length;
     all.indeterminate = selected.length > 0 && selected.length < boxes.length;
     all.disabled = boxes.length === 0;
+    const clear = document.querySelector('[data-library-clear-selection]');
+    if (clear) clear.hidden = selected.length === 0;
     document.querySelectorAll('[data-library-requires-selection]').forEach(button => { button.disabled = selected.length === 0; });
     boxes.forEach(box => box.closest('.library-card, .library-directory').classList.toggle('is-selected', box.checked));
   };
   boxes.forEach(box => box.addEventListener('change', update));
   all.addEventListener('change', () => { boxes.forEach(box => { box.checked = all.checked; }); update(); });
   update();
+  document.querySelector('[data-library-clear-selection]')?.addEventListener('click', () => { boxes.forEach(box => { box.checked = false; }); update(); all.focus(); });
   document.querySelectorAll('[data-library-url]').forEach(input => {
     input.value = new URL(input.value, location.origin).href;
     input.addEventListener('click', () => input.select());

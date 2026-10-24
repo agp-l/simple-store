@@ -2,7 +2,11 @@
 
 V administraci **Stránky** přepínají záložky mezi stránkami a články. U článku nastavuje **Náhledový obrázek** samostatný obrázek pro blog a doporučení pod produkty. Automatický režim zachovává původní chování (první obrazový blok); volba **Bez obrázku** je samostatná. Volba se ukládá do revize a přenáší v JSON exportu obsahu.
 
-**Fotografie a média** zobrazuje místní rastrové obrázky v `images/`, včetně starších adresářů a fotografií produktů, stránek a článků. Vlastní složky a podsložky jsou organizační štítky: zařazení a přejmenování nemění URL, revize obsahu ani přiřazení produktů. Systémové filtry „Nahráno k …“ označují původ souboru, nikoli úplný seznam jeho současných použití. Externí obrázky na jiných serverech knihovna nestahuje.
+**Fotografie a média** zobrazuje místní rastrové obrázky v `images/`, včetně starších adresářů a fotografií produktů, stránek a článků. Filtry **Nahráno k produktům / stránkám / článkům** se standardně otevřou jako složky pojmenované podle aktuálního obsahu. Překlady sdílejí jednu složku, přednost má výchozí jazyk obchodu. Po odstranění produktu fotografie zůstávají ve složce označené „bez aktuálního záznamu“. Přepínač **Složky / Obrázky** umožňuje i plochý přehled. Hledání zahrnuje názvy produktů a souborů, nerozlišuje českou diakritiku; řadit lze podle názvu, stáří a velikosti.
+
+Ve složce produktu tlačítko **Přidat fotografie** přidává do galerie a zachovává existující hlavní snímek. U nového produktu s výchozím obrázkem se první fotografie stane hlavní. U stránek a článků přibudou obrazové bloky. Vše se ukládá jako nová revize s kontrolou souběžné editace. Výběr celé složky pro export nebo zařazení zahrne všechny její obrázky, i když v přehledu hledáš jen podle jednoho názvu. Kliknutí na fotografii otevře náhled s listováním šipkami a kopírováním adresy.
+
+Vlastní složky a podsložky jsou organizační štítky: zařazení a přejmenování nemění URL, revize obsahu ani přiřazení produktů. Systémové filtry „Nahráno k …“ označují původ souboru, nikoli úplný seznam jeho současných použití. Externí obrázky na jiných serverech knihovna nestahuje.
 
 Nové nahrání vytvoří bezpečně překódovaný obrázek do 1800 px, kartu do 960 px a miniaturu do 240 px. Limity jsou 12 MiB / 20 Mpx na fotografii, 20 souborů v dávce; platí také limity PHP uvedené u formuláře. Správce samostatně nezveřejňuje ani nevkládá obrázky. V editorech lze zvolit **Celá knihovna médií**, složku a hledání, následně snímek přiřadit do vybraného místa.
 
@@ -13,3 +17,5 @@ Jde o přenos kolekce, nikoli úplnou obnovu webu: již existující obrázky za
 Organizace knihovny je v chráněném `images/media/.library.json`; změny používají zámek a atomické přejmenování. Nasazení aplikace toto úložiště ani uživatelské fotografie nepřepisuje. Selhání importu odstraní pouze právě vytvořené soubory a ponechá původní metadata. ZIP se nikdy nerozbaluje do veřejného adresáře. Správce nepřidává hromadné mazání; tím lze složky bezpečně používat i pro soubory odkazované ze starších revizí nebo mimo obchod.
 
 Ověření: `tests/content-cover.php`, `tests/media-catalog.php`, `tests/media-archive.php` (GD + ZIP), `tests/admin-media-browser.mjs` (Playwright). Integrační test ZIP je součástí obou databázových CI úloh; pro vlastní běh databázi nepotřebuje.
+
+Další ověření: `tests/media-browse.php`, `tests/media-owners-database.php` (MySQL/MariaDB), `tests/media-folders-browser.mjs`.

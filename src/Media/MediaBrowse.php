@@ -13,16 +13,16 @@ final class MediaBrowse
     public static function options(array $input): array
     {
         $folder = $input['folder'] ?? 'all'; $owner = $input['owner'] ?? '';
-        $search = $input['q'] ?? ''; $sort = $input['sort'] ?? 'newest';
+        $search = $input['q'] ?? ''; $parentSearch = $input['parent_q'] ?? ''; $sort = $input['sort'] ?? 'newest';
         $view = $input['view'] ?? (is_string($folder) && isset(MediaOwners::TYPES[$folder]) ? 'folders' : 'photos');
         $offset = filter_var($input['offset'] ?? '0', FILTER_VALIDATE_INT, ['options' => ['min_range' => 0, 'max_range' => 100000]]);
         if (!is_string($folder) || !is_string($owner) || !is_string($search) || strlen($search) > 200 ||
-            !is_string($sort) || !isset(self::SORTS[$sort]) || !in_array($view, ['folders', 'photos'], true) || $offset === false ||
+            !is_string($parentSearch) || strlen($parentSearch) > 200 || !is_string($sort) || !isset(self::SORTS[$sort]) || !in_array($view, ['folders', 'photos'], true) || $offset === false ||
             ($owner !== '' && (!isset(MediaOwners::TYPES[$folder]) || preg_match('/^[a-f0-9]{32}$/D', $owner) !== 1))) {
             throw new InvalidArgumentException('Neplatný filtr knihovny médií.');
         }
         if (!isset(MediaOwners::TYPES[$folder]) || $owner !== '') $view = 'photos';
-        return compact('folder', 'owner', 'view', 'sort', 'offset') + ['q' => trim($search)];
+        return compact('folder', 'owner', 'view', 'sort', 'offset') + ['q' => trim($search), 'parent_q' => trim($parentSearch)];
     }
 
     public static function listing(array $files, array $state, array $owners, array $options, int $limit = 48): array
