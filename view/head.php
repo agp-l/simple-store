@@ -28,4 +28,5 @@
   <?php if ($productCardEffects ?? false): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/product-card-effects.css?v=<?= filemtime(__DIR__ . '/../assets/product-card-effects.css') ?>"><?php endif; ?>
   <?php if (in_array($page ?? '', ['catalog', 'product-record'], true)): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/product-selection.css?v=<?= filemtime(__DIR__ . '/../assets/product-selection.css') ?>"><?php endif; ?>
   <link rel="stylesheet" href="<?= $siteRoot ?>assets/prices.css?v=<?= filemtime(__DIR__ . '/../assets/prices.css') ?>">
+  <?php if ($adminWorkspace ?? false): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/admin-layout.css?v=<?= filemtime(__DIR__ . '/../assets/admin-layout.css') ?>"><?php endif; ?>
 </head>

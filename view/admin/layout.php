@@ -1,7 +1,8 @@
 <?php
 declare(strict_types=1);
 
-// Choose text and content only; the chrome is shared with customer pages.
+// Authenticated administration has its own workspace; login keeps the store shell.
+$adminWorkspace = in_array($screen, ['purchase-partners', 'content-import', 'product-import', 'editor', 'categories', 'menus', 'media', 'orders', 'returns', 'accounting', 'settings', 'users', 'database'], true);
 $panelTitle = 'Administrace · dobrodruzi';
 $panelDescription = 'Správa obchodu Dobrodruzi';
 $panelHeroTitle = in_array($screen, ['purchase-partners', 'content-import', 'product-import', 'editor', 'products', 'categories', 'menus', 'media', 'orders', 'returns', 'accounting', 'settings', 'users', 'database'], true)

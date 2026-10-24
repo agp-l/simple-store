@@ -1,7 +1,7 @@
 <?php
-// This body is framed by the shared storefront shell.
+// One full-width workspace for every authenticated administration section.
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-$inside = in_array($screen, ['purchase-partners', 'content-import', 'product-import', 'editor', 'categories', 'menus', 'media', 'orders', 'returns', 'accounting', 'settings', 'users', 'database'], true);
+$inside = $adminWorkspace;
 $panelPreviewControl = $inside && $csrf !== '' ? [
     'active' => (bool) ($adminPreviewActive ?? false),
     'csrf' => $csrf,

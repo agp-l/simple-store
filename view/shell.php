@@ -9,6 +9,7 @@ $pageTitle ??= 'Dobrodruzi.cz — vybavení na každou cestu';
 $pageDescription ??= 'Batohy, stany, spacáky a vybavení na cesty.';
 $privatePage ??= false;
 $panelStylesheet ??= false;
+$adminWorkspace ??= false;
 $compactHeader ??= false;
 $siteCopy ??= \SimpleStore\Content\SiteCopyRepository::DEFAULTS;
 $heroTitle ??= $siteCopy['hero_title'];
@@ -42,8 +43,8 @@ $productCardEffects = $page === 'catalog'
 <!doctype html>
 <html lang="<?= htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
 <?php require __DIR__ . '/head.php'; ?>
-<body class="<?= $panelStylesheet ? 'panel-page' : 'store-page' ?>">
-<?php require __DIR__ . '/header.php'; ?>
+<body class="<?= $panelStylesheet ? 'panel-page' : 'store-page' ?><?= $adminWorkspace ? ' admin-page' : '' ?>">
+<?php require __DIR__ . ($adminWorkspace ? '/admin/header.php' : '/header.php'); ?>
 <?php if (($setupNotice ?? '') !== ''): ?>
   <aside class="wrap setup-notice" role="alert"><strong>Pro dokončení nastavení</strong><pre><?= htmlspecialchars(trim($setupNotice), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></pre></aside>
 <?php endif; ?>
@@ -51,8 +52,12 @@ $productCardEffects = $page === 'catalog'
   <aside class="wrap" role="alert"><pre class="debug-error"><?= htmlspecialchars($debugError, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></pre></aside>
 <?php endif; ?>
 <?php require $bodyView; ?>
+<?php if ($adminWorkspace): ?>
+<script defer src="<?= $siteRoot ?>assets/admin-layout.js?v=<?= filemtime(__DIR__ . '/../assets/admin-layout.js') ?>"></script>
+<?php else: ?>
 <?php require __DIR__ . '/footer.php'; ?>
 <script defer src="<?= $siteRoot ?>assets/app.js?v=<?= filemtime(__DIR__ . '/../assets/app.js') ?>"></script>
+<?php endif; ?>
 <?php if ($page === 'shipping' && ($packetaApiKey ?? '') !== ''): ?><script defer src="https://widget.packeta.com/v6/www/js/library.js"></script><script defer src="<?= $siteRoot ?>assets/packeta-checkout.js?v=<?= filemtime(__DIR__ . '/../assets/packeta-checkout.js') ?>"></script><?php endif; ?>
 <?php if ($page === 'shipping' && ($pplWidgetKey ?? '') !== ''): ?><script async src="https://www.ppl.cz/accesspointwidget/loader.js"></script><script defer src="<?= $siteRoot ?>assets/ppl-checkout.js?v=<?= filemtime(__DIR__ . '/../assets/ppl-checkout.js') ?>"></script><?php endif; ?>
 <?php if ($page === 'shipping'): ?><script defer src="<?= $siteRoot ?>assets/gls-checkout.js?v=<?= filemtime(__DIR__ . '/../assets/gls-checkout.js') ?>"></script><?php endif; ?>

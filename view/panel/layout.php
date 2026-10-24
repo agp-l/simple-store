@@ -1,7 +1,7 @@
 <?php
 declare(strict_types=1);
 
-// Both private areas use the same store shell and panel assets.
+// Private areas share document metadata and panel assets; admin adds its own chrome.
 $language = $site['default_language'];
 $pageTitle = $panelTitle;
 $pageDescription = $panelDescription;

@@ -271,6 +271,7 @@ jobs:
           node --test tests/tax-evidence-browser.mjs
           node --test tests/evidence-workspace-browser.mjs
           node --test tests/admin-users-browser.mjs
+          node --test tests/admin-layout-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -283,6 +284,7 @@ jobs:
             /tmp/tax-evidence-screenshots/
             /tmp/evidence-workspace-screenshots/
             /tmp/admin-users-screenshots/
+            /tmp/admin-layout-screenshots/
           retention-days: 7
 
   private-routes-apache:

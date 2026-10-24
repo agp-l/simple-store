@@ -18,5 +18,11 @@ $documentEntryOptions=[['id'=>1,'entry_date'=>'2026-10-03','document_number'=>'P
 if($mode==='document-draft'){$accountingError='Zkontroluj částku.';$_POST=['action'=>'evidence-document-save','id'=>'0','description'=>'Neztratit fakturu <boty>','counterparty'=>'Dodavatel & syn','amount_czk'=>'chyba','entry_ids'=>['1'],'external_number'=>'REF-NEZTRATIT','activity'=>'Masáže','issue_date'=>'2026-10-01'];}
 $resetReport=['database'=>'test','tables'=>['shop_orders'=>4,'shop_invoices'=>2,'shop_evidence_events'=>7],'stock_movements_preserved'=>3,'reservations'=>[],'shop_product_revisions'=>12];
 $invoiceEditHistory=[];$selectedInvoice=['id'=>3,'version'=>2,'issue_date'=>'2026-10-04','due_date'=>'2026-10-10','delivery_date'=>'2026-10-04','paid_date'=>'2026-10-03','variable_symbol'=>'1234567890','shipping_czk'=>0,'activity'=>'E-shop Dobrodruzi','seller'=>$taxSettings,'buyer'=>['name'=>'Eva Novotná'],'items'=>[['name'=>'Boty','quantity'=>1,'unit_price_czk'=>1800]]];
+if (($argv[2] ?? '') === 'shell') {
+    $site = ['default_language' => 'cs', 'languages' => ['cs']];
+    $screen = 'accounting';
+    require dirname(__DIR__, 2) . '/view/admin/layout.php';
+    exit;
+}
 ?>
 <!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/assets/panel.css"><link rel="stylesheet" href="/assets/panel-actions.css"><style>body{margin:0}*{box-sizing:border-box}.fixture-sidebar{padding:24px}.fixture-main{min-width:0;padding:24px 0}</style></head><body class="panel-area"><div class="panel-shell panel-shell--evidence"><aside class="fixture-sidebar"><strong>DOBRODRUZI</strong><p>Administrace</p><p>Evidence podnikání</p><p>Produkty</p><p>Objednávky</p></aside><main class="fixture-main"><?php if($mode==='invoice-edit'){$taxUrl='/admin/?section=accounting';require dirname(__DIR__,2).'/view/admin/invoice-edit.php';}else require dirname(__DIR__,2).'/view/admin/accounting.php';?></main></div></body></html>

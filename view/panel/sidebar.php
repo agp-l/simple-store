@@ -2,7 +2,8 @@
 // The two private areas share one navigation component and visual hierarchy.
 $escapePanel = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 ?>
-<aside class="panel-sidebar">
+<aside class="panel-sidebar"<?= !empty($adminWorkspace) ? ' id="admin-sidebar" aria-label="Menu administrace" tabindex="-1"' : '' ?>>
+  <?php if (!empty($adminWorkspace)): ?><button class="admin-menu-close" type="button" data-admin-close hidden>Zavřít menu <span aria-hidden="true">×</span></button><?php endif; ?>
   <div class="panel-sidebar-heading"><span><?= $escapePanel($panelHeading) ?></span><small><?= $escapePanel($panelSubtitle) ?></small></div>
   <nav aria-label="<?= $escapePanel($panelHeading) ?>">
     <?php foreach ($panelLinks as $item): ?>

@@ -1,0 +1,154 @@
+/* Loaded only for authenticated administration. Customer/store layouts keep panel.css. */
+.admin-page {
+  --admin-sidebar-width: 232px;
+  --admin-header-height: 64px;
+  background: #f4f6f2;
+}
+.admin-page .skip { z-index: 100; }
+.admin-page .admin-header {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  height: var(--admin-header-height);
+  padding-right: clamp(16px, 2vw, 36px);
+  background: #fff;
+  border-bottom: 1px solid #dce3d9;
+  color: #252927;
+}
+.admin-brand {
+  display: grid;
+  align-content: center;
+  flex: 0 0 var(--admin-sidebar-width);
+  height: 100%;
+  padding: 8px 22px;
+  text-decoration: none;
+  line-height: 1.2;
+}
+.admin-brand strong { font-size: 24px; letter-spacing: -.06em; }
+.admin-brand > span { margin-top: 3px; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: #5f6b62; }
+.admin-header-actions { display: flex; align-items: center; gap: 12px; margin-left: auto; }
+.admin-shortcuts > summary, .admin-store-link, .admin-menu-toggle, .admin-menu-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid #d6e1d1;
+  border-radius: 4px;
+  background: #fff;
+  color: #344e32;
+  font: 600 13px var(--font-body);
+  text-decoration: none;
+  cursor: pointer;
+}
+.admin-shortcuts > summary { list-style: none; }
+.admin-shortcuts > summary::-webkit-details-marker { display: none; }
+.admin-shortcuts > summary:hover, .admin-store-link:hover { background: #edf5e9; }
+.admin-shortcuts .site-admin-bar {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 16px;
+  width: min(420px, calc(100vw - 24px));
+  max-height: calc(100dvh - var(--admin-header-height) - 24px);
+  overflow: auto;
+  padding: 18px;
+  border: 1px solid #c8d8c1;
+  border-radius: 5px;
+  background: #fff;
+}
+.admin-shortcuts .site-admin-inner { width: 100%; margin: 0; padding: 0; display: grid; gap: 16px; }
+.admin-shortcuts .site-admin-group { display: flex; gap: 8px; }
+.admin-shortcuts .site-admin-group[aria-label="Spravovat obsah"] { display: grid; }
+.admin-shortcuts .site-admin-inner :is(a, button) { min-height: 44px; }
+.admin-menu-toggle, .admin-menu-close { display: none; }
+.admin-page [hidden] { display: none !important; }
+.admin-page > .panel-area { padding: 0; }
+.admin-page .panel-shell {
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  min-height: calc(100dvh - var(--admin-header-height));
+  grid-template-columns: var(--admin-sidebar-width) minmax(0, 1fr);
+  gap: 0;
+  background: linear-gradient(to right, #1a1b1c 0 var(--admin-sidebar-width), #f4f6f2 var(--admin-sidebar-width) 100%);
+}
+.admin-page .panel-main {
+  width: 100%;
+  max-width: 1720px;
+  margin-inline: auto;
+  padding: 28px clamp(16px, 2vw, 36px) 60px;
+  overflow-wrap: anywhere;
+}
+.admin-page .panel-sidebar {
+  position: sticky;
+  top: var(--admin-header-height);
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - var(--admin-header-height));
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  border-radius: 0;
+  background: #1a1b1c;
+}
+.admin-page .panel-sidebar-heading { display: grid; padding: 22px 20px 16px; }
+.admin-page .panel-sidebar nav { display: grid; grid-template-columns: 1fr; gap: 3px; padding: 0 8px 20px; }
+.admin-page .panel-sidebar nav a { min-width: 0; min-height: 44px; border-bottom: 0; border-left: 3px solid transparent; }
+.admin-page .panel-sidebar nav a[aria-current="page"] { border-left-color: var(--sun); background: #344537; }
+.admin-page .panel-sidebar nav a span { flex: 0 0 19px; }
+.admin-page .panel-sidebar-preview { margin-top: auto; }
+.admin-page .panel-sidebar-foot { flex-wrap: wrap; gap: 12px; padding: 18px 16px; }
+.admin-page .panel-sidebar-foot form { width: 100%; margin: 0; }
+.admin-page .panel-sidebar-foot button { width: 100%; min-height: 44px; }
+.admin-page :is(.panel-panel-head, .panel-form-actions, .panel-quick) { flex-wrap: wrap; }
+.admin-page :is(.panel-form, .panel-editor) > *,
+.admin-page :is(.panel-fields-two, .panel-grid, .panel-grid-catalog) > * { min-width: 0; }
+.admin-page .panel-table-wrap { max-width: 100%; overscroll-behavior-x: contain; }
+.admin-page :is(input, select, textarea, img) { max-width: 100%; }
+.admin-page :is(.panel-error, .panel-notice, .panel-help, code) { overflow-wrap: anywhere; }
+
+@media (max-width: 1080px) {
+  .admin-page .admin-header { gap: 8px; padding-inline: 12px; }
+  .admin-brand { flex-basis: auto; padding-inline: 4px; }
+  .admin-header-actions { gap: 8px; }
+  .admin-page .panel-shell { grid-template-columns: minmax(0, 1fr); background: #f4f6f2; }
+  .admin-page .panel-main { padding: 24px 20px 48px; }
+  /* Without JS navigation remains fully usable above the content. */
+  .admin-page .panel-sidebar { position: static; height: auto; }
+  .admin-page .panel-sidebar nav { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .admin-nav-ready .admin-menu-toggle { display: flex; flex: 0 0 44px; }
+  .admin-nav-ready .admin-menu-close { display: flex; justify-content: space-between; margin: 12px 16px 0; background: transparent; color: #fff; border-color: #59665a; }
+  .admin-nav-ready .panel-sidebar {
+    position: fixed;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 60;
+    width: min(320px, calc(100% - 48px));
+    height: 100dvh;
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform .18s ease;
+  }
+  .admin-nav-ready .panel-sidebar nav { grid-template-columns: 1fr; }
+  .admin-menu-open { overflow: hidden; }
+  .admin-menu-open .panel-sidebar { transform: translateX(0); visibility: visible; }
+  .admin-menu-backdrop { position: fixed; inset: 0; z-index: 50; background: rgb(20 27 21 / .45); }
+}
+@media (max-width: 600px) {
+  .admin-page .panel-main { padding: 20px 12px 36px; }
+  .admin-page .panel-panel { padding: 16px; }
+  .admin-brand strong { font-size: 22px; }
+  .admin-shortcuts > summary span, .admin-store-link span { display: none; }
+  .admin-shortcuts > summary, .admin-store-link { width: 44px; padding: 10px; }
+  .admin-page .panel-fields-two { grid-template-columns: minmax(0, 1fr); }
+  .admin-page .panel-settings-overview { grid-template-columns: minmax(0, 1fr); }
+  .admin-page .panel-main :is(.panel-button, .panel-action) { max-width: 100%; white-space: normal; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .admin-nav-ready .panel-sidebar { transition: none; }
+}

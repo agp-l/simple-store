@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 
+$adminWorkspace = false;
 $panelTitle = 'Můj účet · dobrodruzi';
 $panelDescription = 'Zákaznický účet obchodu Dobrodruzi';
 $panelHeroTitle = $screen === 'account' ? 'Moje cesty a objednávky' : 'Vítejte u dobrodruhů';

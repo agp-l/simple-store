@@ -32,8 +32,10 @@ if (!str_contains($html, 'Kategorie a podkategorie') ||
     !str_contains($html, 'value="category-create"') ||
     !str_contains($html, 'value="category-update"') ||
     !str_contains($html, 'aria-current="page"') ||
-    substr_count($html, '<footer class="foot">') !== 1 ||
-    !str_contains($html, 'class="nav-band"') ||
+    str_contains($html, '<footer class="foot">') ||
+    str_contains($html, 'class="nav-band"') ||
+    !str_contains($html, 'admin-layout.css') ||
+    !str_contains($html, 'id="admin-sidebar"') ||
     !str_contains($html, 'href="/shop/assets/favicon.svg"')) {
     throw new RuntimeException('Category administration must provide the new and edit controls.');
 }
