@@ -12,7 +12,7 @@ $ledgerUrl = $taxUrl . '&tab=money&year=' . $taxYear;
 ?>
 <section class="panel-panel">
   <div class="panel-panel-head"><h2>Peněžní deník <?= (int) $taxYear ?></h2><a class="panel-button" href="<?= \SimpleStore\Navigation\PanelUrl::escape($ledgerUrl . '&download=ledger&' . http_build_query($ledgerFilters)) ?>">Export CSV</a></div>
-  <p class="panel-help">Zapisuj skutečné platby podle podkladů. <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl . '&tab=funds&year=' . $taxYear) ?>">Platby objednávek a asistovaný nákup</a> umí rozdělit vlastní příjem a svěřené peníze jedním formulářem.</p>
+  <p class="panel-help"><strong>Jeden zápis stačí.</strong> Tyto pohyby se automaticky zobrazují také v Daňové evidenci. Zde můžeš filtrovat účty, opravovat zápisy a evidovat převody. <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl . '&tab=funds&year=' . $taxYear) ?>">Platby objednávek a asistovaný nákup</a> umí rozdělit vlastní příjem a svěřené peníze jedním formulářem.</p>
   <form class="panel-ledger-filters" method="get" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>">
     <input type="hidden" name="section" value="accounting"><input type="hidden" name="tab" value="money"><input type="hidden" name="year" value="<?= (int) $taxYear ?>">
     <label>Hledat<input name="q" maxlength="150" placeholder="Doklad, popis, protistrana…" value="<?= $escape($ledgerFilters['q'] ?? '') ?>"></label>

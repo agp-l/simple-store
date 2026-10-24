@@ -25,6 +25,15 @@ final class DocumentNumbering
         return $result;
     }
     public function all(): array { return $this->db->query('SELECT * FROM shop_document_series ORDER BY kind,id'); }
+    /** Read-only hints; actual allocation still checks every permanent number reservation. */
+    public function nextNumbers(int $year): array {
+        TaxEvidenceRepository::year($year);
+        $out=[];
+        foreach ($this->db->query('SELECT series_id,calendar_year,next_number FROM shop_document_counters WHERE calendar_year IN %li', [0,$year]) as $row) {
+            $out[(int)$row['series_id']][(int)$row['calendar_year']] = (int)$row['next_number'];
+        }
+        return $out;
+    }
     public function save(int $id,array $input,int $admin): int {
         $name=TaxRegisterRepository::text($input['name']??'',120);
         $kind=$input['kind']??''; $pattern=TaxRegisterRepository::text($input['pattern']??'',80);

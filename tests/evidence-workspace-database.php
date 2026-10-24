@@ -20,6 +20,8 @@ $reject(fn()=>$tax->addEntry(array_replace($base,['document_number'=>$e['documen
 $reject(fn()=>$tax->amendEntry($entry,['version'=>1,'amount_czk'=>'1'],1,'Stará verze'));
 $entry2=$tax->addEntry(array_replace($base,['entry_date'=>'2095-10-06','direction'=>'expense','tax_kind'=>'deductible','amount_czk'=>'242.25','description'=>'Obaly']));
 $refund=$tax->addEntry(array_replace($base,['entry_date'=>'2095-10-11','direction'=>'expense','tax_kind'=>'income_return','amount_czk'=>'100.10','description'=>'Částečná vratka']));
+$countersBefore=$n->nextNumbers($year);
+$assert(($countersBefore[$series][$year]??null)===153 && $n->nextNumbers($year)===$countersBefore,'Preview must not reserve or advance a number');
 $assert($tax->entry($entry2)['document_number']===$suffix.'-MAS-2095-0151','Collision changed counter');
 $nextYear=$tax->addEntry(array_replace($base,['entry_date'=>'2096-01-01']));
 $assert($tax->entry($nextYear)['document_number']===$suffix.'-MAS-2096-0001','Yearly counter did not reset');
@@ -47,6 +49,7 @@ $rows=$journal->page($year,0,'',$activity)['items'];$assert(count($rows)===4,'Li
 $match=array_values(array_filter($rows,fn($r)=>(int)$r['id']===$entry&&$r['kind']==='entry'))[0];
 $linked=$journal->links($match);$assert((int)$linked['documents'][0]['id']===$doc&&count($linked['documents'][0]['files'])===1,'Statement/original links absent');
 $assert(count($journal->page($year,0,'HYPERLINK',$activity)['items'])===1,'Journal search failed');
+$assert(count($journal->page($year,0,'FIO-10',$activity)['items'])===2,'Linked bank document reference must find both payments');
 $csv=fopen('php://temp','w+b');$journal->csv($csv,$year,'',$activity);rewind($csv);$csvText=stream_get_contents($csv);fclose($csv);
 $assert(str_contains($csvText,"'=HYPERLINK")&&str_contains($csvText,'doklady/'.$doc.'.html')&&str_contains($csvText,';-100.10;')&&!str_contains($csvText,"'-100.10"),'CSV links, formula escaping or refund lost');
 // Editing the original order invoice cannot alter orders or cash.

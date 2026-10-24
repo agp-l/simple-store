@@ -16,6 +16,10 @@ $db = ConnectionFactory::create([
     'database' => 'simple_store', 'port' => 3306,
 ]);
 (new SchemaUpdater($db, dirname(__DIR__) . '/database/schema.sql'))->apply();
+// Legacy/manual mode remains supported; isolate from settings left by preceding tests.
+$tax = new \SimpleStore\Accounting\TaxEvidenceRepository($db);
+$initialTaxSettings = $tax->settings();
+$tax->saveSettings(array_replace($initialTaxSettings, ['fio_auto_receipts'=>'0']));
 $bank = new BankTransferPayment('', '123456789/2010', 'Test');
 $orders = new OrderRepository($db, $bank);
 $order = $orders->create(null, 'fio-test@example.test', [[
@@ -277,4 +281,63 @@ $age(40);
 if ($sync->sync(true,(int)$atomic['id'])['matched'] !== 1 ||
     (int)$db->queryFirstField('SELECT COUNT(*) FROM shop_evidence_documents WHERE order_id=%i AND kind=%s',
         $atomic['id'],'bank_movement') !== 1) throw new RuntimeException('Fio retry lost or duplicated its evidence.');
+// New receipts are automatic only for a configured sole trader. No extra bank request.
+$sellerSettings = array_replace($initialTaxSettings, ['name'=>'Eva Podnikatelka', 'ico'=>'12345678',
+    'street'=>'Polní 1','city'=>'Praha','postal_code'=>'11000','legal_form'=>'sole_trader','fio_auto_receipts'=>'1']);
+$tax->saveSettings($sellerSettings);
+foreach (['own','assisted','existing','company','disabled','amended','incomplete','rollback'] as $index=>$scenario) {
+    $tax->saveSettings(array_replace($sellerSettings,
+        $scenario==='company'?['legal_form'=>'company']:[],
+        $scenario==='disabled'?['fio_auto_receipts'=>'0']:[],
+        $scenario==='incomplete'?['ico'=>'']:[]));
+    $items=[['product_key'=>str_repeat('e',32),'language'=>'cs','slug'=>'automatic','name'=>'Test',
+        'quantity'=>1,'unit_price_czk'=>1000,'image_path'=>'','options'=>[]]];
+    $fresh=$orders->create(null,'auto-receipt@example.test',$items,
+        ['method'=>'gls_home','label'=>'GLS','name'=>'Test','phone'=>'123','street'=>'Test 1','city'=>'Praha','postal_code'=>'11000','country'=>'CZ'],79,bin2hex(random_bytes(32)));
+    $freshId=(int)$fresh['id'];
+    // Seed the stored purchase split; checkout consent and mail are covered by assisted-purchase tests.
+    if ($scenario==='assisted') {
+        $items[0]+= ['sale_mode'=>'assisted','supplier_price_czk'=>800,'assistance_fee_czk'=>200,
+            'seller'=>['name'=>'Test dodavatel','ico'=>'12345678']];
+        $db->query('UPDATE shop_orders SET items_json=%s WHERE id=%i',json_encode($items,JSON_THROW_ON_ERROR),$freshId);
+    }
+    if (in_array($scenario,['existing','amended'],true)) {
+        $manual=$tax->addEntry(['entry_date'=>$bookingDate,'direction'=>'income','account'=>'bank','tax_kind'=>'taxable',
+            'purpose'=>'manual','amount_czk'=>'1079','description'=>'Ručně evidovaný příjem','order_id'=>$freshId]);
+        if($scenario==='amended')$tax->voidEntry($manual,1,'Odstraněný ruční příjem',1);
+    }
+    $rows=[['column0'=>['value'=>$bookingDate], 'column22'=>['value'=>91000+$index],
+        'column5'=>['value'=>$fresh['variable_symbol']], 'column1'=>['value'=>1079], 'column14'=>['value'=>'CZK']]];
+    $beforeRequests=count($requests);
+    $age(40);
+    if($scenario==='rollback') {
+        $db->query("CREATE TRIGGER fio_test_receipt_failure BEFORE INSERT ON shop_evidence_events
+            FOR EACH ROW BEGIN IF NEW.entity_kind='entry' THEN SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Receipt audit failed'; END IF; END");
+        $failed=false;
+        try{$sync->sync(true,$freshId);}catch(Throwable $expected){$failed=true;}
+        finally{$db->query('DROP TRIGGER fio_test_receipt_failure');}
+        if(!$failed || $orders->findById($freshId)['payment_status']!=='pending'
+            || $tax->orderReceipt($freshId)!==null
+            || (new \SimpleStore\Accounting\FioPaymentEvidence($db))->forOrder($freshId)!==null
+            || $db->queryFirstField('SELECT movement_id FROM shop_fio_matches WHERE order_id=%i',$freshId)!==null)
+            throw new RuntimeException('Automatic receipt escaped the outer payment transaction');
+        $age(40);$beforeRequests=count($requests);
+    }
+    if($sync->sync(true,$freshId)['matched']!==1 || count($requests)!==$beforeRequests+1) throw new RuntimeException('Automatic receipt added a bank call or failed matching');
+    $receipt=$tax->orderReceipt($freshId);
+    $expected=in_array($scenario,['own','assisted','rollback'],true);
+    if(($receipt!==null)!==$expected) throw new RuntimeException('Wrong automatic receipt eligibility: '.$scenario);
+    if($expected) {
+        if($receipt['entry_date']!==$bookingDate || (string)$receipt['amount_czk']!=='1079.00' || $receipt['reference']!=='Fio:'.(91000+$index)) throw new RuntimeException('Automatic receipt lost bank date, reference or amount');
+        $expectedRows=$scenario==='assisted'?2:1;
+        if((int)$db->queryFirstField('SELECT COUNT(*) FROM shop_tax_entries WHERE order_id=%i',$freshId)!==$expectedRows
+            || (int)$db->queryFirstField('SELECT COUNT(*) FROM shop_evidence_links l JOIN shop_tax_entries e ON e.id=l.entry_id WHERE e.order_id=%i',$freshId)!==$expectedRows)
+            throw new RuntimeException('Automatic split or bank attachment is missing');
+        if($scenario==='assisted' && (string)$db->queryFirstField('SELECT amount_czk FROM shop_tax_entries WHERE order_id=%i AND purpose=%s',$freshId,'principal_receipt')!=='800.00') throw new RuntimeException('Entrusted funds treated as taxable sales');
+        $beforeEntries=(int)$db->queryFirstField('SELECT COUNT(*) FROM shop_tax_entries WHERE order_id=%i',$freshId);
+        try{$sync->sync(true,$freshId);}catch(InvalidArgumentException $expectedError){}
+        if(count($requests)!==$beforeRequests+1 || (int)$db->queryFirstField('SELECT COUNT(*) FROM shop_tax_entries WHERE order_id=%i',$freshId)!==$beforeEntries) throw new RuntimeException('Automatic receipt duplicated on repeat');
+    }
+}
+$tax->saveSettings($initialTaxSettings);
 echo "Fio database tests passed.\n";

@@ -24,5 +24,11 @@ $fundsEntries=$taxEntries;$fundsPage=['items'=>[$fundsOrder+['funds'=>$fundsTota
 $registerEdit=null;$registerHistory=[];$registerOffset=0;$taxAdjustments=['income'=>'0.00','expenses'=>'250.75'];
 $record=['id'=>4,'kind'=>$mode==='closing'?'inventory_stock':'receivable','opened_on'=>'2026-12-31','closed_on'=>null,'amount_czk'=>'250.75','book_value_czk'=>'300.75','description'=>'Zásoby <vlastní>','counterparty'=>'Dodavatel','reference'=>'INV-2026','quantity'=>'2 ks','note'=>'Doložená pořizovací cena.','version'=>1,'voided_at'=>null];
 $registerPage=['items'=>[$record],'nextOffset'=>null];
+if (($argv[2] ?? '') === 'shell') {
+    $site = ['default_language'=>'cs', 'languages'=>['cs']];
+    $screen = 'accounting';
+    require dirname(__DIR__,2).'/view/admin/layout.php';
+    exit;
+}
 ?>
 <!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/assets/panel.css"><link rel="stylesheet" href="/assets/panel-actions.css"><style>body{margin:0}.panel-test{max-width:1250px;margin:auto;padding:20px;min-width:0}*{box-sizing:border-box}</style></head><body class="panel-area"><main class="panel-test"><?php require dirname(__DIR__,2).'/view/admin/tax.php'; ?></main></body></html>

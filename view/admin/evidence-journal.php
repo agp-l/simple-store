@@ -2,8 +2,18 @@
 $u=static fn(string $tail):string=>\SimpleStore\Navigation\PanelUrl::escape($taxUrl.$tail);
 $filter=['tab'=>'overview','year'=>$taxYear,'q'=>$journalSearch,'activity'=>$journalActivity];
 ?>
+<?php
+$automaticReceipts = !empty($taxSettings['fio_auto_receipts'] ?? true)
+    && ($taxSettings['legal_form'] ?? 'sole_trader') === 'sole_trader'
+    && \SimpleStore\Accounting\TaxEvidenceRepository::invoiceReady($taxSettings)
+    && preg_match('/s\.?\s*r\.?\s*o\.?/iu', (string)($taxSettings['name'] ?? '')) !== 1;
+?>
+<div class="accounting-highlights">
+  <section class="accounting-highlight" data-tone="blue"><span class="accounting-highlight-icon" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render('refresh') ?></span><div><h2><?= $automaticReceipts?'Příjmy Fio bez přepisování':'Nastav automatické příjmy' ?></h2><p><?= $automaticReceipts?'Nová přesně spárovaná platba vytvoří příjem i propojený bankovní podklad. Použije skutečné datum banky.':'Automatický zápis vyžaduje OSVČ s vyplněnými údaji a zapnutou volbu příjmů Fio.' ?> <a href="<?= $u('&tab=settings&year='.$taxYear.'#automation') ?>">Nastavení automatizace</a></p><small>Vyžaduje propojené Fio a běžící plánovač. Staré a již zapsané platby se nemění.</small></div></section>
+  <section class="accounting-highlight" data-tone="violet"><span class="accounting-highlight-icon" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render('document') ?></span><div><h2>Doklad a platba patří k sobě</h2><p>Daňová evidence propojuje pohyby peněz s fakturami a výpisy. V <a href="<?= $u('&tab=money&year='.$taxYear) ?>">Pohybech peněz</a> upravuješ stejné zápisy, nic nezadáváš dvakrát.</p><small>Faktura nebo výpis bez platby se do peněžních součtů nezapočítává.</small></div></section>
+</div>
 <section class="panel-panel evidence-overview">
-  <div class="panel-panel-head"><div><h2>Daňová evidence · <?= (int)$taxYear ?></h2><p>Platby, daňové členění a všechny související doklady na jednom místě.</p></div><a class="panel-button" href="<?= $u('&tab=money&year='.$taxYear.'&new=1#ledger-edit') ?>">+ Peněžní pohyb</a></div>
+  <div class="panel-panel-head"><div><h2>Daňová evidence · <?= (int)$taxYear ?></h2><p>Platby, daňové členění a všechny související doklady na jednom místě.</p></div><a class="panel-action" href="<?= $u('&tab=money&year='.$taxYear.'&new=1#ledger-edit') ?>">+ Peněžní pohyb</a></div>
   <p class="panel-help">Režim roku: <strong><?= $escape(['actual'=>'Skutečné výdaje','percentage'=>'Výdaje procentem z příjmů','flat_tax'=>'Paušální daň'][$selectedMethod]??$selectedMethod) ?></strong> · <a href="<?= $u('&tab=settings&year='.$taxYear) ?>">Nastavit / potvrdit režim</a>. Součty plateb nejsou hotovým daňovým přiznáním.</p>
   <div class="evidence-toolbar"><a class="panel-button" href="<?= $u('&tab=documents&year='.$taxYear) ?>">+ Doklad / bankovní výpis</a><a href="<?= $u('&download=journal-csv&'.http_build_query($filter)) ?>">Stáhnout tabulku CSV</a><a href="<?= $u('&download=documents-zip&year='.$taxYear) ?>">Doklady a tabulka za rok · ZIP</a><a href="<?= $u('&download=documents-zip&scope=all&year='.$taxYear) ?>">Všechny roky · ZIP</a></div>
   <form class="panel-ledger-filters" method="get" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>"><input type="hidden" name="section" value="accounting"><input type="hidden" name="tab" value="overview">
@@ -33,7 +43,7 @@ $filter=['tab'=>'overview','year'=>$taxYear,'q'=>$journalSearch,'activity'=>$jou
   <td class="evidence-amount evidence-expense"><?= $values['expense']!==0?$taxMoney(\SimpleStore\Accounting\TaxMoney::decimal($values['expense'])):'—' ?></td>
   <td class="evidence-amount"><?php if($values['nonincome']):?><span class="evidence-income">+ <?= $taxMoney(\SimpleStore\Accounting\TaxMoney::decimal($values['nonincome'])) ?></span><?php elseif($values['nonexpense']):?><span class="evidence-expense">− <?= $taxMoney(\SimpleStore\Accounting\TaxMoney::decimal($values['nonexpense'])) ?></span><?php else:?>—<?php endif;?></td>
 </tr><?php endforeach;?>
-<?php if($journalPage['items']===[]):?><tr><td colspan="6"><p>Ještě tu nejsou žádné pohyby ani doklady. Začni přidáním platby nebo dokladu. <a href="<?= $u('&tab=guide') ?>">Prohlédnout vysvětlené vzory</a></p></td></tr><?php endif;?>
+<?php if($journalPage['items']===[]):?><tr><td colspan="6"><p>Zatím tu nejsou pohyby ani doklady pro zvolený výběr. Nové spárované příjmy Fio se při zapnuté automatizaci doplní samy. Ostatní platby a podklady můžeš přidat ručně. <a href="<?= $u('&tab=guide') ?>">Prohlédnout vysvětlené vzory</a></p></td></tr><?php endif;?>
 </tbody></table></div><nav class="evidence-toolbar" aria-label="Stránky evidence"><?php if($journalOffset>0):?><a href="<?= $u('&'.http_build_query($filter+['offset'=>max(0,$journalOffset-50)])) ?>">← Předchozí</a><?php endif;?><?php if($journalPage['nextOffset']!==null):?><a href="<?= $u('&'.http_build_query($filter+['offset'=>$journalPage['nextOffset']])) ?>">Další →</a><?php endif;?><span>50 řádků na stránku · export obsahuje celý výběr.</span></nav></section>
 <details class="panel-panel"><summary>Co ještě zkontrolovat na konci roku</summary><p>Porovnej pohyby s bankou a pokladnou. Doplň <a href="<?= $u('&tab=balances&year='.$taxYear) ?>">majetek, pohledávky a dluhy</a>, <a href="<?= $u('&tab=closing&year='.$taxYear) ?>">inventuru a uzávěrkové úpravy</a> a <a href="<?= $u('&tab=funds&year='.$taxYear) ?>">svěřené peníze zákazníků</a>. Samotná tabulka nenahrazuje tyto evidence ani daňové přiznání.</p></details>
 <?php if($selectedMethod==='flat_tax')require __DIR__.'/flat-tax-advances.php';?>

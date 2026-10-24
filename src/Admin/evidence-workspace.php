@@ -17,6 +17,7 @@ $numbering=new DocumentNumbering($db);
 $journalPage=['items'=>[],'nextOffset'=>null];$journalTotals=[];$journalActivities=[];
 $documentSeries=$documentFiles=$documentHistory=$documentEntries=$documentEntryOptions=$invoiceEditHistory=[];
 $evidenceDocument=null;$resetReport=null;$journalOffset=0;$journalSearch=$journalActivity='';
+$seriesNextNumbers=[];
 $evidenceActionHandled=false;
 $workspaceActions=['evidence-document-save','evidence-series-save','evidence-invoice-save','evidence-commerce-reset'];
 $workspaceUrl=$adminUrl.'?section=accounting';
@@ -49,6 +50,7 @@ try {
     if($workspaceReady) {
         TaxEvidenceRepository::year($taxYear);
         $documentSeries=$numbering->all();
+        if ($accountingTab==='numbering') $seriesNextNumbers=$numbering->nextNumbers($taxYear);
         if(isset($_GET['sample'])) {
             $evidenceDocument=EvidenceExamples::document(is_string($_GET['sample'])?$_GET['sample']:'');
             require __DIR__.'/../../view/admin/evidence-document-print.php';exit;
@@ -107,5 +109,5 @@ if($workspaceReady && $evidenceActionHandled && $accountingError!=='') {
         if($evidenceDocument!==null){$documentFiles=$documentRepository->files((int)$evidenceDocument['id']);$documentHistory=$documentRepository->history('document',(int)$evidenceDocument['id']);}
     }
     if(($_POST['action']??'')==='evidence-commerce-reset'){$accountingTab='restart';$resetReport=(new CommerceTestReset($db))->report();}
-    if(($_POST['action']??'')==='evidence-series-save'){$accountingTab='numbering';$documentSeries=$numbering->all();}
+    if(($_POST['action']??'')==='evidence-series-save'){$accountingTab='numbering';$documentSeries=$numbering->all();$seriesNextNumbers=$numbering->nextNumbers($taxYear);}
 }

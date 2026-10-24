@@ -16,8 +16,11 @@ $documentSeries=[['id'=>1,'name'=>'Faktury e-shop','kind'=>'invoice','pattern'=>
 $evidenceDocument=null;$documentFiles=$documentHistory=$documentEntries=$documentEntryOptions=[];
 $documentEntryOptions=[['id'=>1,'entry_date'=>'2026-10-03','document_number'=>'PD-2026-0001','description'=>'Boty a příslušenství','amount_czk'=>'1800.00']];
 if($mode==='document-draft'){$accountingError='Zkontroluj částku.';$_POST=['action'=>'evidence-document-save','id'=>'0','description'=>'Neztratit fakturu <boty>','counterparty'=>'Dodavatel & syn','amount_czk'=>'chyba','entry_ids'=>['1'],'external_number'=>'REF-NEZTRATIT','activity'=>'Masáže','issue_date'=>'2026-10-01'];}
+$taxYearRegimeReady=true;$taxYearMode=['method'=>'actual','saved'=>true];
+$invoiceRows=[];$invoicePreviousUrl=$invoiceNextUrl='';
 $resetReport=['database'=>'test','tables'=>['shop_orders'=>4,'shop_invoices'=>2,'shop_evidence_events'=>7],'stock_movements_preserved'=>3,'reservations'=>[],'shop_product_revisions'=>12];
 $invoiceEditHistory=[];$selectedInvoice=['id'=>3,'version'=>2,'issue_date'=>'2026-10-04','due_date'=>'2026-10-10','delivery_date'=>'2026-10-04','paid_date'=>'2026-10-03','variable_symbol'=>'1234567890','shipping_czk'=>0,'activity'=>'E-shop Dobrodruzi','seller'=>$taxSettings,'buyer'=>['name'=>'Eva Novotná'],'items'=>[['name'=>'Boty','quantity'=>1,'unit_price_czk'=>1800]]];
+if($mode==='invoices')$selectedInvoice=null;
 if (($argv[2] ?? '') === 'shell') {
     $site = ['default_language' => 'cs', 'languages' => ['cs']];
     $screen = 'accounting';

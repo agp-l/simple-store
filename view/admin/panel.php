@@ -25,7 +25,7 @@ $inside = $adminWorkspace;
     ];
     require __DIR__ . '/sidebar.php';
     ?>
-    <main class="panel-main" id="obsah">
+    <main class="panel-main" id="obsah" data-admin-section="<?= $escape($screen) ?>">
   <?php else: ?>
     <main class="panel-wrap panel-auth-main" id="obsah">
   <?php endif; ?>

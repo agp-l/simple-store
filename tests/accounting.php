@@ -191,7 +191,7 @@ ob_start();
 require dirname(__DIR__) . '/view/admin/accounting.php';
 $html = ob_get_clean();
 restore_error_handler();
-if (!str_contains($html, 'Evidence podnikání') || !str_contains($html, 'Stáhnout CSV') ||
+if (!str_contains($html, 'Doklady a platby') || !str_contains($html, 'Stáhnout CSV') ||
     !str_contains($html, '1 690 Kč') || !str_contains($html, 'Zrušeno') ||
     !str_contains($html, '=HYPERLINK(&quot;https://example.test&quot;)') ||
     str_contains($html, '=HYPERLINK("https://example.test")')) {

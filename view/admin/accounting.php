@@ -20,23 +20,48 @@ $accountingFulfillmentLabel = static fn (mixed $status): string => match ($statu
 };
 $accountingTab ??= 'overview';
 $taxYear ??= (int) date('Y');
-$accountingTitles = ['overview' => 'Daňová evidence', 'money' => 'Peněžní deník',
+$accountingTitles = ['overview' => 'Daňová evidence', 'money' => 'Pohyby peněz',
     'balances' => 'Majetek a dluhy', 'closing' => 'Inventura a uzávěrka', 'funds' => 'Platby a asistovaný nákup', 'stock' => 'Starší skladové podklady',
     'invoices' => 'Faktury', 'orders' => 'Kontrola plateb objednávek',
     'mail' => 'E-mailová fronta', 'settings' => 'Podnikatel a režim',
-    'documents'=>'Nový doklad / výpis', 'numbering'=>'Číslování', 'restart'=>'Restart historie',
+    'documents'=>'Přidat doklad', 'numbering'=>'Číselné řady', 'restart'=>'Restart historie',
     'guide' => 'Jak vést evidenci'];
 $accountingYearMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? 'actual');
+$accountingDescriptions = [
+    'overview' => 'Společný přehled skutečných plateb a jejich dokladů. Jedna evidence, žádné dvojí zadávání.',
+    'money' => 'Peněžní deník: podrobný pohled na stejné platby jako v Daňové evidenci. Filtry, opravy a převody mezi účty.',
+    'invoices' => 'Vystavené faktury, jejich opravy a podklady pro zákazníky.',
+    'documents' => 'Připoj originální podklad k platbě. Jeden výpis může doložit více transakcí.',
+    'funds' => 'Oddělené vlastní tržby, svěřené peníze zákazníků, dodavatelské platby a vratky.',
+    'balances' => 'Pohledávky, dluhy a majetek, které samotný přehled plateb nepokrývá.',
+    'closing' => 'Skutečné stavy zásob a podklady pro uzavření vybraného roku.',
+    'numbering' => 'Srozumitelné číslování pro e-shop i další činnosti. Nová čísla pak vznikají automaticky.',
+    'settings' => 'Údaje podnikatele, automatizace a daňový režim jednotlivých roků.',
+    'guide' => 'Co se vytváří samo, co ověřit a jak spolu doklady a platby souvisejí.',
+    'restart' => 'Samostatné nástroje pro odstranění testovací historie.',
+];
+$accountingGroups = [
+    'Každý den' => ['overview', 'money', 'invoices', 'documents', 'funds'],
+    'Uzavření roku' => ['balances', 'closing'],
+    'Nastavení a pomoc' => ['numbering', 'settings', 'guide'],
+];
 ?>
+<div class="accounting-workspace" data-accounting-tab="<?= $escape($accountingTab) ?>">
 <div class="panel-intro">
-  <div><p class="panel-eyebrow">Evidence podnikání · OSVČ</p><h1><?= $escape($accountingTab === 'overview' ? 'Daňová evidence' : $accountingTitles[$accountingTab]) ?></h1>
-    <p><?= $accountingTab === 'overview' ? 'Příjmy, výdaje a podklady pro všechny tvoje činnosti. Každá platba má své datum, zařazení a návazné doklady.' : 'Tento pohled navazuje na doklady, objednávky a peněžní deník.' ?></p></div>
+  <div><p class="panel-eyebrow">Doklady a platby · <?= (int) $taxYear ?></p><h1><?= $escape($accountingTitles[$accountingTab]) ?></h1>
+    <p><?= $escape($accountingDescriptions[$accountingTab] ?? 'Doplňující podklady a kontrolní sestavy evidence.') ?></p></div>
 </div>
-<nav class="panel-accounting-nav" aria-label="Evidence podnikání">
-  <?php foreach (['overview', 'money', 'funds', 'balances', 'closing', 'invoices', 'documents', 'numbering', 'guide', 'settings', 'restart'] as $key): ?>
-    <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=' . $key . '&year=' . $taxYear) ?>" <?= $accountingTab === $key ? 'aria-current="page"' : '' ?>><?= \SimpleStore\Rendering\Icon::render(['overview' => 'list', 'money' => 'card', 'funds' => 'card', 'balances' => 'list', 'closing' => 'list', 'invoices' => 'document', 'guide' => 'book', 'settings' => 'settings', 'documents'=>'document', 'numbering'=>'list', 'restart'=>'refresh'][$key]) ?> <?= $escape($accountingTitles[$key]) ?></a>
-  <?php endforeach; ?>
-</nav>
+<div class="accounting-navigation">
+<?php foreach ($accountingGroups as $group => $tabs): ?>
+  <div class="accounting-nav-group"><p><?= $escape($group) ?></p>
+    <nav class="panel-accounting-nav" aria-label="<?= $escape($group) ?>">
+    <?php foreach ($tabs as $key): ?>
+      <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=' . $key . '&year=' . $taxYear) ?>" <?= $accountingTab === $key ? 'aria-current="page"' : '' ?>><?= $escape($accountingTitles[$key]) ?></a>
+    <?php endforeach; ?>
+    </nav>
+  </div>
+<?php endforeach; ?>
+</div>
 <?php if ($accountingTab === 'overview' && in_array($accountingYearMethod, ['actual', 'percentage'], true)): ?>
   <p class="panel-help">K evidenci za rok <?= (int) $taxYear ?> můžeš doplnit <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=balances&year=' . $taxYear) ?>">pohledávky, dluhy a majetek</a>. Neuhrazené objednávky zkontroluj s podklady zvlášť.</p>
 <?php endif; ?>
@@ -127,3 +152,5 @@ $accountingYearMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'
 <?php else: ?>
   <?php require __DIR__ . '/tax.php'; ?>
 <?php endif; ?>
+
+</div>

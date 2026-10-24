@@ -60,7 +60,7 @@ final class FioPaymentEvidence
             'issue_date' => $date, 'paid_date' => $date,
             'description' => 'Přijatá platba Fio · ' . $order['order_number'],
             'amount_czk' => $movement['amount'], 'order_id' => (int) $order['id'],
-            'notes' => 'Automaticky uložený podklad ke spárované platbě. Příloha obsahuje jeden pohyb z API, nikoli celý výpis ani bankou podepsané potvrzení. Nenahrazuje fakturu. Samotný podklad nezapisuje daňový příjem; peněžní zápis potvrď podle povahy obchodu. SHA-256 slouží ke kontrole uloženého souboru, není podpisem banky.',
+            'notes' => 'Automaticky uložený podklad ke spárované platbě. Příloha obsahuje jeden pohyb z API, nikoli celý výpis ani bankou podepsané potvrzení. Nenahrazuje fakturu. Příjmy se počítají pouze z propojených peněžních zápisů. SHA-256 slouží ke kontrole uloženého souboru, není podpisem banky.',
             'seller_json' => json_encode((new TaxEvidenceRepository($this->db))->settings(), JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
         ];
         $this->db->insert('shop_evidence_documents', $fields);
@@ -74,6 +74,29 @@ final class FioPaymentEvidence
         $this->db->query('INSERT IGNORE INTO shop_evidence_links (document_id, entry_id)
             SELECT %i, id FROM shop_tax_entries WHERE order_id=%i AND purpose IN %ls',
             $id, $order['id'], ['own_receipt', 'principal_receipt']);
+        $this->recordReceipt((int) $order['id'], $date, 'Fio:' . $movement['id']);
+    }
+
+    /** Only a newly verified, exact CZK order payment; never infer expenses or replay history. */
+    private function recordReceipt(int $orderId, string $date, string $reference): void
+    {
+        $tax = new TaxEvidenceRepository($this->db);
+        $settings = $tax->settings();
+        if (!$tax->installed() || !$settings['fio_auto_receipts'] || $settings['legal_form'] !== 'sole_trader'
+            || !TaxEvidenceRepository::invoiceReady($settings)
+            || preg_match('/s\.?\s*r\.?\s*o\.?/iu', $settings['name']) === 1) return;
+        // A manual entry or its removal is a reason to leave the accounting decision to the admin.
+        if ($this->db->queryFirstField('SELECT id FROM shop_tax_entries WHERE order_id=%i LIMIT 1', $orderId) !== null
+            || $this->db->queryFirstField("SELECT id FROM shop_tax_entry_events
+                WHERE JSON_UNQUOTE(JSON_EXTRACT(old_json, '$.order_id'))=%s LIMIT 1", (string) $orderId) !== null) return;
+        $tax->addOrderReceipt($orderId, ['entry_date' => $date, 'reference' => $reference]);
+        foreach ($this->db->query('SELECT * FROM shop_tax_entries WHERE order_id=%i', $orderId) as $entry) {
+            $this->db->insert('shop_evidence_events', [
+                'entity_kind' => 'entry', 'entity_id' => (int) $entry['id'], 'old_json' => 'null',
+                'new_json' => json_encode($entry, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR),
+                'reason' => 'Automatický příjem z ověřené platby Fio', 'admin_id' => 0,
+            ]);
+        }
     }
 
     /** Also covers a receipt entered later, including both assisted-purchase parts. */

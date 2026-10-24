@@ -7,7 +7,7 @@ import { chromium } from 'playwright';
 test('OSVC evidence: usable tables, retained drafts, exact amounts and safe form controls', async () => {
   const modes = ['money','draft','edit','funds','balances','closing'];
   const files = modes.map(mode => `tests/fixtures/tax-${mode}.html`);
-  modes.forEach((mode,i) => writeFileSync(files[i], execFileSync('php',['tests/fixtures/tax-evidence.php',mode])));
+  modes.forEach((mode,i) => writeFileSync(files[i], execFileSync('php',['tests/fixtures/tax-evidence.php',mode,'shell'])));
   const server=spawn('php',['-S','127.0.0.1:8784','-t',process.cwd()],{stdio:'ignore'});
   const url=mode=>`http://127.0.0.1:8784/tests/fixtures/tax-${mode}.html`;
   let browser;
@@ -15,7 +15,7 @@ test('OSVC evidence: usable tables, retained drafts, exact amounts and safe form
     for(let i=0;i<40;i++){try{await fetch(url('money'));break;}catch{await new Promise(r=>setTimeout(r,100));}}
     browser=await chromium.launch({headless:true});
     mkdirSync('/tmp/tax-evidence-screenshots',{recursive:true});
-    for(const width of [1440,390]) {
+    for(const width of [1440,768,390,320]) {
       const page=await browser.newPage({viewport:{width,height:1000}});
       const errors=[];page.on('pageerror',e=>errors.push(String(e)));
       for(const mode of modes) {

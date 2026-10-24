@@ -313,7 +313,7 @@ Po stažení této verze otevři **Databáze** v administraci a použij aktuáln
 
 Po aktualizaci v **Administrace → Databáze** otevři **Daňová evidence OSVČ → Údaje OSVČ** a vyplň skutečné jméno, IČO, sídlo a e-mail odesílatele. Číslo účtu na vydané faktuře vychází ze snímku platebních údajů dané objednávky. Režim je určen pro OSVČ vedoucí daňovou evidenci, která **není plátcem DPH**; režim plátce a automatický výpočet přiznání nejsou implementované.
 
-- **Peněžní deník:** ruční zápis skutečných příjmů a výdajů podle bankovního výpisu či pokladny, rozlišení banky/hotovosti a daňového zařazení. Roční CSV export zahrnuje i záznamy mimo zobrazených posledních 500 řádků. Chybný záznam lze opravit nebo vyřadit s důvodem a historií změny. Označení objednávky jako zaplacené nenahrazuje datum připsání peněz. Její skutečnou úhradu zapiš na detailu objednávky jen jednou.
+- **Pohyby peněz (peněžní deník):** stejné zápisy jako v Daňové evidenci, s podrobnými filtry, opravami a převody. Nová přesná párování Fio u nastavené OSVČ vytvářejí příjem automaticky (vypínatelné v Podnikatel a režim); ostatní skutečné příjmy a výdaje se doplňují podle podkladů. Zachovává se rozlišení banky/hotovosti a daňového zařazení. Roční CSV export zahrnuje i záznamy mimo zobrazených posledních 500 řádků. Chybný záznam lze opravit nebo vyřadit s důvodem a historií změny. Označení objednávky jako zaplacené nenahrazuje datum připsání peněz. Její skutečnou úhradu zapiš na detailu objednávky jen jednou.
 - **Majetek a dluhy:** ručně vedené pohledávky, dluhy a majetek; nezaplacené objednávky se zobrazují odděleně. Konec roku vyžaduje kontrolu skutečných stavů.
 - **Sklad a prodeje:** došlé kusy a inventurní rozdíly se zapisují ke klíči produktu, položky nové objednávky mají snímek počtu a ceny. Počítaný úbytek používá stav odesláno/dokončeno. Starší objednávky doplňuje opakovatelná akce po 100 objednávkách. Roční prodeje a skladové pohyby lze exportovat do CSV. Fyzický stav je nutné porovnat s evidencí.
 - **Faktury:** na detailu zaplacené objednávky ověř odběratele a vystav fakturu z roční číselné řady. Tisková stránka má volbu pro uložení PDF v prohlížeči; zákazník ji uvidí přes svůj soukromý odkaz na objednávku. Faktura obsahuje snímky údajů z doby vystavení. Oprava čísla vyžaduje důvod, zachovává historii a nepovolí opětovné použití starého čísla. Již odeslaný e-mail se po opravě sám nepřepíše.
@@ -376,3 +376,9 @@ Counts include current published products in every descendant, regardless of sto
 This never changes the saved visibility switch: enabled folders reappear after a product is published,
 while manually hidden folders stay hidden. Root sections are not automatically hidden for emptiness.
 The category administrator shows an eye icon and distinguishes manual hiding from automatic empty hiding.
+
+### Přehlednost dokladů a plateb
+
+Navigace rozlišuje každodenní práci, uzavření roku a nastavení. Restart historie je pod Údržbou v nastavení evidence; původní adresy zůstávají funkční. Číselné řady mají přehled výchozích řad pro každý druh, sbalené úpravy, průvodce zkratka/rok/počet číslic a živý náhled. Náhled nic nerezervuje. Existující vlastní formáty se otevřením nemění a formulář funguje i bez JavaScriptu. Hledání ve společné evidenci dohledá platbu také podle propojeného čísla faktury či výpisu.
+
+Barevné akcenty v `admin-layout.css` rozlišují prodej, obsah, finance a nastavení; týkají se jen administrace. Příjmy Fio a jejich omezení popisuje [docs/fio.md](docs/fio.md). Program není účetnictví s.r.o., nepřipravuje DPH ani automatické přiznání a neodhaduje neznámé výdaje, inventuru či skutečné datum dodání.

@@ -36,7 +36,14 @@ final class EvidenceJournal
             FROM shop_evidence_documents d WHERE d.issue_date>=%s AND d.issue_date<%s AND NOT EXISTS (SELECT 1 FROM shop_evidence_links l JOIN shop_tax_entries e ON e.id=l.entry_id WHERE l.document_id=d.id AND e.entry_date>=%s AND e.entry_date<%s)
             ) journal WHERE 1=1";
         $params=[$from,$to,$from,$to,$from,$to,$from,$to,$from,$to];
-        if ($search!=='') { $sql.=' AND (document_number LIKE %ss OR reference LIKE %ss OR description LIKE %ss OR counterparty LIKE %ss OR order_number LIKE %ss)'; array_push($params,$search,$search,$search,$search,$search); }
+        if ($search!=='') {
+            $sql.=" AND (document_number LIKE %ss OR reference LIKE %ss OR description LIKE %ss OR counterparty LIKE %ss OR order_number LIKE %ss
+                OR (journal.kind='entry' AND (EXISTS (SELECT 1 FROM shop_invoices i WHERE i.order_id=journal.order_id AND i.document_number LIKE %ss)
+                    OR EXISTS (SELECT 1 FROM shop_evidence_documents d LEFT JOIN shop_evidence_links l ON l.document_id=d.id
+                        WHERE (l.entry_id=journal.id OR d.order_id=journal.order_id OR d.invoice_id IN (SELECT i.id FROM shop_invoices i WHERE i.order_id=journal.order_id))
+                        AND (d.document_number LIKE %ss OR d.external_number LIKE %ss)))))";
+            array_push($params,$search,$search,$search,$search,$search,$search,$search,$search);
+        }
         if ($activity!=='') { $sql.=' AND activity=%s';$params[]=$activity; }
         return [$sql,$params];
     }

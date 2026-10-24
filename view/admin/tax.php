@@ -136,16 +136,21 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
       <?php if ($mailRows === []): ?><p class="panel-empty">Fronta je prázdná.</p><?php endif; ?>
     </section>
   <?php elseif ($accountingTab === 'settings'): ?>
-    <section class="panel-panel"><h2>Údaje prodávajícího</h2>
+    <section class="panel-panel" id="automation"><h2>Podnikatel a automatizace</h2>
       <p class="panel-help">Z těchto údajů vznikají nové faktury; již vystavené si ponechají původní podobu. Systém vytváří doklady neplátce DPH. Doplň také údaj o zápisu, např. „Fyzická osoba zapsaná v živnostenském rejstříku“; u obchodního rejstříku včetně soudu, oddílu a vložky podle skutečnosti.</p>
-      <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="settings"><input type="hidden" name="action" value="tax-save-settings">
+      <form class="panel-form accounting-settings-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="settings"><input type="hidden" name="action" value="tax-save-settings">
         <input type="hidden" name="year" value="<?= (int) $taxYear ?>">
         <input type="hidden" name="mail_from" value="<?= $escape($taxSettings['mail_from'] ?? '') ?>">
         <label>Právní forma prodávajícího<select name="legal_form"><option value="sole_trader" <?= ($taxSettings['legal_form'] ?? 'sole_trader') === 'sole_trader' ? 'selected' : '' ?>>OSVČ</option><option value="company" <?= ($taxSettings['legal_form'] ?? '') === 'company' ? 'selected' : '' ?>>Společnost (např. s.r.o.)</option></select></label>
         <p class="panel-help">Pro s.r.o. není tato evidence OSVČ účetnictvím společnosti. Údaj změň podle skutečného prodávajícího.</p>
         <?php foreach (['name'=>'Jméno a příjmení podnikatele', 'ico'=>'IČO', 'street'=>'Ulice a číslo sídla', 'city'=>'Město', 'postal_code'=>'PSČ', 'email'=>'Kontaktní e-mail', 'phone'=>'Telefon', 'bank_account'=>'Číslo účtu na faktuře', 'registration'=>'Údaj o zápisu v rejstříku / evidenci'] as $key=>$label): ?><label><?= $escape($label) ?><input name="<?= $key ?>" value="<?= $escape($taxSettings[$key] ?? '') ?>" maxlength="<?= $key === 'ico' ? 8 : 254 ?>"></label><?php endforeach; ?>
         <p class="panel-help">Odesílání zákaznických zpráv a jejich obsah najdeš v <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=mail') ?>">nastavení obchodu → E-maily</a>.</p>
-        <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit údaje prodávajícího</button>
+        <fieldset class="accounting-automation-settings"><legend>Příjmy z Fio bez přepisování</legend>
+          <input type="hidden" name="fio_auto_receipts" value="0">
+          <label class="panel-check"><input type="checkbox" name="fio_auto_receipts" value="1" <?= !empty($taxSettings['fio_auto_receipts'] ?? true) ? 'checked' : '' ?>> Automaticky zapsat nově spárované platby Fio do evidence</label>
+          <p class="panel-help">Po přesné shodě účtu, variabilního symbolu a částky se použije datum banky. Vlastní příjem a svěřené peníze se rozdělí podle objednávky a připojí se bankovní podklad. Platí pro OSVČ s vyplněnými údaji výše. Existující a dříve opravené zápisy se nepřepisují; staré platby se zpětně nedoplňují. Propojení a plánovač Fio nastavíš v <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=payments') ?>">nastavení plateb</a>.</p>
+        </fieldset>
+        <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit údaje a automatizaci</button>
       </form>
     </section>
     <section class="panel-panel"><h2>Režim pro rok <?= (int) $taxYear ?></h2>
@@ -157,7 +162,7 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
         <p class="panel-error">Paušální daň a výdaje OSVČ nelze použít pro obchodní společnost. Nejprve ověř údaje prodávajícího.</p>
       <?php else: ?>
         <?php if (!($taxYearMode['saved'] ?? false)): ?><p class="panel-notice">Pro <?= (int) $taxYear ?> zatím není uložený vlastní režim. Zobrazená volba vychází ze starého obecného nastavení; potvrď ji po kontrole podkladů.</p><?php endif; ?>
-        <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl) ?>">
+        <form class="panel-form accounting-settings-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl) ?>">
           <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="tax-save-year-mode"><input type="hidden" name="year" value="<?= (int) $taxYear ?>">
           <label>Režim OSVČ pro tento rok<select name="method">
             <option value="actual" <?= $selectedMethod === 'actual' ? 'selected' : '' ?>>Skutečné výdaje – daňová evidence</option>
@@ -172,5 +177,6 @@ $selectedMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'] ?? '
         </form>
       <?php endif; ?>
     </section>
+    <details class="panel-panel accounting-maintenance"><summary>Údržba a testovací historie</summary><p>Restart je určený pro testovací data, nikoli běžnou práci s evidencí.</p><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl . '&tab=restart&year=' . $taxYear) ?>">Otevřít nástroje restartu historie</a></details>
   <?php endif; ?>
 <?php endif; ?>

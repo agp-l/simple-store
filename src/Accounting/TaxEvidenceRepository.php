@@ -37,13 +37,14 @@ final class TaxEvidenceRepository
         $defaults = ['name' => '', 'ico' => '', 'street' => '', 'city' => '',
             'postal_code' => '', 'registration' => '', 'email' => '', 'phone' => '', 'bank_account' => '',
             'mail_from' => '', 'legal_form' => 'sole_trader',
-            'expense_method' => 'actual', 'expense_percentage' => 60];
+            'expense_method' => 'actual', 'expense_percentage' => 60, 'fio_auto_receipts' => true];
         if (!$this->installed()) return $defaults;
         $row = $this->db->queryFirstRow('SELECT settings_json FROM shop_tax_settings WHERE id=%i', 1);
         if ($row === null) return $defaults;
         $saved = json_decode((string) $row['settings_json'], true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($saved)) return $defaults;
         $settings = array_replace($defaults, array_intersect_key($saved, $defaults));
+        $settings['fio_auto_receipts'] = in_array($settings['fio_auto_receipts'], [true, 1, '1'], true);
         if (!in_array($settings['legal_form'], ['sole_trader', 'company'], true)) {
             $settings['legal_form'] = $defaults['legal_form'];
         }
@@ -89,6 +90,8 @@ final class TaxEvidenceRepository
         $fields['legal_form'] = $legalForm;
         $fields['expense_method'] = $expenseMethod;
         $fields['expense_percentage'] = $percentage;
+        $fields['fio_auto_receipts'] = array_key_exists('fio_auto_receipts', $input)
+            ? in_array($input['fio_auto_receipts'], [true, 1, '1'], true) : $existing['fio_auto_receipts'];
         $this->db->query('INSERT INTO shop_tax_settings (id, settings_json) VALUES (%i, %s)
             ON DUPLICATE KEY UPDATE settings_json=VALUES(settings_json), updated_at=CURRENT_TIMESTAMP',
             1, json_encode($fields, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
@@ -289,7 +292,8 @@ final class TaxEvidenceRepository
     {
         $date = self::date($input['entry_date'] ?? null);
         $reference = self::text($input['reference'] ?? '', 100);
-        $this->db->startTransaction();
+        $ownsTransaction = $this->db->transactionDepth() === 0;
+        if ($ownsTransaction) $this->db->startTransaction();
         try {
             $order = $this->db->queryFirstRow(
                 'SELECT id, order_number, payment_status, payment_method, total_czk, variable_symbol, items_json
@@ -303,6 +307,9 @@ final class TaxEvidenceRepository
             if ((int) $already > 0) throw new InvalidArgumentException('Tato objednávka už má zapsaný příjem.');
             $items = json_decode((string) ($order['items_json'] ?? '[]'), true, 512, JSON_THROW_ON_ERROR);
             $principal = \SimpleStore\Checkout\AssistedPurchase::principal($items);
+            if ($principal < 0 || $principal > (int) $order['total_czk']) {
+                throw new InvalidArgumentException('Rozdělení platby neodpovídá ceně objednávky.');
+            }
             $receipt = [
                 'entry_date' => $date, 'direction' => 'income', 'account' => 'bank',
                 'tax_kind' => 'taxable', 'amount_czk' => (int) $order['total_czk'] - $principal,
@@ -316,9 +323,9 @@ final class TaxEvidenceRepository
                 'tax_kind' => 'nontaxable', 'amount_czk' => $principal, 'purpose' => 'principal_receipt',
                 'description' => 'Svěřené prostředky k nákupu · ' . $order['order_number'],
             ]));
-            $this->db->commit();
+            if ($ownsTransaction) $this->db->commit();
         } catch (\Throwable $error) {
-            $this->db->rollback();
+            if ($ownsTransaction) $this->db->rollback();
             throw $error;
         }
     }
