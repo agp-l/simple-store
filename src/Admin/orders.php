@@ -78,6 +78,7 @@ $orderControlsReady = $orderControls->installed();
 $orderEvents = [];
 $orderInvoice = null;
 $orderReceipt = null;
+$orderFioEvidence = null;
 $goPayState = null;
 $btcpayState = null;
 $orderTaxReady = false;
@@ -171,6 +172,7 @@ if ($rawId !== null) {
         if ($orderTaxReady) {
             $sellerSettings = $taxEvidence->settings();
             $orderReceipt = $taxEvidence->orderReceipt($id);
+            $orderFioEvidence = (new \SimpleStore\Accounting\FioPaymentEvidence($db))->forOrder($id);
         }
         if ($orderInvoiceReady) $orderInvoice = $invoiceStore->byOrder($id);
     }

@@ -7,6 +7,7 @@ use InvalidArgumentException;
 use MeekroDB;
 use RuntimeException;
 use SimpleStore\Accounting\OrderMailQueue;
+use SimpleStore\Accounting\FioPaymentEvidence;
 use Throwable;
 
 /** Periodic Fio statement import. A unique movement may settle only one pending bank order. */
@@ -105,7 +106,7 @@ final class FioBankReconciler
             foreach ($statement['transactions'] as $row) {
                 $result['checked']++;
                 $movement = is_array($row) ? FioTransferMatcher::movement($row) : null;
-                if ($movement === null || !$this->settle($movement, $account, $eligible)) {
+                if ($movement === null || !$this->settle($movement, $account, $eligible, $statement['info'], $row)) {
                     $result['ignored']++;
                     continue;
                 }
@@ -141,8 +142,11 @@ final class FioBankReconciler
         }
     }
 
-    private function settle(array $movement, string $account, array $eligible): bool
+    private function settle(array $movement, string $account, array $eligible, array $info, array $row): bool
     {
+        $date = FioPaymentEvidence::bookingDate($row);
+        $today = (new \DateTimeImmutable('now', new \DateTimeZone('Europe/Prague')))->format('Y-m-d');
+        if ($date === null || $date > $today) return false;
         $this->db->startTransaction();
         try {
             $existing = $this->db->queryFirstRow(
@@ -155,11 +159,11 @@ final class FioBankReconciler
                 return false;
             }
             $order = $this->db->queryFirstRow(
-                'SELECT id, status, payment_method, payment_status, variable_symbol,
+                'SELECT id, order_number, created_at, status, payment_method, payment_status, variable_symbol,
                     total_czk, payment_details_json FROM shop_orders
                  WHERE variable_symbol=CONVERT(%s USING ascii) COLLATE ascii_bin
                  LIMIT 1 FOR UPDATE', $movement['vs']);
-            if ($order === null || !isset($eligible[(int) $order['id']]) || !FioTransferMatcher::matchesOrder($order, $movement, $account)) {
+            if ($order === null || $date < substr((string) $order['created_at'], 0, 10) || !isset($eligible[(int) $order['id']]) || !FioTransferMatcher::matchesOrder($order, $movement, $account)) {
                 $this->db->commit();
                 return false;
             }
@@ -187,6 +191,7 @@ final class FioBankReconciler
             $this->db->query('UPDATE shop_orders SET payment_status=%s, payment_paid_at=UTC_TIMESTAMP(),
                 payment_verified_by=NULL, provider_reference=%s
                 WHERE id=%i AND payment_status=%s', 'paid', 'Fio:' . $movement['id'], $orderId, 'pending');
+            (new FioPaymentEvidence($this->db))->record($order, $movement, $date, $info, $row);
             $this->db->commit();
         } catch (Throwable $error) {
             $this->db->rollback();

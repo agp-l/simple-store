@@ -117,3 +117,10 @@ praktická organizace evidence, nikoli oddělení daňového subjektu.
 
 Údaje podnikatele obsahují i zápis v rejstříku/evidenci podle § 435 občanského
 zákoníku. Nové doklady jej přebírají do snímku vystavitele, historické se nemění.
+
+
+## Automatické podklady Fio (24. 10. 2026)
+
+Nově přesně spárovaná platba Fio získá soukromý doklad typu **Bankovní pohyb z API (podklad)** a přílohu JSON. Čísluje se nastavenou řadou ostatních dokladů, nese původní ID pohybu i skutečné datum připsání z banky. Z detailu objednávky otevřeš podklad; při zápisu příjmu jsou datum a bankovní reference předvyplněné. Doklad se připojí také k příjmovým zápisům a je součástí exportu ZIP. U asistovaného nákupu může jeden podklad souviset se dvěma zápisy (svěřené prostředky a vlastní odměna).
+
+Uložení podkladu samo nemění daňové součty. Bankovní údaj potvrzuje peněžní pohyb, ale nenahrazuje doklad k tomu, co bylo prodáno či koupeno. Dál uchovávej faktury, účtenky, pověření a podle potřeby oficiální bankovní výpisy. PDF výpis můžeš nahrát jako **Bankovní výpis** a připojit k více platbám; není třeba kopírovat celý PDF ke každé objednávce. Automatický import jednotlivých bankovních potvrzení PDF není zaveden — dokumentované Fio API poskytuje PDF celých oficiálních výpisů podle roku a čísla výpisu. Viz [návrh a kontrola integrace Fio](fio.md).

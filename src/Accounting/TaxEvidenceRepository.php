@@ -120,6 +120,9 @@ final class TaxEvidenceRepository
             }
             $this->db->insert('shop_tax_entries', $fields + ['order_id' => null]);
             $id = (int) $this->db->insertId();
+            if ($numbered && !empty($fields['order_id']) && in_array($fields['purpose'], ['own_receipt', 'principal_receipt'], true)) {
+                (new FioPaymentEvidence($this->db))->linkReceipt($id, (int) $fields['order_id']);
+            }
             if ($ownsTransaction) $this->db->commit();
             return $id;
         } catch (\Throwable $e) { if ($ownsTransaction) $this->db->rollback(); throw $e; }

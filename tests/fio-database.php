@@ -42,7 +42,8 @@ $client = new FioStatementClient(static function (string $url) use (&$accountId,
     $requests[] = $url;
     return [200, json_encode(['accountStatement' => [
         'info' => ['accountId' => $accountId, 'bankId' => '2010', 'currency' => 'CZK',
-            'iban' => BankTransferPayment::ibanForCzechAccount($accountId . '/2010')],
+            'iban' => BankTransferPayment::ibanForCzechAccount($accountId . '/2010'),
+            'openingBalance' => 123456.78, 'closingBalance' => 999999.99],
         'transactionList' => ['transaction' => $rows],
     ]], JSON_THROW_ON_ERROR)];
 });
@@ -65,10 +66,11 @@ catch (InvalidArgumentException $expected) {
     if ($expected->getMessage() === 'Fio rate limit was ignored.') throw $expected;
 }
 $accountId = '123456789';
+$bookingDate = (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format('Y-m-d');
 $rows = [
-    ['column22' => ['value' => 90001], 'column5' => ['value' => $order['variable_symbol']],
+    ['column0' => ['value' => $bookingDate . '+0200'], 'column22' => ['value' => 90001], 'column5' => ['value' => $order['variable_symbol']],
         'column1' => ['value' => 1078], 'column14' => ['value' => 'CZK']],
-    ['column22' => ['value' => 90002], 'column5' => ['value' => $order['variable_symbol']],
+    ['column0' => ['value' => $bookingDate . '+0200'], 'column22' => ['value' => 90002], 'column5' => ['value' => $order['variable_symbol']],
         'column1' => ['value' => 1079], 'column14' => ['value' => 'CZK']],
 ];
 // Simulate elapsed 35-second Fio request interval without waiting during CI.
@@ -148,7 +150,7 @@ $orders->markPaid((int) $replacement['id'], 1);
 (new OrderControlRepository($db))->correctPayment((int) $replacement['id'], 1,
     'Bank returned the transfer', 'not_received');
 $rows = [[
-    'column22' => ['value' => 90003], 'column5' => ['value' => $order['variable_symbol']],
+    'column0' => ['value' => $bookingDate], 'column22' => ['value' => 90003], 'column5' => ['value' => $order['variable_symbol']],
     'column1' => ['value' => 1079], 'column14' => ['value' => 'CZK'],
 ]];
 $db->query('UPDATE shop_fio_requests SET last_requested_at=UTC_TIMESTAMP() - INTERVAL 40 SECOND
@@ -207,13 +209,72 @@ try {
         throw new RuntimeException('Overlapping Fio checks were not prevented.');
     }
 } finally { $otherDb->queryFirstField('SELECT RELEASE_LOCK(%s)', $lock); }
-$rows = [['column22'=>['value'=>90004], 'column5'=>['value'=>$auto['variable_symbol']],
+$rows = [['column0'=>['value'=>$bookingDate], 'column22'=>['value'=>90004], 'column5'=>['value'=>$auto['variable_symbol']],
     'column1'=>['value'=>1079], 'column14'=>['value'=>'CZK']]];
+$entryCount = (int)$db->queryFirstField('SELECT COUNT(*) FROM shop_tax_entries');
 if ($sync->sync(true, (int)$auto['id'])['matched'] !== 1 || count($requests) !== ++$count) {
     throw new RuntimeException('A manual check must settle an old overdue order.');
 }
+$evidence = (new \SimpleStore\Accounting\FioPaymentEvidence($db))->forOrder((int)$auto['id']);
+if ($evidence === null || $evidence['paid_date'] !== $bookingDate ||
+    $evidence['external_number'] !== 'Fio:90004' || (int)$evidence['amount_czk'] !== 1079 ||
+    (int)$db->queryFirstField('SELECT COUNT(*) FROM shop_tax_entries') !== $entryCount) {
+    throw new RuntimeException('Fio evidence was not stored correctly, or silently changed cash totals.');
+}
+$file = $db->queryFirstRow('SELECT * FROM shop_evidence_files WHERE document_id=%i', $evidence['id']);
+$payload = json_decode($file['file_data'], true, 512, JSON_THROW_ON_ERROR);
+if ($file['sha256'] !== hash('sha256', $file['file_data']) || $file['mime_type'] !== 'application/json' ||
+    $payload['transaction']['column22']['value'] !== 90004 || isset($payload['account']['openingBalance']) ||
+    isset($payload['account']['closingBalance']) || str_contains($file['file_data'], $token)) {
+    throw new RuntimeException('Fio evidence leaked unrelated data or lost its original movement/hash.');
+}
+$tax = new \SimpleStore\Accounting\TaxEvidenceRepository($db);
+$tax->addOrderReceipt((int)$auto['id'], ['entry_date'=>$bookingDate, 'reference'=>'Fio:90004']);
+$receipt = $tax->orderReceipt((int)$auto['id']);
+if ((int)$db->queryFirstField('SELECT COUNT(*) FROM shop_evidence_links WHERE document_id=%i AND entry_id=%i',
+    $evidence['id'], $receipt['id']) !== 1) throw new RuntimeException('Later receipt did not attach its Fio document.');
+$archive = (new \SimpleStore\Accounting\EvidenceArchive($db))->build((int)substr($bookingDate,0,4));
+try {
+    $zip = new ZipArchive();
+    if ($zip->open($archive['path']) !== true ||
+        $zip->getFromName('soubory/'.$file['id'].'.json') !== $file['file_data']) {
+        throw new RuntimeException('Fio original is missing from the tax evidence ZIP.');
+    }
+    $zip->close();
+} finally { \SimpleStore\Accounting\EvidenceArchive::cleanup($archive['directory']); }
 // A targeted request must not fall back to a global check after cancellation/payment.
 try { $sync->sync(true, (int)$auto['id']); throw new RuntimeException('Paid order was checked again.'); }
 catch (InvalidArgumentException $expected) {}
 if (count($requests) !== $count) throw new RuntimeException('An ineligible targeted check contacted Fio.');
+// Missing/invalid/future dates and reused VS from before creation cannot settle.
+$atomic = $orders->create(null, 'fio-atomic@example.test', [[
+    'product_key'=>str_repeat('d',32), 'language'=>'cs', 'slug'=>'atomic', 'name'=>'Test',
+    'quantity'=>1, 'unit_price_czk'=>1000, 'image_path'=>'', 'options'=>[],
+]], ['method'=>'gls_home','label'=>'GLS','name'=>'Test','phone'=>'123',
+    'street'=>'Test 1','city'=>'Praha','postal_code'=>'11000','country'=>'CZ'],79,bin2hex(random_bytes(32)));
+$rows[0]['column22']['value'] = 90005;
+$rows[0]['column5']['value'] = $atomic['variable_symbol'];
+foreach ([null, '2026-02-30', '2099-01-01', '2000-01-01'] as $badDate) {
+    $rows[0]['column0']['value'] = $badDate;
+    $age(40);
+    if ($sync->sync(true,(int)$atomic['id'])['matched'] !== 0) throw new RuntimeException('Invalid payment date accepted.');
+}
+$rows[0]['column0']['value'] = $bookingDate;
+// If saving the private original fails, paid state and consumed ID must roll back too.
+$db->query("CREATE TRIGGER fio_test_evidence_failure BEFORE INSERT ON shop_evidence_files
+    FOR EACH ROW SIGNAL SQLSTATE '45000' SET MESSAGE_TEXT='Fio evidence test failure'");
+$failed = false;
+$age(40);
+try { $sync->sync(true,(int)$atomic['id']); }
+catch (Throwable $expected) { $failed = true; }
+finally { $db->query('DROP TRIGGER fio_test_evidence_failure'); }
+if (!$failed || $orders->findById((int)$atomic['id'])['payment_status'] !== 'pending' ||
+    $db->queryFirstField('SELECT movement_id FROM shop_fio_matches WHERE order_id=%i',$atomic['id']) !== null ||
+    (new \SimpleStore\Accounting\FioPaymentEvidence($db))->forOrder((int)$atomic['id']) !== null) {
+    throw new RuntimeException('Fio settlement and evidence were not atomic.');
+}
+$age(40);
+if ($sync->sync(true,(int)$atomic['id'])['matched'] !== 1 ||
+    (int)$db->queryFirstField('SELECT COUNT(*) FROM shop_evidence_documents WHERE order_id=%i AND kind=%s',
+        $atomic['id'],'bank_movement') !== 1) throw new RuntimeException('Fio retry lost or duplicated its evidence.');
 echo "Fio database tests passed.\n";

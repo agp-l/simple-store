@@ -9,7 +9,7 @@ use Throwable;
 /** Originals live in the database, never in a publicly served upload directory. */
 final class EvidenceDocumentRepository
 {
-    public const KINDS=['invoice'=>'Samostatná faktura neplátce','proforma'=>'Výzva k platbě / záloha','receipt'=>'Příjmový / výdajový pokladní doklad','expense'=>'Přijatá faktura / účtenka','bank_statement'=>'Bankovní výpis','supplier'=>'Doklad partnera zákazníkovi','contract'=>'Smlouva / pověření','other'=>'Jiný podklad','correction'=>'Oprava navazujícího dokladu'];
+    public const KINDS=['invoice'=>'Samostatná faktura neplátce','proforma'=>'Výzva k platbě / záloha','receipt'=>'Příjmový / výdajový pokladní doklad','expense'=>'Přijatá faktura / účtenka','bank_statement'=>'Bankovní výpis','bank_movement'=>'Bankovní pohyb z API (podklad)','supplier'=>'Doklad partnera zákazníkovi','contract'=>'Smlouva / pověření','other'=>'Jiný podklad','correction'=>'Oprava navazujícího dokladu'];
     public function __construct(private MeekroDB $db) {}
     public function installed(): bool { return (int)$this->db->queryFirstField('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN %ls',['shop_evidence_documents','shop_evidence_links','shop_evidence_files','shop_evidence_events','shop_document_numbers'])===5 && (new DocumentNumbering($this->db))->installed(); }
     public function byId(int $id): ?array { return $this->db->queryFirstRow('SELECT * FROM shop_evidence_documents WHERE id=%i',$id); }

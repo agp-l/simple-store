@@ -159,6 +159,25 @@ if (!str_contains($html, 'name="action" value="mark-order-paid"') ||
     !str_contains($html, 'Zobrazit objednávku')) {
     throw new RuntimeException('Order detail must require explicit bank verification and escape customer data.');
 }
+$beforeFioOrder = $order;
+$fioReady = $fioConfigured = true;
+$order['status'] = 'new';
+$order['payment_due_at'] = gmdate('Y-m-d H:i:s', time() - 20 * 86400);
+$_GET = ['fio_checked'=>'3','fio_paid'=>'0'];
+ob_start();require dirname(__DIR__) . '/view/admin/layout.php';$html=ob_get_clean();
+if (!str_contains($html,'name="action" value="fio-sync"') ||
+    !str_contains($html,'Ověřit platbu u Fio') || !str_contains($html,'Funguje i po splatnosti') ||
+    !str_contains($html,'Ve zkontrolovaném období nebyla nalezena nová přesná shoda.')) {
+    throw new RuntimeException('Overdue order must expose a targeted Fio check and its result.');
+}
+$order['payment_status']='paid';$orderTaxReady=true;
+$orderFioEvidence=['id'=>42,'external_number'=>'Fio:90004','paid_date'=>'2026-10-24'];
+ob_start();require dirname(__DIR__) . '/view/admin/layout.php';$html=ob_get_clean();
+if (!str_contains($html,'document_id=42') || !str_contains($html,'value="2026-10-24"') ||
+    !str_contains($html,'value="Fio:90004"') || str_contains($html,'name="action" value="fio-sync"')) {
+    throw new RuntimeException('Paid order must link its private Fio evidence and prefill the actual receipt date.');
+}
+$order=$beforeFioOrder;$orderTaxReady=false;$orderFioEvidence=null;$fioReady=$fioConfigured=false;$_GET=[];
 $linkedProductKey = str_repeat('a', 32);
 $orderProductLinks = [$linkedProductKey . ':cs' => '/shop/cs/produkt/aktualni-batoh?edit=1'];
 $order['items'][0]['product_key'] = $linkedProductKey;

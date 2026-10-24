@@ -128,3 +128,20 @@ if (\SimpleStore\Checkout\FioPollingPolicy::interval([
     'created_at' => '2026-09-01 12:00:00', 'payment_due_at' => null,
 ], $now) !== null) throw new RuntimeException('Legacy orders without a due date must eventually stop polling.');
 echo "Fio polling policy tests passed.\n";
+
+foreach ([
+    [1340661600000, '2012-06-26'], ['1340661600000', '2012-06-26'],
+    ['2026-10-24+0200', '2026-10-24'], ['2026-10-24+02:00', '2026-10-24'],
+    ['2026-01-01', '2026-01-01'], ['2026-02-30+0100', null],
+    ['2026-10-24junk', null], [null, null], [true, null], [123, null],
+] as [$value, $expectedDate]) {
+    if (\SimpleStore\Accounting\FioPaymentEvidence::bookingDate(['column0'=>['value'=>$value]]) !== $expectedDate) {
+        throw new RuntimeException('Incorrect Fio bank booking date.');
+    }
+}
+// Bank midnight is the next calendar day compared to UTC, including year rollover.
+$millis = (new DateTimeImmutable('2025-12-31 23:00:00', new DateTimeZone('UTC')))->getTimestamp() * 1000;
+if (\SimpleStore\Accounting\FioPaymentEvidence::bookingDate(['column0'=>['value'=>$millis]]) !== '2026-01-01') {
+    throw new RuntimeException('Bank receipt date shifted across calendar years.');
+}
+echo "Fio evidence date tests passed.\n";

@@ -20,6 +20,11 @@
         <?php if ($bankTransfer && !empty($payment['iban'])): ?><div><dt>IBAN</dt><dd><?= $escape($payment['iban']) ?></dd></div><?php endif; ?>
         <?php if ($bankTransfer && !empty($order['payment_due_at'])): ?><div><dt>Splatnost</dt><dd><?= $escape($order['payment_due_at']) ?> UTC<?= $orderOverdue ? ' · Po splatnosti' : '' ?></dd></div><?php endif; ?>
       </dl>
+      <?php if (!empty($orderFioEvidence)): ?>
+        <p class="panel-notice">Bankovní pohyb <?= $escape($orderFioEvidence['external_number']) ?> · připsáno <?= $escape($orderFioEvidence['paid_date']) ?>.
+          <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=documents&document_id=' . (int) $orderFioEvidence['id']) ?>">Podklad z Fio a stažení JSON</a>
+        </p>
+      <?php endif; ?>
       <div class="panel-order-invoice">
         <strong>Faktura</strong>
         <?php if ($orderInvoice !== null): ?>
@@ -84,8 +89,8 @@
             <p class="panel-help">Zaplaceno je stav objednávky. Do deníku zapiš skutečné datum připsání částky podle bankovního výpisu.</p>
             <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting') ?>">
               <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="tax-link-payment"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
-              <label>Datum připsání<input type="date" name="entry_date" required></label>
-              <label>Bankovní reference<input name="reference" maxlength="100" value="<?= $escape($order['variable_symbol'] ?? '') ?>"></label>
+              <label>Datum připsání<input type="date" name="entry_date" value="<?= $escape($orderFioEvidence['paid_date'] ?? '') ?>" required></label>
+              <label>Bankovní reference<input name="reference" maxlength="100" value="<?= $escape($orderFioEvidence['external_number'] ?? $order['variable_symbol'] ?? '') ?>"></label>
               <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Zapsat příjem <?= $orderMoney($order['total_czk']) ?></button>
             </form>
           <?php endif; ?>
