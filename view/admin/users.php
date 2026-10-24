@@ -16,13 +16,13 @@ $usersBaseUrl = $adminUrl . '?section=users';
   <?php if ($account !== null): ?><p class="panel-help">Účet #<?= (int) $account['id'] ?> · vytvořen <?= $escape($account['created_at']) ?><?= (int) $account['id'] === $actorId ? ' · váš účet' : '' ?></p><?php endif; ?>
   <form class="panel-form" method="post" action="<?= $escape($detailUrl) ?>" data-user-profile>
     <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
-    <?php if ($account !== null): ?><input type="hidden" name="action" value="user-update"><input type="hidden" name="id" value="<?= (int) $account['id'] ?>"><input type="hidden" name="revision" value="<?= $escape($method === 'POST' && ($_POST['action'] ?? '') === 'user-update' ? ($_POST['revision'] ?? '') : $account['revision']) ?>">
+    <?php if ($account !== null): ?><input type="hidden" name="action" value="user-update"><input type="hidden" name="id" value="<?= (int) $account['id'] ?>"><input type="hidden" name="revision" value="<?= $escape($method === 'POST' && ($_POST['action'] ?? '') === 'user-update' ? (is_string($_POST['revision'] ?? null) ? $_POST['revision'] : '') : $account['revision']) ?>">
     <?php else: ?><input type="hidden" name="action" value="user-create"><?php endif; ?>
     <div class="panel-fields-two">
       <label>Jméno<input name="display_name" value="<?= $escape($accountForm['display_name']) ?>" maxlength="120" required autocomplete="off"></label>
       <label>Přihlašovací e-mail<input type="email" name="email" value="<?= $escape($accountForm['email']) ?>" maxlength="254" required autocomplete="off"></label>
       <label>Telefon<input type="tel" name="phone" value="<?= $escape($accountForm['phone']) ?>" maxlength="40" autocomplete="off"></label>
-      <label>Identifikátor účtu<input name="username" value="<?= $escape($accountForm['username']) ?>" minlength="3" maxlength="80" pattern="[a-zA-Z0-9][a-zA-Z0-9_.\-]{2,79}" required autocomplete="off"><small>Jedinečný název bez mezer a diakritiky, např. jana.novakova.</small></label>
+      <label>Identifikátor účtu<input name="username" value="<?= $escape($accountForm['username']) ?>" minlength="3" maxlength="80" pattern="[a-zA-Z0-9][a-zA-Z0-9_.\-]{2,79}" <?= $account !== null ? 'required' : '' ?> autocomplete="off"><small>Při založení lze nechat prázdné. Jedinečný název bez mezer a diakritiky, např. jana.novakova.</small></label>
       <label>Role<select name="role"><option value="customer" <?= $accountForm['role'] === 'customer' ? 'selected' : '' ?>>Zákazník</option><option value="admin" <?= $accountForm['role'] === 'admin' ? 'selected' : '' ?>>Administrátor — plný přístup</option></select></label>
       <label>Stav účtu<select name="is_active"><option value="1" <?= (string) $accountForm['is_active'] === '1' ? 'selected' : '' ?>>Aktivní</option><option value="0" <?= (string) $accountForm['is_active'] === '0' ? 'selected' : '' ?>>Zablokovaný</option></select></label>
     </div>
@@ -62,7 +62,7 @@ $usersBaseUrl = $adminUrl . '?section=users';
 </section>
 <?php endif; ?>
 <section class="panel-panel"><h2>Seznam účtů</h2>
-  <form class="users-filters" method="get" action="<?= $escape($adminUrl) ?>"><input type="hidden" name="section" value="users">
+  <form class="panel-form users-filters" method="get" action="<?= $escape($adminUrl) ?>"><input type="hidden" name="section" value="users">
     <label>Hledat účet<input type="search" name="search" value="<?= $escape($search) ?>" maxlength="100" placeholder="Jméno, e-mail, telefon…"></label>
     <label>Role<select name="role"><option value="">Všechny role</option><option value="admin" <?= $roleFilter === 'admin' ? 'selected' : '' ?>>Administrátoři</option><option value="customer" <?= $roleFilter === 'customer' ? 'selected' : '' ?>>Zákazníci</option></select></label>
     <label>Stav<select name="active"><option value="">Všechny stavy</option><option value="1" <?= $activeFilter === '1' ? 'selected' : '' ?>>Aktivní</option><option value="0" <?= $activeFilter === '0' ? 'selected' : '' ?>>Zablokované</option></select></label>

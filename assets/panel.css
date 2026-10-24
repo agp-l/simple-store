@@ -1568,3 +1568,8 @@
 .users-sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
 #account-management details>summary{cursor:pointer;font-weight:700;margin:.4rem 0}
 @media(max-width:700px){.users-filters{grid-template-columns:1fr 1fr}.users-filters>label:first-of-type{grid-column:1/-1}.users-filters button{width:100%}.users-table{min-width:580px}}
+
+#account-management{min-width:0;max-width:100%}
+#account-management .panel-fields-two{align-items:start}
+.users-table td:first-child strong,.users-table td:first-child small{display:block}
+.users-table .panel-icon-link{position:relative}

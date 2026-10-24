@@ -113,6 +113,9 @@ try {
         } elseif ($action === 'reset-request' && !$auth->signedIn()) {
             try {
                 $entryUrl = 'https://' . ($_SERVER['HTTP_HOST'] ?? '') . $adminUrl;
+                if (!is_string($_POST['email'] ?? null) || filter_var(trim($_POST['email']), FILTER_VALIDATE_EMAIL) === false) {
+                    throw new InvalidArgumentException('Zadej platný e-mail správce.');
+                }
                 (new PasswordResetService($db))->request('admin', is_string($_POST['email'] ?? null) ? $_POST['email'] : '', 'admin.php', $entryUrl);
                 header('Location: ' . $adminUrl . '?mode=forgot&sent=1', true, 303);
                 exit;

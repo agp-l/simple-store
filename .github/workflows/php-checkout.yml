@@ -186,6 +186,7 @@ jobs:
           php tests/password-reset-database.php
           php tests/commerce-reset-database.php
           php tests/table-prefix-database.php
+          php tests/admin-users-database.php
 
   database-mariadb:
     runs-on: ubuntu-latest
@@ -238,6 +239,7 @@ jobs:
           php tests/fio-database.php
           php tests/commerce-reset-database.php
           php tests/table-prefix-database.php
+          php tests/admin-users-database.php
 
   variant-browser:
     runs-on: ubuntu-latest
@@ -262,6 +264,7 @@ jobs:
           node --test tests/product-sales-mass-browser.mjs
           node --test tests/checkout-presentation-browser.mjs
           node --test tests/tax-evidence-browser.mjs
+          node --test tests/admin-users-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -272,4 +275,5 @@ jobs:
             /tmp/sales-mass-screenshots/
             /tmp/checkout-presentation/
             /tmp/tax-evidence-screenshots/
+            /tmp/admin-users-screenshots/
           retention-days: 7

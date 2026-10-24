@@ -61,6 +61,9 @@ final class AccountManagementRepository
 
     public function create(int $actor, array $input, string $password): int
     {
+        if (is_string($input['username'] ?? null) && trim($input['username']) === '') {
+            $input['username'] = 'user_' . bin2hex(random_bytes(12));
+        }
         $fields = self::profile($input);
         self::password($password);
         return $this->write($actor, function () use ($fields, $password): int {
@@ -153,7 +156,7 @@ final class AccountManagementRepository
 
     public static function password(string $password): void
     {
-        if (preg_match('/^.{10,}$/usD', $password) !== 1 || strlen($password) > 72) {
+        if (str_contains($password, "\0") || preg_match('/^.{10,}$/usD', $password) !== 1 || strlen($password) > 72) {
             throw new InvalidArgumentException('Heslo musí mít alespoň 10 znaků a nejvýše 72 bajtů.');
         }
     }
