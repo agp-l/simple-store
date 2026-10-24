@@ -113,11 +113,14 @@ final class EvidenceArchive
                     'shop_btcpay_payments','shop_fio_matches','shop_mail_outbox'];
                 $dataLinks='';
                 foreach($tables as $table) {
-                    $columns=$this->db->queryFirstColumn('SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s ORDER BY ORDINAL_POSITION',$table);
+                    $columns=$this->db->query('SELECT COLUMN_NAME,COLUMN_KEY FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s ORDER BY ORDINAL_POSITION',$table);
                     if($columns===[])continue;
-                    $offset=0;$sort=$columns[0];
+                    $keys=array_column(array_filter($columns,static fn($column)=>$column['COLUMN_KEY']==='PRI'),'COLUMN_NAME');
+                    if($keys===[])$keys=[$columns[0]['COLUMN_NAME']];
+                    $sort=implode(',',array_map(static fn($column)=>'`'.str_replace('`','``',$column).'`',$keys));
+                    $offset=0;
                     do {
-                        $rows=$this->db->query('SELECT * FROM %b ORDER BY %b LIMIT 500 OFFSET %i',$table,$sort,$offset);
+                        $rows=$this->db->query('SELECT * FROM %b ORDER BY '.$sort.' LIMIT 500 OFFSET %i',$table,$offset);
                         if($rows!==[]){$name='data/'.$table.'-'.$offset.'.json';$add($name,json_encode($rows,JSON_UNESCAPED_UNICODE|JSON_PRETTY_PRINT|JSON_THROW_ON_ERROR));$dataLinks.='<li><a href="'.$name.'">'.$e($table).' · '.$offset.'</a></li>';}
                         $offset+=500;
                     }while(count($rows)===500);
