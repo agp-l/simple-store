@@ -65,6 +65,38 @@ final class OrderFundsRepository
         return $this->db->query('SELECT * FROM shop_tax_entries WHERE order_id=%i ORDER BY entry_date,id', $id);
     }
 
+    public function refundCases(int $orderId): array
+    {
+        return $this->db->query('SELECT case_number,refund_amount_czk,refund_reference,refunded_at
+            FROM shop_after_sales_cases WHERE order_id=%i AND refunded_at IS NOT NULL ORDER BY id', $orderId);
+    }
+
+    /** Reconstruct year-end balances from movements, including deleted orders and earlier years. */
+    public function writeBalancesCsv(mixed $stream, int $year): void
+    {
+        TaxEvidenceRepository::year($year);
+        fwrite($stream, "\xEF\xBB\xBF");
+        fputcsv($stream, ['K datu','Objednávka ID','Číslo objednávky','Přijato svěřeno Kč','Vráceno dodavatelem Kč','Zaplaceno dodavateli Kč','Vráceno zákazníkovi Kč','Zůstatek Kč'], ';', '"', '');
+        $offset = 0;
+        do {
+            $rows = $this->db->query("SELECT order_id,order_number,
+                SUM(CASE WHEN purpose='principal_receipt' THEN amount_czk ELSE 0 END) AS received,
+                SUM(CASE WHEN purpose='supplier_return' THEN amount_czk ELSE 0 END) AS supplier_return,
+                SUM(CASE WHEN purpose='supplier_payment' THEN amount_czk ELSE 0 END) AS paid,
+                SUM(CASE WHEN purpose='principal_return' THEN amount_czk ELSE 0 END) AS returned
+                FROM shop_tax_entries WHERE entry_date<=%s AND purpose IN
+                ('principal_receipt','supplier_return','supplier_payment','principal_return')
+                GROUP BY order_id,order_number ORDER BY order_id,order_number LIMIT 200 OFFSET %i", $year . '-12-31', $offset);
+            foreach ($rows as $row) {
+                $held = TaxMoney::cents((string) $row['received'],true) + TaxMoney::cents((string) $row['supplier_return'],true)
+                    - TaxMoney::cents((string) $row['paid'],true) - TaxMoney::cents((string) $row['returned'],true);
+                fputcsv($stream, [$year . '-12-31', $row['order_id'] ?? '', TaxEvidenceRepository::safeCsvCell($row['order_number']),
+                    $row['received'], $row['supplier_return'], $row['paid'], $row['returned'], TaxMoney::decimal($held)], ';', '"', '');
+            }
+            $offset += count($rows);
+        } while (count($rows) === 200);
+    }
+
     /** Explicit split lets the admin record partial payments and historical adjustments. */
     public function record(int $id, array $input): void
     {

@@ -197,6 +197,7 @@ if (!str_contains($html, 'Evidence podnikání') || !str_contains($html, 'Stáhn
 }
 
 require dirname(__DIR__) . '/src/Accounting/TaxEvidenceRepository.php';
+require dirname(__DIR__) . '/src/Accounting/TaxMoney.php';
 require dirname(__DIR__) . '/src/Accounting/EvidenceBookRowPresenter.php';
 require dirname(__DIR__) . '/src/Accounting/FlatTaxRateSchedule.php';
 $accountingTab = 'overview';
@@ -269,8 +270,8 @@ $csrf = 'unit-test';
 ob_start();
 require dirname(__DIR__) . '/view/admin/accounting.php';
 $html = ob_get_clean();
-if (!str_contains($html, 'Paušální zálohy') || !str_contains($html, '9 162 Kč') ||
-    !str_contains($html, '9 984 Kč') || !str_contains($html, 'Zapsat skutečně uhrazenou zálohu') ||
+if (!str_contains($html, 'Paušální zálohy') || !str_contains($html, '9 162,00 Kč') ||
+    !str_contains($html, '9 984,00 Kč') || !str_contains($html, 'Zapsat skutečně uhrazenou zálohu') ||
     !str_contains($html, '&lt;script&gt;alert(1)&lt;/script&gt;') ||
     str_contains($html, '<script>alert(1)</script>') ||
     str_contains($html, 'Rozdíl v deníku')) {

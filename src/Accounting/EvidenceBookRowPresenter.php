@@ -61,12 +61,12 @@ final class EvidenceBookRowPresenter
         }
         if ($this->row['payment_method'] !== 'bank_transfer') {
             return ['label' => 'Prověřit vyúčtování / vratky',
-                'href' => $evidenceUrl . '&tab=money&year=' . $this->year];
+                'href' => $evidenceUrl . '&tab=funds&year=' . $this->year . '&order_id=' . (int) $this->row['order_id']];
         }
         if ($this->row['receipt_id'] === null) {
             return ['label' => 'Zapsat příjem z výpisu', 'href' => $orderUrl];
         }
-        if ((int) $this->row['receipt_amount_czk'] !== (int) $this->row['total_czk']) {
+        if ((float) $this->row['receipt_amount_czk'] !== (float) $this->row['total_czk']) {
             return ['label' => 'Prověřit rozdílnou částku', 'href' => $orderUrl];
         }
         return null;

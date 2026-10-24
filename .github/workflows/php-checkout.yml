@@ -157,6 +157,7 @@ jobs:
           php tests/tax-database.php
           php tests/tax-year-regime-database.php
           php tests/flat-tax-advances-database.php
+          php tests/osvc-evidence-database.php
           php tests/evidence-book-database.php
           php tests/mail-database.php
           php tests/after-sales-database.php
@@ -217,6 +218,7 @@ jobs:
           php tests/tax-year-regime-database.php
           php tests/after-sales-database.php
           php tests/flat-tax-advances-database.php
+          php tests/osvc-evidence-database.php
           php tests/shipping-database.php
           php tests/homepage-database.php
           php tests/product-import-database.php

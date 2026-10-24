@@ -23,7 +23,7 @@ $taxRegister = new TaxRegisterRepository($db);
 $corrections = new InvoiceCorrectionRepository($db);
 $fundsPage = $registerPage = ['items' => [], 'nextOffset' => null];
 $fundsOrder = $registerEdit = null;
-$fundsTotals = $fundsEntries = $registerHistory = $invoiceCorrections = [];
+$fundsRefunds = $fundsTotals = $fundsEntries = $registerHistory = $invoiceCorrections = [];
 $taxAdjustments = ['income' => '0.00', 'expenses' => '0.00'];
 $ledgerFilters = array_intersect_key($_GET, array_flip(['q','from','to','account','tax_kind','purpose','order_id']));
 $registerOffset = $fundsOffset = 0;
@@ -261,11 +261,12 @@ try {
         $flatTaxAdvanceRows = $flatTaxAdvances->forYear($taxYear);
     }
     $taxDownload = $_GET['download'] ?? '';
-    if ($taxReady && in_array($taxDownload, ['balances', 'closing'], true)) {
+    if ($taxReady && in_array($taxDownload, ['balances', 'closing', 'funds'], true)) {
         $stream = fopen('php://temp/maxmemory:2097152', 'w+b');
         if ($stream === false) throw new RuntimeException('Export se nepodařilo připravit.');
         try {
-            $taxRegister->writeCsv($stream, $taxYear, $taxDownload);
+            if ($taxDownload === 'funds') $orderFunds->writeBalancesCsv($stream, $taxYear);
+            else $taxRegister->writeCsv($stream, $taxYear, $taxDownload);
             rewind($stream);
             header('Content-Type: text/csv; charset=UTF-8');
             header('Content-Disposition: attachment; filename="evidence-' . $taxDownload . '-' . $taxYear . '.csv"');
@@ -315,6 +316,7 @@ try {
             if ($fundsOrder !== null) {
                 $fundsTotals = $orderFunds->totals((int) $fundsOrder['id']);
                 $fundsEntries = $orderFunds->entries((int) $fundsOrder['id']);
+                $fundsRefunds = $orderFunds->refundCases((int) $fundsOrder['id']);
             }
             $fundsPage = $orderFunds->page($fundsOffset, $fundsSearch, $fundsMode);
             if (($_GET['print_funds'] ?? '') === '1') {

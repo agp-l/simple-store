@@ -71,7 +71,7 @@ SELECT book.*, book.document_number AS invoice_number,
 FROM (
     SELECT 'order' AS kind, o.id AS record_id,
         CASE
-            WHEN e.entry_date >= %s AND e.entry_date < %s THEN e.entry_date
+            WHEN a.entry_date >= %s AND a.entry_date < %s THEN a.entry_date
             WHEN i.issue_date >= %s AND i.issue_date < %s THEN i.issue_date
             WHEN o.payment_paid_at >= %s AND o.payment_paid_at < %s THEN DATE(o.payment_paid_at)
             ELSE DATE(o.created_at)
@@ -94,13 +94,18 @@ FROM (
     LEFT JOIN shop_invoices i ON i.order_id=o.id
     LEFT JOIN shop_tax_entries e ON e.id=(
         SELECT te.id FROM shop_tax_entries te WHERE te.order_id=o.id
-        ORDER BY (te.entry_date >= %s AND te.entry_date < %s) DESC, te.id DESC LIMIT 1
+            AND te.direction='income' AND te.purpose IN ('own_receipt','principal_receipt')
+        ORDER BY te.entry_date,te.id LIMIT 1
+    )
+    LEFT JOIN shop_tax_entries a ON a.id=(
+        SELECT ta.id FROM shop_tax_entries ta WHERE ta.order_id=o.id
+        ORDER BY (ta.entry_date >= %s AND ta.entry_date < %s) DESC,ta.entry_date DESC,ta.id DESC LIMIT 1
     )
     WHERE o.status <> 'test' AND o.payment_method <> 'test' AND (
         (o.created_at >= %s AND o.created_at < %s)
         OR (o.payment_paid_at >= %s AND o.payment_paid_at < %s)
         OR (i.issue_date >= %s AND i.issue_date < %s)
-        OR (e.entry_date >= %s AND e.entry_date < %s)
+        OR (a.entry_date >= %s AND a.entry_date < %s)
     )
     UNION ALL
     SELECT 'entry', e.id, e.entry_date,
@@ -158,6 +163,12 @@ SQL;
             foreach (['record_id', 'order_id', 'invoice_id', 'entry_id', 'receipt_id',
                 'total_czk'] as $key) {
                 if ($item[$key] !== null) $item[$key] = (int) $item[$key];
+            }
+        }
+        unset($item);
+        foreach ($items as &$item) {
+            foreach (['amount_czk','entry_amount_czk','receipt_amount_czk'] as $key) {
+                if ($item[$key] !== null) $item[$key] = TaxMoney::number((string) $item[$key]);
             }
         }
         unset($item);

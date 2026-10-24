@@ -1,0 +1,12 @@
+<?php
+declare(strict_types=1);
+$printEscape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+$printMoney = static fn (mixed $value): string => \SimpleStore\Accounting\TaxMoney::format($value);
+$purposes = \SimpleStore\Accounting\TaxEvidenceRepository::PURPOSES;
+?>
+<!doctype html><html lang="cs"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Vyúčtování <?= $printEscape($fundsOrder['order_number']) ?></title><?php require __DIR__ . '/evidence-print-style.php'; ?></head><body>
+<div class="toolbar"><button type="button" onclick="window.print()">Tisk / uložit jako PDF</button></div><h1>Průběžné vyúčtování objednávky</h1><p><?= $printEscape($fundsOrder['order_number']) ?> · stav evidence k <?= $printEscape((new DateTimeImmutable('now',new DateTimeZone('Europe/Prague')))->format('d. m. Y H:i')) ?></p>
+<div class="columns"><section><h2>Poskytovatel</h2><p><?= $printEscape($taxSettings['name']) ?><br>IČO <?= $printEscape($taxSettings['ico']) ?><br><?= $printEscape($taxSettings['street']) ?><br><?= $printEscape($taxSettings['postal_code'] . ' ' . $taxSettings['city']) ?></p></section><section><h2>Zákazník</h2><p><?= $printEscape($fundsOrder['customer_email']) ?></p><p>Cena objednávky <?= $printMoney($fundsOrder['total_czk']) ?><br>Z toho svěřeno na nákup <?= $printMoney($fundsOrder['principal_czk']) ?></p></section></div>
+<table><thead><tr><th>Datum</th><th>Pohyb / protistrana</th><th>Reference</th><th class="money">Příjem</th><th class="money">Výdaj</th></tr></thead><tbody><?php foreach ($fundsEntries as $entry): ?><tr><td><?= $printEscape($entry['entry_date']) ?></td><td><?= $printEscape($purposes[$entry['purpose']] ?? $entry['purpose']) ?><small><?= $printEscape($entry['counterparty']) ?></small></td><td><?= $printEscape($entry['reference']) ?></td><td class="money"><?= $entry['direction'] === 'income' ? $printMoney($entry['amount_czk']) : '—' ?></td><td class="money"><?= $entry['direction'] === 'expense' ? $printMoney($entry['amount_czk']) : '—' ?></td></tr><?php endforeach; ?></tbody></table>
+<p class="total">Zůstatek svěřených prostředků: <?= $printMoney($fundsTotals['held']) ?></p><p class="muted">Přehled skutečně zapsaných pohybů. Zůstatek = přijaté svěřené peníze + vratky dodavatelů − platby dodavatelům − vratky svěřených peněz zákazníkovi. Faktura za vlastní plnění a doklad prodávajícího za zboží jsou samostatné doklady.</p>
+</body></html>

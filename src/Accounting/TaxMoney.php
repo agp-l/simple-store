@@ -35,6 +35,6 @@ final class TaxMoney
 
     public static function number(string $decimal): int|float
     {
-        return str_ends_with($decimal, '.00') ? (int) $decimal : (float) $decimal;
+        return (float) $decimal === (float) (int) $decimal ? (int) $decimal : (float) $decimal;
     }
 }

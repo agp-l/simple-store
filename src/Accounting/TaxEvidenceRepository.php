@@ -192,7 +192,12 @@ final class TaxEvidenceRepository
             if (isset($input['version']) && (int) $input['version'] !== (int) $old['version']) {
                 throw new InvalidArgumentException('Zápis mezitím změnil jiný správce. Otevři aktuální verzi a porovnej údaje.');
             }
-            $fields = $this->entryFields(array_replace($old, $input));
+            $merged = array_replace($old, $input);
+            if ($old['order_id'] !== null && ($merged['order_id'] ?? null) == $old['order_id'] &&
+                $this->db->queryFirstRow('SELECT id FROM shop_orders WHERE id=%i', $old['order_id']) === null) {
+                $merged['order_id'] = null; // Deleted orders do not make historical entries uneditable.
+            }
+            $fields = $this->entryFields($merged);
             $fields['version'] = (int) ($old['version'] ?? 1) + 1;
             $this->db->update('shop_tax_entries', $fields, 'id=%i', $id);
             $this->recordEntryEvent($old, $fields, 'amended', $adminId, $reason);
@@ -266,7 +271,7 @@ final class TaxEvidenceRepository
                 throw new InvalidArgumentException('Příjem lze přiřadit jen k zaplacené objednávce převodem.');
             }
             $already = $this->db->queryFirstField(
-                'SELECT COUNT(*) FROM shop_tax_entries WHERE order_id=%i', $orderId);
+                "SELECT COUNT(*) FROM shop_tax_entries WHERE order_id=%i AND purpose IN ('own_receipt','principal_receipt')", $orderId);
             if ((int) $already > 0) throw new InvalidArgumentException('Tato objednávka už má zapsaný příjem.');
             $items = json_decode((string) ($order['items_json'] ?? '[]'), true, 512, JSON_THROW_ON_ERROR);
             $principal = \SimpleStore\Checkout\AssistedPurchase::principal($items);

@@ -65,12 +65,13 @@
       <?php endif; ?>
       <?php if ($bankTransfer): ?><p class="panel-help"><?= !empty($fioConfigured) ? 'Převody na propojený účet Fio lze ověřit tlačítkem v přehledu objednávek. Pravidelnou kontrolu lze spouštět z cronu; jiné účty kontroluj ručně.' : 'Platbu zkontroluj ve výpisu banky, nebo zapni ověřování Fio v nastavení plateb.' ?></p><?php endif; ?>
       <?php if ($onlineGateway): ?><p class="panel-help">Stav platby potvrzuje <?= $gatewayName ?>. Samotný návrat zákazníka na web platbu nepotvrzuje.</p><?php endif; ?>
+      <?php if ($orderTaxReady && ($order['status'] ?? '') !== 'test'): ?><p><a class="panel-button" href="<?= $escape($adminUrl . '?section=accounting&tab=funds&order_id=' . (int) $order['id']) ?>">Platby, dodavatelé a vratky v evidenci</a></p><?php endif; ?>
       <?php if (($bankTransfer || $onlineGateway) && $paid && $orderTaxReady && ($order['status'] ?? '') !== 'test'): ?>
         <details class="panel-order-accordion panel-order-controls" aria-label="Daňová evidence objednávky">
           <summary>Daňová evidence a vystavení faktury</summary>
           <?php if ($bankTransfer): ?>
           <?php if ($orderReceipt !== null): ?>
-            <p class="panel-notice">Příjem <?= $orderMoney($orderReceipt['amount_czk']) ?> ze dne <?= $escape($orderReceipt['entry_date']) ?> je zapsaný v <a href="<?= $escape($adminUrl . '?section=accounting&tab=money') ?>">peněžním deníku</a>.</p>
+            <p class="panel-notice">Příjem <?= \SimpleStore\Accounting\TaxMoney::format($orderReceipt['amount_czk']) ?> ze dne <?= $escape($orderReceipt['entry_date']) ?> je zapsaný v <a href="<?= $escape($adminUrl . '?section=accounting&tab=money') ?>">peněžním deníku</a>.</p>
           <?php else: ?>
             <p class="panel-help">Zaplaceno je stav objednávky. Do deníku zapiš skutečné datum připsání částky podle bankovního výpisu.</p>
             <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=accounting') ?>">
