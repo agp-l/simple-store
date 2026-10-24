@@ -168,3 +168,39 @@ if ($db->queryFirstField('SELECT state FROM shop_mail_outbox WHERE id=%i', $miss
     throw new RuntimeException('Verified non-acceptance should allow a manual retry, with cron backoff.');
 }
 echo "Live customer mail settings and tracking OK\n";
+
+// Exercise the real settings controller: draft previews must not save settings or queue mail.
+$previewConfiguration = (new MailSettingsRepository($db))->load();
+$previewInput = ['action' => 'preview-mail', 'tab' => 'mail', 'preview_code' => 'invoice', 'preview_mode' => 'mixed',
+    'templates' => $previewConfiguration['templates'], 'copy' => $previewConfiguration['settings']['copy']];
+foreach ($previewInput['templates'] as &$entry) $entry['enabled'] = $entry['enabled'] ? '1' : '0';
+unset($entry);
+$previewInput['copy']['footer'] = 'Pouze rozepsaný náhled, neodesílat.';
+$beforeSettings = $db->queryFirstField('SELECT settings_json FROM shop_mail_settings WHERE id=1');
+$beforeTemplates = $db->query('SELECT * FROM shop_mail_templates ORDER BY event_code');
+$beforeMail = (int) $db->queryFirstField('SELECT COUNT(*) FROM shop_mail_outbox');
+$runPreview = static function (MeekroDB $db, array $input): array {
+    $_POST = $input; $_GET = ['tab' => 'mail'];
+    $method = 'POST'; $adminUrl = '/shop/admin.php'; $basePath = '/shop/';
+    $site = ['default_language' => 'cs', 'languages' => ['cs']];
+    require dirname(__DIR__) . '/src/Admin/settings.php';
+    return [$mailPreview, $mailConfiguration, $settingsError, $mailPreviewIsDraft];
+};
+[$preview, $draft, $error, $isDraft] = $runPreview($db, $previewInput);
+if ($error !== '' || !$isDraft || $preview === null ||
+    !str_contains($preview['html'], 'Pouze rozepsaný náhled, neodesílat.') ||
+    $draft['templates']['invoice']['label'] !== 'Faktura') {
+    throw new RuntimeException('The real settings controller did not render the draft invoice.');
+}
+$previewInput['templates']['invoice']['subject'] = 'Chybná {neznama_znacka}';
+[$preview, $draft, $error] = $runPreview($db, $previewInput);
+if ($preview !== null || $error === '' || $draft['templates']['invoice']['subject'] !== 'Chybná {neznama_znacka}') {
+    throw new RuntimeException('Invalid preview lost the submitted draft or bypassed validation.');
+}
+if ($db->queryFirstField('SELECT settings_json FROM shop_mail_settings WHERE id=1') !== $beforeSettings ||
+    $db->query('SELECT * FROM shop_mail_templates ORDER BY event_code') !== $beforeTemplates ||
+    (int) $db->queryFirstField('SELECT COUNT(*) FROM shop_mail_outbox') !== $beforeMail) {
+    throw new RuntimeException('Preview mutated settings or the mail queue.');
+}
+$_POST = $_GET = []; http_response_code(200);
+echo "Draft mail controller is read-only and retains invalid edits OK\n";

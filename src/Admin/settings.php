@@ -69,19 +69,10 @@ if ($settingsTab === 'mail') {
     }
 }
 $mailPreview = null;
-$previewCode = $_GET['preview'] ?? null;
-if ($settingsTab === 'mail' && is_string($previewCode) && isset(MailSettingsRepository::EVENTS[$previewCode])) {
-    $previewOrder = ['order_number' => 'DB-2026-0001', 'total_czk' => 1079, 'shipping_czk' => 79,
-        'shipping' => ['label' => 'GLS na adresu', 'recipient' => 'Eva Nová'],
-        'items' => [['name' => 'Lehký batoh', 'quantity' => 1, 'unit_price_czk' => 1000]],
-        'payment_method' => 'bank_transfer', 'payment_details' => ['account_display' => '123456789/0000'],
-        'variable_symbol' => '20260001', 'payment_due_at' => '2026-10-15'];
-    $mailPreview = \SimpleStore\Accounting\OrderEmailComposer::compose($previewCode,
-        $previewOrder, $mailConfiguration['templates'][$previewCode],
-        ['number' => 'GLS123456789', 'url' => 'https://example.com/sledovani'],
-        '', (string) $mailConfiguration['settings']['public_base_url'],
-        $termsPage === null ? [] : ['obchodni-podminky']);
-}
+$mailPreviewIsDraft = false;
+$previewCode = $_POST['preview_code'] ?? $_GET['preview'] ?? null;
+$previewMode = $_POST['preview_mode'] ?? $_GET['preview_mode'] ?? 'own';
+if (!is_string($previewMode) || !in_array($previewMode, ['own', 'assisted', 'mixed'], true)) $previewMode = 'own';
 $shippingCatalog = ShippingPolicy::defaults();
 $form = [
     'btc_prices_enabled' => ($settings['btc_prices_enabled'] ?? true) === true ? '1' : '0',
@@ -146,6 +137,16 @@ if ($method === 'POST') {
             header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=settings&tab=appearance&language=' . $copyLanguage . '&saved=1'), true, 303);
             exit;
         }
+        if (($_POST['action'] ?? null) === 'preview-mail') {
+            if ($settingsTab !== 'mail') throw new InvalidArgumentException('Otevři nastavení e-mailů.');
+            $mailConfiguration = MailSettingsRepository::withDraft($mailConfiguration, $_POST);
+            $mailPreviewIsDraft = true;
+            $mailConfiguration['settings']['copy'] = MailSettingsRepository::validateCopy($mailConfiguration['settings']['copy']);
+            $mailConfiguration['templates'] = MailSettingsRepository::validateTemplates($_POST['templates'] ?? null, $mailConfiguration['templates']);
+            if (!is_string($previewCode) || !isset(\SimpleStore\Accounting\MailContent::definitions()[$previewCode])) {
+                throw new InvalidArgumentException('Vyber šablonu pro náhled.');
+            }
+        }
         if (($_POST['action'] ?? null) === 'save-mail-settings') {
             $adminEmail = $_POST['admin_recovery_email'] ?? null;
             if (!is_string($adminEmail) || filter_var(trim($adminEmail), FILTER_VALIDATE_EMAIL) === false) {
@@ -165,10 +166,10 @@ if ($method === 'POST') {
             header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=settings&tab=mail&test=' . ($sent ? 'sent' : 'failed')), true, 303);
             exit;
         }
-        if (($_POST['action'] ?? null) !== 'save-checkout-settings' && $fioCronKey === '') {
+        if (!in_array($_POST['action'] ?? null, ['save-checkout-settings', 'preview-mail'], true) && $fioCronKey === '') {
             throw new InvalidArgumentException('Neznámá akce nastavení.');
         }
-        if ($fioCronKey === '') {
+        if ($fioCronKey === '' && ($_POST['action'] ?? null) === 'save-checkout-settings') {
             $repository->saveSection($settingsTab, $_POST, $basePath, $settings);
             $paymentReturn = $settingsTab === 'payment' && in_array($paymentArea,
                 ['bank', 'fio', 'comgate', 'gopay', 'btcpay'], true)
@@ -186,20 +187,8 @@ if ($method === 'POST') {
             }
         }
         if ($settingsTab === 'mail') {
-            foreach (['from_email', 'from_name', 'reply_to', 'public_base_url', 'admin_recovery_email',
-                'smtp_host', 'smtp_port', 'smtp_security', 'smtp_username'] as $key) {
-                if (is_string($_POST[$key] ?? null)) $mailConfiguration['settings'][$key] = $_POST[$key];
-            }
-            $mailConfiguration['settings']['automatic_enabled'] = ($_POST['automatic_enabled'] ?? null) === '1';
-            foreach ($mailConfiguration['templates'] as $code => &$entry) {
-                if (is_array($_POST['templates'][$code] ?? null)) {
-                    foreach (['subject', 'message'] as $key) {
-                        if (is_string($_POST['templates'][$code][$key] ?? null)) $entry[$key] = $_POST['templates'][$code][$key];
-                    }
-                    $entry['enabled'] = ($_POST['templates'][$code]['enabled'] ?? null) === '1';
-                }
-            }
-            unset($entry);
+            $mailConfiguration = MailSettingsRepository::withDraft($mailConfiguration, $_POST);
+            $mailPreviewIsDraft = true;
         }
     } catch (RuntimeException $exception) {
         http_response_code(503);
@@ -242,4 +231,9 @@ if ($method === 'POST') {
             $fioDraftToken = $paymentDraftSecrets['fio_token'] ?? '';
         }
     }
+}
+
+if ($settingsTab === 'mail' && $settingsError === '' && is_string($previewCode) &&
+    isset(\SimpleStore\Accounting\MailContent::definitions()[$previewCode])) {
+    $mailPreview = \SimpleStore\Accounting\MailPreview::compose($previewCode, $previewMode, $mailConfiguration);
 }

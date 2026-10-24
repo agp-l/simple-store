@@ -55,6 +55,16 @@ Před prvním použitím nové správy účtů spusť **Databáze → Aktualizov
 
 Smazání vyžaduje potvrzení a odstraní účet, uložené adresy a obnovovací odkazy. Objednávky, reklamace, doklady a auditní historie zůstanou zachované, odpojí se pouze vazba na účet. Změny adresáře nepřepisují adresy v dřívějších objednávkách. Původní správce nadále používá dřívější přihlašovací e-mail z nastavení obchodu; první uložení jeho detailu nebo ruční změna hesla tento e-mail sváže přímo s účtem. Potom už změny kontaktního e-mailu obchodu jeho přihlášení neovlivní. Ostatní správci tento společný e-mail k přihlášení nepoužívají.
 
+### Vzhled a texty zákaznických e-mailů
+
+V **Nastavení obchodu → E-maily** upravíš předměty a úvody objednávkových zpráv, faktury, potvrzení reklamace a odstoupení, odpovědi i obnovu hesla. Společné texty zahrnují podpis, patičku, tlačítka, názvy údajů, stavy reklamací a vysvětlení partnerského dodání. Texty se ukládají do stávajících poštovních tabulek; tato úprava nepřidává databázovou migraci. Přesně rozpoznané staré výchozí úvody se aktualizují, vlastní formulace a volby odesílání zůstávají zachované.
+
+**Zobrazit náhled** pracuje s rozepsaným formulářem bez ukládání a odesílání. Ukázku přepneš mezi vlastním, partnerským a kombinovaným nákupem a mezi mobilní a širokou šířkou. K dispozici je i textová verze. Obnovení výchozích textů upraví pouze danou skupinu formuláře. Změny začnou platit po uložení pro nově vytvořené zprávy; již uložená fronta se hromadně nepřepisuje. Skutečné odeslání zkouší pouze samostatné tlačítko testu doručení.
+
+Partnerská položka uvádí skutečného prodávajícího a rozpis zboží a služby z objednávky. Potvrzení a přijetí platby zachovávají sjednané dodání a přesnou žádost o dřívější zahájení; více stejných partnerů se v údajích seskupuje. Samotná externí expedice vlastního prodeje se nezaměňuje s asistovaným nákupem. Texty si nevymýšlejí nedostupnost na vlastním skladu. Smluvní dokumenty se přikládají z původního snímku a odkaz na podmínky asistence se zobrazuje jen pro publikovanou stránku. Platba po stornu používá vlastní šablonu a neoznamuje obnovení objednávky.
+
+HTML a prostý text mají společný obsah. Šablona používá tabulkový rozvrh, vložené styly a čitelné mobilní zobrazení bez obrázků načítaných od třetích stran. Náhledy testují běžný prohlížeč; jednotlivé poštovní aplikace mohou styly vykreslovat mírně odlišně. Automatické interní mezistavy zůstávají ve výchozím nastavení vypnuté. Obnova hesla má stále jednorázový odkaz na 30 minut a používá stejné nastavení odesílatele i adresy pro odpověď.
+
 ### Doručování e-mailů z fronty
 
 Odeslání po události se zkouší hned. Pokud poštovní server zprávu odmítne, zůstane ve frontě a plánovač ji může zopakovat. Nejdřív spusť **Administrace → Databáze → Aktualizovat SQL tabulky** (přidá `attempted_at` a `next_attempt_at`), nastav odesílatele v **Nastavení obchodu → E-maily** a ověř testovací e-mail. Plánovač bere nejvýše 20 zpráv v jednom CLI běhu a automaticky zkusí jednu zprávu maximálně pětkrát; po neúspěchu čeká postupně 5, 10, 20 a 40 minut. Vyčerpané zprávy zůstávají viditelné v **Doklady a platby → E-maily** a správce je může zkusit ručně i po pátém pokusu.

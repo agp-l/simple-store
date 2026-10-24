@@ -36,7 +36,7 @@ final class AdminActionPolicy
         'media-upload', 'media-attach', 'media-delete', 'delete-product',
         'delete-content', 'homepage-product', 'product-selection', 'product-selection-order', 'product-supplier-link', 'product-sale', 'purchase-partner-save', 'product-relation', 'catalog-post',
         'products-sale-preview', 'products-sale-apply', 'products-mass-preview', 'products-mass-apply', 'products-variants-preview', 'products-variants-apply', 'save-checkout-settings', 'fio-cron-rotate', 'save-site-copy',
-        'save-mail-settings', 'mail-test', 'schema-apply',
+        'save-mail-settings', 'preview-mail', 'mail-test', 'schema-apply',
         'table-prefix-migrate', 'table-prefix-cleanup',
     ];
 

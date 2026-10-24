@@ -110,3 +110,61 @@ if (!str_contains($initial['text'], 'Původní firma') || !str_contains($initial
     throw new RuntimeException('Address notices must distinguish the checkout and dispatch snapshots.');
 }
 echo "Customer mail rendering OK\n";
+
+// Every customer message uses configurable copy, safe markup and deterministic preview data.
+$config = ['settings' => ['from_name' => 'Lesní obchod <test>', 'copy' => [
+    'footer' => 'Vlastní patička <script>', 'signoff' => 'Zdraví {shop_name}',
+    'button_order' => 'Otevřít nákup', 'bank_account' => 'Náš bankovní účet',
+]], 'templates' => []];
+foreach (\SimpleStore\Accounting\MailContent::definitions() as $code => $definition) {
+    $config['templates'][$code] = $definition + ['enabled' => true];
+    foreach (['own', 'assisted', 'mixed'] as $mode) {
+        $preview = \SimpleStore\Accounting\MailPreview::compose($code, $mode, $config);
+        if (!str_contains($preview['html'], 'Vlastní patička &lt;script&gt;') ||
+            str_contains($preview['html'], '<script>') || !str_contains($preview['text'], 'Zdraví Lesní obchod <test>') ||
+            !str_contains($preview['html'], 'role="presentation"') ||
+            preg_match('/\{(?:shop_name|order_number|invoice_number|case_number|minutes|seller_name)\}/', $preview['text'])) {
+            throw new RuntimeException('Missing configured copy or unsafe markup in ' . $code . '/' . $mode);
+        }
+    }
+}
+$own = \SimpleStore\Accounting\MailPreview::compose('order', 'own', $config);
+$mixed = \SimpleStore\Accounting\MailPreview::compose('order', 'mixed', $config);
+if (str_contains($own['text'], 'Partnerský outdoorový obchod') ||
+    !str_contains($mixed['text'], '1 678 Kč + zajištění nákupu 122 Kč') ||
+    !str_contains($mixed['text'], 'Horská 3, 602 00 Brno') ||
+    !str_contains($mixed['html'], 'https://example.com/cs/obchodni-podminky-asistovaneho-nakupu') ||
+    !str_contains($mixed['text'], \SimpleStore\Checkout\AssistedPurchase::EARLY_REQUEST) ||
+    !str_contains($mixed['text'], \SimpleStore\Checkout\AssistedPurchase::DELIVERY_POLICY) ||
+    !str_contains($mixed['text'], 'Náš bankovní účet: 123456789/2010') ||
+    !str_contains($mixed['text'], '31. 10. 2026 13:00') ||
+    str_contains($mixed['text'], 'neměli skladem') || str_contains($mixed['text'], 'UTC')) {
+    throw new RuntimeException('Partner mail invented availability, lost contract facts or ignored custom payment labels.');
+}
+$config['templates']['paid']['message'] = 'Ihned posíláme zboží.';
+$config['templates']['late_paid']['message'] = 'Vlastní vysvětlení pozdní platby.';
+$late = \SimpleStore\Accounting\MailPreview::compose('late_paid', 'mixed', $config);
+if (!str_contains($late['text'], 'Vlastní vysvětlení pozdní platby.') ||
+    !str_contains($late['text'], 'Objednávka zůstává zrušená') || str_contains($late['text'], 'Ihned posíláme')) {
+    throw new RuntimeException('Late payment reused the normal shipping promise.');
+}
+$config['templates']['password_reset']['subject'] = 'Heslo pro {shop_name}';
+$reset = \SimpleStore\Accounting\ServiceEmailComposer::passwordReset('customer', 'https://example.com/reset?token=abcdef', $config);
+if (!str_contains($reset['text'], '30 minut') || !str_contains($reset['html'], 'https://example.com/reset?token=abcdef') ||
+    $reset['subject'] !== 'Heslo pro Lesní obchod <test>') throw new RuntimeException('Password reset copy or action was lost.');
+$longSubject = \SimpleStore\Accounting\MailContent::subject(str_repeat('ě', 120) . "\r\nInjected: bad");
+if (strlen($longSubject) > 190 || preg_match('//u', $longSubject) !== 1 || str_contains($longSubject, "\n")) {
+    throw new RuntimeException('Expanded subject is unsafe or truncates UTF-8.');
+}
+$copy = \SimpleStore\Accounting\MailContent::defaults();
+foreach ([['partner_prices' => 'Bez částek'], ['reset_expiry' => 'Platí {unknown}'], ['bank_account' => []]] as $bad) {
+    try {
+        MailSettingsRepository::validateCopy(array_replace($copy, $bad));
+        throw new RuntimeException('Invalid or incomplete customer copy was accepted.');
+    } catch (InvalidArgumentException $expected) {}
+}
+$draft = MailSettingsRepository::withDraft($config, ['copy' => ['footer' => '<b>Rozepsáno</b>'],
+    'templates' => ['invoice' => ['subject' => 'Nový předmět', 'message' => 'Nový text']], 'smtp_password' => 'never-return']);
+if ($draft['settings']['copy']['footer'] !== '<b>Rozepsáno</b>' || $draft['templates']['invoice']['message'] !== 'Nový text' ||
+    str_contains(json_encode($draft), 'never-return')) throw new RuntimeException('Draft restoration lost text or exposed the SMTP password.');
+echo "Configurable customer messages and previews OK\n";

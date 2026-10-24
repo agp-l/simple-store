@@ -30,17 +30,12 @@ final class OrderEmailComposer
         $facts = [[$copy['status'], $state], [$copy['shipping'], $vars['carrier']], [$copy['total'], $vars['total']]];
         $lines = EmailLayout::factLines($facts);
         $html = EmailLayout::facts($facts);
-        $assisted = array_filter($items, static fn (mixed $item): bool => is_array($item) && ($item['sale_mode'] ?? '') === 'assisted');
         $showContract = in_array($event, ['order', 'paid'], true);
-        if ($assisted !== [] && $showContract && !$late && ($order['status'] ?? '') !== 'cancelled') {
-            $lines[] = ''; $lines[] = $copy['partner_heading']; $lines[] = $copy['partner_intro'];
-            $html .= EmailLayout::notice($copy['partner_intro']);
-        }
         if ($event === 'order') {
             $method = (string) ($order['payment_method'] ?? '');
             if ($method === 'bank_transfer') {
                 $bank = is_array($order['payment_details'] ?? null) ? $order['payment_details'] : [];
-                $paymentFacts = [[$copy['bank_account'], (string) ($bank['account_display'] ?? '')],
+                $paymentFacts = [[$copy['payment'], $copy['bank_transfer']], [$copy['bank_account'], (string) ($bank['account_display'] ?? '')],
                     [$copy['variable_symbol'], (string) ($order['variable_symbol'] ?? '')],
                     [$copy['due_date'], MailContent::date((string) ($order['payment_due_at'] ?? ''))]];
                 $lines = array_merge($lines, ['', $copy['bank_heading'], $copy['bank_intro']], EmailLayout::factLines($paymentFacts));
@@ -105,8 +100,12 @@ final class OrderEmailComposer
         $lines = array_merge($lines, ['', $copy['delivery'] . ' · ' . $vars['carrier'] . ':'], $address);
         $html .= EmailLayout::heading($copy['delivery']) . EmailLayout::paragraph(implode("\n", array_merge([$vars['carrier']], $address)));
         if ($showContract && $partners !== []) {
-            $html .= EmailLayout::heading($copy['partner_details']);
-            $lines[] = ''; $lines[] = $copy['partner_details'];
+            $html .= EmailLayout::heading($copy['partner_heading']);
+            $lines[] = ''; $lines[] = $copy['partner_heading'];
+            if (!$late && ($order['status'] ?? '') !== 'cancelled') {
+                $lines[] = $copy['partner_intro'];
+                $html .= EmailLayout::paragraph($copy['partner_intro']);
+            }
             foreach ($partners as $partnerFacts) {
                 $lines = array_merge($lines, EmailLayout::factLines($partnerFacts), ['']);
                 $html .= EmailLayout::facts($partnerFacts);
@@ -116,7 +115,7 @@ final class OrderEmailComposer
                 $note = $copy['assistance_contract'] . "\n" . (!empty($consent['early_start'])
                     ? $copy['early_request'] . ': ' . (string) ($consent['early_request_text'] ?? '') : $copy['assistance_wait']);
                 $lines[] = $note;
-                $html .= EmailLayout::notice($note);
+                $html .= EmailLayout::heading($copy['assistance']) . EmailLayout::notice($note);
             }
         }
         $footerLinks = [];
@@ -125,7 +124,8 @@ final class OrderEmailComposer
         if (EmailLayout::safeUrl($base) !== '' && parse_url($base, PHP_URL_QUERY) === null && parse_url($base, PHP_URL_FRAGMENT) === null) {
             if (preg_match('/^[a-f0-9]{64}$/D', $token) === 1) $footerLinks[] = [$copy['button_support'], $base . '/support.php?order=' . $token];
             if ($showContract && in_array($legalLanguage, ['cs', 'en'], true)) {
-                foreach (['obchodni-podminky' => 'terms', 'vymena-a-vraceni-zbozi' => 'returns', 'reklamacni-rad' => 'complaints'] as $slug => $key) {
+                foreach (['obchodni-podminky' => 'terms', 'vymena-a-vraceni-zbozi' => 'returns', 'reklamacni-rad' => 'complaints',
+                    \SimpleStore\Checkout\AssistedPurchase::TERMS_SLUG => 'assistance_terms'] as $slug => $key) {
                     if (in_array($slug, $publishedLegal, true)) $footerLinks[] = [$copy[$key], $base . '/' . $legalLanguage . '/' . $slug];
                 }
             }

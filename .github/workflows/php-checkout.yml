@@ -75,6 +75,7 @@ jobs:
           php tests/fio-statement.php
           php tests/fio-transport-error.php
           php tests/mail-render.php
+          php tests/mail-settings.php
           php tests/after-sales-render.php
           php tests/order-legal-snapshot.php
           php tests/mail-worker.php
@@ -283,6 +284,7 @@ jobs:
           node --test tests/admin-users-browser.mjs
           node --test tests/admin-layout-browser.mjs
           node --test tests/admin-order-detail-browser.mjs
+          node --test tests/admin-mail-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -297,6 +299,7 @@ jobs:
             /tmp/admin-users-screenshots/
             /tmp/admin-layout-screenshots/
             /tmp/admin-order-detail-screenshots/
+            /tmp/admin-mail-screenshots/
           retention-days: 7
 
   private-routes-apache:

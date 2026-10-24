@@ -13,7 +13,7 @@ final class MailSettingsRepository
 {
     public const EVENTS = [
         'order' => ['label' => 'Přijetí objednávky', 'subject' => 'Přijali jsme objednávku {order_number}',
-            'message' => "Dobrý den,\n\nděkujeme za objednávku. Máme ji u sebe a níže najdete vše důležité k platbě a doručení."],
+            'message' => "Dobrý den,\n\nděkujeme za objednávku. Níže najdete její přehled a vše potřebné k platbě a doručení."],
         'paid' => ['label' => 'Platba potvrzena', 'subject' => 'Platba za objednávku {order_number} dorazila',
             'message' => "Dobrý den,\n\nplatba za objednávku {order_number} dorazila. Děkujeme. Jakmile bude zásilka na cestě, dáme vám vědět."],
         'processing' => ['label' => 'Připravuje se', 'subject' => 'Připravujeme objednávku {order_number}',
@@ -124,22 +124,7 @@ final class MailSettingsRepository
             'smtp_port' => (int) $port, 'smtp_security' => $security,
             'smtp_username' => $username, 'smtp_password_encrypted' => $encrypted,
             'copy' => self::validateCopy($input['copy'] ?? $previous['copy'])];
-        $inputTemplates = $input['templates'] ?? null;
-        if (!is_array($inputTemplates)) throw new InvalidArgumentException('Šablony e-mailů chybí.');
-        $templates = [];
-        foreach (MailContent::definitions() as $code => $default) {
-            $entry = $inputTemplates[$code] ?? (isset(MailContent::EXTRA_TEMPLATES[$code])
-                ? $previousConfiguration['templates'][$code] : null);
-            if (!is_array($entry)) throw new InvalidArgumentException('Šablona ' . $code . ' chybí.');
-            $subject = self::field($entry, 'subject', 190);
-            $message = self::field($entry, 'message', 5000);
-            if ($subject === '' || $message === '' || preg_match('/[\r\n]/', $subject)) {
-                throw new InvalidArgumentException('Zkontroluj předmět, text a zástupné značky šablony ' . $code . '.');
-            }
-            MailContent::validatePlaceholders($subject . ' ' . $message, MailContent::placeholders($code));
-            $templates[$code] = ['subject' => $subject, 'message' => $message,
-                'enabled' => isset(MailContent::EXTRA_TEMPLATES[$code]) || ($entry['enabled'] ?? null) === '1'];
-        }
+        $templates = self::validateTemplates($input['templates'] ?? null, $previousConfiguration['templates']);
         $this->db->startTransaction();
         try {
             $this->db->query('INSERT INTO shop_mail_settings (id, settings_json) VALUES (%i, %s)
@@ -159,6 +144,26 @@ final class MailSettingsRepository
     }
 
 
+    public static function validateTemplates(mixed $inputTemplates, array $previousTemplates): array
+    {
+        if (!is_array($inputTemplates)) throw new InvalidArgumentException('Šablony e-mailů chybí.');
+        $templates = [];
+        foreach (MailContent::definitions() as $code => $default) {
+            $entry = $inputTemplates[$code] ?? (isset(MailContent::EXTRA_TEMPLATES[$code])
+                ? $previousTemplates[$code] : null);
+            if (!is_array($entry)) throw new InvalidArgumentException('Šablona ' . $code . ' chybí.');
+            $subject = self::field($entry, 'subject', 190);
+            $message = self::field($entry, 'message', 5000);
+            if ($subject === '' || $message === '' || preg_match('/[\r\n]/', $subject)) {
+                throw new InvalidArgumentException('Zkontroluj předmět, text a zástupné značky šablony ' . $code . '.');
+            }
+            MailContent::validatePlaceholders($subject . ' ' . $message, MailContent::placeholders($code));
+            $templates[$code] = ['label' => $default['label'], 'subject' => $subject, 'message' => $message,
+                'enabled' => isset(MailContent::EXTRA_TEMPLATES[$code]) || ($entry['enabled'] ?? null) === '1'];
+        }
+        return $templates;
+    }
+
     /** Drafts never expose the stored SMTP secret and never save or send anything. */
     public static function withDraft(array $configuration, array $input): array
     {
@@ -166,7 +171,9 @@ final class MailSettingsRepository
             'smtp_host', 'smtp_port', 'smtp_security', 'smtp_username'] as $key) {
             if (is_string($input[$key] ?? null)) $configuration['settings'][$key] = $input[$key];
         }
-        $configuration['settings']['automatic_enabled'] = ($input['automatic_enabled'] ?? '') === '1';
+        if (array_key_exists('templates', $input) || array_key_exists('automatic_enabled', $input)) {
+            $configuration['settings']['automatic_enabled'] = ($input['automatic_enabled'] ?? '') === '1';
+        }
         foreach (MailContent::defaults() as $key => $default) {
             if (is_string($input['copy'][$key] ?? null)) $configuration['settings']['copy'][$key] = $input['copy'][$key];
         }

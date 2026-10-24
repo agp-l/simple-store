@@ -32,8 +32,14 @@ final class EmailLayout
         $html = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="width:100%;table-layout:fixed;border-collapse:collapse;font-size:15px;line-height:1.6">';
         foreach ($facts as [$label, $value]) {
             if ($value === '') continue;
+            $rendered = self::safeUrl($value) !== '' ? '<a href="' . self::escape($value) . '" style="color:#254e3b;text-decoration:underline">' . self::escape($value) . '</a>' : nl2br(self::escape($value));
+            if (strlen($value) > 220 || str_contains($value, "\n")) {
+                $html .= '<tr><td colspan="2" style="padding:16px 0;border-bottom:1px solid #e7ebef;overflow-wrap:anywhere"><strong>' . self::escape($label) .
+                    '</strong><div style="margin-top:6px">' . $rendered . '</div></td></tr>';
+                continue;
+            }
             $html .= '<tr><th width="40%" align="left" style="padding:10px 12px 10px 0;border-bottom:1px solid #e7ebef;color:#283443;font-weight:normal;vertical-align:top;overflow-wrap:anywhere">' . self::escape($label) .
-                '</th><td style="padding:10px 0;border-bottom:1px solid #e7ebef;vertical-align:top;overflow-wrap:anywhere;word-break:break-word">' . nl2br(self::escape($value)) . '</td></tr>';
+                '</th><td style="padding:10px 0;border-bottom:1px solid #e7ebef;vertical-align:top;overflow-wrap:anywhere;word-break:break-word">' . $rendered . '</td></tr>';
         }
         return $html . '</table>';
     }
