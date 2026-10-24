@@ -45,6 +45,7 @@
     refreshTimer = setTimeout(() => {
       if (pending || document.querySelector('[data-product-sale-form][data-dirty="true"]') ||
           document.querySelector('[data-variant-manager][data-dirty="true"]') ||
+          document.querySelector('[data-variant-generate][data-dirty="true"], [data-variant-generate][data-submitting="true"]') ||
           document.getElementById('media-picker')?.open ||
           document.activeElement?.matches('[data-edit-operation], [data-editor-select], [data-editor-input], [data-editor-type]')) {
         refreshWhenReady();
@@ -106,7 +107,12 @@
           target.dataset.editValue = value;
         }
       });
-      if (field === 'price_czk') document.dispatchEvent(new CustomEvent('product-price-saved', { detail: { price: Number(value) } }));
+      if (field === 'price_czk') {
+        document.querySelectorAll('[data-edit-operation="set"][data-edit-field="price_czk"]').forEach(target => {
+          if (target !== document.activeElement) target.textContent = new Intl.NumberFormat('cs-CZ').format(Number(value));
+        });
+        document.dispatchEvent(new CustomEvent('product-price-saved', { detail: { price: Number(value) } }));
+      }
       if (operation === 'section.add') {
         addedSection = index === null ? document.querySelectorAll('.product-content-block').length : index + 1;
       }
@@ -123,6 +129,13 @@
   }
 
   document.addEventListener('click', event => {
+    if (event.target.closest('[data-product-price-focus]')) {
+      event.preventDefault();
+      const price = document.querySelector('[data-variant-base-price]');
+      price?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      price?.focus({ preventScroll: true });
+      return;
+    }
     const link = event.target.closest('[data-edit-operation] a');
     if (link) { event.preventDefault(); link.closest('[data-edit-operation]').focus(); }
   });

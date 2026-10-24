@@ -68,5 +68,12 @@ $check(str_contains($adminHtml, '/assets/product-variants.js?'), 'Variant photo 
 ob_start(); $renderer->render('product-record', ['product' => $product, 'basePath' => '/shop/', 'language' => 'cs', 'editMode' => true, 'canEditProduct' => true,
     'variantError' => 'Vyber jiný existující produkt.', 'variantForm' => ['operation' => 'merge-preview', 'source_slug' => 'wrong-product', 'merge_groups' => 'Velikost: XL']]); $failedMerge = ob_get_clean();
 $check(str_contains($failedMerge, 'id="product-variant-merge" open') && str_contains($failedMerge, 'value="wrong-product"') && str_contains($failedMerge, 'role="alert">Vyber jiný'), 'Failed conversion must stay open with input and a visible error.');
+$withoutVariants = array_replace($product, ['variant_inventory' => ProductVariantRepository::empty()]);
+ob_start(); $renderer->render('product-record', ['product' => $withoutVariants, 'basePath' => '/shop/', 'language' => 'cs', 'editMode' => true, 'canEditProduct' => true]); $emptyHtml = ob_get_clean();
+$check(str_contains($emptyHtml, 'data-variant-base-price contenteditable=') && str_contains($emptyHtml, 'Prodejní cena produktu') && str_contains($emptyHtml, 'data-product-price-focus'), 'Products without variants have no discoverable price editor.');
+$check(str_contains($emptyHtml, 'id="variant-create" open') && str_contains($emptyHtml, 'assets/product-variant-editor.js?'), 'Empty inventory must initialize the creation form and draft protection.');
+ob_start(); $renderer->render('product-record', ['product' => $product, 'basePath' => '/shop/', 'language' => 'cs', 'editMode' => true, 'canEditProduct' => true,
+    'variantError' => 'Zkontroluj vlastnosti.', 'variantForm' => ['operation' => 'generate', 'groups' => 'Velikost: XL', 'confirm' => '1']]); $failedGenerate = ob_get_clean();
+$check(str_contains($failedGenerate, 'id="variant-create" open') && str_contains($failedGenerate, '>Velikost: XL</textarea>') && str_contains($failedGenerate, 'Zkontroluj vlastnosti.'), 'Failed generation closed or lost the submitted values.');
 $cart->clear();
 echo "Variant validation, cart, import and rendering passed.\n";

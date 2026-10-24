@@ -54,7 +54,7 @@ $partnerAdminUrl = $siteRoot . 'admin/?section=purchase-partners';
           </div>
           <div>
             <label>Cena dodavatele <span class="sale-money-input"><input type="number" name="supplier_price_czk" min="1" max="9999999" step="1" inputmode="numeric" value="<?= $escape($saleValues['supplier_price_czk'] ?? '') ?>" aria-describedby="sale-price-help"><span>Kč / ks</span></span></label>
-            <p class="sale-hint" id="sale-price-help">Celé Kč. Základní cena produktu: <strong data-sale-base-price><?= $money($basePrice) ?></strong>.</p>
+            <p class="sale-hint" id="sale-price-help">Celé Kč. Prodejní cena produktu: <strong data-sale-base-price><?= $money($basePrice) ?></strong>. <a href="#product-price" data-product-price-focus>Upravit prodejní cenu</a></p>
             <p class="sale-fee">Odměna za službu <output data-sale-fee><?= $fee === null ? '—' : $money($fee) ?></output></p>
           </div>
         </div>

@@ -20,11 +20,37 @@ $doc = ProductImport::decode(file_get_contents(dirname(__DIR__) . '/src/Product/
 $doc['product'] = array_replace($doc['product'], ['slug' => $prefix, 'name' => $prefix, 'category_path' => 'batohy', 'price_czk' => 100, 'published' => true, 'stock_status' => 'in_stock']);
 $key = $products->saveRevision(ProductImport::fields($doc))['product_key'];
 $stock->setAvailable($key, 0, 10);
-$rows = ProductVariants::generate("Velikost: S | M\nBarva: Modrá | Červená");
+$generate = static function (array $post) use ($key): array {
+    $process = proc_open([PHP_BINARY, __DIR__ . '/fixtures/variant-action.php'],
+        [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes);
+    if (!is_resource($process)) throw new RuntimeException('Cannot run the variant controller.');
+    fwrite($pipes[0], json_encode($post + ['key' => $key, 'language' => 'cs', 'operation' => 'generate'], JSON_THROW_ON_ERROR));
+    fclose($pipes[0]);
+    $output = stream_get_contents($pipes[1]); fclose($pipes[1]);
+    $errors = stream_get_contents($pipes[2]); fclose($pipes[2]);
+    if (proc_close($process) !== 0) throw new RuntimeException($errors);
+    return json_decode($output, true, 16, JSON_THROW_ON_ERROR);
+};
+$create = ['groups' => "Velikost: S | M\nBarva: Modrá | Červená", 'confirm' => '1', 'expected' => $variants->snapshot($key)['expected']];
+$missing = $generate(array_replace($create, ['groups' => '']));
+$check(isset($missing['variant_error']) && $variants->snapshot($key)['items'] === [], 'Empty generation changed inventory.');
+$unconfirmed = $generate(array_replace($create, ['confirm' => '0']));
+$check(isset($unconfirmed['variant_error']) && $variants->snapshot($key)['items'] === [], 'Unconfirmed mode switch created variants.');
+$created = $generate($create);
+$check(!isset($created['variant_error']), 'First generation failed: ' . ($created['variant_error']['message'] ?? ''));
+$generated = $variants->snapshot($key);
+$check($generated['enabled'] && count($generated['items']) === 4 && array_sum(array_column($generated['items'], 'quantity')) === 0,
+    'Controller failed to create the first zero-stock variants.');
+$check(count(array_filter($generated['items'], static fn (array $row): bool => $row['price_czk'] !== null)) === 0, 'New variants must inherit the base price.');
+$duplicate = $generate(array_replace($create, ['expected' => $generated['expected']]));
+$check(!isset($duplicate['variant_error']) && $variants->snapshot($key)['items'] === $generated['items'], 'Repeated generation duplicated variants or replaced their identities.');
+$stale = $generate($create);
+$check(isset($stale['variant_error']) && $variants->snapshot($key)['items'] === $generated['items'], 'Stale generation bypassed concurrency protection.');
+$rows = $generated['items'];
 $rows[0]['quantity'] = 3; $rows[0]['sku'] = 'S-BLUE'; $rows[0]['price_czk'] = 120;
 $rows[1]['quantity'] = 1;
 $rows[3]['stock_status'] = 'on_order';
-$initial = ['enabled' => true, 'items' => $rows, 'expected' => ProductVariantRepository::empty()['expected']];
+$initial = ['enabled' => true, 'items' => $rows, 'expected' => $variants->snapshot($key)['expected']];
 $variants->save($key, $initial);
 $state = $variants->snapshot($key);
 $check($state['items'][1]['price_czk'] === null, 'Inherited price became zero.');

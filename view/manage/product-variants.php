@@ -17,11 +17,11 @@ foreach ($details['options'] as $group) $variantGroups[] = $group['name'] . ': '
   <div class="product-admin-settings-heading"><strong id="variant-heading"><?= \SimpleStore\Rendering\Icon::render('package') ?> Varianty a sklad</strong><span class="editor-chip"><?= $variantInventory['enabled'] ? 'Sklad po variantách' : 'Společný sklad produktu' ?> · <?= count($variantRows) ?> variant</span></div>
   <?php if (($_GET['variants_saved'] ?? '') === '1' && $variantError === ''): ?><p class="inline-stock-notice" role="status">Varianty a sklad byly uloženy.</p><?php endif; ?>
   <?php if ($variantError !== '' && !in_array($variantForm['operation'] ?? '', ['merge', 'merge-preview'], true)): ?><p class="panel-error" role="alert"><?= $escape($variantError) ?></p><?php endif; ?>
-  <?php if ($variantRows !== []): ?>
   <div class="variant-pricing">
-    <div><strong>Společná cena produktu</strong><div class="variant-shared-price"><span data-variant-base-price<?= $editable('price_czk', (string) $product['price_czk']) ?>><?= number_format((int) $product['price_czk'], 0, ',', ' ') ?></span> Kč</div>
-      <p>Kliknutím na cenu ji upravíš. Varianty bez vlastní ceny ji přebírají automaticky, i po dalších změnách.</p>
+    <div id="product-price"><strong><?= $variantRows === [] ? 'Prodejní cena produktu' : 'Společná cena produktu' ?></strong><div class="variant-shared-price"><span data-variant-base-price<?= $editable('price_czk', (string) $product['price_czk']) ?>><?= number_format((int) $product['price_czk'], 0, ',', ' ') ?></span> Kč <button type="button" class="inline-small" data-product-price-focus><?= \SimpleStore\Rendering\Icon::render('edit') ?> Upravit cenu</button></div>
+      <p>Klikni na cenu, napiš částku v celých Kč a potvrď klávesou Enter nebo kliknutím mimo pole.<?= $variantRows === [] ? ' Tuto cenu zaplatí zákazník.' : ' Varianty bez vlastní ceny ji přebírají automaticky.' ?></p>
     </div>
+    <?php if ($variantRows !== []): ?>
     <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>" data-variant-inherit>
       <input type="hidden" name="action" value="product-variants"><input type="hidden" name="operation" value="inherit-prices"><input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>"><input type="hidden" name="expected" value="<?= $escape($variantForm['expected'] ?? $variantInventory['expected']) ?>">
       <button class="inline-small" type="submit">Použít společnou cenu u všech variant</button>
@@ -29,7 +29,9 @@ foreach ($details['options'] as $group) $variantGroups[] = $group['name'] . ': '
       <p data-variant-price-count>Jinou cenu vyplň jen u variant, které mají stát jinak. Prázdné pole znamená společnou cenu.</p>
       <button class="inline-small" type="submit" form="variant-batch" data-variant-save-top hidden>Uložit změny variant</button>
     </form>
+    <?php else: ?><p>Produkt můžeš prodávat i bez variant. Varianty vytvářej, jen když zákazník vybírá například velikost nebo barvu.</p><?php endif; ?>
   </div>
+  <?php if ($variantRows !== []): ?>
   <p data-variant-save-state role="status" hidden></p>
   <p>SKU je nepovinný interní kód varianty, například BUNDA-M-MODRA. Prázdná fotografie přebírá obrázek produktu. Vlastnosti varianty jsou stálé; jinou kombinaci přidej jako novou.</p>
   <div class="variant-table-wrap"><table class="variant-table"><thead><tr><th>Varianta</th><th>SKU</th><th>Volné kusy</th><th>Dostupnost</th><th>Vlastní cena Kč</th><th>Fotografie</th><th>Nabízet</th><th></th></tr></thead><tbody>
@@ -56,14 +58,16 @@ foreach ($details['options'] as $group) $variantGroups[] = $group['name'] . ': '
     <input type="hidden" name="action" value="product-variants"><input type="hidden" name="operation" value="batch"><input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>"><input type="hidden" name="expected" value="<?= $escape($variantForm['expected'] ?? $variantInventory['expected']) ?>"><input type="hidden" name="rows_json">
     <button class="inline-small" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit celou tabulku variant</button>
   </form>
-  <script defer src="<?= $escape($basePath . 'assets/product-variant-editor.js?v=' . filemtime(__DIR__ . '/../../assets/product-variant-editor.js')) ?>"></script>
   <?php endif; ?>
-  <details class="variant-create"><summary><?= \SimpleStore\Rendering\Icon::render('plus') ?> <?= $variantRows === [] ? 'Vytvořit varianty' : 'Přidat kombinace' ?></summary>
-    <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>">
+  <details class="variant-create" id="variant-create" <?= $variantRows === [] || ($variantForm['operation'] ?? '') === 'generate' ? 'open' : '' ?>><summary><?= \SimpleStore\Rendering\Icon::render('plus') ?> <?= $variantRows === [] ? 'Vytvořit varianty' : 'Přidat kombinace' ?></summary>
+    <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>" data-variant-generate>
       <input type="hidden" name="action" value="product-variants"><input type="hidden" name="operation" value="generate"><input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>"><input type="hidden" name="expected" value="<?= $escape($variantInventory['expected']) ?>">
-      <label>Vlastnosti a jejich hodnoty<textarea name="groups" rows="4" maxlength="16000" placeholder="Velikost: S | M | L&#10;Barva: Modrá | Červená" required><?= $escape($variantForm['groups'] ?? implode("\n", $variantGroups)) ?></textarea></label>
-      <p>Každá vlastnost na nový řádek, hodnoty odděl znakem |. Pro jednu konkrétní kombinaci napiš u každé vlastnosti jen jednu hodnotu. Existující kombinace se nepřepíšou.</p>
-      <label class="variant-confirm"><input type="checkbox" name="confirm" value="1" required> Zapnout sklad variant. Nové kombinace začnou s 0 kusy; dosavadní společný počet se nerozdělí a při přepnutí se vynuluje.</label>
+      <label>1. Vlastnosti a jejich hodnoty<textarea name="groups" rows="4" maxlength="16000" aria-describedby="variant-groups-help variant-generate-error" placeholder="Velikost: S | M | L&#10;Barva: Modrá | Červená" required><?= $escape($variantForm['groups'] ?? implode("\n", $variantGroups)) ?></textarea></label>
+      <p id="variant-groups-help">Například <code>Velikost: S | M | L</code> vytvoří tři varianty. Každou další vlastnost dej na nový řádek. Text v šedé ukázce je potřeba nahradit vlastními hodnotami. Existující kombinace se nepřepíšou.</p>
+      <p class="variant-generate-preview" data-variant-generate-preview role="status" aria-live="polite" hidden></p>
+      <?php if (!$variantInventory['enabled']): ?><label class="variant-confirm"><input type="checkbox" name="confirm" value="1" required <?= ($variantForm['operation'] ?? '') === 'generate' && ($variantForm['confirm'] ?? '') === '1' ? 'checked' : '' ?>> 2. Potvrzuji zapnutí skladu variant. Nové kombinace začnou s 0 kusy; dosavadní společný počet se nerozdělí a při přepnutí se vynuluje.</label>
+      <?php else: ?><input type="hidden" name="confirm" value="1"><p>Nové varianty začnou s 0 kusy a společnou cenou produktu. Sklad a ceny existujících variant zůstanou zachované.</p><?php endif; ?>
+      <p class="panel-error" id="variant-generate-error" data-variant-generate-error role="alert" hidden></p>
       <button class="inline-small" type="submit"><?= \SimpleStore\Rendering\Icon::render('plus') ?> Vytvořit kombinace</button>
     </form>
   </details>
@@ -72,5 +76,6 @@ foreach ($details['options'] as $group) $variantGroups[] = $group['name'] . ': '
     <label class="variant-confirm"><input type="checkbox" name="confirm" value="1" required> Rozumím, že společný počet kusů se vynuluje. Zásoby variant zůstanou uložené.</label><button class="inline-small" type="submit"><?= $variantInventory['enabled'] ? 'Přejít na společný sklad' : 'Zapnout sklad variant' ?></button>
   </form></details><?php endif; ?>
   <?php require __DIR__ . '/product-variant-merge.php'; ?>
+  <script defer src="<?= $escape($basePath . 'assets/product-variant-editor.js?v=' . filemtime(__DIR__ . '/../../assets/product-variant-editor.js')) ?>"></script>
 </section>
 <?php endif; ?>

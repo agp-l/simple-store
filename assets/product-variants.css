@@ -4,6 +4,10 @@
 .variant-pricing { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 20px; padding: 16px; margin: 16px 0; border: 1px solid var(--line); border-radius: 5px; background: #f4f8f1; }
 .variant-pricing strong { font-size: 13px; }
 .variant-shared-price { margin-top: 7px; font-size: 22px; font-weight: 750; }
+.variant-shared-price [data-variant-base-price] { display: inline-block; min-width: 80px; padding: 6px 10px; border: 1px solid #94a3b8; border-radius: 5px; background: #fff; color: #111827; }
+.variant-manager .variant-generate-preview { padding: 10px 12px; margin: 0; border-left: 3px solid #3b82f6; background: #eff6ff; color: #111827; }
+.variant-create textarea[aria-invalid="true"] { border-color: #b91c1c; }
+.variant-create .panel-error { margin: 0; color: #991b1b; }
 .variant-pricing p { margin: 8px 0 0; font-size: 12px; }
 .variant-pricing form { margin: 0; align-self: center; min-width: 0; }
 .variant-pricing .inline-small { white-space: normal; max-width: 100%; margin: 4px 4px 4px 0; }
