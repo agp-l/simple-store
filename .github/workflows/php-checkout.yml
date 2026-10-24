@@ -171,6 +171,7 @@ jobs:
           php tests/content-import-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
+          php tests/product-sales-mass-database.php
           php tests/product-zip-database.php
           php tests/product-bulk-database.php
           php tests/product-mass-database.php
@@ -221,6 +222,7 @@ jobs:
           php tests/content-import-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
+          php tests/product-sales-mass-database.php
           php tests/product-zip-database.php
           php tests/product-bulk-database.php
           php tests/product-mass-database.php
