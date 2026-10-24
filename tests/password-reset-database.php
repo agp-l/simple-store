@@ -2,6 +2,7 @@
 declare(strict_types=1);
 
 require dirname(__DIR__) . '/vendor/autoload.php';
+require __DIR__ . '/support/mail-message.php';
 
 use SimpleStore\Accounting\MailCredential;
 use SimpleStore\Accounting\MailSettingsRepository;
@@ -48,7 +49,7 @@ $adminId = (int) $db->queryFirstField('SELECT id FROM shop_users WHERE role=%s A
 $messages = [];
 $service = new PasswordResetService($db, static function (string $email, string $subject,
     string $body, string $headers) use (&$messages): bool {
-    $messages[] = [$email, $body];
+    $messages[] = [$email, decodedMailText($body)];
     return true;
 });
 $service->request('customer', 'unknown-' . $suffix . '@example.test', 'account.php');

@@ -8,26 +8,26 @@ use MeekroDB;
 use RuntimeException;
 use Throwable;
 
-/** Editable copy and sending identity; operational order facts stay in code. */
+/** Editable customer copy and sending identity; order facts remain immutable data. */
 final class MailSettingsRepository
 {
     public const EVENTS = [
         'order' => ['label' => 'Přijetí objednávky', 'subject' => 'Přijali jsme objednávku {order_number}',
-            'message' => 'Děkujeme, {customer_name}. Objednávku jsme přijali. Níže najdete její souhrn a způsob úhrady.'],
+            'message' => "Dobrý den,\n\nděkujeme za objednávku. Máme ji u sebe a níže najdete vše důležité k platbě a doručení."],
         'paid' => ['label' => 'Platba potvrzena', 'subject' => 'Platba za objednávku {order_number} dorazila',
-            'message' => 'Platbu jsme obdrželi. O dalším postupu doručení vás budeme informovat.'],
+            'message' => "Dobrý den,\n\nplatba za objednávku {order_number} dorazila. Děkujeme. Jakmile bude zásilka na cestě, dáme vám vědět."],
         'processing' => ['label' => 'Připravuje se', 'subject' => 'Připravujeme objednávku {order_number}',
-            'message' => 'Vaši objednávku právě připravujeme. Jakmile bude připravena, dáme vám vědět.'],
+            'message' => "Dobrý den,\n\nvaše objednávka se připravuje. Až bude zásilka na cestě, pošleme vám zprávu."],
         'ready_to_ship' => ['label' => 'Připraveno k odeslání', 'subject' => 'Objednávka {order_number} je připravena',
-            'message' => 'Balík je připravený k předání dopravci. O předání vás budeme informovat.'],
+            'message' => "Dobrý den,\n\nvaše zásilka je zabalená a připravená k předání dopravci. Ještě není na cestě; o odeslání vám napíšeme."],
         'shipped' => ['label' => 'Předáno dopravci', 'subject' => 'Objednávka {order_number} je na cestě',
-            'message' => 'Zásilka byla předána dopravci. Podrobnosti ke sledování najdete níže.'],
+            'message' => "Dobrý den,\n\nzásilku už převzal dopravce. Údaje k doručení a sledování najdete níže."],
         'tracking' => ['label' => 'Doplněno sledování', 'subject' => 'Sledování zásilky {order_number}',
-            'message' => 'Doplnili jsme číslo nebo odkaz pro sledování vaší zásilky.'],
+            'message' => "Dobrý den,\n\nuž máme údaje pro sledování vaší zásilky. Její cestu můžete sledovat pomocí odkazu níže."],
         'completed' => ['label' => 'Dokončeno', 'subject' => 'Objednávka {order_number} je dokončena',
-            'message' => 'Objednávku jsme označili jako dokončenou. Děkujeme za váš nákup.'],
+            'message' => "Dobrý den,\n\nvaše objednávka je vyřízená. Děkujeme, že jste si vybrali náš obchod. Ať vám vybavení dobře slouží."],
         'cancelled' => ['label' => 'Zrušeno', 'subject' => 'Objednávka {order_number} byla zrušena',
-            'message' => 'Vaše objednávka byla zrušena. V případě dotazů nám odpovězte na tento e-mail.'],
+            'message' => "Dobrý den,\n\npotvrzujeme zrušení objednávky {order_number}. Pokud to neodpovídá vaší domluvě s námi, odpovězte prosím na tento e-mail."],
     ];
 
     public function __construct(private MeekroDB $db)
@@ -52,9 +52,10 @@ final class MailSettingsRepository
         $settings = ['from_email' => $legacySender, 'from_name' => 'dobrodruzi.cz',
             'reply_to' => '', 'public_base_url' => '', 'automatic_enabled' => true,
             'admin_recovery_email' => '', 'smtp_host' => '', 'smtp_port' => 587,
-            'smtp_security' => 'starttls', 'smtp_username' => '', 'smtp_password_encrypted' => ''];
+            'smtp_security' => 'starttls', 'smtp_username' => '', 'smtp_password_encrypted' => '',
+            'copy' => MailContent::defaults()];
         $templates = [];
-        foreach (self::EVENTS as $event => $default) {
+        foreach (MailContent::definitions() as $event => $default) {
             // Routine internal handling steps should not generate three additional
             // customer messages between payment confirmation and dispatch.
             $templates[$event] = ['enabled' => !in_array($event,
@@ -71,8 +72,9 @@ final class MailSettingsRepository
             $code = $row['event_code'];
             if (!isset($templates[$code])) continue;
             $templates[$code] = ['enabled' => (bool) $row['enabled'], 'subject' => (string) $row['subject'],
-                'message' => (string) $row['message_text'], 'label' => self::EVENTS[$code]['label']];
+                'message' => self::upgradeDefault($code, (string) $row['message_text']), 'label' => MailContent::definitions()[$code]['label']];
         }
+        $settings['copy'] = MailContent::copy(['settings' => $settings]);
         return ['settings' => $settings, 'templates' => $templates];
     }
 
@@ -83,7 +85,8 @@ final class MailSettingsRepository
         $reply = self::field($input, 'reply_to', 254);
         $name = self::field($input, 'from_name', 100);
         $baseUrl = rtrim(self::field($input, 'public_base_url', 500), '/');
-        $previous = $this->load()['settings'];
+        $previousConfiguration = $this->load();
+        $previous = $previousConfiguration['settings'];
         $recovery = self::field($input + $previous, 'admin_recovery_email', 254);
         $host = self::field($input + $previous, 'smtp_host', 253);
         $port = $input['smtp_port'] ?? $previous['smtp_port'];
@@ -119,26 +122,23 @@ final class MailSettingsRepository
             'public_base_url' => $baseUrl, 'automatic_enabled' => ($input['automatic_enabled'] ?? null) === '1',
             'admin_recovery_email' => $recovery, 'smtp_host' => $host,
             'smtp_port' => (int) $port, 'smtp_security' => $security,
-            'smtp_username' => $username, 'smtp_password_encrypted' => $encrypted];
+            'smtp_username' => $username, 'smtp_password_encrypted' => $encrypted,
+            'copy' => self::validateCopy($input['copy'] ?? $previous['copy'])];
         $inputTemplates = $input['templates'] ?? null;
         if (!is_array($inputTemplates)) throw new InvalidArgumentException('Šablony e-mailů chybí.');
         $templates = [];
-        foreach (self::EVENTS as $code => $default) {
-            $entry = $inputTemplates[$code] ?? null;
+        foreach (MailContent::definitions() as $code => $default) {
+            $entry = $inputTemplates[$code] ?? (isset(MailContent::EXTRA_TEMPLATES[$code])
+                ? $previousConfiguration['templates'][$code] : null);
             if (!is_array($entry)) throw new InvalidArgumentException('Šablona ' . $code . ' chybí.');
             $subject = self::field($entry, 'subject', 190);
             $message = self::field($entry, 'message', 5000);
             if ($subject === '' || $message === '' || preg_match('/[\r\n]/', $subject)) {
                 throw new InvalidArgumentException('Zkontroluj předmět, text a zástupné značky šablony ' . $code . '.');
             }
-            preg_match_all('/\{([^{}]+)\}/u', $subject . ' ' . $message, $found);
-            foreach ($found[1] as $placeholder) {
-                if (!in_array($placeholder, ['order_number', 'customer_name', 'total', 'carrier'], true)) {
-                    throw new InvalidArgumentException('Neznámá zástupná značka {' . $placeholder . '}.');
-                }
-            }
+            MailContent::validatePlaceholders($subject . ' ' . $message, MailContent::placeholders($code));
             $templates[$code] = ['subject' => $subject, 'message' => $message,
-                'enabled' => ($entry['enabled'] ?? null) === '1'];
+                'enabled' => isset(MailContent::EXTRA_TEMPLATES[$code]) || ($entry['enabled'] ?? null) === '1'];
         }
         $this->db->startTransaction();
         try {
@@ -156,6 +156,66 @@ final class MailSettingsRepository
             $this->db->rollback();
             throw $error;
         }
+    }
+
+
+    /** Drafts never expose the stored SMTP secret and never save or send anything. */
+    public static function withDraft(array $configuration, array $input): array
+    {
+        foreach (['from_email', 'from_name', 'reply_to', 'public_base_url', 'admin_recovery_email',
+            'smtp_host', 'smtp_port', 'smtp_security', 'smtp_username'] as $key) {
+            if (is_string($input[$key] ?? null)) $configuration['settings'][$key] = $input[$key];
+        }
+        $configuration['settings']['automatic_enabled'] = ($input['automatic_enabled'] ?? '') === '1';
+        foreach (MailContent::defaults() as $key => $default) {
+            if (is_string($input['copy'][$key] ?? null)) $configuration['settings']['copy'][$key] = $input['copy'][$key];
+        }
+        foreach ($configuration['templates'] as $code => &$entry) {
+            if (!is_array($input['templates'][$code] ?? null)) continue;
+            foreach (['subject', 'message'] as $key) {
+                if (is_string($input['templates'][$code][$key] ?? null)) $entry[$key] = $input['templates'][$code][$key];
+            }
+            $entry['enabled'] = isset(MailContent::EXTRA_TEMPLATES[$code]) || ($input['templates'][$code]['enabled'] ?? '') === '1';
+        }
+        unset($entry);
+        return $configuration;
+    }
+
+    public static function validateCopy(mixed $input): array
+    {
+        if (!is_array($input)) throw new InvalidArgumentException('Texty společných částí e-mailů nejsou platné.');
+        $copy = [];
+        foreach (MailContent::defaults() as $key => $default) {
+            $value = self::field($input + [$key => $default], $key, 2000);
+            if ($value === '' && !in_array($key, ['brand_line', 'signoff', 'footer'], true)) {
+                throw new InvalidArgumentException('Vyplň text e-mailu: ' . $key . '.');
+            }
+            preg_match_all('/\{([^{}]+)\}/u', $default, $matches);
+            MailContent::validatePlaceholders($value, array_merge(['shop_name'], $matches[1]));
+            foreach ($matches[1] as $placeholder) {
+                if ($placeholder !== 'shop_name' && !str_contains($value, '{' . $placeholder . '}')) {
+                    throw new InvalidArgumentException('V textu ' . $key . ' zachovej značku {' . $placeholder . '}, aby nechyběly údaje zákazníka.');
+                }
+            }
+            $copy[$key] = $value;
+        }
+        return $copy;
+    }
+
+    /** Upgrade only the exact former defaults, never an administrator's own wording. */
+    private static function upgradeDefault(string $code, string $message): string
+    {
+        $old = [
+            'order' => ['Děkujeme, {customer_name}. Objednávku jsme přijali. Níže najdete její souhrn a způsob úhrady.'],
+            'paid' => ['Platbu jsme obdrželi. O dalším postupu doručení vás budeme informovat.', 'Platbu jsme obdrželi. Objednávku nyní připravíme k odeslání.'],
+            'processing' => ['Vaši objednávku právě připravujeme. Jakmile bude připravena, dáme vám vědět.'],
+            'ready_to_ship' => ['Balík je připravený k předání dopravci. O předání vás budeme informovat.'],
+            'shipped' => ['Zásilka byla předána dopravci. Podrobnosti ke sledování najdete níže.', 'Zásilku jsme předali dopravci. Podrobnosti ke sledování najdete níže.'],
+            'tracking' => ['Doplnili jsme číslo nebo odkaz pro sledování vaší zásilky.'],
+            'completed' => ['Objednávku jsme označili jako dokončenou. Děkujeme za váš nákup.'],
+            'cancelled' => ['Vaše objednávka byla zrušena. V případě dotazů nám odpovězte na tento e-mail.'],
+        ];
+        return in_array($message, $old[$code] ?? [], true) ? self::EVENTS[$code]['message'] : $message;
     }
 
     private static function field(array $input, string $key, int $max): string

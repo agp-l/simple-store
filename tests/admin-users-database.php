@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__) . '/vendor/autoload.php';
+require __DIR__ . '/support/mail-message.php';
 use SimpleStore\Admin\{AccountManagementRepository, AdminUserRepository, AdminAuth};
 use SimpleStore\Auth\PasswordResetService;
 use SimpleStore\Customer\{CustomerRepository, CustomerAuth};
@@ -66,7 +67,7 @@ try {
     $reject(fn()=>$manager->delete($owner,$second,$stale));
     $reject(fn()=>$manager->update($owner,$second,$rev($second),$asForm($second,['email'=>'owner@example.test'])));
     $messages=[];
-    $reset = new PasswordResetService($db, static function(string $email,string $subject,string $body) use (&$messages): bool { $messages[]=[$email,$body]; return true; });
+    $reset = new PasswordResetService($db, static function(string $email,string $subject,string $body) use (&$messages): bool { $messages[]=[$email,decodedMailText($body)]; return true; });
     $reset->request('admin','second@example.test','admin.php');
     $assert(count($messages)===1 && $messages[0][0]==='second@example.test', 'Recovery was sent to a different administrator.');
     preg_match('/token=([a-f0-9]{64})/', $messages[0][1], $match);

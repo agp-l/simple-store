@@ -17,8 +17,9 @@ final class CaseNotificationService
 
     public function receipt(array $case): void
     {
+        $configuration = (new MailSettingsRepository($this->db))->load();
         $this->enqueue($case, 'after-sales:' . $case['id'] . ':submitted',
-            CaseNotice::receipt($case, $this->url($case)));
+            CaseNotice::receipt($case, CaseNotice::publicUrl($case, (string) $configuration['settings']['public_base_url']), $configuration));
         try {
             $settings = (new MailSettingsRepository($this->db))->load()['settings'];
             $seller = json_decode((string) ($case['seller_json'] ?? ''), true);
@@ -47,8 +48,9 @@ final class CaseNotificationService
 
     public function event(array $case, int $eventId, string $message): void
     {
+        $configuration = (new MailSettingsRepository($this->db))->load();
         $this->enqueue($case, 'after-sales:' . $case['id'] . ':event:' . $eventId,
-            CaseNotice::event($case, $message, $this->url($case)));
+            CaseNotice::event($case, $message, CaseNotice::publicUrl($case, (string) $configuration['settings']['public_base_url']), $configuration));
     }
 
     public function state(array $case): string
@@ -75,9 +77,4 @@ final class CaseNotificationService
         }
     }
 
-    private function url(array $case): string
-    {
-        $settings = (new MailSettingsRepository($this->db))->load()['settings'];
-        return CaseNotice::publicUrl($case, (string) $settings['public_base_url']);
-    }
 }

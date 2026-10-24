@@ -30,6 +30,7 @@ namespace {
 namespace SimpleStore\Accounting {
     class MailSettingsRepository
     {
+        public const EVENTS = [];
         public function __construct(\MeekroDB $db) {}
 
         public function load(): array
@@ -42,6 +43,8 @@ namespace SimpleStore\Accounting {
 }
 
 namespace {
+    require dirname(__DIR__) . '/src/bootstrap.php';
+    require __DIR__ . '/support/mail-message.php';
     require dirname(__DIR__) . '/src/Admin/AdminUserRepository.php';
     require dirname(__DIR__) . '/src/Auth/PasswordResetService.php';
 
@@ -49,7 +52,7 @@ namespace {
     $messages = [];
     $service = new \SimpleStore\Auth\PasswordResetService($db,
         static function (string $email, string $subject, string $message) use (&$messages): bool {
-            $messages[] = $message;
+            $messages[] = decodedMailText($message);
             return true;
         });
 

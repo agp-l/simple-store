@@ -41,7 +41,7 @@ $check($token !== \SimpleStore\Checkout\CheckoutReview::token($summary, ['email'
 $order = ['items' => $items, 'total_czk' => 3879, 'subtotal_czk' => 3800, 'shipping_czk' => 79,
     'shipping' => ['assisted_purchase' => ['early_start' => true, 'early_request_text' => A::EARLY_REQUEST]]];
 $mail = OrderEmailComposer::compose('order', $order, MailSettingsRepository::EVENTS['order']);
-$check(str_contains($mail['text'], '1 678 Kč + služba 122 Kč') &&
+$check(str_contains($mail['text'], '1 678 Kč + zajištění nákupu 122 Kč') &&
     str_contains($mail['html'], 'Partner &lt;test&gt;') && str_contains($mail['text'], A::EARLY_REQUEST),
     'Confirmation lost breakdown, seller, escaping or explicit request.');
 $item = $assisted; $checkoutEscape = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');

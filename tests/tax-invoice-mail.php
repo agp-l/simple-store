@@ -274,7 +274,7 @@ if ($online['payment_method'] !== 'comgate' || $online['total_czk'] !== 990) {
     throw new RuntimeException('Paid gateway order did not produce a payment snapshot invoice.');
 }
 $onlineMail = $queue->enqueueInvoice($online);
-if (!str_contains($db->outbox[$onlineMail]['body_text'], 'Uhrazeno online přes Comgate') ||
+if (!str_contains($db->outbox[$onlineMail]['body_text'], 'Platba přes Comgate byla při vystavení faktury potvrzená.') ||
     str_contains($db->outbox[$onlineMail]['body_text'], 'Uhrazeno bankovním převodem')) {
     throw new RuntimeException('Gateway invoice mail misstates the payment method.');
 }
@@ -292,7 +292,7 @@ $orderMail = $queue->enqueueOrder($db->orders[10] + [
     'items' => [['name' => 'Stan', 'quantity' => 2, 'unit_price_czk' => 450]],
     'shipping' => ['label' => 'Kurýr'],
 ]);
-if ($orderMail === null || !str_contains($db->outbox[$orderMail]['body_text'], 'online přes Comgate') ||
+if ($orderMail === null || !str_contains($db->outbox[$orderMail]['body_text'], 'Online přes Comgate') ||
     str_contains($db->outbox[$orderMail]['body_text'], 'Číslo účtu:')) {
     throw new RuntimeException('Gateway order email contains bank transfer instructions.');
 }
@@ -343,7 +343,7 @@ $bitcoinOrderMail = $queue->enqueueOrder($db->orders[11] + [
     'shipping' => ['label' => 'Kurýr'],
 ], 'https://shop.example/cs/objednavka/private-token');
 if ($bitcoinOrderMail === null ||
-    !str_contains($db->outbox[$bitcoinOrderMail]['body_text'], 'online přes BTCPay Server') ||
+    !str_contains($db->outbox[$bitcoinOrderMail]['body_text'], 'Online přes BTCPay Server') ||
     !str_contains($db->outbox[$bitcoinOrderMail]['body_text'], 'https://shop.example') ||
     str_contains($db->outbox[$bitcoinOrderMail]['body_text'], 'Číslo účtu:')) {
     throw new RuntimeException('BTCPay order email must include payment instructions and order link.');

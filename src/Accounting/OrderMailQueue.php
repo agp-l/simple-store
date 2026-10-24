@@ -52,7 +52,7 @@ final class OrderMailQueue
             (string) $config['settings']['public_base_url'] !== '');
         $message = OrderEmailComposer::compose('order', $order, $config['templates']['order'], [],
             $this->orderUrl($order, $config['settings'], $orderUrl),
-            (string) $config['settings']['public_base_url'], $legal['slugs'], $legal['language']);
+            (string) $config['settings']['public_base_url'], $legal['slugs'], $legal['language'], $config);
         $orderId = (int) ($order['id'] ?? 0);
         if ($orderId < 1) throw new InvalidArgumentException('Neplatná objednávka pro potvrzení e-mailem.');
         // Checkout and cancellation both lock the order before its outbox row. A delayed
@@ -103,7 +103,7 @@ final class OrderMailQueue
             : ['slugs' => [], 'terms' => '', 'language' => 'cs'];
         $message = OrderEmailComposer::compose($stage, $order, $config['templates'][$stage], $tracking,
             $this->orderUrl($order, $config['settings']), (string) $config['settings']['public_base_url'],
-            $legal['slugs'], $legal['language']);
+            $legal['slugs'], $legal['language'], $config);
         $key = $eventKey !== '' ? $eventKey : $stage . ':' . (int) $order['id'];
         return $this->enqueue($key, (int) $order['id'], (string) $order['customer_email'],
             $message['subject'], $message['text'], $message['html'], $legal['terms']);
@@ -135,9 +135,9 @@ final class OrderMailQueue
         if (filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
             throw new InvalidArgumentException('Zadej platný e-mail příjemce testu.');
         }
-        $body = "Test e-mailového nastavení dobrodruzi.cz\n\nPokud tuto zprávu čtete, hosting zprávu přijal k odeslání.\n";
+        $message = ServiceEmailComposer::test($this->settings->load());
         return $this->enqueue('test:' . bin2hex(random_bytes(12)), 0, $email,
-            'Test e-mailu dobrodruzi.cz', $body, self::simpleHtml($body));
+            $message['subject'], $message['text'], $message['html']);
     }
 
     /** Queue a custom transactional notification once per unique event key. */
@@ -154,43 +154,17 @@ final class OrderMailQueue
 
     public function enqueueInvoice(array $invoice): int
     {
-        $seller = $invoice['seller'];
         $buyer = $invoice['buyer'];
-        $lines = ['Faktura ' . $invoice['document_number'],
-            'Datum vystavení: ' . $invoice['issue_date'],
-            'Objednávka: ' . $invoice['order_number'], '',
-            'Dodavatel: ' . $seller['name'], 'IČO: ' . $seller['ico'],
-            $seller['street'] . ', ' . $seller['postal_code'] . ' ' . $seller['city'],
-            'Odběratel: ' . $buyer['name'],
-            trim($buyer['street'] . ', ' . $buyer['postal_code'] . ' ' . $buyer['city'], ', '), '',
-            'Položky:'];
-        foreach ($invoice['items'] as $item) {
-            $lines[] = (int) $item['quantity'] . ' × ' . $item['name'] . ' (' .
-                (int) $item['unit_price_czk'] . ' Kč/ks) — ' .
-                ((int) $item['quantity'] * (int) $item['unit_price_czk']) . ' Kč';
-        }
-        $lines[] = 'Doprava: ' . (int) $invoice['shipping_czk'] . ' Kč';
-        $lines[] = 'Celkem: ' . (int) $invoice['total_czk'] . ' Kč';
-        $principal = \SimpleStore\Checkout\AssistedPurchase::principal($invoice['items']);
-        if ($principal > 0) $lines[] = 'Mimo tuto fakturu přijato ' . $principal .
-            ' Kč jako svěřené prostředky k nákupu u partnerů. Doklad za zboží vystavuje prodávající zákazníkovi. Celá přijatá platba: ' .
-            ((int) $invoice['total_czk'] + $principal) . ' Kč. Neplaťte znovu.';
-        $lines[] = match ($invoice['payment_method'] ?? 'bank_transfer') {
-            'comgate' => 'Uhrazeno online přes Comgate.',
-            'gopay' => 'Platba online přes GoPay byla při vystavení faktury potvrzená.',
-            'btcpay' => 'Platba přes BTCPay Server byla při vystavení faktury potvrzená.',
-            default => 'Uhrazeno bankovním převodem · VS: ' . ($invoice['variable_symbol'] ?? ''),
-        };
-        $lines[] = 'Nejsem plátce DPH.';
-        $subject = 'Faktura ' . $invoice['document_number'];
-        $body = implode("\n", $lines) . "\n";
+        $message = ServiceEmailComposer::invoice($invoice, $this->settings->load());
+        $subject = $message['subject'];
+        $body = $message['text'];
         $id = $this->enqueue('invoice:' . (int) $invoice['id'],
             $invoice['order_id'] === null ? null : (int) $invoice['order_id'],
-            (string) $buyer['email'], $subject, $body, self::simpleHtml($body));
+            (string) $buyer['email'], $subject, $body, $message['html']);
         // A corrected number must also reach the queued message. Never rewrite sent mail.
         if ($this->htmlInstalled()) {
             $this->db->query('UPDATE shop_mail_outbox SET subject=%s, body_text=%s, body_html=%s
-                WHERE id=%i AND state IN (%s,%s)', $subject, $body, self::simpleHtml($body), $id, 'queued', 'failed');
+                WHERE id=%i AND state IN (%s,%s)', $subject, $body, $message['html'], $id, 'queued', 'failed');
         } else {
             $this->db->query('UPDATE shop_mail_outbox SET subject=%s, body_text=%s
                 WHERE id=%i AND state IN (%s,%s)', $subject, $body, $id, 'queued', 'failed');

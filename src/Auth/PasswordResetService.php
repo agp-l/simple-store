@@ -33,7 +33,8 @@ final class PasswordResetService
         self::role($role);
         if (!in_array($path, ['admin.php', 'account.php'], true)) throw new InvalidArgumentException('Neplatná adresa obnovy.');
         if (!$this->available()) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky.');
-        $settings = (new MailSettingsRepository($this->db))->load()['settings'];
+        $configuration = (new MailSettingsRepository($this->db))->load();
+        $settings = $configuration['settings'];
         if ($settings['from_email'] === '' || $settings['public_base_url'] === '') {
             throw new RuntimeException('Pro obnovu hesla nastav odesílatele a veřejnou HTTPS adresu v Nastavení obchodu → E-maily.');
         }
@@ -75,15 +76,16 @@ final class PasswordResetService
             VALUES (%s, %i, %s, %s, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 30 MINUTE))',
             $hash, $id, hash('sha256', (string) $user['password_hash']), $role);
         $url .= 'reset-password/?token=' . $token;
-        $subject = '=?UTF-8?B?' . base64_encode($role === 'admin'
-            ? 'Obnova hesla administrace · dobrodruzi.cz'
-            : 'Obnova hesla zákaznického účtu · dobrodruzi.cz') . '?=';
+        $mail = \SimpleStore\Accounting\ServiceEmailComposer::passwordReset($role, $url, $configuration);
+        $subject = '=?UTF-8?B?' . base64_encode($mail['subject']) . '?=';
         $from = (string) $settings['from_email'];
         $name = '=?UTF-8?B?' . base64_encode((string) $settings['from_name']) . '?=';
-        $headers = 'From: ' . $name . ' <' . $from . ">\r\nContent-Type: text/plain; charset=UTF-8";
-        $account = $role === 'admin' ? 'administrátorskému účtu' : 'zákaznickému účtu';
-        $message = "Pro obnovu hesla k {$account} na dobrodruzi.cz otevři tento odkaz:\n\n{$url}\n\n"
-            . "Odkaz platí 30 minut a lze jej použít jen jednou. Pokud jsi o obnovu nežádal(a), zprávu ignoruj.\n";
+        $mime = \SimpleStore\Accounting\OrderMailMime::compose($mail['text'], $mail['html']);
+        $headers = 'From: ' . $name . ' <' . $from . ">\r\n" . $mime['headers'];
+        if (filter_var($settings['reply_to'] ?? '', FILTER_VALIDATE_EMAIL)) {
+            $headers .= "\r\nReply-To: " . $settings['reply_to'];
+        }
+        $message = $mime['body'];
         try {
             $delivered = $this->transport !== null
                 ? ($this->transport)($email, $subject, $message, $headers)
