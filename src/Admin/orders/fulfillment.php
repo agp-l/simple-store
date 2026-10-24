@@ -17,9 +17,9 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'set-order-status') {
             $orders->setFulfillmentStatus($id, $newStatus, $source, $note);
             try { $orderMail->notifyStage($id, $newStatus, $orderMailSender); }
             catch (Throwable $mailError) { error_log('Order stage notification: ' . $mailError->getMessage()); }
-            header('Location: ' . (($_POST['return_list'] ?? null) === '1'
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty((($_POST['return_list'] ?? null) === '1'
                 ? $orderListReturnUrl . '&saved=1'
-                : $adminUrl . '?section=orders&id=' . $id . '&saved=1'), true, 303);
+                : $adminUrl . '?section=orders&id=' . $id . '&saved=1')), true, 303);
             exit;
         } catch (InvalidArgumentException $exception) {
             http_response_code(422);
@@ -44,7 +44,7 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'save-order-tracking') {
                 $orderMail->notifyStage((int) $id, 'tracking', $orderMailSender, $key);
             } catch (Throwable $mailError) { error_log('Tracking notification: ' . $mailError->getMessage()); }
         }
-        header('Location: ' . $adminUrl . '?section=orders&id=' . (int) $id . '&tracking_saved=1', true, 303);
+        header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=orders&id=' . (int) $id . '&tracking_saved=1'), true, 303);
         exit;
     } catch (InvalidArgumentException $exception) {
         http_response_code(422);
@@ -74,7 +74,7 @@ if ($method === 'POST' && ($_POST['action'] ?? '') === 'change-order-shipping') 
         $orderShipping->change($id, (int) $admin['id'], $newMethod, $expectedMethod,
             $reason, ($_POST['draft_not_submitted'] ?? '') === '1', $homeAddress,
             ($_POST['address_confirmed'] ?? '') === '1');
-        header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&shipping_saved=1', true, 303);
+        header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=orders&id=' . $id . '&shipping_saved=1'), true, 303);
         exit;
     } catch (InvalidArgumentException $exception) {
         http_response_code(422);

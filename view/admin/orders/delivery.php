@@ -20,7 +20,7 @@
         <?php if ($orderTrackingReady): ?>
           <details class="panel-order-accordion"><summary>Sledování zásilky a externí dodavatel</summary>
             <p class="panel-help">U Zásilkovny se použije odkaz z API, u GLS a Balíkovny registrované číslo. Číslo nebo HTTPS odkaz můžeš doplnit i ručně. Po předání dopravci se nové údaje pošlou zákazníkovi; stejné uložení zprávu neopakuje.</p>
-            <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+            <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
               <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="save-order-tracking"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
               <label>Číslo zásilky<input name="tracking_number" maxlength="100" value="<?= $escape($orderManualTracking['number']) ?>" placeholder="Číslo přidělené dopravcem"></label>
               <label>Veřejný odkaz pro sledování<input type="url" name="tracking_url" maxlength="1000" value="<?= $escape($orderManualTracking['url']) ?>" placeholder="https://..."></label>
@@ -32,7 +32,7 @@
           <details class="panel-order-accordion" <?= $shippingEntered !== [] ? 'open' : '' ?>>
             <summary><?= \SimpleStore\Rendering\Icon::render('edit') ?> Změnit skutečného dopravce</summary>
             <p class="panel-help">Změna se týká expedice. Původní cena dopravy, objednávka a vystavený doklad zůstávají stejné.</p>
-            <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+            <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
               <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="change-order-shipping"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="expected_method" value="<?= $escape($shipping['method'] ?? '') ?>">
               <label>Expedovat přes <select name="shipping_method" required>
                 <?php foreach ($shippingChangeOptions as $methodCode => $methodLabel): ?><option value="<?= $escape($methodCode) ?>" <?= $methodCode === $shippingFormValue('shipping_method') ? 'selected' : '' ?>><?= $escape($methodLabel) ?></option><?php endforeach; ?>

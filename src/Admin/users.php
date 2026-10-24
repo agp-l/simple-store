@@ -49,7 +49,7 @@ if ($method === 'POST') {
         } elseif ($action === 'user-delete') {
             if ($read($_POST, 'confirm_delete') !== '1') throw new InvalidArgumentException('Potvrď smazání účtu.');
             $manager->delete($actorId, $userId, $revision);
-            header('Location: ' . $adminUrl . '?section=users&deleted=1', true, 303);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=users&deleted=1'), true, 303);
             exit;
         } elseif ($action === 'user-address-save') {
             $manager->saveAddress($actorId, $userId, $revision, $addressId > 0 ? $addressId : null, $_POST);
@@ -61,9 +61,9 @@ if ($method === 'POST') {
         }
         if (!$auth->signedIn()) {
             $auth->signOut();
-            header('Location: ' . $adminUrl . '?account_changed=1', true, 303);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?account_changed=1'), true, 303);
         } else {
-            header('Location: ' . $adminUrl . '?section=users&id=' . $userId . '&saved=1', true, 303);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=users&id=' . $userId . '&saved=1'), true, 303);
         }
         exit;
     } catch (InvalidArgumentException | RuntimeException $exception) {

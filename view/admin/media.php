@@ -7,19 +7,19 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
   <?php if ($mediaError !== ''): ?><p class="panel-error" role="alert"><?= $escape($mediaError) ?></p><?php endif; ?>
   <?php if ($selectedMedia === null): ?>
     <p>Fotografie spravuj u konkrétního produktu, stránky nebo článku. Tam uvidíš, která je hlavní a kde je použitá. Otevři obsah a stiskni <strong>Fotografie</strong>.</p>
-    <p class="media-actions"><a href="<?= $escape($basePath . $site['default_language'] . '#produkty') ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Otevřít produkty</a>
-      <a href="<?= $escape($basePath . $site['default_language'] . '/blog') ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Otevřít blog</a>
-      <a href="<?= $escape($basePath . $site['default_language'] . '?manage=1') ?>">Najít neveřejný produkt</a>
-      <a href="<?= $escape($adminUrl) ?>">Najít neveřejný dokument</a></p>
+    <p class="media-actions"><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($basePath . $site['default_language'] . '#produkty') ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Otevřít produkty</a>
+      <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($basePath . $site['default_language'] . '/blog') ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Otevřít blog</a>
+      <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($basePath . $site['default_language'] . '?manage=1') ?>">Najít neveřejný produkt</a>
+      <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>">Najít neveřejný dokument</a></p>
   <?php else: ?>
     <p><strong><?= $escape($selectedMedia['label']) ?></strong> · <?= $escape($selectedMedia['language']) ?>
       <?= $selectedMedia['category'] !== '' ? ' · Kategorie: ' . $escape($selectedMedia['category']) : '' ?></p>
     <?php if ($selectedMedia['type'] === 'product'): ?>
       <?php $mainPath = $selectedMedia['mainImagePath']; $mainUrl = str_starts_with($mainPath, 'images/') ? $basePath . $mainPath : $mainPath; ?>
-      <p>Hlavní fotografie v aktuální revizi: <a data-media-main href="<?= $escape($mainUrl) ?>" target="_blank" rel="noopener noreferrer"><?= $escape($mainPath) ?></a></p>
+      <p>Hlavní fotografie v aktuální revizi: <a data-media-main href="<?= \SimpleStore\Navigation\PanelUrl::escape($mainUrl) ?>" target="_blank" rel="noopener noreferrer"><?= $escape($mainPath) ?></a></p>
     <?php endif; ?>
     <p class="media-actions"><button type="button" class="panel-action panel-button" data-media-open><?= \SimpleStore\Rendering\Icon::render('upload') ?> Nahrát fotografie</button>
-      <a href="<?= $escape($selectedMedia['editUrl']) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Otevřít obsah k úpravě</a></p>
+      <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($selectedMedia['editUrl']) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Otevřít obsah k úpravě</a></p>
     <p class="media-note"><?= $selectedMedia['type'] === 'product'
         ? 'Z této stránky se první nahraný snímek stane hlavní fotografií produktu, další přibudou do galerie. Při nahrávání přímo na produktu se umístění řídí zvoleným tlačítkem.'
         : 'Nahrání vloží snímky jako obrazové bloky do dokumentu.' ?></p>

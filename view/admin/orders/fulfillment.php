@@ -3,7 +3,7 @@
       <?php if (!in_array($order['status'], ['completed', 'cancelled', 'test'], true) && !$gatewayDispatchBlocked): ?>
       <?php $packetaMethod = in_array($shipping['method'] ?? '', ['zasilkovna_pickup', 'zasilkovna_home'], true);
       $fulfillmentSource = $order['fulfillment_source'] ?? 'own'; ?>
-      <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+      <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
         <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="set-order-status"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
         <?php if ($paid && $order['status'] !== 'shipped' && $fulfillmentSourceReady): ?>
           <label>Expedici zajišťuje <select name="fulfillment_source">
@@ -24,19 +24,19 @@
         </select></label>
         <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit stav</button>
         <p class="panel-help">Připravena k odeslání znamená zabalenou zásilku, případně potvrzení připravenosti od dodavatele. Stav Předána dopravci nastav až po skutečném předání balíku (u dodavatele po jeho potvrzení), Dokončena po doručení. <?= $packetaMethod ? 'Při expedici obchodem přes Zásilkovnu musí být místní zásilka vytvořená. Dodavatel může expedovat bez místního podání.' : '' ?> Dokončené a stornované objednávky se zákazníkovi přesunou do historie.</p>
-        <?php if ($paid && !$fulfillmentSourceReady): ?><p class="panel-help">Pro volbu externího dodavatele <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
+        <?php if ($paid && !$fulfillmentSourceReady): ?><p class="panel-help">Pro volbu externího dodavatele <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
       </form>
       <?php elseif ($gatewayDispatchBlocked): ?>
         <p class="panel-help">Běžnou expedici po vrácení nebo neověřeném stavu platby nelze potvrdit. Pokud opravuješ omylem uložený stav, použij níže ovládání oprav s uvedením důvodu.</p>
       <?php endif; ?>
       <?php if (!$orderControlsReady): ?>
-        <p class="panel-help">Pro opravy a mazání objednávek <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
+        <p class="panel-help">Pro opravy a mazání objednávek <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
       <?php else: ?>
         <?php if (in_array($order['status'], ['shipped', 'completed'], true)): ?>
           <details class="panel-order-accordion panel-order-controls" aria-label="Oprava chybného odeslání">
             <summary><?= \SimpleStore\Rendering\Icon::render('edit') ?> Opravit omylem nastavený stav</summary>
             <p class="panel-help">Použij jen když balík ve skutečnosti nebyl předán dopravci. Oprava nemění platbu ani zásilku u dopravce; zůstane zapsána v historii.</p>
-            <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+            <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
               <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="correct-order-status"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="confirmation" value="not_handed">
               <label>Skutečný stav <select name="order_status"><option value="processing">Připravuje se</option><option value="ready_to_ship">Připravena k odeslání</option></select></label>
               <label>Důvod opravy <textarea name="reason" minlength="8" maxlength="190" required placeholder="Například omylem označeno jako odeslané"></textarea></label>
@@ -49,7 +49,7 @@
           <details class="panel-order-accordion panel-order-controls" aria-label="Oprava dokončení">
             <summary><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Vrátit z dokončeno na předáno dopravci</summary>
             <p class="panel-help">Když objednávka stále cestuje a doručení bylo potvrzeno omylem.</p>
-            <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+            <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
               <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="correct-order-status"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="order_status" value="shipped"><input type="hidden" name="confirmation" value="not_delivered">
               <label>Důvod opravy <textarea name="reason" minlength="8" maxlength="190" required></textarea></label>
               <label class="panel-check"><input type="checkbox" name="verified" value="1" required> Potvrzuji, že zásilka ještě nebyla doručena.</label>
@@ -61,7 +61,7 @@
           <details class="panel-order-accordion panel-order-controls" aria-label="Obnovení objednávky">
             <summary><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Obnovit stornovanou objednávku</summary>
             <p class="panel-help">Zrušení bylo omyl; platba zůstává neověřená.</p>
-            <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+            <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
               <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="correct-order-status"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="order_status" value="new"><input type="hidden" name="confirmation" value="reopen">
               <label>Důvod opravy <textarea name="reason" minlength="8" maxlength="190" required></textarea></label>
               <label class="panel-check"><input type="checkbox" name="verified" value="1" required> Potvrzuji, že chci zrušenou objednávku znovu otevřít.</label>
@@ -77,7 +77,7 @@
           <details class="panel-order-accordion panel-order-controls" aria-label="Smazání objednávky">
             <summary><?= \SimpleStore\Rendering\Icon::render('delete') ?> Trvale smazat objednávku</summary>
             <p class="panel-help">Objednávka zmizí z běžného seznamu a účtu zákazníka bez ohledu na stav platby či vyřízení. Vystavená faktura, finanční záznamy a zaplacené položky zůstanou v účetnictví, čísla skutečných zásilek v databázi pro dohledání u dopravce. Odstranění objednávky nestornuje platbu ani fyzickou zásilku u dopravce. Nejasné založení platby u brány nejprve ověř. Do důvodu nepiš osobní údaje.</p>
-            <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+            <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
               <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="delete-order"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>"><input type="hidden" name="confirmation" value="delete">
               <label>Důvod smazání <textarea name="reason" minlength="8" maxlength="190" required placeholder="Například test pokladny"></textarea></label>
               <label>Opiš číslo <?= $escape($order['order_number']) ?><input name="order_number" autocomplete="off" required></label>

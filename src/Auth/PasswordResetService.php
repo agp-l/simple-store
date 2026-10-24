@@ -37,7 +37,8 @@ final class PasswordResetService
         if ($settings['from_email'] === '' || $settings['public_base_url'] === '') {
             throw new RuntimeException('Pro obnovu hesla nastav odesílatele a veřejnou HTTPS adresu v Nastavení obchodu → E-maily.');
         }
-        $url = rtrim($settings['public_base_url'], '/') . '/' . $path;
+        $area = $path === 'admin.php' ? 'admin' : 'account';
+        $url = rtrim($settings['public_base_url'], '/') . '/' . $area . '/';
         if ($entryUrl !== null && !self::sameEntryPoint($url, $entryUrl)) {
             throw new RuntimeException('Veřejná HTTPS adresa v nastavení e-mailů vede na jiný web. Oprav ji na adresu této instalace bez /cs.');
         }
@@ -73,7 +74,7 @@ final class PasswordResetService
         $this->db->query('INSERT INTO shop_password_resets (token_hash, user_id, password_hash_at_issue, role, created_at, expires_at)
             VALUES (%s, %i, %s, %s, UTC_TIMESTAMP(), DATE_ADD(UTC_TIMESTAMP(), INTERVAL 30 MINUTE))',
             $hash, $id, hash('sha256', (string) $user['password_hash']), $role);
-        $url .= '?mode=reset&token=' . $token;
+        $url .= 'reset-password/?token=' . $token;
         $subject = '=?UTF-8?B?' . base64_encode($role === 'admin'
             ? 'Obnova hesla administrace · dobrodruzi.cz'
             : 'Obnova hesla zákaznického účtu · dobrodruzi.cz') . '?=';
@@ -149,6 +150,7 @@ final class PasswordResetService
     {
         $a = parse_url($configured);
         $b = parse_url($current);
+        if (is_array($b)) $b['path'] = preg_replace('~/(admin|account)\.php$~', '/$1/', (string) ($b['path'] ?? ''));
         return is_array($a) && is_array($b) &&
             strtolower((string) ($a['host'] ?? '')) === strtolower((string) ($b['host'] ?? '')) &&
             ($a['port'] ?? 443) === ($b['port'] ?? 443) &&

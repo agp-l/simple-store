@@ -39,7 +39,7 @@ if ($method === 'POST') {
         try {
             if ($action === 'return-delete') {
                 $returns->delete($id, is_string($_POST['confirmation'] ?? null) ? $_POST['confirmation'] : '');
-                header('Location: ' . $returnBaseUrl . '&deleted=1', true, 303);
+                header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($returnBaseUrl . '&deleted=1'), true, 303);
                 exit;
             }
             if ($action === 'return-refund') {
@@ -68,8 +68,8 @@ if ($method === 'POST') {
                     $mailProblem = true;
                 }
             }
-            header('Location: ' . $returnBaseUrl . '&id=' . $id . '&saved=1' .
-                ($mailProblem ? '&mail_problem=1' : ''), true, 303);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($returnBaseUrl . '&id=' . $id . '&saved=1' .
+                ($mailProblem ? '&mail_problem=1' : '')), true, 303);
             exit;
         } catch (InvalidArgumentException $exception) {
             http_response_code(422);

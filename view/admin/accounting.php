@@ -33,24 +33,24 @@ $accountingYearMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'
 </div>
 <nav class="panel-accounting-nav" aria-label="Evidence podnikání">
   <?php foreach (['overview', 'money', 'funds', 'balances', 'closing', 'invoices', 'guide', 'settings'] as $key): ?>
-    <a href="<?= $escape($adminUrl . '?section=accounting&tab=' . $key . '&year=' . $taxYear) ?>" <?= $accountingTab === $key ? 'aria-current="page"' : '' ?>><?= \SimpleStore\Rendering\Icon::render(['overview' => 'list', 'money' => 'card', 'funds' => 'card', 'balances' => 'list', 'closing' => 'list', 'invoices' => 'document', 'guide' => 'book', 'settings' => 'settings'][$key]) ?> <?= $escape($accountingTitles[$key]) ?></a>
+    <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=' . $key . '&year=' . $taxYear) ?>" <?= $accountingTab === $key ? 'aria-current="page"' : '' ?>><?= \SimpleStore\Rendering\Icon::render(['overview' => 'list', 'money' => 'card', 'funds' => 'card', 'balances' => 'list', 'closing' => 'list', 'invoices' => 'document', 'guide' => 'book', 'settings' => 'settings'][$key]) ?> <?= $escape($accountingTitles[$key]) ?></a>
   <?php endforeach; ?>
 </nav>
 <?php if ($accountingTab === 'overview' && in_array($accountingYearMethod, ['actual', 'percentage'], true)): ?>
-  <p class="panel-help">K evidenci za rok <?= (int) $taxYear ?> můžeš doplnit <a href="<?= $escape($adminUrl . '?section=accounting&tab=balances&year=' . $taxYear) ?>">pohledávky, dluhy a majetek</a>. Neuhrazené objednávky zkontroluj s podklady zvlášť.</p>
+  <p class="panel-help">K evidenci za rok <?= (int) $taxYear ?> můžeš doplnit <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=balances&year=' . $taxYear) ?>">pohledávky, dluhy a majetek</a>. Neuhrazené objednávky zkontroluj s podklady zvlášť.</p>
 <?php endif; ?>
 <?php if (($taxSettings['legal_form'] ?? 'sole_trader') === 'company'): ?>
-  <p class="panel-error" role="alert">Je nastavená obchodní společnost. Tato evidence je určena pro OSVČ; pro společnost není účetnictvím ani podkladem k přiznání. <a href="<?= $escape($adminUrl . '?section=accounting&tab=settings') ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Zkontrolovat právní formu</a>.</p>
+  <p class="panel-error" role="alert">Je nastavená obchodní společnost. Tato evidence je určena pro OSVČ; pro společnost není účetnictvím ani podkladem k přiznání. <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=settings') ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Zkontrolovat právní formu</a>.</p>
 <?php elseif (preg_match('/s\.?\s*r\.?\s*o\.?/iu', (string) ($taxSettings['name'] ?? '')) === 1): ?>
-  <p class="panel-notice" role="status">Údaje prodávajícího obsahují „s.r.o.“, ale právní forma je nastavená na OSVČ. <a href="<?= $escape($adminUrl . '?section=accounting&tab=settings') ?>">Ověř právní formu</a>, než použiješ tento přehled pro daně.</p>
+  <p class="panel-notice" role="status">Údaje prodávajícího obsahují „s.r.o.“, ale právní forma je nastavená na OSVČ. <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=settings') ?>">Ověř právní formu</a>, než použiješ tento přehled pro daně.</p>
 <?php endif; ?>
 <?php if (in_array($accountingTab, ['balances', 'stock', 'orders', 'mail'], true)): ?>
-  <p class="panel-help"><a href="<?= $escape($adminUrl . '?section=accounting&tab=overview&year=' . $taxYear) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-left') ?> Zpět ke knize dokladů</a></p>
+  <p class="panel-help"><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=overview&year=' . $taxYear) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-left') ?> Zpět ke knize dokladů</a></p>
 <?php endif; ?>
 <?php if ($accountingTab === 'orders'): ?>
 <section class="panel-panel">
   <h2>Období</h2>
-  <form class="panel-search" method="get" action="<?= $escape($adminUrl) ?>">
+  <form class="panel-search" method="get" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>">
     <input type="hidden" name="section" value="accounting">
     <input type="hidden" name="tab" value="orders">
     <label>Od <input type="date" name="from" value="<?= $escape($accountingFrom) ?>" required></label>
@@ -60,13 +60,13 @@ $accountingYearMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'
   <p class="panel-help">Toto je kontrolní přehled stavů objednávek, nikoli peněžní deník. Vyber nejvýše 366 dní. Testovací objednávky se nezahrnují.</p>
 </section>
 <?php if (!$accountingReady): ?>
-  <p class="panel-error" role="alert">Nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
+  <p class="panel-error" role="alert">Nejdřív <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
 <?php endif; ?>
 <?php if ($accountingError !== ''): ?><p class="panel-error" role="alert"><?= $escape($accountingError) ?></p><?php endif; ?>
 <?php if ($accountingReady && $accountingError === ''): ?>
   <section class="panel-panel">
     <div class="panel-panel-head"><h2>Objednávky s potvrzenou platbou</h2>
-      <a class="panel-icon-link panel-button" href="<?= $escape($accountingExportUrl) ?>"><?= \SimpleStore\Rendering\Icon::render('download') ?> Stáhnout CSV</a></div>
+      <a class="panel-icon-link panel-button" href="<?= \SimpleStore\Navigation\PanelUrl::escape($accountingExportUrl) ?>"><?= \SimpleStore\Rendering\Icon::render('download') ?> Stáhnout CSV</a></div>
     <dl class="panel-order-facts">
       <div><dt>Počet objednávek</dt><dd><?= (int) $accountingTotals['count'] ?></dd></div>
       <div><dt>Zboží</dt><dd><?= $accountingMoney($accountingTotals['subtotal_czk']) ?></dd></div>
@@ -80,7 +80,7 @@ $accountingYearMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'
     <?php if ($accountingPage['items'] === []): ?><p class="panel-empty">Ve vybraném období nejsou objednávky s potvrzenou platbou.</p><?php endif; ?>
     <div class="panel-order-list">
       <?php foreach ($accountingPage['items'] as $row): ?>
-        <a class="panel-order-row" href="<?= $escape($adminUrl . '?section=orders&id=' . (int) $row['id']) ?>">
+        <a class="panel-order-row" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=orders&id=' . (int) $row['id']) ?>">
           <span><strong><?= $escape($row['order_number']) ?></strong><small>VS: <?= $escape($row['variable_symbol'] ?? '—') ?> · <?= $escape($row['payment_paid_at']) ?> UTC</small></span>
           <span><strong><?= $escape($row['customer_name']) ?></strong><small><?= $escape($row['customer_email'] ?? '') ?></small></span>
           <span><strong><?= $accountingMoney($row['total_czk']) ?></strong><small>Zboží <?= $accountingMoney($row['subtotal_czk']) ?> + doprava <?= $accountingMoney($row['shipping_czk']) ?></small></span>
@@ -89,14 +89,14 @@ $accountingYearMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'
       <?php endforeach; ?>
     </div>
     <nav class="panel-quick panel-order-pages" aria-label="Stránky účetních podkladů">
-      <?php if ($accountingPreviousUrl !== ''): ?><a href="<?= $escape($accountingPreviousUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-left') ?> Předchozí</a><?php endif; ?>
-      <?php if ($accountingNextUrl !== ''): ?><a href="<?= $escape($accountingNextUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?> Další</a><?php endif; ?>
+      <?php if ($accountingPreviousUrl !== ''): ?><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($accountingPreviousUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-left') ?> Předchozí</a><?php endif; ?>
+      <?php if ($accountingNextUrl !== ''): ?><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($accountingNextUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?> Další</a><?php endif; ?>
     </nav>
   </section>
   <details class="panel-panel panel-settings-details" <?= $financialPreviousUrl !== '' ? 'open' : '' ?>>
     <summary>Technické záznamy oprav plateb a odstraněných objednávek</summary>
     <p class="panel-help">Zásahy za vybrané období podle data změny (UTC). Původní potvrzení platby a částka zůstávají dohledatelné i po smazání objednávky. Tato evidence nenahrazuje bankovní výpis ani doklad.</p>
-    <?php if (!$financialEventsReady): ?><p class="panel-help">Pro historii zásahů <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
+    <?php if (!$financialEventsReady): ?><p class="panel-help">Pro historii zásahů <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
     <?php if ($financialEventsReady && $financialChanges['items'] === []): ?><p class="panel-empty">V tomto období nejsou finanční opravy ani smazání.</p><?php endif; ?>
     <?php if ($financialEventsReady && $financialChanges['items'] !== []): ?>
       <ul>
@@ -110,14 +110,14 @@ $accountingYearMethod = $taxYearMode['method'] ?? ($taxSettings['expense_method'
               'provider_partial_refund_deleted' => 'Částečné vrácení platby po smazání',
               default => 'Změna platby',
           }; ?>
-          <li><strong><?= $escape($change['order_number']) ?></strong> · <?= $escape($financialAction) ?><?php if (($change['action'] ?? '') === 'provider_payment_after_cancel' && (int) ($change['order_id'] ?? 0) > 0): ?> · <a href="<?= $escape($adminUrl . '?section=orders&id=' . (int) $change['order_id']) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Otevřít objednávku</a><?php endif; ?> · <?= (int) $change['admin_id'] === 0 ? 'platební brána' : 'správce #' . (int) $change['admin_id'] ?> · <?= $escape($change['created_at']) ?> UTC<br>
+          <li><strong><?= $escape($change['order_number']) ?></strong> · <?= $escape($financialAction) ?><?php if (($change['action'] ?? '') === 'provider_payment_after_cancel' && (int) ($change['order_id'] ?? 0) > 0): ?> · <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=orders&id=' . (int) $change['order_id']) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Otevřít objednávku</a><?php endif; ?> · <?= (int) $change['admin_id'] === 0 ? 'platební brána' : 'správce #' . (int) $change['admin_id'] ?> · <?= $escape($change['created_at']) ?> UTC<br>
             VS <?= $escape($change['variable_symbol'] ?? '—') ?> · <?= $accountingMoney($change['total_czk']) ?> · původní platba <?= $escape($change['payment_status_before'] === 'paid' ? 'potvrzená' : 'čekající') ?><?php if ($change['payment_paid_at'] !== null): ?> · původně potvrzeno <?= $escape($change['payment_paid_at']) ?> UTC<?php endif; ?><br><?= $escape($change['reason']) ?></li>
         <?php endforeach; ?>
       </ul>
     <?php endif; ?>
     <nav class="panel-quick panel-order-pages" aria-label="Stránky historie zásahů">
-      <?php if ($financialPreviousUrl !== ''): ?><a href="<?= $escape($financialPreviousUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-left') ?> Předchozí zásahy</a><?php endif; ?>
-      <?php if ($financialNextUrl !== ''): ?><a href="<?= $escape($financialNextUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?> Další zásahy</a><?php endif; ?>
+      <?php if ($financialPreviousUrl !== ''): ?><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($financialPreviousUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-left') ?> Předchozí zásahy</a><?php endif; ?>
+      <?php if ($financialNextUrl !== ''): ?><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($financialNextUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?> Další zásahy</a><?php endif; ?>
     </nav>
   </details>
 <?php endif; ?>

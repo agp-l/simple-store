@@ -56,7 +56,7 @@ if ($messages !== []) throw new RuntimeException('Unknown accounts received a re
 $service->request('customer', $customer, 'account.php');
 $service->request('customer', $customer, 'account.php');
 if (count($messages) !== 1 || $messages[0][0] !== $customer ||
-    preg_match('/\?mode=reset&token=([a-f0-9]{64})/', $messages[0][1], $matches) !== 1) {
+    preg_match('~https://example\.test/shop/account/reset-password/\?token=([a-f0-9]{64})~', $messages[0][1], $matches) !== 1) {
     throw new RuntimeException('Customer recovery was not sent once with a valid token.');
 }
 $token = $matches[1];
@@ -73,10 +73,10 @@ $service->request('admin', 'not-owner@example.test', 'admin.php');
 if (count($messages) !== 1) throw new RuntimeException('Arbitrary address can recover an admin account.');
 $service->request('admin', 'owner@example.test', 'admin.php');
 if (count($messages) !== 2 || $messages[1][0] !== 'owner@example.test' ||
-    !str_contains($messages[1][1], '/shop/admin.php?mode=reset&token=')) {
+    !str_contains($messages[1][1], '/shop/admin/reset-password/?token=')) {
     throw new RuntimeException('Admin recovery did not use the configured owner address.');
 }
-preg_match('/\?mode=reset&token=([a-f0-9]{64})/', $messages[1][1], $matches);
+preg_match('~https://example\.test/shop/admin/reset-password/\?token=([a-f0-9]{64})~', $messages[1][1], $matches);
 $service->complete('admin', $matches[1], 'new-admin-password', 'new-admin-password');
 if (!password_verify('new-admin-password',
     $db->queryFirstField('SELECT password_hash FROM shop_users WHERE id=%i', $adminId))) {

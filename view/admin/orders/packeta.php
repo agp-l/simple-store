@@ -3,9 +3,9 @@
             <summary>Podání zásilky Zásilkovně<?php if ($packetaShipment !== null && ($packetaShipment['status'] ?? '') === 'created'): ?> · <?= $escape($packetaShipment['barcode_text'] ?: $packetaShipment['barcode']) ?><?php endif; ?></summary>
           <div class="panel-packeta-dispatch">
             <?php if (($order['fulfillment_source'] ?? 'own') !== 'external' && !$packetaReady): ?>
-              <p class="panel-help">Nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>, aby vznikla tabulka zásilek.</p>
+              <p class="panel-help">Nejdřív <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>, aby vznikla tabulka zásilek.</p>
             <?php elseif (($order['fulfillment_source'] ?? 'own') !== 'external' && !$packetaConfigured): ?>
-              <p class="panel-help">V <a href="<?= $escape($adminUrl . '?section=settings') ?>">nastavení obchodu</a> vyplň soukromé API heslo a označení odesílatele z klientské sekce Zásilkovny.</p>
+              <p class="panel-help">V <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings') ?>">nastavení obchodu</a> vyplň soukromé API heslo a označení odesílatele z klientské sekce Zásilkovny.</p>
             <?php endif; ?>
             <?php $packetaNotice = match ($_GET['packeta_result'] ?? '') {
                 'packeta-cancel', 'packeta-cancel-confirmed' => 'Zásilka byla stornována u Zásilkovny. Můžeš opravit údaje a vytvořit novou.',
@@ -30,31 +30,31 @@
                 <?php endif; ?>
               </dl>
               <?php if ($packetaConfigured && $packetaShipment['method'] === 'zasilkovna_home' && !$packetaShipment['courier_number']): ?>
-                <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+                <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="packeta-courier"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                   <button class="panel-button panel-action" type="submit"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Vyžádat číslo dopravce pro HD</button>
                 </form>
               <?php elseif ($packetaConfigured): ?>
-                <p><a class="panel-icon-link panel-button" href="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id'] . '&packeta_label=1') ?>"><?= \SimpleStore\Rendering\Icon::render('download') ?> Stáhnout štítek PDF</a></p>
+                <p><a class="panel-icon-link panel-button" href="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id'] . '&packeta_label=1') ?>"><?= \SimpleStore\Rendering\Icon::render('download') ?> Stáhnout štítek PDF</a></p>
               <?php endif; ?>
-              <?php if ($packetaTrackingUrl !== null): ?><p><a class="panel-text-link" href="<?= $escape($packetaTrackingUrl) ?>" target="_blank" rel="noopener noreferrer">Sledovat zásilku u Zásilkovny →</a></p><?php endif; ?>
+              <?php if ($packetaTrackingUrl !== null): ?><p><a class="panel-text-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($packetaTrackingUrl) ?>" target="_blank" rel="noopener noreferrer">Sledovat zásilku u Zásilkovny →</a></p><?php endif; ?>
               <?php if ($packetaCancelReady && $packetaConfigured && !in_array($order['status'], ['shipped', 'completed', 'cancelled', 'test'], true)): ?>
-                <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+                <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="packeta-cancel"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                   <label class="panel-check"><input type="checkbox" name="packeta_cancel_confirmed" value="1" required> Potvrzuji, že balík ještě nebyl fyzicky předán dopravci. Storno ruší zásilku u Zásilkovny, nikoli objednávku nebo platbu.</label>
                   <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('cancel') ?> Stornovat zásilku u Zásilkovny</button>
                 </form>
-              <?php elseif (!$packetaCancelReady): ?><p class="panel-help">Pro možnost storna <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
+              <?php elseif (!$packetaCancelReady): ?><p class="panel-help">Pro možnost storna <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p><?php endif; ?>
               <p class="panel-help">Samotné vytvoření čísla ještě neznamená, že je balík fyzicky odeslaný.</p>
             <?php elseif ($packetaShipment !== null && in_array($packetaShipment['status'], ['cancelling', 'cancel_uncertain'], true)): ?>
               <p class="panel-error" role="alert">Výsledek storna zásilky <?= $escape($packetaShipment['barcode'] ?? '') ?> není jistý. Zkontroluj zásilku v klientské sekci Zásilkovny. Nové podání je zatím zablokované.</p>
               <?php if ($packetaShipment['status'] !== 'cancelling' || strtotime((string) $packetaShipment['updated_at'] . ' UTC') <= time() - 60): ?>
-                <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+                <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="packeta-cancel-confirmed"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                   <label class="panel-check"><input type="checkbox" name="packeta_cancel_checked" value="1" required> Ověřil/a jsem v klientské sekci, že je zásilka stornovaná.</label>
                   <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('check') ?> Potvrdit storno a povolit nové podání</button>
                 </form>
-                <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+                <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="packeta-cancel-not-done"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                   <label class="panel-check"><input type="checkbox" name="packeta_cancel_checked" value="1" required> Ověřil/a jsem v klientské sekci, že zásilka zůstala aktivní.</label>
                   <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('check') ?> Ponechat aktivní zásilku</button>
@@ -63,7 +63,7 @@
             <?php elseif ($packetaShipment !== null && in_array($packetaShipment['status'], ['submitting', 'uncertain'], true)): ?>
               <p class="panel-error" role="alert">Výsledek podání není jistý. Vyhledej v klientské sekci Zásilkovny objednávku <?= $escape($order['order_number']) ?>. Další podání neprováděj, dokud nezjistíš, zda zásilka vznikla.</p>
               <?php if ($packetaShipment['status'] !== 'submitting' || strtotime((string) $packetaShipment['updated_at'] . ' UTC') <= time() - 60): ?>
-              <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+              <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                 <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="packeta-reconcile"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                 <label>Nalezené číslo zásilky<input name="packeta_barcode" placeholder="Z1234567890" pattern="Z[0-9]{1,20}" required></label>
                 <label><input type="checkbox" name="packeta_checked" value="1" required> Ověřil/a jsem, že tato zásilka patří k objednávce.</label>
@@ -71,7 +71,7 @@
               </form>
               <?php else: ?><p class="panel-help">Podání ještě probíhá. Pro kontrolu po minutě obnov stránku.</p><?php endif; ?>
               <?php if (strtotime((string) $packetaShipment['updated_at'] . ' UTC') <= time() - 60): ?>
-                <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+                <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="packeta-retry"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                   <label><input type="checkbox" name="packeta_not_created" value="1" required> Ověřil/a jsem v klientské sekci, že zásilka nevznikla.</label>
                   <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Povolit nový pokus</button>
@@ -84,7 +84,7 @@
                 <?php if (str_contains((string) ($packetaShipment['last_error'] ?? ''), 'eshop_id:')): ?>
                   <?php $rejectedPacket = json_decode((string) ($packetaShipment['submitted_json'] ?? ''), true); ?>
                   <?php $sentSender = is_array($rejectedPacket) ? ($rejectedPacket['eshop'] ?? '') : ''; ?>
-                  <p class="panel-help">Odeslané označení odesílatele: <strong><?= $escape(is_string($sentSender) ? $sentSender : '') ?></strong>. Zkopíruj přesné <strong>Označení</strong> ze čtvrtého sloupce <a href="https://client.packeta.com/senders/" target="_blank" rel="noopener noreferrer">seznamu odesílatelů Zásilkovny</a> do <a href="<?= $escape($adminUrl . '?section=settings') ?>">nastavení obchodu</a>. Potom zásilku podej znovu.</p>
+                  <p class="panel-help">Odeslané označení odesílatele: <strong><?= $escape(is_string($sentSender) ? $sentSender : '') ?></strong>. Zkopíruj přesné <strong>Označení</strong> ze čtvrtého sloupce <a href="https://client.packeta.com/senders/" target="_blank" rel="noopener noreferrer">seznamu odesílatelů Zásilkovny</a> do <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings') ?>">nastavení obchodu</a>. Potom zásilku podej znovu.</p>
                 <?php endif; ?>
               <?php endif; ?>
               <?php if (!$paid): ?><p class="panel-help"><?= $onlineGateway ? 'Nejdřív vyčkej na potvrzení platby ' . $gatewayName . ' nebo načti aktuální stav brány.' : 'Nejdřív ověř platbu na bankovním výpisu a označ ji jako přijatou.' ?></p><?php endif; ?>
@@ -108,7 +108,7 @@
                 ?>
                 <details class="panel-order-accordion panel-order-edit-draft" <?= $entered !== [] ? 'open' : '' ?>><summary><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Zkontrolovat údaje a vytvořit zásilku</summary>
                 <p class="panel-help">Zkontroluj údaje příjemce a hmotnost již zabaleného balíku. API použije číslo objednávky <?= $escape($order['order_number']) ?> a platbu bez dobírky. Případné opravy kontaktu a adresy níže se uloží k zásilce; původní objednávka zůstane v historii.</p>
-                <form class="panel-form" method="post" action="<?= $escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+                <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
                   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="packeta-create"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
                   <label>Jméno<input name="first_name" value="<?= $escape($entered['first_name'] ?? $defaultFirstName) ?>" maxlength="70" required></label>
                   <label>Příjmení<input name="surname" value="<?= $escape($entered['surname'] ?? $defaultSurname) ?>" maxlength="70" required></label>

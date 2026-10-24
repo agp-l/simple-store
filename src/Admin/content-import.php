@@ -80,8 +80,8 @@ try {
                 throw new InvalidArgumentException('JSON nebo způsob importu se změnil. Nejdřív znovu zobraz náhled.');
             }
             $content->saveRevision($importPreview, $key, $revision);
-            header('Location: ' . $basePath . $data['language'] . ($data['type'] === 'post' ? '/blog' : '') .
-                '/' . rawurlencode($importPreview['slug']) . '?edit=1', true, 303);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($basePath . $data['language'] . ($data['type'] === 'post' ? '/blog' : '') .
+                '/' . rawurlencode($importPreview['slug']) . '?edit=1'), true, 303);
             exit;
         }
     }

@@ -59,7 +59,7 @@ foreach (['page', 'post'] as $type) {
         'canEditContent' => true, 'contentEditMode' => true, 'editToken' => 'test-token']);
     $editor = ob_get_clean();
     $check(str_contains($editor, 'Export JSON') && str_contains($editor, 'Import JSON') &&
-        str_contains($editor, '/shop/admin.php?section=content-import'), 'Document editor transfer controls are missing.');
+        str_contains($editor, '/shop/admin/content-import/'), 'Document editor transfer controls are missing.');
 }
 $minimal = ['format' => ContentImport::FORMAT, 'type' => 'page', 'language' => 'cs', 'content' => ['title' => 'O nás', 'body' => 'Text stránky']];
 $fields = ContentImport::fields(ContentImport::decode(json_encode($minimal)), ['cs'], 'new');

@@ -2,7 +2,7 @@
 <section class="product-admin-settings product-admin-recommendations">
   <strong><?= \SimpleStore\Rendering\Icon::render('check') ?> Doporučené produkty</strong>
   <?php if (($_GET['selection_saved'] ?? '') === '1'): ?><p role="status">Výběr byl uložen.</p><?php endif; ?>
-  <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>" class="selection-add-form">
+  <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>" class="selection-add-form">
     <input type="hidden" name="csrf" value="<?= $escape($editToken) ?>">
     <input type="hidden" name="action" value="product-selection">
     <input type="hidden" name="language" value="<?= $escape($language) ?>">

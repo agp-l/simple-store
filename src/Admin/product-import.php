@@ -31,7 +31,7 @@ if ($importTab === 'help') {
     if ($method === 'POST' && $action === 'product-prompt-save') {
         try {
             $promptStore->save($aiPrompt);
-            header('Location: ' . $adminUrl . '?section=product-import&tab=help&language=' . rawurlencode($language) . '&prompt_saved=1', true, 303);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=product-import&tab=help&language=' . rawurlencode($language) . '&prompt_saved=1'), true, 303);
             exit;
         } catch (Throwable $exception) {
             error_log('Product import prompt save: ' . $exception->getMessage());
@@ -74,7 +74,7 @@ if ($method === 'POST' && $action === 'product-zip-step' && ($_POST['ajax'] ?? '
     exit;
 }
 if ($method === 'POST' && $action === 'product-zip-upload' && $zipError === '') {
-    header('Location: ' . $adminUrl . '?section=product-import&tab=zip#zip-import', true, 303);
+    header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=product-import&tab=zip#zip-import'), true, 303);
     exit;
 }
 try {
@@ -90,7 +90,7 @@ try {
         }
         if ($action === 'product-import-save') {
             $repository->saveRevision($importPreview, $key, $importData['revision'] ?? null, ProductImport::suppliers($importData));
-            header('Location: ' . $basePath . $language . '/produkt/' . $importPreview['slug'] . '?edit=1', true, 303);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($basePath . $language . '/produkt/' . $importPreview['slug'] . '?edit=1'), true, 303);
             exit;
         }
     } elseif (is_string($_GET['key'] ?? null)) {

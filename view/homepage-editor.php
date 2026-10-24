@@ -12,16 +12,16 @@ $editUrl = $homeUrl . '?homepage_edit=1#homepage-editor';
   <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="homepage-editor-notice" role="status">Výběr na úvodní stránce byl uložen.</p><?php endif; ?>
   <?php if (is_string($_GET['homepage_error'] ?? null)): ?><p class="homepage-editor-error" role="alert"><?= $escape($_GET['homepage_error']) ?></p><?php endif; ?>
   <?php if (!$homepageReady): ?>
-    <p class="homepage-editor-notice" role="alert">Nejdřív <a href="<?= $escape($siteRoot . 'admin.php?section=database') ?>">aktualizuj SQL tabulky</a>. Dosavadní výpis produktů zatím funguje.</p>
+    <p class="homepage-editor-notice" role="alert">Nejdřív <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/?section=database') ?>">aktualizuj SQL tabulky</a>. Dosavadní výpis produktů zatím funguje.</p>
   <?php else: ?>
     <?php if (!$homepageConfigured): ?><p class="homepage-editor-notice">Zatím se zobrazuje automatický výpis katalogu. Přidej první produkt a úvodní stránka začne používat tvůj výběr.</p>
     <?php elseif ($homepageSelected === []): ?><p class="homepage-editor-notice">Výběr je prázdný. Přidej produkt níže, nebo vrať automatický výpis.</p><?php endif; ?>
-    <?php if ($homepageSelected !== []): ?><ol class="homepage-picks" data-product-selection data-scope="home" data-language="<?= $escape($language) ?>" data-csrf="<?= $escape($adminCsrf) ?>" data-endpoint="<?= $escape($siteRoot . 'admin.php') ?>">
+    <?php if ($homepageSelected !== []): ?><ol class="homepage-picks" data-product-selection data-scope="home" data-language="<?= $escape($language) ?>" data-csrf="<?= $escape($adminCsrf) ?>" data-endpoint="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>">
       <?php foreach ($homepageSelected as $i => $selected): ?>
         <?php $isPublic = !empty($selected['published']); ?>
         <li data-key="<?= $escape($selected['product_key']) ?>"><button type="button" class="selection-drag" aria-label="Přesunout <?= $escape($selected['name']) ?>" title="Přetáhni nebo použij Alt + šipku nahoru/dolů">⠿</button><div class="homepage-pick-info"><strong><?= $escape($selected['name']) ?></strong>
           <small><?= $isPublic ? 'Zobrazuje se zákazníkům' : 'Skrytý nebo odstraněný – zákazníkům se neukazuje' ?></small></div>
-          <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>">
+          <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>">
             <input type="hidden" name="csrf" value="<?= $escape($adminCsrf) ?>">
             <input type="hidden" name="action" value="homepage-product">
             <input type="hidden" name="language" value="<?= $escape($language) ?>">
@@ -33,13 +33,13 @@ $editUrl = $homeUrl . '?homepage_edit=1#homepage-editor';
         </li>
       <?php endforeach; ?>
     </ol><p class="selection-order-status" role="status" aria-live="polite"></p><?php endif; ?>
-    <?php if ($homepageConfigured): ?><form class="homepage-reset" method="post" action="<?= $escape($siteRoot . 'admin.php') ?>">
+    <?php if ($homepageConfigured): ?><form class="homepage-reset" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>">
       <input type="hidden" name="csrf" value="<?= $escape($adminCsrf) ?>"><input type="hidden" name="action" value="homepage-product">
       <input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="operation" value="reset">
       <button type="submit">Vrátit automatický výpis katalogu</button>
     </form><?php endif; ?>
     <h3>Přidat z katalogu</h3>
-    <form class="homepage-pick-search" method="get" action="<?= $escape($homeUrl) ?>">
+    <form class="homepage-pick-search" method="get" action="<?= \SimpleStore\Navigation\PanelUrl::escape($homeUrl) ?>">
       <input type="hidden" name="homepage_edit" value="1">
       <label>Najít produkt podle názvu nebo značky <input type="search" name="pick" value="<?= $escape($homepagePick) ?>" maxlength="200" placeholder="Např. batoh"></label>
       <button type="submit">Hledat</button>
@@ -51,7 +51,7 @@ $editUrl = $homeUrl . '?homepage_edit=1#homepage-editor';
         <li><img src="<?= $escape(str_starts_with($imagePath, 'images/') ? $siteRoot . $imagePath : $imagePath) ?>" alt="" loading="lazy">
           <div><strong><?= $escape($candidate['name']) ?></strong><small><?= $escape($candidate['brand']) ?> · <?= number_format((int) $candidate['price_czk'], 0, ',', ' ') ?> Kč</small></div>
           <?php if (in_array($candidate['product_key'], $homepageKeys, true)): ?><span>Vybráno</span>
-          <?php else: ?><form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>">
+          <?php else: ?><form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>">
             <input type="hidden" name="csrf" value="<?= $escape($adminCsrf) ?>"><input type="hidden" name="action" value="homepage-product">
             <input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="operation" value="add">
             <input type="hidden" name="key" value="<?= $escape($candidate['product_key']) ?>"><input type="hidden" name="pick" value="<?= $escape($homepagePick) ?>">
@@ -60,6 +60,6 @@ $editUrl = $homeUrl . '?homepage_edit=1#homepage-editor';
         </li>
       <?php endforeach; ?>
     </ul>
-    <?php if ($homepageCandidateNext !== ''): ?><a class="homepage-next" href="<?= $escape($homepageCandidateNext . '#homepage-editor') ?>">Další produkty →</a><?php endif; ?>
+    <?php if ($homepageCandidateNext !== ''): ?><a class="homepage-next" href="<?= \SimpleStore\Navigation\PanelUrl::escape($homepageCandidateNext . '#homepage-editor') ?>">Další produkty →</a><?php endif; ?>
   <?php endif; ?>
 </section>

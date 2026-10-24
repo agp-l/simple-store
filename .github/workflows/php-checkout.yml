@@ -78,6 +78,7 @@ jobs:
           php tests/packeta-shipment.php
           php tests/carrier-shipment.php
           php tests/schema-updater.php
+          php tests/panel-urls.php
           php tests/checkout-order.php
           php tests/order-controls.php
           php tests/order-shipping.php
@@ -99,6 +100,7 @@ jobs:
           php tests/admin-actions.php
           php tests/admin-auth.php
           php tests/password-reset-collation.php
+          php tests/password-reset-url.php
           php tests/product-import.php
           php tests/product-variants.php
           php tests/inline-editor.php
@@ -277,3 +279,15 @@ jobs:
             /tmp/tax-evidence-screenshots/
             /tmp/admin-users-screenshots/
           retention-days: 7
+
+  private-routes-apache:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: none
+          coverage: none
+      - name: Verify private routes, legacy forms and sessions on Apache
+        run: bash tests/panel-apache.sh

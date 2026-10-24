@@ -8,7 +8,7 @@ use SimpleStore\Product\ProductStockRepository;
 
 // This controller is reached only after admin.php has checked the session and CSRF token.
 if ($method !== 'POST') {
-    header('Location: ' . $basePath . $site['default_language'] . '?manage=1#produkty', true, 303);
+    header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($basePath . $site['default_language'] . '?manage=1#produkty'), true, 303);
     exit;
 }
 $categories = new CategoryRepository($db);
@@ -25,5 +25,5 @@ if ($category === null) {
 }
 $starter = ProductInlineEditor::starter($language, $category['path']);
 $repository->saveRevision($starter);
-header('Location: ' . $basePath . $language . '/produkt/' . $starter['slug'] . '?edit=1', true, 303);
+header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($basePath . $language . '/produkt/' . $starter['slug'] . '?edit=1'), true, 303);
 exit;

@@ -2,13 +2,13 @@
       <div class="panel-intro">
         <div><p class="panel-eyebrow">Navigace / umístění</p><h1>Menu webu</h1>
           <p>Vyber místo na webu, zvol odkazy a uprav jejich text, cíl i pořadí.</p></div>
-        <form class="panel-language" method="get" action="<?= $escape($adminUrl) ?>">
+        <form class="panel-language" method="get" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>">
           <input type="hidden" name="section" value="menus"><input type="hidden" name="slot" value="<?= $escape($slot) ?>">
           <label>Jazyk <select name="language"><?php foreach ($site['languages'] as $code): ?><option value="<?= $escape($code) ?>" <?= $language === $code ? 'selected' : '' ?>><?= $escape(strtoupper($code)) ?></option><?php endforeach; ?></select></label>
           <button type="submit" class="panel-action"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit</button>
         </form>
       </div>
-      <?php if (!$menuReady): ?><p class="panel-error">Pro změny menu <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>. Výchozí menu zatím fungují dál.</p><?php endif; ?>
+      <?php if (!$menuReady): ?><p class="panel-error">Pro změny menu <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>. Výchozí menu zatím fungují dál.</p><?php endif; ?>
       <?php if ($menuError !== ''): ?><p class="panel-error" role="alert"><?= $escape($menuError) ?></p><?php endif; ?>
       <?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Změna menu byla uložena.</p><?php endif; ?>
       <div class="panel-grid panel-grid-catalog">
@@ -16,7 +16,7 @@
           <h2 id="menu-slots-title">Kde se menu zobrazí</h2>
           <div class="panel-menu-slots">
             <?php foreach ($menuSlots as $name => $settings): ?>
-              <a class="panel-tree-row<?= $slot === $name ? ' is-active' : '' ?>" href="<?= $escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $name])) ?>">
+              <a class="panel-tree-row<?= $slot === $name ? ' is-active' : '' ?>" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $name])) ?>">
                 <span class="panel-tree-name"><?= $escape($slotNames[$name] ?? $name) ?></span>
                 <small><?= ['categories' => 'Kategorie', 'content' => 'Stránky', 'manual' => 'Vlastní odkazy'][$settings['source']] ?? 'Menu' ?></small>
               </a>
@@ -28,7 +28,7 @@
           <section class="panel-panel" aria-labelledby="menu-settings-title">
             <p class="panel-eyebrow">Nastavení</p><h2 id="menu-settings-title"><?= $escape($slotNames[$slot] ?? $slot) ?></h2>
             <p class="panel-help">Vyber automatický obsah menu. Další vlastní odkazy můžeš přidat níže bez změny zdroje.</p>
-            <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $slot])) ?>">
+            <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $slot])) ?>">
               <input type="hidden" name="action" value="menu-slot"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
               <input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="slot" value="<?= $escape($slot) ?>">
               <?php if ($slot === 'footer'): ?><label>Nadpis menu v patičce <input name="title" maxlength="80" required value="<?= $escape($activeSlot['title'] ?? 'Informace') ?>"></label><?php endif; ?>
@@ -51,21 +51,21 @@
           <?php if ($activeSlot['source'] === 'categories'): ?>
             <section class="panel-panel panel-hint"><h2>Pořadí a názvy kategorií</h2>
               <p>Odkazy se automaticky načítají z katalogu. Řazení, zobrazení a názvy upravíš ve správě kategorií.</p>
-              <a class="panel-text-link" href="<?= $escape($adminUrl . '?section=categories&language=' . rawurlencode($language)) ?>">Spravovat kategorie →</a>
+              <a class="panel-text-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=categories&language=' . rawurlencode($language)) ?>">Spravovat kategorie →</a>
             </section>
           <?php endif; ?>
             <section class="panel-panel" aria-labelledby="manual-items-title">
               <div class="panel-panel-head"><h2 id="manual-items-title"><?= $activeSlot['source'] === 'manual' ? 'Vlastní odkazy' : 'Další odkazy' ?> <span><?= count($menuItems) ?></span></h2>
-                <a href="<?= $escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $slot]) . '#menu-item-form') ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('plus') ?> Nový odkaz</a></div>
+                <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $slot]) . '#menu-item-form') ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('plus') ?> Nový odkaz</a></div>
               <?php if ($activeSlot['source'] !== 'manual'): ?><p class="panel-help">Odkazy níže se zobrazí za automatickými <?= $activeSlot['source'] === 'categories' ? 'kategoriemi' : 'stránkami' ?>. Pro externí web zvol „Externí web nebo e-mail“ a vlož celou adresu https://.</p><?php endif; ?>
               <?php if ($menuItems === []): ?><p class="panel-empty">Zatím prázdné menu. Přidej první odkaz níže.</p><?php endif; ?>
               <div class="panel-tree"><?php foreach ($menuItems as $item): ?>
-                <a class="panel-tree-row<?= ($selectedItem['id'] ?? '') === $item['id'] ? ' is-active' : '' ?>" style="--indent:<?= min(5, (int) $item['depth']) * 17 ?>px" href="<?= $escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $slot, 'item' => $item['id']])) ?>">
+                <a class="panel-tree-row<?= ($selectedItem['id'] ?? '') === $item['id'] ? ' is-active' : '' ?>" style="--indent:<?= min(5, (int) $item['depth']) * 17 ?>px" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $slot, 'item' => $item['id']])) ?>">
                   <span class="panel-tree-name"><?= $escape($item['label']) ?></span>
                   <small><?= $escape($item['target']) ?> · <?= (int) $item['sort_order'] ?></small>
                 </a>
               <?php endforeach; ?></div>
-              <form class="panel-form panel-item-form" id="menu-item-form" method="post" action="<?= $escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $slot, 'item' => $selectedItem['id'] ?? ''])) ?>">
+              <form class="panel-form panel-item-form" id="menu-item-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?' . http_build_query(['section' => 'menus', 'language' => $language, 'slot' => $slot, 'item' => $selectedItem['id'] ?? ''])) ?>">
                 <input type="hidden" name="action" value="menu-item-save"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
                 <input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="slot" value="<?= $escape($slot) ?>">
                 <input type="hidden" name="id" value="<?= $escape($selectedItem['id'] ?? '') ?>">
@@ -98,7 +98,7 @@
                 <label>Pořadí (nižší číslo dříve) <input type="number" name="sort_order" min="0" max="65535" value="<?= (int) ($selectedItem['sort_order'] ?? (count($menuItems) * 10)) ?>" required></label>
                 <button class="panel-button" type="submit" <?= $menuReady ? '' : 'disabled' ?>><?= \SimpleStore\Rendering\Icon::render($selectedItem === null ? 'plus' : 'save') ?> <?= $selectedItem === null ? 'Přidat odkaz' : 'Uložit odkaz' ?></button>
               </form>
-              <?php if ($selectedItem !== null): ?><form class="panel-remove-form" method="post" action="<?= $escape($adminUrl . '?section=menus') ?>">
+              <?php if ($selectedItem !== null): ?><form class="panel-remove-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=menus') ?>">
                 <input type="hidden" name="action" value="menu-item-remove"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
                 <input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="slot" value="<?= $escape($slot) ?>">
                 <input type="hidden" name="id" value="<?= $escape($selectedItem['id']) ?>">
@@ -111,7 +111,7 @@
               <p class="panel-help">Tyto volby platí, když horní menu čte publikované stránky. Uložení vytvoří novou revizi stránky.</p>
               <?php if ($pageRows === []): ?><p class="panel-empty">Zatím nejsou vytvořené stránky.</p><?php endif; ?>
               <?php foreach ($pageRows as $page): ?>
-                <form class="panel-page-order" method="post" action="<?= $escape($adminUrl . '?section=menus&slot=utility') ?>">
+                <form class="panel-page-order" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=menus&slot=utility') ?>">
                   <input type="hidden" name="action" value="page-menu"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
                   <input type="hidden" name="slot" value="utility"><input type="hidden" name="language" value="<?= $escape($language) ?>">
                   <input type="hidden" name="key" value="<?= $escape($page['document_key']) ?>"><input type="hidden" name="revision" value="<?= (int) $page['revision_number'] ?>">

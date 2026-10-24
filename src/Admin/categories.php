@@ -33,9 +33,9 @@ if ($method === 'POST' && in_array($_POST['action'] ?? '', ['category-create', '
             if (!is_string($path)) throw new InvalidArgumentException('Neplatná kategorie.');
             $categories->update($language, $path, $title, $order, isset($_POST['enabled']));
         }
-        header('Location: ' . $adminUrl . '?' . http_build_query([
+        header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?' . http_build_query([
             'section' => 'categories', 'language' => $language, 'edit' => $path, 'saved' => 1,
-        ]), true, 303);
+        ])), true, 303);
         exit;
     } catch (InvalidArgumentException $exception) {
         $categoryError = $exception->getMessage();

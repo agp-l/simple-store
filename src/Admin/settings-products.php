@@ -40,7 +40,7 @@ if ($method === 'POST') {
                 $_SESSION['product_mass_notice'] = 'Hotovo. Všechny produkty mají způsob prodeje „' .
                     ($saleBulkMode === 'assisted' ? 'Asistovaný nákup' : 'Prodáváme my') . '“. Změněno: ' . $changed . '.';
                 if ($pending['issues'] !== []) $_SESSION['product_mass_notice'] .= ' Doplnění partnerských údajů nebo cen vyžaduje ' . count($pending['issues']) . ' produktů; do té doby u nich není asistovaný nákup možný.';
-                header('Location: ' . $adminUrl . '?section=settings&tab=products#bulk-product-sales', true, 303);
+                header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=settings&tab=products#bulk-product-sales'), true, 303);
                 exit;
             }
         } elseif (in_array($_POST['action'] ?? '', ['products-variants-preview', 'products-variants-apply'], true)) {
@@ -61,7 +61,7 @@ if ($method === 'POST') {
                 unset($_SESSION['product_variant_bulk_preview']);
                 $created = $variantBulkStore->apply($pending);
                 $_SESSION['product_mass_notice'] = 'Hotovo. Vytvořeno ' . $created['variants'] . ' variant u ' . $created['products'] . ' produktů, každá s ' . $pending['quantity'] . ' volnými kusy.';
-                header('Location: ' . $adminUrl . '?section=settings&tab=products', true, 303);
+                header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=settings&tab=products'), true, 303);
                 exit;
             }
         } elseif (($_POST['action'] ?? '') === 'products-mass-preview') {
@@ -79,7 +79,7 @@ if ($method === 'POST') {
             unset($_SESSION['product_mass_preview']);
             $count = $massStore->apply($pending);
             $_SESSION['product_mass_notice'] = 'Hotovo. Počet změněných produktů: ' . $count . '.';
-            header('Location: ' . $adminUrl . '?section=settings&tab=products', true, 303);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=settings&tab=products'), true, 303);
             exit;
         } else {
             throw new InvalidArgumentException('Neplatná akce hromadné změny.');

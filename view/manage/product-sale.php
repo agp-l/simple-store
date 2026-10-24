@@ -22,17 +22,17 @@ $saleVariants = ($product['variant_inventory']['enabled'] ?? false) ? $product['
 $basePrice = (int) $product['price_czk'];
 $fee = is_numeric($saleValues['supplier_price_czk'] ?? null) ? $basePrice - (int) $saleValues['supplier_price_czk'] : null;
 $money = static fn (int $value): string => number_format($value, 0, ',', ' ') . ' Kč';
-$partnerAdminUrl = $siteRoot . 'admin.php?section=purchase-partners';
+$partnerAdminUrl = $siteRoot . 'admin/?section=purchase-partners';
 ?>
 <section class="product-sale" id="product-sale" aria-labelledby="product-sale-title">
   <div class="sale-heading"><h2 id="product-sale-title">Způsob prodeje</h2><span>Jen pro správce</span></div>
   <?php if (!($productSalesReady ?? false)): ?>
-    <p><a href="<?= $escape($siteRoot . 'admin.php?section=database') ?>">Nejprve aktualizuj databázi.</a></p>
+    <p><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/?section=database') ?>">Nejprve aktualizuj databázi.</a></p>
   <?php else: ?>
     <?php if (($_GET['sale_saved'] ?? '') === '1' && ($productSaleError ?? '') === ''): ?><p class="sale-notice" role="status">Nastavení prodeje bylo uloženo.</p><?php endif; ?>
     <?php if (($productSaleError ?? '') !== ''): ?><div class="sale-notice sale-notice--error" role="alert"><?= $escape($productSaleError) ?> Zadané údaje zůstaly ve formuláři.
-      <a target="_blank" rel="noopener" href="<?= $escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1#product-sale') ?>">Porovnat s uloženým nastavením ↗</a></div><?php endif; ?>
-    <form method="post" action="<?= $escape($siteRoot . 'admin.php') ?>" class="sale-form" data-product-sale-form data-base-price="<?= $basePrice ?>" data-recovered="<?= ($productSaleError ?? '') !== '' ? '1' : '0' ?>" novalidate>
+      <a target="_blank" rel="noopener" href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1#product-sale') ?>">Porovnat s uloženým nastavením ↗</a></div><?php endif; ?>
+    <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>" class="sale-form" data-product-sale-form data-base-price="<?= $basePrice ?>" data-recovered="<?= ($productSaleError ?? '') !== '' ? '1' : '0' ?>" novalidate>
       <input type="hidden" name="action" value="product-sale"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>">
       <input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
       <input type="hidden" name="version" value="<?= (int) ($saleValues['version'] ?? 0) ?>">
@@ -48,8 +48,8 @@ $partnerAdminUrl = $siteRoot . 'admin.php?section=purchase-partners';
                 <option value="<?= (int) $partner['id'] ?>" data-missing="<?= $escape($missing === [] ? '' : 'Doplň: ' . implode(', ', $missing) . '.') ?>" <?= (int) ($saleValues['partner_id'] ?? 0) === (int) $partner['id'] ? 'selected' : '' ?>><?= $escape(\SimpleStore\Product\PurchasePartnerRepository::label($partner) . ($partner['ico'] !== '' ? ' · ' . $partner['ico'] : '') . ($missing !== [] ? ' · rozpracovaný' : '')) ?></option>
               <?php endforeach; ?>
             </select></label>
-            <div class="sale-links"><a href="<?= $escape($partnerAdminUrl) ?>" target="_blank" rel="noopener">Seznam a úpravy prodávajících ↗</a>
-              <a data-sale-partner-edit data-edit-base="<?= $escape($partnerAdminUrl) ?>" href="<?= $escape($partnerAdminUrl . '&id=' . (int) ($selectedPartner['id'] ?? 0) . '#partner-form') ?>" target="_blank" rel="noopener" <?= $selectedPartner === null ? 'hidden' : '' ?>>Upravit vybraného ↗</a></div>
+            <div class="sale-links"><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($partnerAdminUrl) ?>" target="_blank" rel="noopener">Seznam a úpravy prodávajících ↗</a>
+              <a data-sale-partner-edit data-edit-base="<?= \SimpleStore\Navigation\PanelUrl::escape($partnerAdminUrl) ?>" href="<?= \SimpleStore\Navigation\PanelUrl::escape($partnerAdminUrl . '&id=' . (int) ($selectedPartner['id'] ?? 0) . '#partner-form') ?>" target="_blank" rel="noopener" <?= $selectedPartner === null ? 'hidden' : '' ?>>Upravit vybraného ↗</a></div>
             <p class="sale-hint" data-sale-partner-status><?= $escape($selectedPartner === null ? 'Vyber prodávajícího nebo vyplň nového.' : (\SimpleStore\Product\PurchasePartnerRepository::missing($selectedPartner) === [] ? 'Údaje prodávajícího jsou kompletní.' : 'Rozpracovaný profil – doplň chybějící údaje.')) ?></p>
           </div>
           <div>

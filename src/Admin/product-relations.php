@@ -22,5 +22,5 @@ try {
 } catch (InvalidArgumentException | JsonException $error) {
     $return .= '&relation_error=' . rawurlencode($error->getMessage());
 }
-header('Location: ' . $return . '#product-relations-admin', true, 303);
+header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($return . '#product-relations-admin'), true, 303);
 exit;

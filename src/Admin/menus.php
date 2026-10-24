@@ -77,9 +77,9 @@ if ($method === 'POST') {
             }
             $definitions->removeItem($language, $slot, $id);
         }
-        header('Location: ' . $adminUrl . '?' . http_build_query([
+        header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?' . http_build_query([
             'section' => 'menus', 'language' => $language, 'slot' => $slot, 'saved' => 1,
-        ]), true, 303);
+        ])), true, 303);
         exit;
     } catch (InvalidArgumentException|RuntimeException $exception) {
         $menuError = $exception->getMessage();

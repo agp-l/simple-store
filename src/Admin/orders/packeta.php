@@ -126,8 +126,8 @@ if (in_array($packetaAction, ['packeta-create', 'packeta-courier',
             }
             $packetaShipments->allowRetry($id);
         }
-        header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&packeta_result=' .
-            rawurlencode($packetaAction), true, 303);
+        header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=orders&id=' . $id . '&packeta_result=' .
+            rawurlencode($packetaAction)), true, 303);
         exit;
     } catch (InvalidArgumentException|PacketaRejectedException $exception) {
         http_response_code(422);

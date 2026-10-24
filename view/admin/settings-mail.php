@@ -4,14 +4,14 @@ $mailForm = $mailConfiguration['settings'];
 $mailTemplates = $mailConfiguration['templates'];
 $mailSettingsUrl = $adminUrl . '?section=settings&tab=mail';
 ?>
-<?php if (!$mailSettingsReady): ?><p class="panel-notice">Nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>. Původní potvrzení objednávky a faktury nadále používají odesílatele z údajů OSVČ.</p><?php endif; ?>
+<?php if (!$mailSettingsReady): ?><p class="panel-notice">Nejdřív <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>. Původní potvrzení objednávky a faktury nadále používají odesílatele z údajů OSVČ.</p><?php endif; ?>
 <?php foreach (($mailLegalWarnings ?? []) as $warning): ?><p class="panel-error" role="alert"><?= $escape($warning) ?></p><?php endforeach; ?>
 <?php if (($_GET['test'] ?? '') === 'sent'): ?><p class="panel-notice" role="status">Poštovní server test přijal. Doručení ověř v cílové schránce.</p><?php elseif (($_GET['test'] ?? '') === 'failed'): ?><p class="panel-error" role="alert">Poštovní server test nepřijal. Zpráva je uložená ve frontě k opakování.</p><?php endif; ?>
-<form class="panel-form panel-settings-form" method="post" action="<?= $escape($mailSettingsUrl) ?>">
+<form class="panel-form panel-settings-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($mailSettingsUrl) ?>">
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="save-mail-settings">
   <section class="panel-panel panel-settings-block">
     <h2>Odesílání zpráv</h2>
-    <p class="panel-help">Vyplň SMTP údaje své schránky, aby se zprávy posílaly jejím serverem. Bez SMTP se použije PHP mail() hostingu. Chybné doručení lze zopakovat v <a href="<?= $escape($adminUrl . '?section=accounting&tab=mail') ?>">e-mailové frontě</a>.</p>
+    <p class="panel-help">Vyplň SMTP údaje své schránky, aby se zprávy posílaly jejím serverem. Bez SMTP se použije PHP mail() hostingu. Chybné doručení lze zopakovat v <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=mail') ?>">e-mailové frontě</a>.</p>
     <label class="panel-check"><input type="checkbox" name="automatic_enabled" value="1" <?= $mailForm['automatic_enabled'] ? 'checked' : '' ?>> Automaticky připravovat zprávy po událostech</label>
     <div class="panel-fields-two"><label>E-mail odesílatele<input type="email" name="from_email" value="<?= $escape($mailForm['from_email']) ?>" maxlength="254" placeholder="objednavky@dobrodruzi.cz"></label>
     <label>Jméno odesílatele<input name="from_name" value="<?= $escape($mailForm['from_name']) ?>" maxlength="100" required></label></div>
@@ -38,7 +38,7 @@ $mailSettingsUrl = $adminUrl . '?section=settings&tab=mail';
           <label class="panel-check"><input type="checkbox" name="templates[<?= $escape($code) ?>][enabled]" value="1" <?= $template['enabled'] ? 'checked' : '' ?>> Posílat při této události</label>
           <label>Předmět<input name="templates[<?= $escape($code) ?>][subject]" value="<?= $escape($template['subject']) ?>" maxlength="190" required></label>
           <label>Úvodní text<textarea name="templates[<?= $escape($code) ?>][message]" rows="3" maxlength="5000" required><?= $escape($template['message']) ?></textarea></label>
-          <a class="panel-icon-link panel-text-link" href="<?= $escape($mailSettingsUrl . '&preview=' . $code) ?>"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Náhled uložené šablony</a>
+          <a class="panel-icon-link panel-text-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($mailSettingsUrl . '&preview=' . $code) ?>"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Náhled uložené šablony</a>
         </div>
       </details>
     <?php endforeach; ?>
@@ -49,12 +49,12 @@ $mailSettingsUrl = $adminUrl . '?section=settings&tab=mail';
   <section class="panel-panel panel-settings-block" id="mail-preview"><h2>Náhled: <?= $escape($mailTemplates[$previewCode]['label']) ?></h2>
     <p class="panel-help">Ukázkové údaje; neodesílá se žádný e-mail. Náhled zobrazuje poslední uložený text. Při skutečném potvrzení se původní znění podmínek přiloží zvlášť jako soubor, takže se v tomto náhledu nevypisuje.</p>
     <iframe title="Náhled e-mailu" sandbox srcdoc="<?= $escape($mailPreview['html']) ?>" style="width:100%;min-height:670px;border:1px solid #dde4da"></iframe>
-    <a href="<?= $escape($mailSettingsUrl) ?>">Zavřít náhled</a>
+    <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($mailSettingsUrl) ?>">Zavřít náhled</a>
   </section>
 <?php endif; ?>
 <section class="panel-panel panel-settings-block"><h2>Vyzkoušet doručení</h2>
   <p class="panel-help">Nejdřív ulož adresu odesílatele. Test vytvoří zprávu ve frontě a pokusí se ji odeslat.</p>
-  <form class="panel-form" method="post" action="<?= $escape($mailSettingsUrl) ?>">
+  <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($mailSettingsUrl) ?>">
     <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="mail-test">
     <label>E-mail příjemce testu<input type="email" name="test_recipient" maxlength="254" required></label>
     <button class="panel-action panel-button" type="submit" <?= !$mailSettingsReady ? 'disabled' : '' ?>><?= \SimpleStore\Rendering\Icon::render('mail') ?> Odeslat testovací e-mail</button>

@@ -104,7 +104,7 @@ $checks = [
     'single_create_product' => substr_count($editor, 'value="create-product"') === 1,
     'compact_edit_body' => $compactEditableBodies,
     'add_section' => str_contains($editor, 'data-editor-action="section-add"'),
-    'media_link' => str_contains($editor, 'section=media&amp;type=product&amp;key=' . str_repeat('a', 32)),
+    'media_link' => str_contains($editor, 'media/?type=product&amp;key=' . str_repeat('a', 32)),
     'delete_product' => str_contains($editor, 'value="delete-product"'),
     'set_stock' => str_contains($editor, 'value="set-product-stock"'),
     'stock_quantity' => str_contains($editor, 'value="12"'),

@@ -32,8 +32,8 @@ if ($method === 'POST') {
     }
     $starter = ContentInlineEditor::starter($type, $language);
     $content->saveRevision($starter, $key, $key === null ? null : 0);
-    header('Location: ' . $basePath . $language . ($type === 'post' ? '/blog' : '') .
-        '/' . $starter['slug'] . '?edit=1', true, 303);
+    header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($basePath . $language . ($type === 'post' ? '/blog' : '') .
+        '/' . $starter['slug'] . '?edit=1'), true, 303);
     exit;
 }
 
@@ -49,13 +49,13 @@ if (isset($_GET['key'])) {
     if ($current === null) {
         throw new InvalidArgumentException('Dokument v tomto jazyce neexistuje.');
     }
-    header('Location: ' . $basePath . $language . ($current['type'] === 'post' ? '/blog' : '') .
-        '/' . rawurlencode($current['slug']) . '?edit=1', true, 303);
+    header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($basePath . $language . ($current['type'] === 'post' ? '/blog' : '') .
+        '/' . rawurlencode($current['slug']) . '?edit=1'), true, 303);
     exit;
 }
 
 if (($_GET['type'] ?? '') === 'post') {
-    header('Location: ' . $basePath . $site['default_language'] . '/blog?manage=1', true, 303);
+    header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($basePath . $site['default_language'] . '/blog?manage=1'), true, 303);
     exit;
 }
 

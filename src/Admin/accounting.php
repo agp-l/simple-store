@@ -245,12 +245,12 @@ $taxRegister->save(0, $_POST, (int) $admin['id']);
             default:
                 throw new InvalidArgumentException('Neznámá účetní akce.');
         }
-        header('Location: ' . ($returnOrder > 0 ?
+        header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty(($returnOrder > 0 ?
             $adminUrl . '?section=orders&id=' . $returnOrder . '&tax_saved=1' :
             $accountingBaseUrl . '&tab=' . rawurlencode($accountingTab) .
                 ($returnYear === null ? '' : '&year=' . $returnYear) .
                 ($returnFundsOrder > 0 ? '&order_id=' . $returnFundsOrder : '') .
-                ($returnInvoice > 0 ? '&invoice_id=' . $returnInvoice : '') . '&saved=1'), true, 303);
+                ($returnInvoice > 0 ? '&invoice_id=' . $returnInvoice : '') . '&saved=1')), true, 303);
         exit;
     } catch (InvalidArgumentException $exception) {
         http_response_code(422);

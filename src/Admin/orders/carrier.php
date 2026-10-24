@@ -28,8 +28,8 @@ if (in_array($carrierAction, ['carrier-save', 'carrier-register'], true)) {
                 'tracking:' . $id . ':' . substr(hash('sha256', $number), 0, 24)); }
             catch (Throwable $mailError) { error_log('Carrier notification: ' . $mailError->getMessage()); }
         }
-        header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&carrier_saved=' .
-            rawurlencode($carrierAction), true, 303);
+        header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=orders&id=' . $id . '&carrier_saved=' .
+            rawurlencode($carrierAction)), true, 303);
         exit;
     } catch (InvalidArgumentException $exception) {
         http_response_code(422);

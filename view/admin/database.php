@@ -15,14 +15,14 @@ declare(strict_types=1);
     <h2>Sjednocení názvů tabulek</h2>
     <?php if ($tablePrefixStatus['state'] === 'ready'): ?>
       <p>Šest starších tabulek lze přejmenovat na <code>shop_*</code> bez kopírování dat. Pro současný web vzniknou dočasné zapisovatelné pohledy se starými názvy. Před změnou si ulož zálohu databáze.</p>
-      <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=database') ?>">
+      <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">
         <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
         <input type="hidden" name="action" value="table-prefix-migrate">
         <button class="panel-button panel-action" type="submit"><?= \SimpleStore\Rendering\Icon::render('edit') ?> Přejmenovat šest tabulek</button>
       </form>
     <?php elseif ($tablePrefixStatus['state'] === 'migrated'): ?>
       <p>Tabulky mají prefix <code>shop_</code>. Staré názvy jsou již nepotřebné přechodné pohledy.</p>
-      <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=database') ?>">
+      <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">
         <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
         <input type="hidden" name="action" value="table-prefix-cleanup">
         <button class="panel-action panel-action--danger panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('delete') ?> Odstranit staré pohledy</button>
@@ -65,7 +65,7 @@ declare(strict_types=1);
     <?php endif; ?>
     <?php if (!$databaseStatus['current'] && !in_array($tablePrefixStatus['state'] ?? '', ['ready', 'conflict'], true)): ?>
       <p class="panel-help">Použije se právě databáze uvedená výše. Příkazy pro vytvoření a přepnutí databáze ze souboru se nespouštějí; stávající obsah tabulek zůstává zachován.</p>
-      <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=database') ?>">
+      <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">
         <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
         <input type="hidden" name="action" value="schema-apply">
         <button class="panel-button panel-action" type="submit"><?= \SimpleStore\Rendering\Icon::render('database') ?> Aktualizovat SQL tabulky</button>

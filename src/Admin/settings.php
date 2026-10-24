@@ -143,7 +143,7 @@ if ($method === 'POST') {
                 throw new InvalidArgumentException('Vyber platný jazyk a stránku vzhledu.');
             }
             $siteCopyStore->save($copyLanguage, $_POST);
-            header('Location: ' . $adminUrl . '?section=settings&tab=appearance&language=' . $copyLanguage . '&saved=1', true, 303);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=settings&tab=appearance&language=' . $copyLanguage . '&saved=1'), true, 303);
             exit;
         }
         if (($_POST['action'] ?? null) === 'save-mail-settings') {
@@ -152,7 +152,7 @@ if ($method === 'POST') {
                 throw new InvalidArgumentException('Vyplň platný kontaktní e-mail obchodu.');
             }
             $mailSettingsStore->save($_POST);
-            header('Location: ' . $adminUrl . '?section=settings&tab=mail&saved=1', true, 303);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=settings&tab=mail&saved=1'), true, 303);
             exit;
         }
         if (($_POST['action'] ?? null) === 'mail-test') {
@@ -162,7 +162,7 @@ if ($method === 'POST') {
             if (!is_string($recipient)) throw new InvalidArgumentException('Zadej e-mail příjemce testu.');
             $mailId = $mailQueue->enqueueTest($recipient);
             $sent = $mailQueue->dispatch($mailId, $taxMailFrom);
-            header('Location: ' . $adminUrl . '?section=settings&tab=mail&test=' . ($sent ? 'sent' : 'failed'), true, 303);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=settings&tab=mail&test=' . ($sent ? 'sent' : 'failed')), true, 303);
             exit;
         }
         if (($_POST['action'] ?? null) !== 'save-checkout-settings' && $fioCronKey === '') {
@@ -173,8 +173,8 @@ if ($method === 'POST') {
             $paymentReturn = $settingsTab === 'payment' && in_array($paymentArea,
                 ['bank', 'fio', 'comgate', 'gopay', 'btcpay'], true)
                 ? '&area=' . $paymentArea . '#settings-' . $paymentArea : '';
-            header('Location: ' . $adminUrl . '?section=settings&tab=' . $settingsTab .
-                '&saved=1' . $paymentReturn, true, 303);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=settings&tab=' . $settingsTab .
+                '&saved=1' . $paymentReturn), true, 303);
             exit;
         }
     } catch (InvalidArgumentException $exception) {

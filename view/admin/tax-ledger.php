@@ -11,9 +11,9 @@ $purposes = \SimpleStore\Accounting\TaxEvidenceRepository::PURPOSES;
 $ledgerUrl = $taxUrl . '&tab=money&year=' . $taxYear;
 ?>
 <section class="panel-panel">
-  <div class="panel-panel-head"><h2>Peněžní deník <?= (int) $taxYear ?></h2><a class="panel-button" href="<?= $escape($ledgerUrl . '&download=ledger&' . http_build_query($ledgerFilters)) ?>">Export CSV</a></div>
-  <p class="panel-help">Zapisuj skutečné platby podle podkladů. <a href="<?= $escape($taxUrl . '&tab=funds&year=' . $taxYear) ?>">Platby objednávek a asistovaný nákup</a> umí rozdělit vlastní příjem a svěřené peníze jedním formulářem.</p>
-  <form class="panel-ledger-filters" method="get" action="<?= $escape($adminUrl) ?>">
+  <div class="panel-panel-head"><h2>Peněžní deník <?= (int) $taxYear ?></h2><a class="panel-button" href="<?= \SimpleStore\Navigation\PanelUrl::escape($ledgerUrl . '&download=ledger&' . http_build_query($ledgerFilters)) ?>">Export CSV</a></div>
+  <p class="panel-help">Zapisuj skutečné platby podle podkladů. <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl . '&tab=funds&year=' . $taxYear) ?>">Platby objednávek a asistovaný nákup</a> umí rozdělit vlastní příjem a svěřené peníze jedním formulářem.</p>
+  <form class="panel-ledger-filters" method="get" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>">
     <input type="hidden" name="section" value="accounting"><input type="hidden" name="tab" value="money"><input type="hidden" name="year" value="<?= (int) $taxYear ?>">
     <label>Hledat<input name="q" maxlength="150" placeholder="Doklad, popis, protistrana…" value="<?= $escape($ledgerFilters['q'] ?? '') ?>"></label>
     <?php foreach (['account' => ['Účet',$accounts], 'purpose' => ['Účel',$purposes], 'tax_kind' => ['Daňové zařazení',$taxKind]] as $key => [$label,$choices]): ?>
@@ -21,7 +21,7 @@ $ledgerUrl = $taxUrl . '&tab=money&year=' . $taxYear;
     <?php endforeach; ?>
     <label>Od<input type="date" name="from" value="<?= $escape($ledgerFilters['from'] ?? '') ?>"></label><label>Do<input type="date" name="to" value="<?= $escape($ledgerFilters['to'] ?? '') ?>"></label>
     <label>Objednávka ID<input name="order_id" inputmode="numeric" value="<?= $escape($ledgerFilters['order_id'] ?? '') ?>"></label>
-    <div class="panel-ledger-actions"><button class="panel-button">Filtrovat</button><a href="<?= $escape($ledgerUrl) ?>">Zrušit filtry</a></div>
+    <div class="panel-ledger-actions"><button class="panel-button">Filtrovat</button><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($ledgerUrl) ?>">Zrušit filtry</a></div>
   </form>
   <dl class="panel-ledger-totals">
     <?php foreach (['received' => 'Příjmy celkem', 'paid' => 'Výdaje celkem', 'income' => 'Daňové příjmy po vratkách', 'expenses' => 'Daňové výdaje po vratkách'] as $key => $label): ?><div><dt><?= $escape($label) ?></dt><dd><?= $taxMoney($ledgerSummary[$key] ?? 0) ?></dd></div><?php endforeach; ?>
@@ -30,7 +30,7 @@ $ledgerUrl = $taxUrl . '&tab=money&year=' . $taxYear;
 <section class="panel-panel" id="ledger-edit">
   <details <?= $editing || ($accountingError !== '' && in_array($_POST['action'] ?? '', ['tax-add-entry','tax-amend-entry'], true)) ? 'open' : '' ?> class="panel-accounting-details">
     <summary><?= $editing ? 'Upravit zápis #' . (int) $taxEditEntry['id'] : '+ Přidat peněžní pohyb' ?></summary>
-    <form class="panel-form panel-evidence-form" method="post" action="<?= $escape($ledgerUrl . ($editing ? '&edit_entry=' . (int) $taxEditEntry['id'] : '')) ?>" data-ledger-form>
+    <form class="panel-form panel-evidence-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($ledgerUrl . ($editing ? '&edit_entry=' . (int) $taxEditEntry['id'] : '')) ?>" data-ledger-form>
       <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="money"><input type="hidden" name="year" value="<?= (int) $taxYear ?>"><input type="hidden" name="action" value="<?= $editing ? 'tax-amend-entry' : 'tax-add-entry' ?>">
       <input type="hidden" name="request_key" value="<?= $escape($field('request_key', bin2hex(random_bytes(16)))) ?>">
       <?php if ($editing): ?><input type="hidden" name="id" value="<?= (int) $taxEditEntry['id'] ?>"><input type="hidden" name="version" value="<?= $escape($field('version', 1)) ?>"><input type="hidden" name="order_number" value="<?= $escape($field('order_number')) ?>"><?php endif; ?>
@@ -50,14 +50,14 @@ $ledgerUrl = $taxUrl . '&tab=money&year=' . $taxYear;
         <label>Podklad ocenění v Kč<input name="valuation_note" maxlength="255" value="<?= $escape($field('valuation_note')) ?>" placeholder="Kurz, datum, zdroj, případně TXID"></label>
       </div><p class="panel-help">Korunovou hodnotu vyplň podle doloženého ocenění transakce. U rozdělené platby uveď ke každé části jen odpovídající množství. Pozdější směna krypta se eviduje zvlášť.</p></details>
       <?php if ($editing): ?><label class="panel-evidence-wide">Důvod opravy<input name="reason" minlength="1" maxlength="190" value="<?= $escape($field('reason')) ?>" required></label><?php endif; ?>
-      <div class="panel-ledger-actions panel-evidence-wide"><button class="panel-button" type="submit"><?= $editing ? 'Uložit opravu' : 'Přidat pohyb' ?></button><?php if ($editing): ?><a href="<?= $escape($ledgerUrl) ?>">Zavřít úpravu</a><?php endif; ?></div>
+      <div class="panel-ledger-actions panel-evidence-wide"><button class="panel-button" type="submit"><?= $editing ? 'Uložit opravu' : 'Přidat pohyb' ?></button><?php if ($editing): ?><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($ledgerUrl) ?>">Zavřít úpravu</a><?php endif; ?></div>
     </form>
-    <?php if ($editing): ?><details><summary>Vyřadit chybný zápis</summary><form class="panel-form" method="post" action="<?= $escape($ledgerUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="money"><input type="hidden" name="year" value="<?= (int) $taxYear ?>"><input type="hidden" name="action" value="tax-void-entry"><input type="hidden" name="id" value="<?= (int) $taxEditEntry['id'] ?>"><input type="hidden" name="version" value="<?= (int) $taxEditEntry['version'] ?>"><label>Důvod<input name="reason" minlength="1" maxlength="190" required></label><label class="panel-check"><input type="checkbox" name="confirmed" value="1" required> Vyřadit z deníku, ponechat v historii.</label><button class="panel-button">Vyřadit zápis</button></form></details><?php endif; ?>
+    <?php if ($editing): ?><details><summary>Vyřadit chybný zápis</summary><form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($ledgerUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="money"><input type="hidden" name="year" value="<?= (int) $taxYear ?>"><input type="hidden" name="action" value="tax-void-entry"><input type="hidden" name="id" value="<?= (int) $taxEditEntry['id'] ?>"><input type="hidden" name="version" value="<?= (int) $taxEditEntry['version'] ?>"><label>Důvod<input name="reason" minlength="1" maxlength="190" required></label><label class="panel-check"><input type="checkbox" name="confirmed" value="1" required> Vyřadit z deníku, ponechat v historii.</label><button class="panel-button">Vyřadit zápis</button></form></details><?php endif; ?>
   </details>
 </section>
 <details class="panel-panel" <?= $accountingError !== '' && ($_POST['action'] ?? '') === 'tax-transfer' ? 'open' : '' ?>><summary>Převod mezi vlastními korunovými účty</summary>
   <?php $transferDraft = $accountingError !== '' && ($_POST['action'] ?? '') === 'tax-transfer' ? $_POST : []; ?>
-  <form class="panel-form panel-evidence-form" method="post" action="<?= $escape($ledgerUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="money"><input type="hidden" name="year" value="<?= (int) $taxYear ?>"><input type="hidden" name="action" value="tax-transfer"><input type="hidden" name="request_key" value="<?= $escape($transferDraft['request_key'] ?? bin2hex(random_bytes(16))) ?>">
+  <form class="panel-form panel-evidence-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($ledgerUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="money"><input type="hidden" name="year" value="<?= (int) $taxYear ?>"><input type="hidden" name="action" value="tax-transfer"><input type="hidden" name="request_key" value="<?= $escape($transferDraft['request_key'] ?? bin2hex(random_bytes(16))) ?>">
     <label>Datum<input type="date" name="entry_date" value="<?= $escape($transferDraft['entry_date'] ?? $today) ?>" required></label>
     <?php foreach (['from_account'=>'Odkud','to_account'=>'Kam'] as $key=>$label): ?><label><?= $label ?><select name="<?= $key ?>"><?php foreach (['bank','cash','clearing'] as $account): ?><option value="<?= $account ?>" <?= ($transferDraft[$key] ?? ($key === 'from_account' ? 'clearing' : 'bank')) === $account ? 'selected' : '' ?>><?= $escape($accounts[$account]) ?></option><?php endforeach; ?></select></label><?php endforeach; ?>
     <label>Částka Kč<input name="amount_czk" inputmode="decimal" value="<?= $escape($transferDraft['amount_czk'] ?? '') ?>" required></label><label>Reference<input name="reference" maxlength="100" value="<?= $escape($transferDraft['reference'] ?? '') ?>"></label><button class="panel-button">Zapsat oba pohyby</button>
@@ -68,15 +68,15 @@ $ledgerUrl = $taxUrl . '&tab=money&year=' . $taxYear;
     <?php foreach ($taxEntries as $entry): ?><tr>
       <td><?= $escape($entry['entry_date']) ?><small><?= $escape($entry['reference']) ?></small></td>
       <td><strong><?= $escape($entry['description']) ?></strong><small><?= $escape($purposes[$entry['purpose']] ?? $entry['purpose']) ?></small></td>
-      <td><?= $escape($entry['counterparty']) ?><?php if ($entry['order_id'] !== null): ?><small><a href="<?= $escape($taxUrl . '&tab=funds&order_id=' . (int) $entry['order_id'] . '&year=' . $taxYear) ?>"><?= $escape($entry['order_number'] ?: '#' . $entry['order_id']) ?></a></small><?php elseif ($entry['order_number'] !== ''): ?><small><?= $escape($entry['order_number']) ?> · archiv</small><?php endif; ?></td>
+      <td><?= $escape($entry['counterparty']) ?><?php if ($entry['order_id'] !== null): ?><small><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($taxUrl . '&tab=funds&order_id=' . (int) $entry['order_id'] . '&year=' . $taxYear) ?>"><?= $escape($entry['order_number'] ?: '#' . $entry['order_id']) ?></a></small><?php elseif ($entry['order_number'] !== ''): ?><small><?= $escape($entry['order_number']) ?> · archiv</small><?php endif; ?></td>
       <td><?= $escape($accounts[$entry['account']] ?? $entry['account']) ?><?php if ($entry['currency'] !== 'CZK'): ?><small><?= $escape($entry['foreign_amount'] . ' ' . $entry['currency']) ?></small><small><?= $escape($entry['valuation_note']) ?></small><?php endif; ?></td>
       <td><?= $escape($taxKind[$entry['tax_kind']] ?? $entry['tax_kind']) ?></td>
       <td class="panel-table-money"><?= $entry['direction'] === 'income' ? $taxMoney($entry['amount_czk']) : '—' ?></td><td class="panel-table-money"><?= $entry['direction'] === 'expense' ? $taxMoney($entry['amount_czk']) : '—' ?></td>
-      <td><a href="<?= $escape($ledgerUrl . '&edit_entry=' . (int) $entry['id'] . '#ledger-edit') ?>">Upravit</a></td>
+      <td><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($ledgerUrl . '&edit_entry=' . (int) $entry['id'] . '#ledger-edit') ?>">Upravit</a></td>
     </tr><?php endforeach; ?>
     <?php if ($taxEntries === []): ?><tr><td colspan="8">Tomuto výběru neodpovídá žádný pohyb.</td></tr><?php endif; ?>
   </tbody></table></div>
-  <nav class="panel-ledger-actions" aria-label="Stránky deníku"><?php if ($taxEntriesPreviousUrl !== ''): ?><a href="<?= $escape($taxEntriesPreviousUrl) ?>">← Předchozí</a><?php endif; ?><?php if ($taxEntriesNextUrl !== ''): ?><a href="<?= $escape($taxEntriesNextUrl) ?>">Další →</a><?php endif; ?></nav>
+  <nav class="panel-ledger-actions" aria-label="Stránky deníku"><?php if ($taxEntriesPreviousUrl !== ''): ?><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($taxEntriesPreviousUrl) ?>">← Předchozí</a><?php endif; ?><?php if ($taxEntriesNextUrl !== ''): ?><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($taxEntriesNextUrl) ?>">Další →</a><?php endif; ?></nav>
   <p class="panel-help">50 řádků na stránku. CSV obsahuje všechny pohyby odpovídající filtrům. Originály dokladů a výpisů uschovej pod uvedenými referencemi.</p>
 </section>
 <details class="panel-panel"><summary>Historie oprav · posledních 100 zásahů do vybraného roku</summary>

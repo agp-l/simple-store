@@ -72,5 +72,5 @@ try {
 }
 $notice = !isset($_SESSION['variant_error']) && ($operation ?? '') !== 'merge-preview' ? '&variants_saved=1' : '';
 $anchor = in_array($operation ?? '', ['merge', 'merge-preview'], true) && isset($_SESSION['variant_error']) ? 'product-variant-merge' : 'product-variants';
-header('Location: ' . $basePath . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1' . $notice . '#' . $anchor, true, 303);
+header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($basePath . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1' . $notice . '#' . $anchor), true, 303);
 exit;

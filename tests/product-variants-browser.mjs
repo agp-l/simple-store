@@ -73,7 +73,7 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
       await prices.nth(1).fill('2790');
       assert.match(await page.locator('[data-variant-price-count]').innerText(), /1 z 6/);
       const events = [];
-      await page.route('**/admin.php', async route => {
+      await page.route('**/admin/', async route => {
         const form = new URLSearchParams(route.request().postData());
         if (form.get('action') === 'inline-product') {
           assert.equal(form.get('field'), 'price_czk');
@@ -116,7 +116,7 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
     await noJs.locator('#product-variant').selectOption(await option.getAttribute('value'));
     assert.ok(await noJs.locator('.product-purchase').evaluate(form => form.checkValidity()));
     await noJs.goto('http://127.0.0.1:8765/' + adminPath);
-    await noJs.route('**/admin.php', async route => {
+    await noJs.route('**/admin/', async route => {
       const form = new URLSearchParams(route.request().postData());
       assert.equal(form.get('operation'), 'inherit-prices');
       assert.ok(form.get('csrf') && form.get('expected') && form.get('key'));

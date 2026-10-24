@@ -34,7 +34,7 @@ $btcpayWebhookSecretConfigured ??= false;
       ['mail', 'E-maily', 'SMTP, potvrzení objednávek a texty zpráv.'],
       ['legal', 'Obchodní podmínky', 'Odkaz na publikovanou stránku obchodních podmínek.'],
   ] as [$key, $title, $description]): ?>
-    <a class="panel-settings-card" href="<?= $escape($adminUrl . '?section=settings&tab=' . $key) ?>"><strong><?= $escape($title) ?> →</strong><span><?= $escape($description) ?></span></a>
+    <a class="panel-settings-card" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=' . $key) ?>"><strong><?= $escape($title) ?> →</strong><span><?= $escape($description) ?></span></a>
   <?php endforeach; ?>
 </div>
 <?php elseif ($settingsTab === 'products'): ?>
@@ -42,7 +42,7 @@ $btcpayWebhookSecretConfigured ??= false;
 <?php elseif ($settingsTab === 'mail'): ?>
 <?php require __DIR__ . '/settings-mail.php'; ?>
 <?php elseif ($settingsTab === 'appearance'): ?>
-<form class="panel-form panel-settings-form" method="post" action="<?= $escape($adminUrl . '?section=settings&tab=appearance') ?>">
+<form class="panel-form panel-settings-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=appearance') ?>">
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
   <input type="hidden" name="action" value="save-site-copy">
   <input type="hidden" name="tab" value="appearance">
@@ -51,7 +51,7 @@ $btcpayWebhookSecretConfigured ??= false;
     <input type="hidden" name="language" value="<?= $escape($copyLanguage) ?>">
     <?php if (count($site['languages']) > 1): ?>
       <nav class="panel-quick" aria-label="Jazyk textů">
-        <?php foreach ($site['languages'] as $code): ?><a href="<?= $escape($adminUrl . '?section=settings&tab=appearance&language=' . $code) ?>" <?= $copyLanguage === $code ? 'aria-current="page"' : '' ?>><?= $escape(strtoupper($code)) ?></a><?php endforeach; ?>
+        <?php foreach ($site['languages'] as $code): ?><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=appearance&language=' . $code) ?>" <?= $copyLanguage === $code ? 'aria-current="page"' : '' ?>><?= $escape(strtoupper($code)) ?></a><?php endforeach; ?>
       </nav>
     <?php endif; ?>
     <p class="panel-help">Texty pro jazyk <?= $escape(strtoupper($copyLanguage)) ?>. Každý jazyk má vlastní znění.</p>
@@ -71,7 +71,7 @@ $btcpayWebhookSecretConfigured ??= false;
 </form>
 <?php else: ?>
 <?php if ($settingsTab !== 'payment'): ?>
-<form class="panel-form panel-settings-form" method="post" action="<?= $escape($adminUrl . '?section=settings&tab=' . $settingsTab) ?>">
+<form class="panel-form panel-settings-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=' . $settingsTab) ?>">
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
   <input type="hidden" name="action" value="save-checkout-settings">
   <input type="hidden" name="tab" value="<?= $escape($settingsTab) ?>">
@@ -113,13 +113,13 @@ $btcpayWebhookSecretConfigured ??= false;
   <nav class="panel-settings-nav" aria-label="Způsoby platby">
     <?php foreach (['bank' => 'Bankovní převod', 'fio' => 'Fio ověřování',
         'comgate' => 'Comgate', 'gopay' => 'GoPay', 'btcpay' => 'BTCPay'] as $areaCode => $areaLabel): ?>
-      <a href="<?= $escape($adminUrl . '?section=settings&tab=payment&area=' . $areaCode) ?>" <?= $paymentArea === $areaCode ? 'aria-current="page"' : '' ?>><?= $escape($areaLabel) ?></a>
+      <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=payment&area=' . $areaCode) ?>" <?= $paymentArea === $areaCode ? 'aria-current="page"' : '' ?>><?= $escape($areaLabel) ?></a>
     <?php endforeach; ?>
   </nav>
   <section class="panel-panel panel-settings-block" id="settings-payment">
   <h2>Platby</h2><p class="panel-help">Každou platební část ulož samostatně. Rozpracované údaje jiné brány její uložení neovlivní.</p>
   <?php if ($paymentArea === 'bank'): ?>
-  <form class="panel-form panel-settings-form" method="post" novalidate action="<?= $escape($adminUrl . '?section=settings&tab=payment#settings-bank') ?>">
+  <form class="panel-form panel-settings-form" method="post" novalidate action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=payment#settings-bank') ?>">
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="save-checkout-settings"><input type="hidden" name="tab" value="payment"><input type="hidden" name="payment_area" value="bank">
   <h3 id="settings-bank">Bankovní převod</h3>
   <?php if ($settingsError !== '' && $paymentArea === 'bank'): ?><p class="panel-error" role="alert"><?= $escape($settingsError) ?></p><?php endif; ?>
@@ -133,7 +133,7 @@ $btcpayWebhookSecretConfigured ??= false;
   <div class="panel-settings-save"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit bankovní převod</button></div></form>
   <?php endif; ?>
   <?php if ($paymentArea === 'fio'): ?>
-  <form class="panel-form panel-settings-form" method="post" novalidate action="<?= $escape($adminUrl . '?section=settings&tab=payment#settings-fio') ?>">
+  <form class="panel-form panel-settings-form" method="post" novalidate action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=payment#settings-fio') ?>">
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="save-checkout-settings"><input type="hidden" name="tab" value="payment"><input type="hidden" name="payment_area" value="fio">
   <details class="panel-settings-details" id="settings-fio"<?= $paymentArea === 'fio' ? ' open' : '' ?>><summary>Fio banka – ověřování bankovních převodů</summary><div class="panel-settings-fields">
   <?php if ($settingsError !== '' && $paymentArea === 'fio'): ?><p class="panel-error" role="alert"><?= $escape($settingsError) ?></p><?php endif; ?>
@@ -149,7 +149,7 @@ $btcpayWebhookSecretConfigured ??= false;
   </div></details></form>
   <?php endif; ?>
   <?php if ($paymentArea === 'comgate'): ?>
-  <form class="panel-form panel-settings-form" method="post" novalidate action="<?= $escape($adminUrl . '?section=settings&tab=payment#settings-comgate') ?>">
+  <form class="panel-form panel-settings-form" method="post" novalidate action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=payment#settings-comgate') ?>">
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="save-checkout-settings"><input type="hidden" name="tab" value="payment"><input type="hidden" name="payment_area" value="comgate">
   <details class="panel-settings-details" id="settings-comgate"<?= $paymentArea === 'comgate' ? ' open' : '' ?>><summary>Comgate – online platba</summary><div class="panel-settings-fields">
   <?php if ($settingsError !== '' && $paymentArea === 'comgate'): ?><p class="panel-error" role="alert"><?= $escape($settingsError) ?></p><?php endif; ?>
@@ -166,7 +166,7 @@ $btcpayWebhookSecretConfigured ??= false;
   </div></details></form>
   <?php endif; ?>
   <?php if ($paymentArea === 'gopay'): ?>
-  <form class="panel-form panel-settings-form" method="post" novalidate action="<?= $escape($adminUrl . '?section=settings&tab=payment#settings-gopay') ?>">
+  <form class="panel-form panel-settings-form" method="post" novalidate action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=payment#settings-gopay') ?>">
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="save-checkout-settings"><input type="hidden" name="tab" value="payment"><input type="hidden" name="payment_area" value="gopay">
   <details class="panel-settings-details" id="settings-gopay"<?= $paymentArea === 'gopay' ? ' open' : '' ?>><summary>GoPay – online platba</summary><div class="panel-settings-fields">
   <?php if ($settingsError !== '' && $paymentArea === 'gopay'): ?><p class="panel-error" role="alert"><?= $escape($settingsError) ?></p><?php endif; ?>
@@ -184,7 +184,7 @@ $btcpayWebhookSecretConfigured ??= false;
   </div></details></form>
   <?php endif; ?>
   <?php if ($paymentArea === 'btcpay'): ?>
-  <form class="panel-form panel-settings-form" method="post" novalidate action="<?= $escape($adminUrl . '?section=settings&tab=payment#settings-btcpay') ?>">
+  <form class="panel-form panel-settings-form" method="post" novalidate action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=payment#settings-btcpay') ?>">
   <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="save-checkout-settings"><input type="hidden" name="tab" value="payment"><input type="hidden" name="payment_area" value="btcpay">
   <details class="panel-settings-details" id="settings-btcpay"<?= $paymentArea === 'btcpay' ? ' open' : '' ?>><summary>BTCPay Server – platba bitcoinem</summary><div class="panel-settings-fields">
   <?php if ($settingsError !== '' && $paymentArea === 'btcpay'): ?><p class="panel-error" role="alert"><?= $escape($settingsError) ?></p><?php endif; ?>
@@ -223,7 +223,7 @@ $btcpayWebhookSecretConfigured ??= false;
       <p><code><?= $escape(rtrim($basePath, '/') . '/fio-cron.php?key=' . $fioCronKey) ?></code></p>
     <?php endif; ?>
     <p class="panel-help">V administraci Webglobe vyber hosting této domény → Web → Cron a vlož celou HTTPS adresu včetně klíče; nastav interval 10 minut. Webglobe před uložením kontroluje adresu metodou HEAD. Pokud hlásí, že skript neexistuje, ověř, že je po nasazení soubor fio-cron.php v kořeni webu vedle index.php. Klíč obsahuje jen oprávnění spustit kontrolu; bankovní token v adrese není. Pokud se adresa dostane k někomu dalšímu, vytvoř nový klíč a v plánu vyměň adresu.</p>
-    <form method="post" action="<?= $escape($adminUrl . '?section=settings&tab=payment&area=fio') ?>">
+    <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=payment&area=fio') ?>">
       <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="fio-cron-rotate"><input type="hidden" name="tab" value="payment">
       <button class="panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('lock') ?> <?= !empty($settings['fio_bank']['cron_key_hash']) ? 'Vyměnit klíč pro Cron' : 'Vytvořit klíč pro Cron' ?></button>
     </form>

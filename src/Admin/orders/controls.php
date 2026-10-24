@@ -23,16 +23,16 @@ if ($method === 'POST' && in_array($_POST['action'] ?? '',
         if ($_POST['action'] === 'correct-order-status') {
             if (!is_string($target)) throw new InvalidArgumentException('Vyber cílový stav.');
             $orderControls->correctFulfillment($id, $target, (int) $admin['id'], $reason, $confirmation);
-            header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&corrected=1', true, 303);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=orders&id=' . $id . '&corrected=1'), true, 303);
         } elseif ($_POST['action'] === 'correct-order-payment') {
             $orderControls->correctPayment($id, (int) $admin['id'], $reason, $confirmation);
-            header('Location: ' . $adminUrl . '?section=orders&id=' . $id . '&payment_corrected=1', true, 303);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=orders&id=' . $id . '&payment_corrected=1'), true, 303);
         } else {
             if (!is_string($number) || $confirmation !== 'delete') {
                 throw new InvalidArgumentException('Potvrď smazání a opiš přesné číslo objednávky.');
             }
             $orderControls->deleteOrder($id, $number, (int) $admin['id'], $reason);
-            header('Location: ' . $adminUrl . '?section=orders&deleted=1', true, 303);
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=orders&deleted=1'), true, 303);
         }
         exit;
     } catch (InvalidArgumentException $exception) {

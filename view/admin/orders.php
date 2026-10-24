@@ -83,10 +83,10 @@ $shippingMethodLabels = array_map(static fn (array $method): string => $method['
 <div class="panel-intro">
   <div><p class="panel-eyebrow">Prodej</p><h1>Objednávky</h1>
     <p>Přehled přijatých objednávek. Převod potvrď po kontrole bankovního výpisu; platby Comgate, GoPay a BTCPay ověřuj u příslušné brány.</p></div>
-  <?php if ($order !== null): ?><div class="panel-quick"><a href="<?= $escape($orderBaseUrl) ?>">← Všechny objednávky</a></div><?php endif; ?>
+  <?php if ($order !== null): ?><div class="panel-quick"><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl) ?>">← Všechny objednávky</a></div><?php endif; ?>
 </div>
 <?php if (!$ordersReady): ?>
-  <p class="panel-error" role="alert">Pro objednávky nejdřív <a href="<?= $escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
+  <p class="panel-error" role="alert">Pro objednávky nejdřív <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">aktualizuj SQL tabulky</a>.</p>
 <?php endif; ?>
 <?php if ($orderError !== ''): ?><p class="panel-error" role="alert"><?= $escape($orderError) ?></p><?php endif; ?>
 <?php if ($order === null && ($_GET['deleted'] ?? '') === '1'): ?><p class="panel-notice" role="status">Objednávka byla smazána. Skutečný obchod má zachovanou účetní stopu.</p><?php endif; ?>

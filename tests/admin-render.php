@@ -98,7 +98,7 @@ require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
 if (!str_contains($html, 'name="action" value="schema-apply"') ||
     !str_contains($html, 'hosting_ag_shop') || !str_contains($html, 'name="csrf" value="test-token"') ||
-    !str_contains($html, '?section=database')) {
+    !str_contains($html, '/database/')) {
     throw new RuntimeException('Database update screen is not integrated into the admin panel.');
 }
 $tablePrefixStatus = ['state' => 'ready', 'tables' => []];
@@ -352,7 +352,7 @@ if (!str_contains($html, 'Odeslané označení odesílatele') ||
     !str_contains($html, 'Dobrodruzi &lt;script&gt;') ||
     str_contains($html, 'Dobrodruzi <script>') ||
     !str_contains($html, 'client.packeta.com/senders/') ||
-    !str_contains($html, 'section=settings')) {
+    !str_contains($html, '/settings/')) {
     throw new RuntimeException('Rejected Packeta sender should show its submitted label and correction path safely.');
 }
 $packetaShipment = null;
@@ -467,7 +467,7 @@ foreach (['overview', 'delivery', 'carriers', 'payment', 'prices', 'legal'] as $
     require dirname(__DIR__) . '/view/admin/layout.php';
     $html = ob_get_clean();
     if (!str_contains($html, 'Nastavení obchodu') ||
-        !str_contains($html, '?section=settings&amp;tab=' . $settingsTab) ||
+        !str_contains($html, '/settings/?tab=' . $settingsTab) ||
         str_contains($html, 'local_test_checkout') ||
         ($settingsTab === 'overview' && !str_contains($html, 'panel-settings-overview')) ||
         ($settingsTab !== 'overview' && !str_contains($html, 'value="save-checkout-settings"'))) {

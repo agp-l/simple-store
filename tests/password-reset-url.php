@@ -53,7 +53,8 @@ namespace {
             return true;
         });
 
-    foreach (['https://shop.example.test/shop/admin.php', 'https://other.example.test/admin.php'] as $wrong) {
+    foreach (['https://shop.example.test/shop/admin.php', 'https://other.example.test/admin.php',
+        'https://shop.example.test/shop/admin/', 'https://other.example.test/admin/'] as $wrong) {
         try {
             $service->request('admin', 'owner@example.test', 'admin.php', $wrong);
             throw new \RuntimeException('A password reset was sent to another installation.');
@@ -66,9 +67,9 @@ namespace {
     }
 
     $service->request('admin', 'owner@example.test', 'admin.php',
-        'https://other.example.test/shop/admin.php');
+        'https://other.example.test/shop/admin/');
     if ($db->insertions !== 1 || count($messages) !== 1 ||
-        !str_contains($messages[0], 'https://other.example.test/shop/admin.php?mode=reset&token=')) {
+        !str_contains($messages[0], 'https://other.example.test/shop/admin/reset-password/?token=')) {
         throw new \RuntimeException('A matching installation did not send a recovery link.');
     }
     $service->request('admin', '', 'admin.php', 'https://other.example.test/shop/admin.php');

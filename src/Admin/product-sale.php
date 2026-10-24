@@ -34,5 +34,5 @@ try {
         'message' => $error instanceof InvalidArgumentException ? $error->getMessage()
             : 'Uložení se nezdařilo. Údaje zůstaly ve formuláři; zkus jej znovu uložit.'];
 }
-header('Location: ' . $returnUrl . '#product-sale', true, 303);
+header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($returnUrl . '#product-sale'), true, 303);
 exit;
