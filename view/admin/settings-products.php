@@ -3,6 +3,7 @@
 <p>Spravuj společné profily prodávajících a rozpracované kontakty pro výběr u produktů.</p>
 <a class="panel-icon-link" href="<?= $escape($adminUrl . '?section=purchase-partners') ?>">Seznam prodávajících a nový prodávající</a></section>
 <?php if (is_string($massNotice)): ?><p class="panel-notice" role="status"><?= $escape($massNotice) ?></p><?php endif; ?>
+<?php require __DIR__ . '/settings-product-sales.php'; ?>
 <section class="panel-panel panel-settings-block">
   <h2><?= \SimpleStore\Rendering\Icon::render('package') ?> Hromadná úprava produktů</h2>
   <p>Změna platí pro všechny produkty včetně konceptů a všech jazyků. Počet produktů: <strong><?= (int) $massCount ?></strong>.</p>

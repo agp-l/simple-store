@@ -11,6 +11,10 @@ $massPreview = null;
 $variantBulkStore = new \SimpleStore\Product\ProductVariantBulkCreate($db, $site['default_language']);
 $variantBulkQuantity = '10';
 $variantBulkPreview = null;
+$saleBulkStore = new \SimpleStore\Product\ProductSalesMassUpdate($db, $site['default_language']);
+$saleBulkReady = $saleBulkStore->installed();
+$saleBulkMode = is_string($_POST['sale_mode'] ?? null) ? $_POST['sale_mode'] : '';
+$saleBulkPreview = null;
 $massNotice = $_SESSION['product_mass_notice'] ?? null;
 unset($_SESSION['product_mass_notice']);
 if ($method === 'POST') {
@@ -18,7 +22,28 @@ if ($method === 'POST') {
         if (is_string($_POST[$key] ?? null)) $massValues[$key] = $_POST[$key];
     }
     try {
-        if (in_array($_POST['action'] ?? '', ['products-variants-preview', 'products-variants-apply'], true)) {
+        if (in_array($_POST['action'] ?? '', ['products-sale-preview', 'products-sale-apply'], true)) {
+            if ($_POST['action'] === 'products-sale-preview') {
+                unset($_SESSION['product_sale_bulk_preview']);
+                $saleBulkPreview = $saleBulkStore->preview($saleBulkMode);
+                $saleBulkPreview['token'] = bin2hex(random_bytes(24));
+                $_SESSION['product_sale_bulk_preview'] = $saleBulkPreview;
+            } else {
+                $pending = $_SESSION['product_sale_bulk_preview'] ?? null;
+                if (!is_array($pending) || !is_string($_POST['preview_token'] ?? null) ||
+                    !hash_equals($pending['token'], $_POST['preview_token'])) {
+                    throw new InvalidArgumentException('Nejdřív zobraz nový náhled přepnutí způsobu prodeje.');
+                }
+                $saleBulkMode = $pending['mode'];
+                unset($_SESSION['product_sale_bulk_preview']);
+                $changed = $saleBulkStore->apply($pending);
+                $_SESSION['product_mass_notice'] = 'Hotovo. Všechny produkty mají způsob prodeje „' .
+                    ($saleBulkMode === 'assisted' ? 'Asistovaný nákup' : 'Prodáváme my') . '“. Změněno: ' . $changed . '.';
+                if ($pending['issues'] !== []) $_SESSION['product_mass_notice'] .= ' Doplnění partnerských údajů nebo cen vyžaduje ' . count($pending['issues']) . ' produktů; do té doby u nich není asistovaný nákup možný.';
+                header('Location: ' . $adminUrl . '?section=settings&tab=products#bulk-product-sales', true, 303);
+                exit;
+            }
+        } elseif (in_array($_POST['action'] ?? '', ['products-variants-preview', 'products-variants-apply'], true)) {
             if (is_string($_POST['variant_quantity'] ?? null)) $variantBulkQuantity = $_POST['variant_quantity'];
             if ($_POST['action'] === 'products-variants-preview') {
                 unset($_SESSION['product_variant_bulk_preview']);
@@ -69,3 +94,4 @@ if ($method === 'POST') {
     }
 }
 $massCount = $massStore->count();
+$saleBulkCounts = $saleBulkStore->counts();

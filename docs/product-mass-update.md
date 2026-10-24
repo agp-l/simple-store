@@ -36,3 +36,29 @@ stale catalog/stock/reservation snapshot is rejected.
 
 Implementation: `ProductVariantBulkCreate`; database regression coverage:
 `tests/product-variant-bulk-database.php`.
+
+## Přepnutí způsobu prodeje
+
+V **Nastavení → Produkty → Hromadné přepnutí způsobu prodeje** vyber
+**Asistovaný nákup** nebo **Prodáváme my**, zobraz náhled a potvrď přepnutí.
+Změna zahrne všechny současné produkty včetně konceptů a variant, každou
+produktovou identitu pouze jednou napříč překlady. Nové produkty si ponechávají
+vlastní nastavení; nejde o trvalé globální přepsání jejich režimu.
+
+Prodávající, společné i jednotlivé nákupní ceny, prodejní ceny, sklad, viditelnost
+a existující objednávky se zachovají. Návrat na asistovaný nákup proto využije
+dříve uložené údaje. Hromadné přepnutí pouze mění režim a verzi jeho nastavení.
+
+Náhled asistovaného nákupu automaticky vypíše produkty s chybějícím či
+neověřeným prodávajícím, chybějící nákupní cenou nebo nákupní cenou vyšší než
+prodejní. Kontroluje nabízené varianty i ceny všech překladů. Přepnout lze také
+rozpracované produkty; jejich nákup zůstává blokovaný stávající kontrolou košíku
+až do doplnění údajů. Náhled není kontrolou dostupnosti skladu.
+
+Potvrzení používá jednorázový plán v administrátorské relaci a CSRF token.
+Změna produktu, režimu, cen variant nebo profilu prodávajícího vyžaduje nový
+náhled; samotný pohyb skladových kusů jej neruší. Celé přepnutí se uloží v jedné
+transakci. Již shodný režim se znovu nezapisuje. Starší otevřený formulář
+produktu nemůže hromadnou změnu tiše přepsat.
+
+Implementace: `ProductSalesMassUpdate`. Bez nové databázové migrace a bez JS.
