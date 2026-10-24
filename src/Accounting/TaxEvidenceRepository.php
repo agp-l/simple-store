@@ -26,7 +26,9 @@ final class TaxEvidenceRepository
                 $table
             ) === 0) return false;
         }
-        return true;
+        return (int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE()
+             AND TABLE_NAME=%s AND COLUMN_NAME=%s', 'shop_tax_entries', 'version') > 0;
     }
 
     public function settings(): array
@@ -101,31 +103,76 @@ final class TaxEvidenceRepository
 
     public function addEntry(array $input): void
     {
-        $fields = self::entryFields($input);
+        $fields = $this->entryFields($input);
         $this->db->insert('shop_tax_entries', $fields + ['order_id' => null]);
     }
 
-    private static function entryFields(array $input): array
+    public const ACCOUNTS = ['bank' => 'Banka', 'cash' => 'Hotovost',
+        'clearing' => 'Platební brána', 'crypto' => 'Krypto', 'noncash' => 'Nepeněžní plnění'];
+    public const KINDS = ['taxable' => 'Zdanitelný příjem', 'nontaxable' => 'Nedaňový příjem',
+        'deductible' => 'Daňový výdaj', 'nondeductible' => 'Nedaňový výdaj',
+        'income_return' => 'Vrácení zdanitelného příjmu', 'expense_return' => 'Vrácení daňového výdaje'];
+    public const PURPOSES = ['manual' => 'Ostatní pohyb', 'own_receipt' => 'Úhrada vlastního prodeje / služby',
+        'principal_receipt' => 'Přijetí svěřených peněz', 'supplier_payment' => 'Platba dodavateli za zákazníka',
+        'supplier_return' => 'Dodavatel vrátil svěřené peníze', 'principal_return' => 'Vrácení svěřených peněz zákazníkovi',
+        'own_return' => 'Vrácení vlastní tržby', 'fee' => 'Poplatek brány / banky', 'transfer' => 'Vlastní převod / vklad / výběr'];
+    private const PURPOSE_RULES = [
+        'own_receipt' => ['income', 'taxable'], 'principal_receipt' => ['income', 'nontaxable'],
+        'supplier_payment' => ['expense', 'nondeductible'], 'supplier_return' => ['income', 'nontaxable'],
+        'principal_return' => ['expense', 'nondeductible'], 'own_return' => ['expense', 'income_return'],
+        'fee' => ['expense', 'deductible'],
+    ];
+
+    private function entryFields(array $input): array
     {
         $date = self::date($input['entry_date'] ?? null);
         $direction = $input['direction'] ?? '';
         $account = $input['account'] ?? '';
         $kind = $input['tax_kind'] ?? '';
-        $amount = filter_var($input['amount_czk'] ?? null, FILTER_VALIDATE_INT,
-            ['options' => ['min_range' => 1, 'max_range' => 99999999]]);
-        if (!in_array($direction, ['income', 'expense'], true) ||
-            !in_array($account, ['bank', 'cash'], true) ||
-            !in_array($kind, $direction === 'income' ? ['taxable', 'nontaxable'] :
-                ['deductible', 'nondeductible'], true) || $amount === false) {
-            throw new InvalidArgumentException('Vyplň směr, banku/pokladnu, daňové zařazení a částku.');
+        $purpose = $input['purpose'] ?? 'manual';
+        $amount = TaxMoney::decimal(TaxMoney::cents($input['amount_czk'] ?? null));
+        if (!is_string($account) || !is_string($purpose) || !in_array($direction, ['income', 'expense'], true) || !isset(self::ACCOUNTS[$account]) ||
+            !in_array($kind, $direction === 'income' ? ['taxable', 'nontaxable', 'expense_return'] :
+                ['deductible', 'nondeductible', 'income_return'], true) || !isset(self::PURPOSES[$purpose])) {
+            throw new InvalidArgumentException('Zkontroluj směr pohybu, účet a daňové zařazení.');
+        }
+        if (isset(self::PURPOSE_RULES[$purpose]) && self::PURPOSE_RULES[$purpose] !== [$direction, $kind] ||
+            $purpose === 'transfer' && !in_array($kind, ['nontaxable', 'nondeductible'], true)) {
+            throw new InvalidArgumentException('Účel pohybu neodpovídá směru a daňovému zařazení.');
         }
         $description = self::text($input['description'] ?? '', 255);
         if ($description === '') throw new InvalidArgumentException('Popiš peněžní pohyb.');
+        $orderId = $input['order_id'] ?? '';
+        $order = null;
+        if ($orderId !== '' && $orderId !== null && $orderId !== 0 && $orderId !== '0') {
+            $orderId = filter_var($orderId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            $order = $orderId === false ? null : $this->db->queryFirstRow(
+                'SELECT id, order_number FROM shop_orders WHERE id=%i', $orderId);
+            if ($order === null) throw new InvalidArgumentException('Objednávka neexistuje. Vazbu můžeš nechat prázdnou a uvést číslo do reference.');
+        }
+        $currency = $input['currency'] ?? 'CZK';
+        $foreign = trim((string) ($input['foreign_amount'] ?? ''));
+        $valuation = self::text($input['valuation_note'] ?? '', 255);
+        if (!is_string($currency) || !preg_match('/^[A-Z]{3}$/D', $currency)) {
+            throw new InvalidArgumentException('Měnu zadej třemi velkými písmeny, např. CZK, EUR, BTC.');
+        }
+        if ($currency !== 'CZK') {
+            $foreign = str_replace(',', '.', $foreign);
+            if (!preg_match('/^\d{1,9}(?:\.\d{1,8})?$/D', $foreign) || (float) $foreign <= 0 || $valuation === '') {
+                throw new InvalidArgumentException('U cizí měny nebo BTC doplň původní částku a podklad ocenění v Kč.');
+            }
+        } else $foreign = null;
+        if ($account === 'crypto' && $currency === 'CZK') {
+            throw new InvalidArgumentException('U krypta uveď měnu, skutečné množství a podklad korunového ocenění.');
+        }
         return [
             'entry_date' => $date, 'direction' => $direction, 'account' => $account,
             'tax_kind' => $kind, 'amount_czk' => $amount, 'description' => $description,
             'counterparty' => self::text($input['counterparty'] ?? '', 190),
             'reference' => self::text($input['reference'] ?? '', 100),
+            'purpose' => $purpose, 'order_id' => $order['id'] ?? null,
+            'order_number' => $order['order_number'] ?? self::text($input['order_number'] ?? '', 40),
+            'currency' => $currency, 'foreign_amount' => $foreign, 'valuation_note' => $valuation,
         ];
     }
 
@@ -137,16 +184,17 @@ final class TaxEvidenceRepository
 
     public function amendEntry(int $id, array $input, int $adminId, string $reason): void
     {
-        $fields = self::entryFields($input);
         self::assertReason($id, $adminId, $reason);
         $this->db->startTransaction();
         try {
             $old = $this->db->queryFirstRow('SELECT * FROM shop_tax_entries WHERE id=%i FOR UPDATE', $id);
             if ($old === null) throw new InvalidArgumentException('Peněžní zápis neexistuje.');
-            $this->db->query('UPDATE shop_tax_entries SET entry_date=%s, direction=%s, account=%s,
-                    tax_kind=%s, amount_czk=%i, description=%s, counterparty=%s, reference=%s WHERE id=%i',
-                $fields['entry_date'], $fields['direction'], $fields['account'], $fields['tax_kind'],
-                $fields['amount_czk'], $fields['description'], $fields['counterparty'], $fields['reference'], $id);
+            if (isset($input['version']) && (int) $input['version'] !== (int) $old['version']) {
+                throw new InvalidArgumentException('Zápis mezitím změnil jiný správce. Otevři aktuální verzi a porovnej údaje.');
+            }
+            $fields = $this->entryFields(array_replace($old, $input));
+            $fields['version'] = (int) ($old['version'] ?? 1) + 1;
+            $this->db->update('shop_tax_entries', $fields, 'id=%i', $id);
             $this->recordEntryEvent($old, $fields, 'amended', $adminId, $reason);
             $this->db->commit();
         } catch (\Throwable $error) {
@@ -155,13 +203,14 @@ final class TaxEvidenceRepository
         }
     }
 
-    public function voidEntry(int $id, int $adminId, string $reason): void
+    public function voidEntry(int $id, int $adminId, string $reason, ?int $version = null): void
     {
         self::assertReason($id, $adminId, $reason);
         $this->db->startTransaction();
         try {
             $old = $this->db->queryFirstRow('SELECT * FROM shop_tax_entries WHERE id=%i FOR UPDATE', $id);
             if ($old === null) throw new InvalidArgumentException('Peněžní zápis neexistuje.');
+            if ($version !== null && $version !== (int) $old['version']) throw new InvalidArgumentException('Zápis se mezitím změnil. Nejdřív načti aktuální verzi.');
             $this->recordEntryEvent($old, null, 'voided', $adminId, $reason);
             $this->db->query('DELETE FROM shop_tax_entries WHERE id=%i', $id);
             $this->db->commit();
@@ -175,8 +224,11 @@ final class TaxEvidenceRepository
     {
         self::year($year);
         return $this->db->query('SELECT entry_id, action, old_json, new_json, reason, admin_id, created_at
-            FROM shop_tax_entry_events WHERE created_at >= %s AND created_at < %s
-            ORDER BY id DESC LIMIT %i', $year . '-01-01', ($year + 1) . '-01-01', 100);
+            FROM shop_tax_entry_events WHERE
+                JSON_UNQUOTE(JSON_EXTRACT(old_json, \'$.entry_date\')) BETWEEN %s AND %s
+                OR JSON_UNQUOTE(JSON_EXTRACT(new_json, \'$.entry_date\')) BETWEEN %s AND %s
+            ORDER BY id DESC LIMIT %i', $year . '-01-01', $year . '-12-31',
+                $year . '-01-01', $year . '-12-31', 100);
     }
 
     private function recordEntryEvent(array $old, ?array $new, string $action,
@@ -221,13 +273,14 @@ final class TaxEvidenceRepository
             $receipt = [
                 'entry_date' => $date, 'direction' => 'income', 'account' => 'bank',
                 'tax_kind' => 'taxable', 'amount_czk' => (int) $order['total_czk'] - $principal,
+                'purpose' => 'own_receipt', 'order_number' => $order['order_number'],
                 'description' => 'Úhrada objednávky ' . $order['order_number'],
                 'counterparty' => '', 'reference' => $reference !== '' ? $reference :
                     (string) ($order['variable_symbol'] ?? ''), 'order_id' => $orderId,
             ];
             if ($receipt['amount_czk'] > 0) $this->db->insert('shop_tax_entries', $receipt);
             if ($principal > 0) $this->db->insert('shop_tax_entries', array_replace($receipt, [
-                'tax_kind' => 'nontaxable', 'amount_czk' => $principal,
+                'tax_kind' => 'nontaxable', 'amount_czk' => $principal, 'purpose' => 'principal_receipt',
                 'description' => 'Svěřené prostředky k nákupu · ' . $order['order_number'],
             ]));
             $this->db->commit();
@@ -241,7 +294,7 @@ final class TaxEvidenceRepository
     {
         if ($orderId < 1 || !$this->installed()) return null;
         return $this->db->queryFirstRow('SELECT MIN(id) AS id, MIN(entry_date) AS entry_date, SUM(amount_czk) AS amount_czk, MAX(reference) AS reference
-            FROM shop_tax_entries WHERE order_id=%i AND direction=%s GROUP BY order_id',
+            FROM shop_tax_entries WHERE order_id=%i AND direction=%s AND purpose IN (\'own_receipt\', \'principal_receipt\') GROUP BY order_id',
             $orderId, 'income');
     }
 
@@ -258,52 +311,63 @@ final class TaxEvidenceRepository
     }
 
     /** @return array{items: array, nextOffset: ?int} */
-    public function entriesPage(int $year, int $offset, int $limit = 50): array
+    public function entriesPage(int $year, int $offset, int $limit = 50, array $filters = []): array
     {
         self::year($year);
         if ($offset < 0 || $limit < 1 || $limit > 200 || $offset > PHP_INT_MAX - $limit - 1) {
             throw new InvalidArgumentException('Neplatná stránka peněžního deníku.');
         }
-        $rows = $this->db->query(
-            'SELECT id, entry_date, direction, account, tax_kind, amount_czk,
-                    description, counterparty, reference, order_id
-             FROM shop_tax_entries WHERE entry_date >= %s AND entry_date < %s
-             ORDER BY entry_date DESC, id DESC LIMIT %i OFFSET %i',
-            $year . '-01-01', ($year + 1) . '-01-01', $limit + 1, $offset
-        );
+        [$where, $params] = self::ledgerFilter($year, $filters);
+        $rows = $this->db->query('SELECT * FROM shop_tax_entries WHERE ' . $where .
+            ' ORDER BY entry_date DESC, id DESC LIMIT %i OFFSET %i', ...array_merge($params, [$limit + 1, $offset]));
         $hasMore = count($rows) > $limit;
         if ($hasMore) array_pop($rows);
         return ['items' => $rows, 'nextOffset' => $hasMore ? $offset + $limit : null];
     }
 
-    /** Export the complete annual money journal, capped to a reviewable file size. */
-    public function writeLedgerCsv(mixed $stream, int $year): int
+    public static function ledgerFilter(int $year, array $filters): array
     {
         self::year($year);
-        if (!is_resource($stream) || get_resource_type($stream) !== 'stream') {
-            throw new InvalidArgumentException('Neplatný výstup CSV.');
+        $where = 'entry_date >= %s AND entry_date < %s';
+        $params = [$year . '-01-01', ($year + 1) . '-01-01'];
+        foreach (['account' => self::ACCOUNTS, 'tax_kind' => self::KINDS, 'purpose' => self::PURPOSES] as $key => $choices) {
+            $value = $filters[$key] ?? '';
+            if ($value === '') continue;
+            if (!is_string($value) || !isset($choices[$value])) throw new InvalidArgumentException('Neplatný filtr deníku.');
+            $where .= ' AND ' . $key . '=%s'; $params[] = $value;
         }
-        if (fwrite($stream, "\xEF\xBB\xBF") !== 3 ||
-            fputcsv($stream, ['Datum', 'Účet', 'Pohyb', 'Zařazení', 'Částka Kč',
-                'Popis', 'Protistrana', 'Doklad', 'Objednávka ID'], ';', '"', '') === false) {
-            throw new RuntimeException('CSV se nepodařilo vytvořit.');
+        if (($filters['order_id'] ?? '') !== '') {
+            $id = filter_var($filters['order_id'], FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+            if ($id === false) throw new InvalidArgumentException('Neplatné ID objednávky.');
+            $where .= ' AND order_id=%i'; $params[] = $id;
         }
+        foreach (['from' => '>=', 'to' => '<='] as $key => $operator) {
+            if (($filters[$key] ?? '') !== '') { $where .= ' AND entry_date' . $operator . '%s'; $params[] = self::date($filters[$key]); }
+        }
+        $search = self::text($filters['q'] ?? '', 150);
+        if ($search !== '') {
+            $where .= " AND CONCAT_WS(' ', description,counterparty,reference,order_number) LIKE %s ESCAPE '='";
+            $params[] = '%' . str_replace(['=', '%', '_'], ['==', '=%', '=_'], $search) . '%';
+        }
+        return [$where, $params];
+    }
+
+    /** Export precisely the selected rows, with valuation and order links. */
+    public function writeLedgerCsv(mixed $stream, int $year, array $filters = []): int
+    {
+        [$where, $params] = self::ledgerFilter($year, $filters);
+        if (!is_resource($stream)) throw new InvalidArgumentException('Neplatný výstup CSV.');
+        fwrite($stream, "\xEF\xBB\xBF");
+        fputcsv($stream, ['ID', 'Datum', 'Účet', 'Pohyb', 'Zařazení', 'Částka Kč', 'Popis',
+            'Protistrana', 'Doklad', 'Objednávka ID', 'Účel', 'Číslo objednávky', 'Měna', 'Původní částka', 'Podklad ocenění'], ';', '"', '');
         $offset = 0;
         do {
-            $rows = $this->db->query('SELECT entry_date, account, direction, tax_kind,
-                    amount_czk, description, counterparty, reference, order_id
-                FROM shop_tax_entries WHERE entry_date >= %s AND entry_date < %s
-                ORDER BY entry_date ASC, id ASC LIMIT %i OFFSET %i',
-                $year . '-01-01', ($year + 1) . '-01-01', 200, $offset);
+            $rows = $this->db->query('SELECT id, entry_date, account, direction, tax_kind,
+                amount_czk, description, counterparty, reference, order_id, purpose, order_number,
+                currency, foreign_amount, valuation_note FROM shop_tax_entries WHERE ' . $where .
+                ' ORDER BY entry_date ASC,id ASC LIMIT 200 OFFSET %i', ...array_merge($params, [$offset]));
             foreach ($rows as $row) {
-                if ($offset >= 50000) throw new InvalidArgumentException('Deník je příliš dlouhý pro jediný export.');
-                $values = [
-                    $row['entry_date'], $row['account'], $row['direction'], $row['tax_kind'],
-                    $row['amount_czk'], self::safeCsvCell($row['description']),
-                    self::safeCsvCell($row['counterparty']), self::safeCsvCell($row['reference']),
-                    $row['order_id'] ?? '',
-                ];
-                if (fputcsv($stream, $values, ';', '"', '') === false) {
+                if (fputcsv($stream, array_map(static fn ($v) => self::safeCsvCell((string) ($v ?? '')), array_values($row)), ';', '"', '') === false) {
                     throw new RuntimeException('CSV se nepodařilo vytvořit.');
                 }
                 $offset++;
@@ -312,16 +376,18 @@ final class TaxEvidenceRepository
         return $offset;
     }
 
-    public function summary(int $year): array
+    public function summary(int $year, array $filters = []): array
     {
-        self::year($year);
-        $row = $this->db->queryFirstRow(
-            'SELECT COALESCE(SUM(CASE WHEN direction=%s AND tax_kind=%s THEN amount_czk ELSE 0 END),0) AS income,
-                    COALESCE(SUM(CASE WHEN direction=%s AND tax_kind=%s THEN amount_czk ELSE 0 END),0) AS expenses
-             FROM shop_tax_entries WHERE entry_date >= %s AND entry_date < %s',
-            'income', 'taxable', 'expense', 'deductible', $year . '-01-01', ($year + 1) . '-01-01'
-        ) ?? [];
-        return ['income' => (int) ($row['income'] ?? 0), 'expenses' => (int) ($row['expenses'] ?? 0)];
+        [$where, $params] = self::ledgerFilter($year, $filters);
+        $row = $this->db->queryFirstRow("SELECT
+            COALESCE(SUM(CASE WHEN direction='income' AND tax_kind='taxable' THEN amount_czk
+                WHEN direction='expense' AND tax_kind='income_return' THEN -amount_czk ELSE 0 END),0) AS income,
+            COALESCE(SUM(CASE WHEN direction='expense' AND tax_kind='deductible' THEN amount_czk
+                WHEN direction='income' AND tax_kind='expense_return' THEN -amount_czk ELSE 0 END),0) AS expenses,
+            COALESCE(SUM(CASE WHEN direction='income' THEN amount_czk ELSE 0 END),0) AS received,
+            COALESCE(SUM(CASE WHEN direction='expense' THEN amount_czk ELSE 0 END),0) AS paid
+            FROM shop_tax_entries WHERE " . $where, ...$params) ?? [];
+        return array_map(static fn ($v) => TaxMoney::number((string) $v), $row);
     }
 
     public function addBalance(array $input): void
@@ -520,7 +586,7 @@ final class TaxEvidenceRepository
         if ($year < 2000 || $year > 2100) throw new InvalidArgumentException('Neplatný rok evidence.');
     }
 
-    private static function safeCsvCell(string $cell): string
+    public static function safeCsvCell(string $cell): string
     {
         return preg_match('/^[\x00-\x20]*[=+\-@]/', $cell) === 1 ? "'" . $cell : $cell;
     }
