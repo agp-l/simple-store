@@ -114,3 +114,17 @@ try {
     if (str_contains($expected->getMessage(), 'A token belonging')) throw $expected;
 }
 echo "Fio statement tests passed.\n";
+
+$now = new DateTimeImmutable('2026-10-24 12:00:00', new DateTimeZone('UTC'));
+foreach ([
+    ['2026-10-24 12:00:00', 600], ['2026-10-24 11:59:59', 3600],
+    ['2026-10-17 12:00:00', 3600], ['2026-10-17 11:59:59', null],
+] as [$due, $interval]) {
+    if (\SimpleStore\Checkout\FioPollingPolicy::interval([
+        'created_at' => '2026-10-01 00:00:00', 'payment_due_at' => $due,
+    ], $now) !== $interval) throw new RuntimeException('Incorrect Fio automatic polling boundary.');
+}
+if (\SimpleStore\Checkout\FioPollingPolicy::interval([
+    'created_at' => '2026-09-01 12:00:00', 'payment_due_at' => null,
+], $now) !== null) throw new RuntimeException('Legacy orders without a due date must eventually stop polling.');
+echo "Fio polling policy tests passed.\n";

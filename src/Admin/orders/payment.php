@@ -8,10 +8,14 @@ use SimpleStore\Checkout\FioBankReconciler;
 
 if ($method === 'POST' && ($_POST['action'] ?? '') === 'fio-sync') {
     try {
+        $rawId = $_POST['id'] ?? null;
+        $fioId = $rawId === null ? null : (is_string($rawId) && ctype_digit($rawId)
+            ? filter_var($rawId, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) : false);
+        if ($fioId === false) throw new InvalidArgumentException('Neplatná objednávka.');
         $result = (new FioBankReconciler($db, $checkoutSettings['fio_bank'] ?? [], null,
-            $orderMail, $orderMailSender))->sync();
-        header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($orderListReturnUrl . '&fio_checked=' . (int) $result['checked'] .
-            '&fio_paid=' . (int) $result['matched']), true, 303);
+            $orderMail, $orderMailSender))->sync(true, $fioId);
+        header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty(($fioId === null ? $orderListReturnUrl : $adminUrl . '?section=orders&id=' . $fioId) . '&fio_checked=' . (int) $result['checked'] .
+            '&fio_paid=' . (int) $result['matched'] . '&fio_skipped=' . rawurlencode($result['skipped'] ?? '')), true, 303);
         exit;
     } catch (InvalidArgumentException $exception) {
         http_response_code(422);

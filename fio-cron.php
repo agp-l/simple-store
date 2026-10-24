@@ -48,7 +48,7 @@ try {
     }
     $sender = (string) ((new TaxEvidenceRepository($db))->settings()['mail_from'] ?? '');
     $result = (new FioBankReconciler($db, $settings['fio_bank'], null,
-        new OrderMailQueue($db), $sender))->sync();
+        new OrderMailQueue($db), $sender))->sync(false);
     echo 'Checked ' . (int) $result['checked'] . '; paid ' . (int) $result['matched'] . "\n";
 } catch (Throwable $error) {
     // HTTP cron logs can be viewed by third parties; never return credentials or a request URL.

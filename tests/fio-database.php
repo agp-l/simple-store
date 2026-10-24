@@ -88,7 +88,7 @@ try {
     $db->query('UPDATE shop_orders SET status=%s
         WHERE payment_method=%s AND payment_status=%s AND status=%s',
         'cancelled', 'bank_transfer', 'pending', 'new');
-    if ($sync->sync() !== ['checked' => 0, 'matched' => 0, 'ignored' => 0] ||
+    if ($sync->sync() !== ['checked' => 0, 'matched' => 0, 'ignored' => 0, 'skipped' => 'no_orders'] ||
         count($requests) !== $requestCount) {
         throw new RuntimeException('Fio must not be contacted without a pending bank order.');
     }
@@ -157,4 +157,63 @@ if ($sync->sync()['matched'] !== 0 ||
     $orders->findById((int) $replacement['id'])['payment_status'] !== 'pending') {
     throw new RuntimeException('Fio ignored an explicit administrator payment correction.');
 }
+// Isolate automatic scheduling from unpaid fixtures left by earlier CI tests.
+$db->query('UPDATE shop_orders SET status=%s WHERE payment_status=%s AND status=%s', 'cancelled', 'pending', 'new');
+$auto = $orders->create(null, 'fio-auto@example.test', [[
+    'product_key' => str_repeat('c', 32), 'language' => 'cs', 'slug' => 'auto',
+    'name' => 'Test', 'quantity' => 1, 'unit_price_czk' => 1000, 'image_path' => '', 'options' => [],
+]], ['method' => 'gls_home', 'label' => 'GLS', 'name' => 'Test', 'phone' => '123',
+    'street' => 'Test 1', 'city' => 'Praha', 'postal_code' => '11000', 'country' => 'CZ'],
+    79, bin2hex(random_bytes(32)));
+$rows = [];
+$age = static function (int $seconds) use ($db, $token): void {
+    $db->query('UPDATE shop_fio_requests SET last_requested_at=DATE_SUB(UTC_TIMESTAMP(), INTERVAL %i SECOND)
+        WHERE token_hash=%s', $seconds, hash('sha256', $token));
+};
+$age(40);
+$count = count($requests);
+if (($sync->sync(false)['skipped'] ?? '') !== 'interval' || count($requests) !== $count) {
+    throw new RuntimeException('An early cron call contacted the bank.');
+}
+$age(601);
+$sync->sync(false);
+if (count($requests) !== ++$count) throw new RuntimeException('An active order was not checked after ten minutes.');
+$db->query('UPDATE shop_orders SET payment_due_at=UTC_TIMESTAMP() - INTERVAL 1 DAY WHERE id=%i', $auto['id']);
+$age(601);
+if (($sync->sync(false)['skipped'] ?? '') !== 'interval' || count($requests) !== $count) {
+    throw new RuntimeException('Overdue-only cron should wait an hour.');
+}
+$age(3601);
+$sync->sync(false);
+if (count($requests) !== ++$count) throw new RuntimeException('A recently overdue order was not checked.');
+$db->query('UPDATE shop_orders SET payment_due_at=UTC_TIMESTAMP() - INTERVAL 8 DAY WHERE id=%i', $auto['id']);
+$age(7200);
+if (($sync->sync(false)['skipped'] ?? '') !== 'no_orders' || count($requests) !== $count) {
+    throw new RuntimeException('Old overdue orders must not cause automatic API requests.');
+}
+$db->query('UPDATE shop_orders SET payment_details_json=%s WHERE id=%i',
+    json_encode(['account_display' => '999999999/2010']), $auto['id']);
+if (($sync->sync()['skipped'] ?? '') !== 'no_orders' || count($requests) !== $count) {
+    throw new RuntimeException('An order for a different account triggered a request.');
+}
+$db->query('UPDATE shop_orders SET payment_details_json=%s WHERE id=%i', json_encode($bank->snapshot()), $auto['id']);
+// Separate connections prove that a slow fetch cannot overlap a second request.
+$otherDb = ConnectionFactory::create(['host'=>'127.0.0.1','user'=>'root',
+    'password'=>(string)getenv('MYSQL_TEST_PASSWORD'),'database'=>'simple_store','port'=>3306]);
+$lock = 'fio:' . substr(hash('sha256', $token), 0, 60);
+$otherDb->queryFirstField('SELECT GET_LOCK(%s, 0)', $lock);
+try {
+    if (($sync->sync(false)['skipped'] ?? '') !== 'busy' || count($requests) !== $count) {
+        throw new RuntimeException('Overlapping Fio checks were not prevented.');
+    }
+} finally { $otherDb->queryFirstField('SELECT RELEASE_LOCK(%s)', $lock); }
+$rows = [['column22'=>['value'=>90004], 'column5'=>['value'=>$auto['variable_symbol']],
+    'column1'=>['value'=>1079], 'column14'=>['value'=>'CZK']]];
+if ($sync->sync(true, (int)$auto['id'])['matched'] !== 1 || count($requests) !== ++$count) {
+    throw new RuntimeException('A manual check must settle an old overdue order.');
+}
+// A targeted request must not fall back to a global check after cancellation/payment.
+try { $sync->sync(true, (int)$auto['id']); throw new RuntimeException('Paid order was checked again.'); }
+catch (InvalidArgumentException $expected) {}
+if (count($requests) !== $count) throw new RuntimeException('An ineligible targeted check contacted Fio.');
 echo "Fio database tests passed.\n";

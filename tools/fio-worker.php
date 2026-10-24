@@ -29,7 +29,7 @@ try {
         CheckoutSettingsRepository::withDefaults($local, $example));
     $sender = (string) ((new TaxEvidenceRepository($db))->settings()['mail_from'] ?? '');
     $result = (new FioBankReconciler($db, $settings['fio_bank'], null,
-        new OrderMailQueue($db), $sender))->sync();
+        new OrderMailQueue($db), $sender))->sync(false);
     echo "Movements checked: {$result['checked']}; orders paid: {$result['matched']}; ignored: {$result['ignored']}\n";
 } catch (Throwable $error) {
     // A bank token is passed in a URL. Never print exception traces or HTTP requests here.

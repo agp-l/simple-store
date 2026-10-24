@@ -1,0 +1,3 @@
+<?php if (isset($_GET['fio_checked'], $_GET['fio_paid']) && is_string($_GET['fio_checked']) && is_string($_GET['fio_paid']) && ctype_digit($_GET['fio_checked']) && ctype_digit($_GET['fio_paid'])): ?>
+  <p class="panel-notice" role="status"><?php if (($_GET['fio_skipped'] ?? '') === 'no_orders'): ?>Fio nebylo kontaktováno: žádná vhodná čekající objednávka na propojený účet.<?php else: ?>Fio: zkontrolováno <?= (int) $_GET['fio_checked'] ?> pohybů, potvrzeno <?= (int) $_GET['fio_paid'] ?> objednávek.<?php if ((int) $_GET['fio_paid'] === 0): ?> Ve zkontrolovaném období nebyla nalezena nová přesná shoda.<?php endif; ?><?php endif; ?></p>
+<?php endif; ?>

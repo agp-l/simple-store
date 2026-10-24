@@ -1,5 +1,6 @@
     <aside class="panel-panel panel-order-payment">
       <h2>Platba</h2>
+      <?php require __DIR__ . '/fio-result.php'; ?>
       <p class="panel-order-state <?= $paymentHighlight ? 'is-paid' : 'is-pending' ?>"><?= $escape($paymentDisplayLabel) ?></p>
       <dl class="panel-order-facts">
         <div><dt>Metoda</dt><dd><?= $bankTransfer ? 'Bankovní převod' : ($onlineGateway ? $gatewayName : $escape($order['payment_method'] ?? 'Neuvedeno')) ?></dd></div>
@@ -32,6 +33,13 @@
       <?php if ($btcpayPayment && $btcpayState !== null && in_array($btcpayState['status'] ?? '', ['creating', 'uncertain'], true)): ?>
         <p class="panel-error" role="alert">Založení faktury má nejasný výsledek. Před dalším pokusem ji vyhledej v BTCPay Serveru podle čísla objednávky.</p>
       <?php endif; ?>
+      <?php if ($bankTransfer && !empty($fioReady) && !$paid && ($order['payment_status'] ?? '') === 'pending' && $order['status'] === 'new'): ?>
+        <form class="panel-order-confirm" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
+          <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="fio-sync"><input type="hidden" name="id" value="<?= (int) $order['id'] ?>">
+          <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('refresh') ?> Ověřit platbu u Fio</button>
+          <p class="panel-help">Funguje i po splatnosti. Hledá platbu v posledních 90 kalendářních dnech; starší platbu ověř ve výpisu banky. Stornované objednávky automaticky neobnovuje.</p>
+        </form>
+      <?php endif; ?>
       <?php if ($bankTransfer && !$paid && ($order['payment_status'] ?? '') === 'pending' && !in_array($order['status'], ['cancelled', 'test'], true)): ?>
         <form class="panel-order-confirm" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . (int) $order['id']) ?>">
           <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
@@ -63,7 +71,7 @@
           </form>
         </details>
       <?php endif; ?>
-      <?php if ($bankTransfer): ?><p class="panel-help"><?= !empty($fioConfigured) ? 'Převody na propojený účet Fio lze ověřit tlačítkem v přehledu objednávek. Pravidelnou kontrolu lze spouštět z cronu; jiné účty kontroluj ručně.' : 'Platbu zkontroluj ve výpisu banky, nebo zapni ověřování Fio v nastavení plateb.' ?></p><?php endif; ?>
+      <?php if ($bankTransfer): ?><p class="panel-help"><?= !empty($fioConfigured) ? 'Převody na propojený účet ověř tlačítkem Fio; po opravě platby, u stornované objednávky nebo jiného účtu zkontroluj výpis ručně.' : 'Platbu zkontroluj ve výpisu banky, nebo zapni ověřování Fio v nastavení plateb.' ?></p><?php endif; ?>
       <?php if ($onlineGateway): ?><p class="panel-help">Stav platby potvrzuje <?= $gatewayName ?>. Samotný návrat zákazníka na web platbu nepotvrzuje.</p><?php endif; ?>
       <?php if ($orderTaxReady && ($order['status'] ?? '') !== 'test'): ?><p><a class="panel-button" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=accounting&tab=funds&order_id=' . (int) $order['id']) ?>">Platby, dodavatelé a vratky v evidenci</a></p><?php endif; ?>
       <?php if (($bankTransfer || $onlineGateway) && $paid && $orderTaxReady && ($order['status'] ?? '') !== 'test'): ?>
