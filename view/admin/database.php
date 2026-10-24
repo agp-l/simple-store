@@ -3,7 +3,7 @@ declare(strict_types=1);
 ?>
 <div class="panel-intro">
   <div><p class="panel-eyebrow">Správa webu</p><h1>Databáze</h1>
-    <p>Aktualizace tabulek z aktuálního souboru <code>database/schema.sql</code>.</p></div>
+    <p>Aktualizace tabulek ze souboru <code>database/schema.sql</code> nahraného na tomto serveru.</p></div>
 </div>
 <?php if ($databaseError !== ''): ?><p class="panel-error" role="alert"><?= $escape($databaseError) ?></p><?php endif; ?>
 <?php if (($_GET['updated'] ?? '') === '1'): ?><p class="panel-notice" role="status">Tabulky byly aktualizovány.</p><?php endif; ?>
@@ -48,7 +48,7 @@ declare(strict_types=1);
     <dl class="panel-order-facts">
       <div><dt>Připojená databáze</dt><dd><strong><?= $escape($databaseStatus['database']) ?></strong></dd></div>
       <div><dt>Soubor</dt><dd><code>database/schema.sql</code> · <?= (int) $databaseStatus['count'] ?> příkazů pro aktualizaci</dd></div>
-      <div><dt>Stav</dt><dd><strong><?= $databaseStatus['current'] ? 'Aktuální' : 'Připraveno k aktualizaci' ?></strong></dd></div>
+      <div><dt>Stav</dt><dd><strong><?= $databaseStatus['current'] ? 'Aktuální vůči souboru na serveru' : 'Připraveno k aktualizaci' ?></strong></dd></div>
       <?php if ($schemaRecord !== null): ?>
         <div><dt>Poslední běh</dt><dd><?= $escape(match ($schemaRecord['state']) {
             'complete' => 'Dokončeno', 'failed' => 'Nedokončeno',
@@ -60,6 +60,9 @@ declare(strict_types=1);
         <?php if ($schemaRecord['last_error']): ?><div><dt>Poslední chyba</dt><dd><?= $escape($schemaRecord['last_error']) ?></dd></div><?php endif; ?>
       <?php endif; ?>
     </dl>
+    <?php if ($databaseStatus['current']): ?>
+      <p class="panel-help">Chybí očekávaná aktualizace? Nejdřív musí úspěšně proběhnout nasazení nové verze webu včetně <code>database/schema.sql</code>. Tato stránka porovnává databázi pouze se souborem na serveru; změny z GitHubu sama nestahuje. Po nasazení stránku obnov.</p>
+    <?php endif; ?>
     <?php if (!$databaseStatus['current'] && !in_array($tablePrefixStatus['state'] ?? '', ['ready', 'conflict'], true)): ?>
       <p class="panel-help">Použije se právě databáze uvedená výše. Příkazy pro vytvoření a přepnutí databáze ze souboru se nespouštějí; stávající obsah tabulek zůstává zachován.</p>
       <form class="panel-form" method="post" action="<?= $escape($adminUrl . '?section=database') ?>">

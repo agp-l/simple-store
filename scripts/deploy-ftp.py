@@ -9,6 +9,7 @@ import json
 import os
 import posixpath
 import secrets
+import time
 from pathlib import Path, PurePosixPath
 
 from release_paths import allowed
@@ -47,6 +48,31 @@ def release(package: Path) -> dict:
 
 def missing(error: ftplib.error_perm) -> bool:
     return str(error).startswith("550")
+
+
+def connect(ftp: ftplib.FTP, host: str, port: int) -> None:
+    """Retry transient connection failures before any login or remote write."""
+    for attempt in range(1, 4):
+        try:
+            ftp.connect(host, port)
+            return
+        except (OSError, EOFError, ftplib.error_temp):
+            ftp.close()
+            if attempt == 3:
+                raise
+            print(f"FTP connection failed (attempt {attempt}/3); retrying before login.", flush=True)
+            time.sleep(attempt * 3)
+
+
+def disconnect(ftp: ftplib.FTP) -> None:
+    # connect() can fail before a socket exists. QUIT would then hide the
+    # connection error with AttributeError instead of reporting the cause.
+    if ftp.sock is not None:
+        try:
+            ftp.quit()
+        except (OSError, EOFError, ftplib.Error):
+            pass
+    ftp.close()
 
 
 def directory_exists(ftp: ftplib.FTP, path: str) -> bool:
@@ -99,7 +125,7 @@ def deploy(package: Path, dry_run: bool) -> None:
     host, port, user, password, root, security = configuration()
     ftp = ftplib.FTP_TLS(timeout=30) if security == "ftps" else ftplib.FTP(timeout=30)
     try:
-        ftp.connect(host, port)
+        connect(ftp, host, port)
         ftp.login(user, password)
         if security == "ftps":
             ftp.prot_p()
@@ -144,10 +170,7 @@ def deploy(package: Path, dry_run: bool) -> None:
         upload(ftp, package / "release.json", remote_manifest_path)
         print(f"Uploaded release {manifest['commit'][:12]}; remote configuration and media preserved.")
     finally:
-        try:
-            ftp.quit()
-        except (OSError, EOFError, ftplib.Error):
-            ftp.close()
+        disconnect(ftp)
 
 
 if __name__ == "__main__":
@@ -157,5 +180,5 @@ if __name__ == "__main__":
     args = parser.parse_args()
     try:
         deploy(args.package.resolve(), args.dry_run)
-    except (OSError, ValueError, ftplib.Error) as error:
+    except (OSError, EOFError, ValueError, ftplib.Error) as error:
         parser.exit(1, f"Deployment stopped: {error}\n")
