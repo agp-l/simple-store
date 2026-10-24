@@ -41,12 +41,22 @@ final class AdminUserRepository
     public function loginEmail(): ?string
     {
         $user = $this->db->queryFirstRow('SELECT * FROM shop_users WHERE role=%s ORDER BY id LIMIT 1', 'admin');
-        if ($user !== null && (int) ($user['is_active'] ?? 1) !== 1) return null;
+        return $user === null || (int) ($user['is_active'] ?? 1) !== 1 ? null : $this->loginEmailFor($user);
+    }
+
+    /** Preserve the old configured login until the original account is explicitly saved. */
+    public function loginEmailFor(array $user): ?string
+    {
+        if ((int) ($user['auth_version'] ?? 0) === 0) {
+            $first = $this->db->queryFirstRow('SELECT * FROM shop_users WHERE role=%s ORDER BY id LIMIT 1', 'admin');
+            if ($first !== null && (int) $first['id'] === (int) $user['id']) {
+                $settings = (new MailSettingsRepository($this->db))->load()['settings'];
+                $configured = strtolower(trim((string) ($settings['admin_recovery_email'] ?? '')));
+                if (self::validEmail($configured)) return $configured;
+            }
+        }
         $stored = strtolower(trim((string) ($user['email'] ?? '')));
-        if (self::validEmail($stored)) return $stored;
-        $settings = (new MailSettingsRepository($this->db))->load()['settings'];
-        $configured = strtolower(trim((string) ($settings['admin_recovery_email'] ?? '')));
-        return self::validEmail($configured) ? $configured : null;
+        return self::validEmail($stored) ? $stored : null;
     }
 
     public function findAdminByEmail(string $email): ?array
@@ -54,15 +64,17 @@ final class AdminUserRepository
         $email = strtolower(trim($email));
         if (!self::validEmail($email)) return null;
         // SELECT * tolerates installations awaiting the auth_version migration.
-        $user = $this->db->queryFirstRow('SELECT * FROM shop_users
+        $first = $this->db->queryFirstRow('SELECT * FROM shop_users WHERE role=%s ORDER BY id LIMIT 1', 'admin');
+        if ($first !== null && (int) ($first['auth_version'] ?? 0) === 0) {
+            $effective = $this->loginEmailFor($first);
+            if ($effective !== null && hash_equals($effective, $email)) {
+                return (int) ($first['is_active'] ?? 1) === 1 ? $first : null;
+            }
+            // An obsolete stored address must not recover the legacy owner's account.
+            if (strtolower((string) ($first['email'] ?? '')) === $email) return null;
+        }
+        return $this->db->queryFirstRow('SELECT * FROM shop_users
             WHERE email=%s AND role=%s AND is_active=1 LIMIT 1', $email, 'admin');
-        if ($user !== null) return $user;
-        // Only the original account without its own email may use the legacy address.
-        // Never transfer this alias to another administrator after blocking an account.
-        $legacy = $this->db->queryFirstRow('SELECT * FROM shop_users WHERE role=%s ORDER BY id LIMIT 1', 'admin');
-        if ($legacy === null || (int) ($legacy['is_active'] ?? 1) !== 1 || self::validEmail((string) ($legacy['email'] ?? ''))) return null;
-        $configured = $this->loginEmail();
-        return $configured !== null && hash_equals($configured, $email) ? $legacy : null;
     }
 
     public function findAdminById(int $id): ?array
@@ -78,13 +90,18 @@ final class AdminUserRepository
             ($email !== null && !self::validEmail($email))) {
             throw new InvalidArgumentException('Invalid administrator name, email or password hash.');
         }
-        $this->db->insert('shop_users', [
+        $fields = [
             'username' => $username,
             'email' => $email === null ? null : strtolower(trim($email)),
             'password_hash' => $passwordHash,
             'role' => 'admin',
             'is_active' => 1,
-        ]);
+        ];
+        if ($email !== null && (int) $this->db->queryFirstField('SELECT COUNT(*) FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME=%s', 'shop_users', 'auth_version') > 0) {
+            $fields['auth_version'] = 1;
+        }
+        $this->db->insert('shop_users', $fields);
     }
 
     public function replacePassword(int $id, string $passwordHash): void
@@ -104,8 +121,10 @@ final class AdminUserRepository
         if ($id < 1 || !self::validEmail($email)) {
             throw new InvalidArgumentException('Invalid administrator or email.');
         }
-        $this->db->query('UPDATE shop_users SET email=%s WHERE id=%i AND role=%s AND is_active=1',
-            strtolower(trim($email)), $id, 'admin');
+        $versioned = (int) $this->db->queryFirstField('SELECT COUNT(*) FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s AND COLUMN_NAME=%s', 'shop_users', 'auth_version') > 0;
+        $this->db->query('UPDATE shop_users SET email=%s' . ($versioned ? ', auth_version=auth_version+1' : '') .
+            ' WHERE id=%i AND role=%s AND is_active=1', strtolower(trim($email)), $id, 'admin');
     }
 
     private static function validEmail(string $email): bool

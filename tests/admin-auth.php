@@ -107,7 +107,7 @@ $auth->signOut();
 $users->createAdmin('second', password_hash('second-password', PASSWORD_DEFAULT), 'second@example.test');
 if (!$auth->signIn('second@example.test', 'second-password') || (int) $auth->user()['id'] !== 2 ||
     $auth->signIn('stored@example.test', 'second-password')) throw new RuntimeException('Administrator identities were mixed.');
-$db->admins['second']['auth_version'] = 1;
+$db->admins['second']['auth_version']++;
 if ($auth->signedIn()) throw new RuntimeException('Revoked administrator session remained valid.');
 $auth->signOut();
 echo "Admin authentication tests passed.\n";

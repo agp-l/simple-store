@@ -28,7 +28,7 @@ final class AccountManagementRepository
             $offset < 0 || $offset > 100000 || $limit < 1 || $limit > 50) {
             throw new InvalidArgumentException('Neplatný filtr účtů.');
         }
-        $sql = 'SELECT u.id, u.username, u.email, u.display_name, u.phone, u.role, u.is_active, u.created_at,
+        $sql = 'SELECT u.id, u.username, u.email, u.display_name, u.phone, u.role, u.is_active, u.auth_version, u.created_at,
             (SELECT COUNT(*) FROM shop_orders o WHERE o.user_id=u.id) AS order_count FROM shop_users u WHERE 1=1';
         $args = [];
         if ($role !== '') { $sql .= ' AND u.role=%s'; $args[] = $role; }
@@ -39,6 +39,12 @@ final class AccountManagementRepository
             array_push($args, strtolower(trim($search)), strtolower(trim($search)), strtolower(trim($search)), trim($search));
         }
         $rows = $this->db->query($sql . ' ORDER BY u.id DESC LIMIT %i OFFSET %i', ...array_merge($args, [$limit + 1, $offset]));
+        foreach ($rows as &$row) {
+            if ($row['role'] === 'admin' && (int) $row['auth_version'] === 0) {
+                $row['email'] = (new AdminUserRepository($this->db))->loginEmailFor($row) ?? $row['email'];
+            }
+        }
+        unset($row);
         return ['items' => array_slice($rows, 0, $limit), 'nextOffset' => count($rows) > $limit ? $offset + $limit : null];
     }
 
@@ -47,6 +53,7 @@ final class AccountManagementRepository
         $row = $id > 0 ? $this->db->queryFirstRow('SELECT * FROM shop_users WHERE id=%i', $id) : null;
         if ($row === null) return null;
         $row['revision'] = self::revision($row);
+        if ($row['role'] === 'admin') $row['login_email'] = (new AdminUserRepository($this->db))->loginEmailFor($row);
         unset($row['password_hash']);
         return $row;
     }
@@ -68,7 +75,7 @@ final class AccountManagementRepository
         self::password($password);
         return $this->write($actor, function () use ($fields, $password): int {
             $this->unique($fields, 0);
-            $this->db->insert('shop_users', $fields + ['password_hash' => password_hash($password, PASSWORD_DEFAULT)]);
+            $this->db->insert('shop_users', $fields + ['password_hash' => password_hash($password, PASSWORD_DEFAULT), 'auth_version' => 1]);
             return (int) $this->db->insertId();
         });
     }
@@ -80,7 +87,7 @@ final class AccountManagementRepository
             $row = $this->locked($id, $revision);
             $this->protectAdministrator($actor, $row, $fields['role'], $fields['is_active']);
             $this->unique($fields, $id);
-            $revoke = $row['email'] !== $fields['email'] || $row['role'] !== $fields['role'] ||
+            $revoke = (int) $row['auth_version'] === 0 || $row['email'] !== $fields['email'] || $row['role'] !== $fields['role'] ||
                 (int) $row['is_active'] !== $fields['is_active'];
             $this->db->update('shop_users', $fields + ['auth_version' => (int) $row['auth_version'] + (int) $revoke], 'id=%i', $id);
             if ($revoke) $this->clearResets($id);
@@ -91,7 +98,13 @@ final class AccountManagementRepository
     {
         self::password($password);
         $this->write($actor, function () use ($id, $revision, $password): void {
-            $this->locked($id, $revision);
+            $row = $this->locked($id, $revision);
+            if ($row['role'] === 'admin' && (int) $row['auth_version'] === 0) {
+                $email = (new AdminUserRepository($this->db))->loginEmailFor($row);
+                if ($email === null) throw new InvalidArgumentException('Nejdřív ulož přihlašovací e-mail správce.');
+                $this->unique(['email' => $email, 'username' => $row['username']], $id);
+                $this->db->query('UPDATE shop_users SET email=%s WHERE id=%i', $email, $id);
+            }
             $this->db->query('UPDATE shop_users SET password_hash=%s, password_changed_at=UTC_TIMESTAMP(),
                 auth_version=auth_version+1 WHERE id=%i', password_hash($password, PASSWORD_DEFAULT), $id);
             $this->clearResets($id);

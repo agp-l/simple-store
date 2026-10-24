@@ -2,7 +2,6 @@
 declare(strict_types=1);
 
 use SimpleStore\Admin\AccountManagementRepository;
-use SimpleStore\Admin\AdminUserRepository;
 
 // admin.php authenticates the administrator and validates CSRF before routing here.
 $screen = 'users';
@@ -29,8 +28,8 @@ if ($userId > 0) {
     if ($account === null) { $usersError = 'Účet nebyl nalezen.'; http_response_code(404); }
     else {
         $accountForm = array_intersect_key($account, $accountForm);
-        if ($account['role'] === 'admin' && empty($accountForm['email'])) {
-            $accountForm['email'] = (new AdminUserRepository($db))->loginEmail() ?? '';
+        if ($account['role'] === 'admin') {
+            $accountForm['email'] = $account['login_email'] ?? '';
         }
         if ($accountForm['display_name'] === '') $accountForm['display_name'] = $accountForm['username'];
     }

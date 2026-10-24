@@ -21,6 +21,7 @@ try {
     $users = new AdminUserRepository($db); $manager = new AccountManagementRepository($db);
     $users->createAdmin('owner', password_hash('owner-password', PASSWORD_DEFAULT));
     $owner = (int)$db->insertId();
+    $db->query('UPDATE shop_users SET email=%s WHERE id=%i', 'obsolete@example.test', $owner);
     $db->insert('shop_mail_settings', ['id'=>1, 'settings_json'=>json_encode(['admin_recovery_email'=>'owner@example.test', 'from_email'=>'shop@example.test', 'public_base_url'=>'https://example.test'], JSON_THROW_ON_ERROR)]);
     $assert($users->findAdminByEmail('owner@example.test')['id'] == $owner, 'Legacy owner email stopped working.');
     $profile = static fn(string $username, string $role='customer'): array => ['username'=>$username, 'email'=>$username.'@example.test','display_name'=>'Test '.$username,'phone'=>'','role'=>$role,'is_active'=>'1'];
@@ -30,8 +31,12 @@ try {
     };
     $reject(fn()=>$manager->create(999, $profile('intruder','admin'), 'secure-password'));
     $reject(fn()=>$manager->create($owner, $profile('owner'), 'secure-password'));
+    $assert($users->findAdminByEmail('obsolete@example.test')===null && $manager->find($owner)['login_email']==='owner@example.test', 'Old stored email displaced the configured legacy identity.');
+    $reject(fn()=>$manager->create($owner, array_replace($profile('claim'), ['email'=>'owner@example.test']), 'secure-password'));
+    $manager->setPassword($owner, $owner, $rev($owner), 'owner-password');
+    $assert($manager->find($owner)['email']==='owner@example.test', 'Legacy manual reset did not retain the effective login email.');
     $second = $manager->create($owner, $profile('second','admin'), 'second-password');
-    $customer = $manager->create($owner, $profile('customer'), 'customer-password');
+    $customer = $manager->create($owner, array_replace($profile('customer'), ['username'=>'']), 'customer-password');
     $assert(count($manager->page('', '', '', 0)['items'])===3 && count($manager->page('', 'admin', '1', 0)['items'])===2, 'Role filters failed.');
     $assert($manager->page('second', '', '', 0)['items'][0]['id']==$second && $manager->page('', '', '', 0, 1)['nextOffset']===1, 'Search or pagination failed.');
     $assert(!isset($manager->find($second)['password_hash']), 'Password hash exposed by account manager.');

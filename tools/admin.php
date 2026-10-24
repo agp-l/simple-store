@@ -24,12 +24,17 @@ try {
     if (!is_file($root . '/vendor/autoload.php') || !is_file($root . '/config/database.php')) {
         throw new RuntimeException('Run composer install and configure config/database.php first.');
     }
-    $users = new AdminUserRepository(ConnectionFactory::create(require $root . '/config/database.php'));
+    $database = ConnectionFactory::create(require $root . '/config/database.php');
+    $users = new AdminUserRepository($database);
     if (!$users->installed()) {
         throw new RuntimeException('Import database/schema.sql into the configured database first (shop_users table missing).');
     }
     if ($emailOption !== null && filter_var($emailOption, FILTER_VALIDATE_EMAIL) === false) {
         throw new RuntimeException('Enter a valid administrator email.');
+    }
+    if ($command === '--reset' && $emailOption === null &&
+        (int) $database->queryFirstField('SELECT COUNT(*) FROM shop_users WHERE role=%s AND is_active=1', 'admin') > 1) {
+        throw new RuntimeException('Multiple administrators exist. Select one with --email=owner@example.com.');
     }
     $loginEmail = $emailOption === null ? $users->loginEmail() : strtolower(trim($emailOption));
     if ($loginEmail === null) throw new RuntimeException('Specify the administrator with --email=owner@example.com.');

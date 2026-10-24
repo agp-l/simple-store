@@ -53,7 +53,7 @@ V **Účty a administrátoři** (`admin.php?section=users`) lze založit zákazn
 
 Před prvním použitím nové správy účtů spusť **Databáze → Aktualizovat SQL tabulky** (sloupec `shop_users.auth_version`). Přihlášení původního správce a aktualizace databáze fungují i před migrací. Změna hesla, e-mailu, role nebo stavu ukončí předchozí relace a zruší staré obnovovací odkazy. Opětovné povolení účtu staré relace neoživí. Vlastní účet nelze smazat, zablokovat ani zbavit role správce; nejdřív použij dalšího správce. Souběžné úpravy účtů jsou zamčené a starší otevřený formulář nepřepíše novější změnu.
 
-Smazání vyžaduje potvrzení a odstraní účet, uložené adresy a obnovovací odkazy. Objednávky, reklamace, doklady a auditní historie zůstanou zachované, odpojí se pouze vazba na účet. Změny adresáře nepřepisují adresy v dřívějších objednávkách. Původní správce bez uloženého e-mailu může nadále použít dřívější e-mail obchodu; v jeho detailu doplň a ulož vlastní e-mail. Ostatní správci tento společný e-mail k přihlášení nepoužívají.
+Smazání vyžaduje potvrzení a odstraní účet, uložené adresy a obnovovací odkazy. Objednávky, reklamace, doklady a auditní historie zůstanou zachované, odpojí se pouze vazba na účet. Změny adresáře nepřepisují adresy v dřívějších objednávkách. Původní správce nadále používá dřívější přihlašovací e-mail z nastavení obchodu; první uložení jeho detailu nebo ruční změna hesla tento e-mail sváže přímo s účtem. Potom už změny kontaktního e-mailu obchodu jeho přihlášení neovlivní. Ostatní správci tento společný e-mail k přihlášení nepoužívají.
 
 ### Doručování e-mailů z fronty
 
