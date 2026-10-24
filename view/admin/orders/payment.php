@@ -15,10 +15,10 @@
           <div><dt>Stav u BTCPay</dt><dd><?= $escape($btcpayStatusLabel($btcpayState['status'] ?? '')) ?></dd></div>
           <?php if (empty($order['provider_reference']) && !empty($btcpayState['invoice_id'])): ?><div><dt>ID faktury BTCPay</dt><dd><?= $escape($btcpayState['invoice_id']) ?></dd></div><?php endif; ?>
         <?php endif; ?>
-        <?php if ($paid && !empty($order['payment_paid_at'])): ?><div><dt><?= $onlineGateway ? 'Potvrzeno bránou' : 'Ověřeno' ?></dt><dd><?= $escape($order['payment_paid_at']) ?><?php if (!empty($order['payment_verified_by'])): ?> · správce #<?= (int) $order['payment_verified_by'] ?><?php endif; ?></dd></div><?php endif; ?>
+        <?php if ($paid && !empty($order['payment_paid_at'])): ?><div><dt><?= $onlineGateway ? 'Potvrzeno bránou' : 'Ověřeno' ?></dt><dd><?= $escape(\SimpleStore\Rendering\LocalDateTime::czech($order['payment_paid_at'])) ?><?php if (!empty($order['payment_verified_by'])): ?> · správce #<?= (int) $order['payment_verified_by'] ?><?php endif; ?></dd></div><?php endif; ?>
         <?php if ($bankTransfer): ?><div><dt>Účet</dt><dd><?= $escape($payment['account_display'] ?? 'Neuveden') ?></dd></div><?php endif; ?>
         <?php if ($bankTransfer && !empty($payment['iban'])): ?><div><dt>IBAN</dt><dd><?= $escape($payment['iban']) ?></dd></div><?php endif; ?>
-        <?php if ($bankTransfer && !empty($order['payment_due_at'])): ?><div><dt>Splatnost</dt><dd><?= $escape($order['payment_due_at']) ?> UTC<?= $orderOverdue ? ' · Po splatnosti' : '' ?></dd></div><?php endif; ?>
+        <?php if ($bankTransfer && !empty($order['payment_due_at'])): ?><div><dt>Splatnost</dt><dd><?= $escape(\SimpleStore\Rendering\LocalDateTime::czech($order['payment_due_at'])) ?><?= $orderOverdue ? ' · Po splatnosti' : '' ?></dd></div><?php endif; ?>
       </dl>
       <?php if (!empty($orderFioEvidence)): ?>
         <p class="panel-notice">Bankovní pohyb <?= $escape($orderFioEvidence['external_number']) ?> · připsáno <?= $escape($orderFioEvidence['paid_date']) ?>.

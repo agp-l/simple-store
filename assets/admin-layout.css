@@ -166,7 +166,7 @@
   border: 0; border-bottom: 2px solid transparent; border-radius: 0;
   background: transparent; color: var(--admin-ink); font-size: 14px; font-weight: 550; line-height: 1.5; text-decoration: none; white-space: nowrap;
 }
-.admin-page :is(.panel-settings-nav, .panel-accounting-nav, .panel-order-filters, .panel-order-tabs) > a:hover { background: var(--section-soft); color: var(--section-accent); }
+.admin-page :is(.panel-settings-nav, .panel-accounting-nav, .panel-order-filters, .panel-order-tabs) > a:hover { color: var(--section-accent); border-bottom-color: currentColor; }
 .admin-page :is(.panel-settings-nav, .panel-accounting-nav, .panel-order-filters, .panel-order-tabs) > a[aria-current="page"] { border-bottom-color: var(--section-accent); background: var(--section-soft); color: var(--section-accent); font-weight: 700; }
 .admin-page :is(.panel-settings-nav, .panel-accounting-nav, .panel-order-filters, .panel-order-tabs) a > .panel-icon { width: 22px; height: 22px; margin: 0; opacity: 1; }
 .admin-page .panel-area :is(.panel-action, .panel-button) { min-height: 40px; padding: 9px 14px; border-color: transparent; background: var(--section-soft); color: var(--section-accent); font-size: 14px; font-weight: 600; box-shadow: none; }
@@ -379,8 +379,8 @@
 @media (max-width: 700px) { .admin-page .accounting-settings-form { grid-template-columns: minmax(0,1fr); } }
 
 .admin-page .panel-intro, .admin-page #series-new, .admin-page #ledger-edit, .admin-page #automation { scroll-margin-top: calc(var(--admin-header-height) + 20px); }
-.admin-page .panel-quick a:hover:not(.panel-button), .admin-page .panel-order-row:hover { background: var(--section-soft); }
-.admin-page .panel-settings-nav > a:not([aria-current="page"]):hover { background: #f4f6fb; }
+.admin-page .panel-quick:not(.panel-order-filters):not(.panel-order-tabs) a:hover:not(.panel-button), .admin-page .panel-order-row:hover { background: var(--section-soft); }
+.admin-page :is(.panel-settings-nav, .panel-accounting-nav, .panel-order-filters, .panel-order-tabs) > a:not([aria-current="page"]):hover { background: transparent; color: var(--card-accent, var(--tab-accent, var(--section-accent))); border-bottom-color: currentColor; }
 
 /* Flat surfaces and readable text across every admin workspace. */
 .admin-page .admin-tab-icon { display: inline-grid; place-items: center; flex: 0 0 34px; width: 34px; height: 34px; border-radius: 6px; background: var(--section-soft); color: var(--section-accent); }
@@ -466,3 +466,47 @@
 .admin-page .admin-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .admin-page .accounting-navigation + .panel-help { margin: 0 0 18px; }
 .admin-page .panel-orders-queue .panel-order-quick-status .panel-action { width: 44px; }
+
+/* Order preparation: the purchased variant and individual contact values come first. */
+.admin-page .panel-order-detail .panel-order-lines { display: grid; gap: 18px; }
+.admin-page .panel-order-detail .panel-order-line { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 14px 18px; align-items: start; padding: 18px; border: 1px solid var(--admin-border); border-radius: 7px; }
+.admin-page .panel-order-detail .panel-order-product-image { width: 72px; height: 72px; background: var(--admin-canvas); border-color: var(--admin-border); }
+.admin-page .panel-order-detail .panel-order-item-content { grid-column: 2; gap: 12px; }
+.admin-page .panel-order-detail .panel-order-product-name { display: block; color: var(--admin-ink); font-size: 19px; line-height: 1.4; font-weight: 750; }
+.admin-page .panel-order-item-quantity { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin: 0; font-size: 14px; }
+.admin-page .panel-order-item-quantity strong { padding: 6px 10px; border-radius: 4px; background: #edf3fe; color: #284985; font-size: 16px; }
+.admin-page .panel-order-variant-box { padding: 14px; border: 1px solid #dabb80; border-left: 3px solid #92601d; border-radius: 5px; background: #fff4e3; }
+.admin-page .panel-order-variant-box > p { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; color: #744a14; font-size: 13px; font-weight: 700; }
+.admin-page .panel-order-variants { display: flex; flex-wrap: wrap; gap: 12px 24px; margin: 0; }
+.admin-page .panel-order-variants > div { min-width: 0; }
+.admin-page .panel-order-variants dt { margin-bottom: 3px; font-size: 13px; color: #744a14; }
+.admin-page .panel-order-variants dd { margin: 0; font-size: 18px; line-height: 1.4; font-weight: 750; color: var(--admin-ink); overflow-wrap: anywhere; }
+.admin-page .panel-order-detail .panel-order-line small { font-size: 13px; line-height: 1.6; }
+.admin-page .panel-order-detail .panel-order-line-total { grid-column: 2; display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding-top: 12px; border-top: 1px solid var(--admin-border); font-size: 13px; }
+.admin-page .panel-order-line-total strong { font-size: 17px; white-space: nowrap; }
+.admin-page .panel-order-detail .panel-order-suppliers { font-size: 14px; }
+.admin-page .panel-order-contact-groups { display: grid; gap: 24px; margin-top: 18px; }
+.admin-page .panel-order-contact-group { --contact-accent: #365fae; --contact-soft: #edf3fe; }
+.admin-page .panel-order-contact-group[data-tone="violet"] { --contact-accent: #7552a4; --contact-soft: #f3eefb; }
+.admin-page .panel-order-contact-group[data-tone="teal"] { --contact-accent: #24757e; --contact-soft: #eaf7f8; }
+.admin-page .panel-order-contact-group h3 { margin: 0 0 12px; font-size: 16px; }
+.admin-page .panel-order-contact-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.admin-page .panel-order-contact-field { min-width: 0; padding: 12px; border: 1px solid var(--admin-border); border-radius: 6px; background: #fff; }
+.admin-page .panel-order-contact-field dt { display: flex; align-items: center; gap: 8px; color: var(--admin-secondary); font-size: 13px; }
+.admin-page .panel-order-contact-icon { display: grid; place-items: center; flex: 0 0 28px; width: 28px; height: 28px; border-radius: 5px; background: var(--contact-soft); color: var(--contact-accent); }
+.admin-page .panel-order-contact-field dd { display: flex; align-items: center; gap: 10px; justify-content: space-between; margin: 8px 0 0; }
+.admin-page .panel-order-contact-value { min-width: 0; font-size: 16px; line-height: 1.5; font-weight: 600; overflow-wrap: anywhere; white-space: pre-line; }
+.admin-page .panel-order-field-copy { display: grid; place-items: center; flex: 0 0 40px; width: 40px; height: 40px; padding: 0; border: 1px solid var(--admin-border); border-radius: 5px; color: var(--contact-accent); background: var(--contact-soft); cursor: pointer; }
+.admin-page .panel-order-field-copy:hover, .admin-page .panel-order-field-copy:focus-visible { border-color: var(--contact-accent); }
+.admin-page .panel-order-field-copy[data-copied="true"] { color: #195b63; background: #eaf7f8; border-color: #24757e; }
+.admin-page .panel-order-field-copy > span { display: flex; }
+.admin-page .panel-order-copy-feedback:not(:empty) { padding: 10px 12px; border-left: 3px solid #24757e; color: #195b63; background: #eaf7f8; font-size: 14px; }
+@media (min-width: 1081px) and (max-width: 1400px) {
+  .admin-page .panel-order-contact-fields { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 600px) {
+  .admin-page .panel-order-contact-fields { grid-template-columns: minmax(0, 1fr); }
+  .admin-page .panel-order-field-copy { flex-basis: 44px; width: 44px; height: 44px; }
+  .admin-page .panel-order-detail .panel-order-line { grid-template-columns: minmax(0, 1fr); padding: 14px; }
+  .admin-page .panel-order-detail :is(.panel-order-item-content, .panel-order-line-total) { grid-column: 1; }
+}

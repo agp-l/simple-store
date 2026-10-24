@@ -73,8 +73,8 @@ $e = $escape;
   </details></section>
 <?php elseif ($returnsReady): ?>
   <section class="panel-panel"><h2>Poslední případy</h2>
-    <form method="get" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>"><input type="hidden" name="section" value="returns">
-      <label>Hledat číslo případu, objednávky nebo e-mail <input name="q" value="<?= $e($returnSearch) ?>" maxlength="100"></label>
+    <form class="panel-order-search panel-returns-search" role="search" method="get" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>"><input type="hidden" name="section" value="returns">
+      <label>Hledat číslo případu, objednávky nebo e-mail <input type="search" name="q" placeholder="Číslo případu, objednávka nebo e-mail" value="<?= $e($returnSearch) ?>" maxlength="100"></label>
       <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('search') ?> Hledat</button>
       <?php if ($returnSearch !== ''): ?><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($returnBaseUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('cancel') ?> Zrušit hledání</a><?php endif; ?>
     </form>

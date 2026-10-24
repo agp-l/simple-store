@@ -92,7 +92,7 @@
         <tr>
           <td data-label="Objednávka a zákazník" class="panel-order-identity">
             <a class="panel-order-primary" href="<?= \SimpleStore\Navigation\PanelUrl::escape($orderBaseUrl . '&id=' . $listedId) ?>"><?= $escape($listed['order_number'] ?? '') ?></a>
-            <small><?= $escape($listed['created_at'] ?? '') ?> UTC</small>
+            <small><?= $escape(\SimpleStore\Rendering\LocalDateTime::czech($listed['created_at'] ?? '')) ?></small>
             <?php if (!empty($listedShipping['recipient'])): ?><strong class="panel-order-customer"><?= $escape($listedShipping['recipient']) ?></strong><?php endif; ?>
             <small><?= $escape($listed['customer_email'] ?? '') ?></small>
             <small><?= ($listed['payment_method'] ?? '') === 'test' ? 'TEST' : 'VS ' . $escape($listed['variable_symbol'] ?? '–') ?></small>
@@ -100,7 +100,7 @@
           <td data-label="Platba a doklady" class="panel-order-payment">
             <strong class="panel-order-amount"><?= $orderMoney($listed['total_czk'] ?? 0) ?></strong>
             <span class="panel-order-state <?= $listedRefunded ? 'is-refunded' : ($listedPaid ? 'is-paid' : 'is-pending') ?>"><?= $escape($listedPaymentLabel) ?></span><small><?= $escape($orderMethodLabel($listed['payment_method'] ?? '')) ?></small>
-            <?php if (($listed['payment_method'] ?? '') === 'bank_transfer' && !empty($listed['payment_due_at'])): ?><small>Splatnost <?= $escape($listed['payment_due_at']) ?> UTC</small><?php endif; ?>
+            <?php if (($listed['payment_method'] ?? '') === 'bank_transfer' && !empty($listed['payment_due_at'])): ?><small>Splatnost <?= $escape(\SimpleStore\Rendering\LocalDateTime::czech($listed['payment_due_at'])) ?></small><?php endif; ?>
             <?php if ($listedOverdue): ?><span class="panel-order-state is-refunded">Po splatnosti</span><?php endif; ?>
             <?php if ($listedPaidAfterCancel): ?><p class="panel-error" role="alert">Zaplaceno po stornu – prověř vrácení platby.</p><?php endif; ?>
             <?php if ($listedGatewayBlocked): ?><small>Ověř transakci v detailu objednávky.</small><?php endif; ?>

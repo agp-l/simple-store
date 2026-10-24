@@ -2,6 +2,19 @@
 declare(strict_types=1);
 require dirname(__DIR__) . '/src/bootstrap.php';
 
+foreach ([
+    ['2026-10-13 18:40:24', '13. 10. 2026 20:40'],
+    ['2026-10-13 23:09:27', '14. 10. 2026 01:09'],
+    ['2026-01-13 18:40:24', '13. 1. 2026 19:40'],
+    ['2026-10-25 00:30:00', '25. 10. 2026 02:30'],
+    ['2026-10-25 01:30:00', '25. 10. 2026 02:30'],
+    ['2026-02-30 12:00:00', '—'], [null, '—'], ['', '—'], ['not a date', '—'],
+] as [$utc, $local]) {
+    if (\SimpleStore\Rendering\LocalDateTime::czech($utc) !== $local) {
+        throw new RuntimeException('Admin dates must use Czech local time, including DST and midnight rollover.');
+    }
+}
+
 $basePath = '/shop/';
 $adminUrl = $basePath . 'admin.php';
 $site = ['languages' => ['cs'], 'default_language' => 'cs'];

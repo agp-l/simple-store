@@ -7,16 +7,60 @@
         </div>
   <p class="panel-order-copy-feedback" role="status" aria-live="polite"></p>
         <?php if (($_GET['tracking_saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Sledovací údaje byly uloženy. Pokud už byla objednávka předána dopravci a automatické zprávy jsou zapnuté, zpráva zákazníkovi se připravila podle nastavení e-mailů.</p><?php endif; ?>
-        <dl class="panel-order-facts">
-          <div><dt>Aktuální doprava</dt><dd><strong><?= $escape($shipping['label'] ?? $shipping['method'] ?? 'Neuvedeno') ?></strong></dd></div>
-          <?php if (!empty($order['dispatch_shipping_changed'])): ?><div><dt>Původně objednáno</dt><dd><?= $escape($order['shipping_ordered']['label'] ?? $order['shipping_ordered']['method'] ?? 'Neuvedeno') ?> · účtováno <?= $orderMoney($order['shipping_czk'] ?? 0) ?></dd></div><?php endif; ?>
-          <div><dt>Expeduje</dt><dd><?= ($order['fulfillment_source'] ?? 'own') === 'external' ? 'Externí dodavatel' : 'Obchod' ?><?php if (!empty($order['fulfillment_note'])): ?><br><?= $escape($order['fulfillment_note']) ?><?php endif; ?></dd></div>
-          <div><dt>Příjemce</dt><dd><?= $escape($shipping['recipient'] ?? $shipping['name'] ?? 'Neuvedeno') ?></dd></div>
-          <div><dt>E-mail</dt><dd><?= $escape($order['customer_email'] ?? $shipping['email'] ?? 'Neuvedeno') ?></dd></div>
-          <div><dt>Telefon</dt><dd><?= $escape($shipping['phone'] ?? 'Neuvedeno') ?></dd></div>
-          <?php if (!empty($shipping['pickup_point'])): ?><div><dt>Výdejní místo</dt><dd><?= $escape($shipping['pickup_point']) ?><br><?= $escape($shipping['pickup_address'] ?? '') ?><?php if (!empty($shipping['pickup_code'])): ?><br>Kód: <?= $escape($shipping['pickup_code']) ?><?php endif; ?><?php if (($shipping['method'] ?? '') === 'balikovna_pickup' && !empty($shipping['pickup_postal_code'])): ?><br>PSČ Balíkovny: <?= $escape($shipping['pickup_postal_code']) ?><?php endif; ?></dd></div>
-          <?php else: ?><div><dt>Adresa</dt><dd><?= $escape($shipping['street'] ?? '') ?><br><?= $escape(trim((string) ($shipping['postal_code'] ?? '') . ' ' . (string) ($shipping['city'] ?? ''))) ?><br><?= $escape($shipping['country'] ?? 'CZ') ?></dd></div><?php endif; ?>
-        </dl>
+        <?php
+        $contactGroups = [
+            ['title' => 'Zákazník', 'tone' => 'blue', 'fields' => [
+                ['Příjemce', $recipientName, 'user'],
+                ['E-mail', $contactEmail, 'mail'],
+                ['Telefon', $contactPhone, 'phone'],
+            ]],
+            ['title' => 'Doručení', 'tone' => 'violet', 'fields' => [
+                ['Aktuální doprava', (string) ($shipping['label'] ?? $shipping['method'] ?? ''), 'truck'],
+                ['Expeduje', ($order['fulfillment_source'] ?? 'own') === 'external' ? 'Externí dodavatel' : 'Obchod', 'package'],
+            ]],
+        ];
+        if (!empty($order['dispatch_shipping_changed'])) {
+            $contactGroups[1]['fields'][] = ['Původně objednáno', (string) ($order['shipping_ordered']['label'] ?? $order['shipping_ordered']['method'] ?? '') . ' · účtováno ' . $orderMoney($order['shipping_czk'] ?? 0), 'truck'];
+        }
+        if (!empty($order['fulfillment_note'])) {
+            $contactGroups[1]['fields'][] = ['Poznámka k expedici', (string) $order['fulfillment_note'], 'document'];
+        }
+        if ($isPickup) {
+            $addressFields = [
+                ['Výdejní místo', (string) ($shipping['pickup_point'] ?? ''), 'pin'],
+                ['Adresa výdejního místa', (string) ($shipping['pickup_address'] ?? ''), 'home'],
+            ];
+            if (!empty($shipping['pickup_code'])) $addressFields[] = ['Kód výdejního místa', (string) $shipping['pickup_code'], 'hash'];
+            if (($shipping['method'] ?? '') === 'balikovna_pickup' && !empty($shipping['pickup_postal_code'])) {
+                $addressFields[] = ['PSČ Balíkovny', (string) $shipping['pickup_postal_code'], 'hash'];
+            }
+        } else {
+            $addressFields = [
+                ['Ulice a číslo domu', (string) ($shipping['street'] ?? ''), 'home'],
+                ['Město', (string) ($shipping['city'] ?? ''), 'pin'],
+                ['PSČ', (string) ($shipping['postal_code'] ?? ''), 'hash'],
+                ['Země', (string) ($shipping['country'] ?? 'CZ'), 'globe'],
+            ];
+        }
+        $contactGroups[] = ['title' => $isPickup ? 'Výdejní místo' : 'Adresa příjemce', 'tone' => 'teal', 'fields' => $addressFields];
+        ?>
+        <div class="panel-order-contact-groups">
+          <?php foreach ($contactGroups as $group): ?>
+            <section class="panel-order-contact-group" data-tone="<?= $escape($group['tone']) ?>" aria-label="<?= $escape($group['title']) ?>">
+              <h3><?= $escape($group['title']) ?></h3>
+              <dl class="panel-order-contact-fields">
+                <?php foreach ($group['fields'] as [$label, $value, $icon]): ?>
+                  <div class="panel-order-contact-field">
+                    <dt><span class="panel-order-contact-icon"><?= \SimpleStore\Rendering\Icon::render($icon) ?></span><?= $escape($label) ?></dt>
+                    <dd><span class="panel-order-contact-value"><?= $escape($value !== '' ? $value : 'Neuvedeno') ?></span>
+                      <?php if ($value !== ''): ?><button type="button" class="panel-order-field-copy" data-order-copy="<?= $escape($value) ?>" data-order-copy-label="<?= $escape($label) ?>" aria-label="<?= $escape('Kopírovat: ' . $label) ?>" title="<?= $escape('Kopírovat: ' . $label) ?>"><span class="order-copy-idle"><?= \SimpleStore\Rendering\Icon::render('copy') ?></span><span class="order-copy-done" hidden><?= \SimpleStore\Rendering\Icon::render('check') ?></span></button><?php endif; ?>
+                    </dd>
+                  </div>
+                <?php endforeach; ?>
+              </dl>
+            </section>
+          <?php endforeach; ?>
+        </div>
         <?php if ($orderTrackingReady): ?>
           <details class="panel-order-accordion"><summary>Sledování zásilky a externí dodavatel</summary>
             <p class="panel-help">U Zásilkovny se použije odkaz z API, u GLS a Balíkovny registrované číslo. Číslo nebo HTTPS odkaz můžeš doplnit i ručně. Po předání dopravci se nové údaje pošlou zákazníkovi; stejné uložení zprávu neopakuje.</p>
