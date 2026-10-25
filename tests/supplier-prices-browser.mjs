@@ -22,14 +22,26 @@ test('supplier manager responsive controls, safe review and single-step runner',
    assert.equal(await page.getByText('Cena platí pro varianty používající základní dodavatelskou cenu.',{exact:false}).count(),1);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`Overflow at ${width}`);
    await page.screenshot({path:`/tmp/supplier-screenshots/manager-${width}.png`,fullPage:true});
-   let ticks=0;
+   let ticks=0, delayNext=false, keepWorking=false, release;
    await page.route('**/admin/supplier-prices/',async route=>{
     const post=new URLSearchParams(route.request().postData());assert.equal(post.get('action'),'supplier-price-tick');assert.equal(post.get('csrf'),'test-token');ticks++;
-    await route.fulfill({contentType:'application/json',body:JSON.stringify({state:'idle',wait:30})});
+    if(delayNext){delayNext=false;await new Promise(resolve=>{release=async()=>{await route.fulfill({contentType:'application/json',body:JSON.stringify({state:'idle',wait:30})});resolve();};});}
+    else await route.fulfill({contentType:'application/json',body:JSON.stringify({state:keepWorking?'working':'idle',wait:60})});
    });
    await page.getByRole('button',{name:'Zpracovávat v tomto okně',exact:true}).click();
    await page.getByText('Fronta je dokončená.',{exact:false}).waitFor();assert.equal(ticks,1);
    assert.equal(await page.getByRole('button',{name:'Přerušit v tomto okně',exact:true}).isDisabled(),true);
+   if(width===1440){
+    delayNext=true;keepWorking=true;
+    await page.getByRole('button',{name:'Zpracovávat v tomto okně',exact:true}).click();
+    for(let i=0;i<100&&!release;i++)await new Promise(r=>setTimeout(r,10));assert.ok(release);
+    await page.getByRole('button',{name:'Přerušit v tomto okně',exact:true}).click();
+    await page.getByRole('button',{name:'Zpracovávat v tomto okně',exact:true}).click();
+    await page.getByText('Zpracování běží',{exact:false}).waitFor();await release();
+    await new Promise(r=>setTimeout(r,100));
+    assert.match(await page.locator('#supplier-run-status').innerText(),/Zpracování běží/,'Old response stopped a newer runner');
+    await page.getByRole('button',{name:'Přerušit v tomto okně',exact:true}).click();
+   }
    assert.deepEqual(errors,[]);await page.close();
   }
  }finally{await browser?.close();server.kill();unlinkSync(file);}
