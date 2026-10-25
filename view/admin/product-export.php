@@ -3,6 +3,7 @@
 <?php if (isset($_SESSION['variant_links_inherited'])): ?><p role="status">Přidáno <?= (int) $_SESSION['variant_links_inherited'] ?> převzatých odkazů variant. Ceny, množství a režimy prodeje zůstaly zachované.</p><?php unset($_SESSION['variant_links_inherited']); endif; ?>
 <details><summary>Partnerské odkazy variant</summary>
 <p>Převezme společné odkazy produktu ke všem jeho existujícím variantám jako neověřené. Zachová upravené i odstraněné odkazy. Lze bezpečně opakovat i po přerušení. Pro hromadné úpravy níže vyber formát Partnerské odkazy variant.</p>
+<p><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($basePath . 'admin/?section=supplier-prices&format=variant-links') ?>">Otevřít soukromý JSON odkazů variant</a></p>
 <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>">
 <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="product-supplier-link"><input type="hidden" name="operation" value="inherit-all">
 <button class="panel-button" type="submit">Doplnit výchozí odkazy ke všem variantám</button>

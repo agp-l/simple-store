@@ -12,6 +12,7 @@
           <button type="button" class="inline-small" data-editor-action="media-library"><?= \SimpleStore\Rendering\Icon::render('image') ?> Fotografie</button>
           <a class="inline-small" href="<?= \SimpleStore\Navigation\PanelUrl::escape($mediaLibraryUrl) ?>"><?= \SimpleStore\Rendering\Icon::render('image') ?> Knihovna fotografií</a>
           <a class="inline-small" href="#supplier-links"><?= \SimpleStore\Rendering\Icon::render('external') ?> Dodavatelé</a>
+          <?php if (!empty($product['variant_inventory']['items'])): ?><a class="inline-small" href="#variant-supplier-links">Partneři variant</a><?php endif; ?>
           <a class="inline-small" href="<?= \SimpleStore\Navigation\PanelUrl::escape($basePath . 'admin/?' . http_build_query(['section' => 'product-import', 'language' => $language, 'key' => $product['product_key']])) ?>"><?= \SimpleStore\Rendering\Icon::render('document') ?> JSON pro AI</a>
           <?php if ($product['published']): ?><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug'])) ?>"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit bez úprav</a><?php endif; ?>
         </div>
@@ -48,6 +49,7 @@
     <?php endif; ?>
     <?php require __DIR__ . '/product-suppliers.php'; ?>
     <?php require __DIR__ . '/product-sale.php'; ?>
+    <?php require __DIR__ . '/product-variant-suppliers.php'; ?>
     <?php require __DIR__ . '/product-variants.php'; ?>
     <?php require __DIR__ . '/product-selection.php'; ?>
     <?php require __DIR__ . '/product-relations.php'; ?>

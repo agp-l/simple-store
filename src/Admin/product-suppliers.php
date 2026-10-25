@@ -57,5 +57,7 @@ try {
 } catch (InvalidArgumentException $exception) {
     $returnUrl .= '&supplier_error=' . rawurlencode($exception->getMessage());
 }
-header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($returnUrl . '#supplier-links'), true, 303);
+$variantOperation = $operation === 'inherit' || str_starts_with($operation, 'variant-');
+if ($variantOperation) $returnUrl .= '&supplier_variant=' . rawurlencode(is_string($_POST['variant_key'] ?? null) ? $_POST['variant_key'] : 'all');
+header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($returnUrl . ($variantOperation ? '#variant-supplier-links' : '#supplier-links')), true, 303);
 exit;

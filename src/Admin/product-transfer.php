@@ -63,11 +63,13 @@ try {
                 }
             }
             $relationsOnly = ($_POST['export_format'] ?? '') === 'relations';
-            $body = $namesOnly ? $transfer->supplierOverview($exportRows, $exportUrl) : ($relationsOnly ? $transfer->exportRelations($exportRows) : $transfer->export($exportRows));
-            if (($_POST['export_format'] ?? '') === 'variant-suppliers') $body = (new \SimpleStore\Product\ProductVariantSupplierTransfer($db, $repository, $site['languages']))->export($exportRows);
+            $variantLinksOnly = ($_POST['export_format'] ?? '') === 'variant-suppliers';
+            $body = $variantLinksOnly
+                ? (new \SimpleStore\Product\ProductVariantSupplierTransfer($db, $repository, $site['languages']))->export($exportRows)
+                : ($namesOnly ? $transfer->supplierOverview($exportRows, $exportUrl) : ($relationsOnly ? $transfer->exportRelations($exportRows) : $transfer->export($exportRows)));
             header('Cache-Control: no-store');
             header('Content-Type: application/json; charset=utf-8');
-            header('Content-Disposition: attachment; filename="products-' . gmdate('Y-m-d-His') . ($namesOnly ? '-suppliers.json' : ($relationsOnly ? '-relations.json' : '.json')) . '"');
+            header('Content-Disposition: attachment; filename="products-' . gmdate('Y-m-d-His') . ($variantLinksOnly ? '-variant-suppliers.json' : ($namesOnly ? '-suppliers.json' : ($relationsOnly ? '-relations.json' : '.json'))) . '"');
             echo $body;
             exit;
         }

@@ -57,7 +57,7 @@ final class ProductVariantSupplierTransfer
                     if (!is_string($id) || !isset($byId[$id]) || isset($touched[$id])) throw new InvalidArgumentException('Neplatná nebo opakovaná varianta produktu.');
                     $touched[$id] = true;
                     if (isset($variant->choices) && (array) $variant->choices != $byId[$id]['choices']) throw new InvalidArgumentException('Vlastnosti varianty neodpovídají exportu.');
-                    if (!is_array($variant->links ?? null) || count($variant->links) > 100) throw new InvalidArgumentException('U varianty může být nejvýše 100 odkazů.');
+                    if (!is_array($variant->links ?? null) || count($variant->links) > 1000) throw new InvalidArgumentException('U varianty může být nejvýše 1 000 odkazů.');
                     foreach ($variant->links as $link) {
                         self::fields($link, ['link_key', 'version', 'partner_key', 'label', 'url', 'origin', 'verification', 'checked_at', 'result']);
                         $linkId = $link->link_key ?? ''; $version = $link->version ?? 0; $partner = $link->partner_key ?? '';

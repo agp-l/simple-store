@@ -42,6 +42,5 @@
             </form>
           </details>
         <?php endif; ?>
-        <?php require __DIR__ . '/product-variant-suppliers.php'; ?>
       </section>
     <?php endif; ?>

@@ -43,7 +43,7 @@ final class ProductVariantSupplierRepository
     public function inheritInTransaction(string $key): int
     {
         if (!$this->installed()) return 0;
-        $links = (new ProductSupplierLinkRepository($this->db))->forProduct($key);
+        $links = $this->db->query('SELECT id,label,url FROM shop_product_supplier_links WHERE product_key=%s ORDER BY id FOR UPDATE', $key);
         $variants = $this->db->queryFirstColumn('SELECT variant_key FROM shop_product_variants WHERE product_key=%s ORDER BY variant_key', $key);
         $partners = (new PurchasePartnerRepository($this->db))->all();
         $existing = $this->forProduct($key, true, true); $seen = [];

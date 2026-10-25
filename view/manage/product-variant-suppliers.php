@@ -1,5 +1,9 @@
 <?php if (!empty($product['variant_inventory']['items'])): ?>
-<details id="variant-supplier-links"><summary>Partnerské odkazy jednotlivých variant</summary>
+<section class="supplier-links variant-supplier-panel"><details id="variant-supplier-links" <?= isset($_GET['supplier_variant']) ? 'open' : '' ?>><summary>Partnerské odkazy jednotlivých variant</summary>
+<?php if (isset($_GET['supplier_variant'])): ?>
+<?php if (($_GET['supplier_saved'] ?? '') === '1'): ?><p role="status">Partnerské odkazy variant byly aktualizovány.</p><?php endif; ?>
+<?php if (isset($_GET['supplier_error']) && is_string($_GET['supplier_error'])): ?><p class="supplier-error" role="alert"><?= $escape($_GET['supplier_error']) ?></p><?php endif; ?>
+<?php endif; ?>
 <p>Partneři jsou jiné e-shopy pro asistovaný nákup. Vybraný prodávající zůstává v nastavení prodeje produktu. Převzatý odkaz ani ruční vložení nepotvrzuje shodu konkrétní velikosti nebo barvy.</p>
 <?php if (!$variantSupplierReady): ?>
 <p>Pro ukládání odkazů variant <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/?section=database') ?>">aktualizuj databázi</a>.</p>
@@ -12,7 +16,7 @@
 <?php foreach ($product['variant_inventory']['items'] as $partnerVariant):
     $variantLinks = array_values(array_filter($variantSupplierLinks, static fn(array $link): bool => $link['variant_key'] === $partnerVariant['id']));
 ?>
-<details class="supplier-add"><summary><?= $escape(\SimpleStore\Product\ProductVariants::label($partnerVariant['choices'])) ?> · <?= count($variantLinks) ?> odkazů<?= !$partnerVariant['enabled'] ? ' · vyřazená varianta' : '' ?></summary>
+<details class="supplier-add" <?= ($_GET['supplier_variant'] ?? '') === $partnerVariant['id'] ? 'open' : '' ?>><summary><?= $escape(\SimpleStore\Product\ProductVariants::label($partnerVariant['choices'])) ?> · odkazy: <?= count($variantLinks) ?><?= !$partnerVariant['enabled'] ? ' · vyřazená varianta' : '' ?></summary>
 <?php if ($variantMode && $partnerVariant['enabled']): ?><p><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug']) . '?variant=' . $partnerVariant['id']) ?>">Otevřít přímý odkaz této varianty ↗</a></p><?php endif; ?>
 <?php foreach (array_merge($variantLinks, [null]) as $variantLink): ?>
 <details class="supplier-add"><summary><?= $variantLink === null ? 'Přidat partnerský odkaz' : $escape($variantLink['label']) . ' · ' . $escape(['verified' => 'Ověřená shoda', 'conflict' => 'Potřebuje kontrolu', 'unverified' => $variantLink['origin'] === 'inherited' ? 'Převzatý – varianta neověřena' : 'Varianta neověřena'][$variantLink['verification']] ?? 'Neověřeno') ?></summary>
@@ -31,5 +35,5 @@
 </details>
 <?php endforeach; ?>
 <?php endif; ?>
-</details>
+</details></section>
 <?php endif; ?>
