@@ -394,6 +394,9 @@ try {
             $supplierRepository = new ProductSupplierLinkRepository($db);
             $supplierLinksReady = $supplierRepository->installed();
             if ($supplierLinksReady) $supplierLinks = $supplierRepository->forProduct($item['product_key']);
+            $variantSupplierRepository = new \SimpleStore\Product\ProductVariantSupplierRepository($db);
+            $shared['variantSupplierReady'] = $variantSupplierRepository->installed();
+            $shared['variantSupplierLinks'] = $variantSupplierRepository->forProduct($item['product_key']);
             $shared['productSalesReady'] = $productSales->installed() &&
                 (new \SimpleStore\Product\PurchasePartnerRepository($db))->installed();
             $shared['productSale'] = $productSales->forProduct($item['product_key']);

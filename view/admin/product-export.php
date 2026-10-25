@@ -1,5 +1,12 @@
 <section class="panel-panel">
 <h2>Vybrat produkty k exportu</h2>
+<?php if (isset($_SESSION['variant_links_inherited'])): ?><p role="status">Přidáno <?= (int) $_SESSION['variant_links_inherited'] ?> převzatých odkazů variant. Ceny, množství a režimy prodeje zůstaly zachované.</p><?php unset($_SESSION['variant_links_inherited']); endif; ?>
+<details><summary>Partnerské odkazy variant</summary>
+<p>Převezme společné odkazy produktu ke všem jeho existujícím variantám jako neověřené. Zachová upravené i odstraněné odkazy. Lze bezpečně opakovat i po přerušení. Pro hromadné úpravy níže vyber formát Partnerské odkazy variant.</p>
+<form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>">
+<input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="product-supplier-link"><input type="hidden" name="operation" value="inherit-all">
+<button class="panel-button" type="submit">Doplnit výchozí odkazy ke všem variantám</button>
+</form></details>
 <form method="get" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>" class="panel-form product-transfer-filters">
 <input type="hidden" name="section" value="product-import"><input type="hidden" name="tab" value="export">
 <label>Jazyk<select name="export_language"><option value="">Všechny jazyky</option><?php foreach ($site['languages'] as $lang): ?><option value="<?= $escape($lang) ?>" <?= $exportLanguage === $lang ? 'selected' : '' ?>><?= $escape($lang) ?></option><?php endforeach; ?></select></label>
@@ -16,11 +23,11 @@ foreach ($exportCategories as $path => $label): ?><option value="<?= $escape($pa
 <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="product-bulk-export">
 <input type="hidden" name="export_language" value="<?= $escape($exportLanguage) ?>"><input type="hidden" name="export_category" value="<?= $escape($exportCategory) ?>"><input type="hidden" name="export_search" value="<?= $escape($exportSearch) ?>"><input type="hidden" name="selected_json" value="[]">
 <div class="product-transfer-actions">
-<label>Formát<select name="export_format"><option value="json">Úplný JSON — záloha a hromadné úpravy</option><option value="names">Přehled pro AI a dodavatelé — stručný JSON</option><option value="relations">Související produkty — propojení a poznámky (JSON)</option></select></label>
+<label>Formát<select name="export_format"><option value="json">Úplný JSON — záloha a hromadné úpravy</option><option value="names">Přehled pro AI a dodavatelé — stručný JSON</option><option value="variant-suppliers">Partnerské odkazy variant — soukromý JSON</option><option value="relations">Související produkty — propojení a poznámky (JSON)</option></select></label>
 <button class="panel-button panel-action" name="export_scope" value="selected" data-export-selected disabled><?= \SimpleStore\Rendering\Icon::render('download') ?> Exportovat zaškrtnuté (<span data-selection-count>0</span>)</button>
 <button class="panel-action panel-button" name="export_scope" value="filtered" <?= $exportRows === [] ? 'disabled' : '' ?>><?= \SimpleStore\Rendering\Icon::render('download') ?> Exportovat vše podle filtru (<?= count($exportRows) ?>)</button>
 </div>
-<p class="panel-help">Pro všechny produkty nech filtry prázdné. JSON obsahuje aktuální texty, ceny, varianty, bloky, dodavatele, sklad a cesty k fotografiím. Neobsahuje soubory fotografií, historii revizí ani nastavení kategorií. Pro úplnou zálohu webu zálohuj také databázi a složku images/.</p>
+<p class="panel-help">Pro všechny produkty nech filtry prázdné. JSON obsahuje aktuální texty, ceny, varianty, bloky, dodavatele, sklad a cesty k fotografiím. Neobsahuje soubory fotografií, historii revizí ani nastavení kategorií. Partnerské odkazy variant exportuj samostatným formátem. Pro úplnou zálohu webu zálohuj také databázi a složku images/.</p>
 <noscript><p>Bez JavaScriptu použij export všeho podle filtru. Jednotlivý výběr vyžaduje JavaScript.</p></noscript>
 <div class="product-transfer-table"><table class="panel-table"><thead><tr><th><input type="checkbox" data-select-all aria-label="Vybrat všechny zobrazené produkty"></th><th>Produkt</th><th>Kategorie</th><th>Jazyk / stav</th><th>Cena / sklad</th></tr></thead><tbody>
 <?php foreach ($exportRows as $row): ?><tr>

@@ -1551,3 +1551,23 @@ SET @supplier_retry_sql = IF(@supplier_retry_exists=0, 'ALTER TABLE shop_supplie
 PREPARE supplier_statement FROM @supplier_retry_sql;
 EXECUTE supplier_statement;
 DEALLOCATE PREPARE supplier_statement;
+
+-- Private URLs for existing variant identities; adds no stock or sales mode.
+CREATE TABLE IF NOT EXISTS shop_product_variant_supplier_links (
+    link_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+    product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    variant_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    partner_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+    label VARCHAR(120) NOT NULL,
+    url VARCHAR(1000) NOT NULL,
+    url_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    inherited_from_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin DEFAULT NULL,
+    origin VARCHAR(16) NOT NULL DEFAULT 'manual',
+    verification VARCHAR(16) NOT NULL DEFAULT 'unverified',
+    version INT UNSIGNED NOT NULL DEFAULT 1,
+    checked_at BIGINT UNSIGNED NOT NULL DEFAULT 0,
+    result_json MEDIUMTEXT NOT NULL,
+    removed TINYINT(1) NOT NULL DEFAULT 0,
+    UNIQUE KEY variant_url (product_key,variant_key,url_hash),
+    KEY variant_partner (product_key,variant_key,partner_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

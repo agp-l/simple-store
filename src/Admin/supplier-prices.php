@@ -4,6 +4,13 @@ use SimpleStore\Supplier\PriceManager;
 
 $screen='supplier-prices';$priceManager=new PriceManager($db);$pricesReady=$priceManager->installed();
 $pricesAutoStart=false;$pricesError='';$pricesNotice='';$cronKey='';
+if ($method === 'GET' && ($_GET['format'] ?? '') === 'variant-links') {
+    $products = new \SimpleStore\Product\ProductRepository($db, $site['languages']);
+    $rows = $db->query('SELECT product_key,language,name FROM shop_product_revisions WHERE active_product_key IS NOT NULL ORDER BY product_key,language');
+    $body = (new \SimpleStore\Product\ProductVariantSupplierTransfer($db, $products, $site['languages']))->export($rows);
+    header('Content-Type: application/json; charset=utf-8'); header('Cache-Control: no-store');
+    echo $body; exit;
+}
 if($method==='GET'&&$pricesReady&&($_GET['format']??'')==='json'){
     header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
     echo json_encode($priceManager->diagnostics(),JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);exit;

@@ -36,11 +36,12 @@
               <input type="hidden" name="action" value="product-supplier-link"><input type="hidden" name="operation" value="save">
               <input type="hidden" name="csrf" value="<?= $escape($editToken) ?>"><input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>">
               <input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="id" value="0">
-              <label>Název dodavatele <input name="label" maxlength="120" placeholder="Např. Velkoobchod obuv" required></label>
+              <label>Název dodavatele <input name="label" maxlength="120" placeholder="Např. Partnerský e-shop" required></label>
               <label>Webová adresa <input type="url" name="url" maxlength="1000" placeholder="https://..." required></label>
               <button type="submit" class="inline-small"><?= \SimpleStore\Rendering\Icon::render('plus') ?> Přidat odkaz</button>
             </form>
           </details>
         <?php endif; ?>
+        <?php require __DIR__ . '/product-variant-suppliers.php'; ?>
       </section>
     <?php endif; ?>

@@ -90,6 +90,8 @@ final class PageRenderer
         $canEditProduct = (bool) ($data['canEditProduct'] ?? false);
         $editMode = (bool) ($data['editMode'] ?? false);
         $supplierLinks = $data['supplierLinks'] ?? [];
+        $variantSupplierReady = (bool) ($data['variantSupplierReady'] ?? false);
+        $variantSupplierLinks = $data['variantSupplierLinks'] ?? [];
         $supplierLinksReady = (bool) ($data['supplierLinksReady'] ?? false);
         $productSalesReady = (bool) ($data['productSalesReady'] ?? false);
         $productSale = $data['productSale'] ?? ['mode' => 'own', 'version' => 0];

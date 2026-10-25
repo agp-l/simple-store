@@ -135,6 +135,8 @@ final class ProductVariantRepository
         }
         $this->db->query('INSERT INTO shop_product_variant_settings (product_key,enabled,version) VALUES (%s,%i,1)
             ON DUPLICATE KEY UPDATE enabled=VALUES(enabled),version=version+1', $key, (int) $data['enabled']);
+        // Existing manual/exact links survive; new rows inherit unverified defaults.
+        (new ProductVariantSupplierRepository($this->db))->inheritInTransaction($key);
         if ($data['enabled'] !== $current['enabled']) {
             $this->db->query('UPDATE shop_product_inventory SET available_quantity=0 WHERE product_key=%s', $key);
         }
