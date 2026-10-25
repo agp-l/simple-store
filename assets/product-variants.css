@@ -8,6 +8,11 @@
 .variant-manager .variant-generate-preview { padding: 10px 12px; margin: 0; border-left: 3px solid #3b82f6; background: #eff6ff; color: #111827; }
 .variant-create textarea[aria-invalid="true"] { border-color: #b91c1c; }
 .variant-create .panel-error { margin: 0; color: #991b1b; }
+.variant-mode-note { margin: 14px 0; padding: 14px 16px; border: 1px solid #bfdbfe; border-left: 4px solid #3b82f6; border-radius: 6px; background: #eff6ff; color: #111827; line-height: 1.6; }
+.variant-mode-note p { margin: 6px 0 0; }
+.variant-mode-note a { color: #1d4ed8; text-decoration: underline; }
+.variant-mode-note--blocked { border-color: #fcd34d; border-left-color: #d97706; background: #fffbeb; }
+.variant-create button:disabled { opacity: .55; cursor: not-allowed; }
 .variant-pricing p { margin: 8px 0 0; font-size: 12px; }
 .variant-pricing form { margin: 0; align-self: center; min-width: 0; }
 .variant-pricing .inline-small { white-space: normal; max-width: 100%; margin: 4px 4px 4px 0; }

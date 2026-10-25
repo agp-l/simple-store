@@ -33,7 +33,6 @@ try {
         (new \SimpleStore\Product\ProductVariantMerge($db))->apply($key, $plan);
         unset($_SESSION['variant_error'], $_SESSION['variant_form']);
     } elseif ($operation === 'generate') {
-        if (($_POST['confirm'] ?? '') !== '1') throw new InvalidArgumentException('Potvrď zapnutí skladu variant.');
         $text = $_POST['groups'] ?? '';
         if (!is_string($text) || strlen($text) > 16000) throw new InvalidArgumentException('Neplatné vlastnosti.');
         $generated = ProductVariants::generate($text);
@@ -41,7 +40,8 @@ try {
         foreach ($generated as $variant) {
             if (!in_array(json_encode($variant['choices'], JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), $existing, true)) $snapshot['items'][] = $variant;
         }
-        $snapshot['enabled'] = true;
+        // Preparing combinations must not switch stock mode or erase shared stock.
+        // Existing orders can keep their reservations while variants are prepared.
     } elseif (in_array($operation, ['row', 'batch'], true)) {
         $changes = [$_POST];
         if ($operation === 'batch') {

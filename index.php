@@ -409,6 +409,7 @@ try {
             }
         }
         if ($editMode) {
+            $shared['variantModeBlocked'] = $stockReady && (new \SimpleStore\Product\ProductVariantRepository($db))->hasReservations($item['product_key']);
             $rows = [];
             foreach ($categories->allForAdmin($url->getLanguage()) as $node) {
                 $rows[] = ['path' => $node['path'], 'title' => str_repeat('— ', $node['depth']) . $node['title'] .

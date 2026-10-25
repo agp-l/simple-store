@@ -131,9 +131,11 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
 });
 
 test('first variants: clear validation, editable base price and drafts survive autosave', async () => {
-  const files = ['empty', 'failed'].map(name => `tests/fixtures/variant-${name}.html`);
+  const files = ['empty', 'failed', 'prepared', 'reserved'].map(name => `tests/fixtures/variant-${name}.html`);
   writeFileSync(files[0], execFileSync('php', ['tests/fixtures/product-variants.php', '--admin', '--sale', '--empty']));
   writeFileSync(files[1], execFileSync('php', ['tests/fixtures/product-variants.php', '--admin', '--sale', '--empty', '--generate-error']));
+  writeFileSync(files[2], execFileSync('php', ['tests/fixtures/product-variants.php', '--admin', '--prepared']));
+  writeFileSync(files[3], execFileSync('php', ['tests/fixtures/product-variants.php', '--admin', '--prepared', '--reserved']));
   const server = spawn('php', ['-S', '127.0.0.1:8778', '-t', process.cwd()], { stdio: 'ignore' });
   const url = file => 'http://127.0.0.1:8778/' + file;
   let browser;
@@ -159,9 +161,7 @@ test('first variants: clear validation, editable base price and drafts survive a
       assert.match(await create.locator('[role="alert"]').innerText(), /Každý řádek/);
       await groups.fill('Velikost: S | M\nBarva: Modrá | Červená');
       assert.match(await create.locator('[data-variant-generate-preview]').innerText(), /kombinací: 4/);
-      await button.click();
-      assert.match(await create.locator('[role="alert"]').innerText(), /zaškrtni potvrzení/);
-      await create.locator('[name="confirm"]').check();
+      assert.equal(await create.locator('[name="confirm"]').count(), 0, 'Preparing variants must not require a stock-mode change.');
       const events = [];
       await page.route('**/admin/', async route => {
         const post = new URLSearchParams(route.request().postData());
@@ -174,7 +174,7 @@ test('first variants: clear validation, editable base price and drafts survive a
           assert.equal(post.get('action'), 'product-variants');
           assert.equal(post.get('operation'), 'generate');
           assert.equal(post.get('groups').replaceAll('\r\n', '\n'), 'Velikost: S | M\nBarva: Modrá | Červená');
-          assert.equal(post.get('confirm'), '1');
+          assert.equal(post.get('confirm'), null);
           assert.match(post.get('expected'), /^[a-f0-9]{64}$/);
           assert.equal(post.get('csrf'), 'test-token');
           assert.deepEqual(events, ['price-3000', 'price-3200'], 'Generation must wait for the pending base-price save.');
@@ -189,7 +189,6 @@ test('first variants: clear validation, editable base price and drafts survive a
       await page.waitForFunction(() => document.querySelector('[data-sale-base-price]').textContent.includes('3'));
       await page.waitForTimeout(700);
       assert.equal(await groups.inputValue(), 'Velikost: S | M\nBarva: Modrá | Červená', 'Autosave erased the first variant definitions.');
-      assert.equal(await create.locator('[name="confirm"]').isChecked(), true);
       assert.match(await page.locator('.detail-prices [data-edit-field="price_czk"]').innerText(), /3\s*000/);
       assert.match(await page.locator('[data-sale-fee]').innerText(), /1\s*322/);
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
@@ -200,12 +199,31 @@ test('first variants: clear validation, editable base price and drafts survive a
       assert.deepEqual(events, ['price-3000', 'price-3200', 'generate']);
       assert.deepEqual(errors, []); await page.close();
     }
+    for (const width of [1440, 390]) {
+      const page = await browser.newPage({ viewport: { width, height: 1050 } });
+      await page.route('https://**/*', route => route.abort());
+      await page.goto(url(files[3]));
+      const mode = page.locator('#variant-stock-mode');
+      assert.ok(await mode.getByRole('button', { name: 'Zapnout sklad variant', exact: true }).isDisabled());
+      assert.ok(await mode.locator('[name="confirm"]').isDisabled());
+      await page.getByText('Přepnutí skladu nyní blokují rezervace v objednávkách', { exact: true }).waitFor();
+      assert.equal(await page.locator('[data-variant-row]').count(), 6);
+      assert.ok(await page.locator('[data-variant-row] [name="quantity"]').first().isEditable());
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1));
+      await page.locator('#product-variants').screenshot({ path: `/tmp/variant-screenshots/prepared-${width}.png` });
+      await page.goto(url(files[2]));
+      await page.locator('[data-variant-row] [name="quantity"]').first().fill('4');
+      await mode.locator('[name="confirm"]').check();
+      await mode.getByRole('button', { name: 'Zapnout sklad variant', exact: true }).click();
+      assert.match(await page.locator('[data-variant-save-state]').innerText(), /Nejdřív ulož/);
+      assert.ok(await page.locator('[data-variant-save-top]').evaluate(el => el === document.activeElement));
+      await page.close();
+    }
     const failed = await browser.newPage();
     await failed.route('https://**/*', route => route.abort());
     await failed.goto(url(files[1]));
     assert.ok(await failed.locator('#variant-create').evaluate(el => el.open));
     assert.equal(await failed.locator('[name="groups"]').inputValue(), 'Velikost: XL');
-    assert.ok(await failed.locator('[data-variant-generate] [name="confirm"]').isChecked());
     assert.equal(await failed.locator('[data-variant-generate]').getAttribute('data-dirty'), 'true', 'Recovered definitions must remain protected from price autosave.');
     await failed.getByText('Varianty nebo sklad se mezitím změnily.', { exact: false }).waitFor();
     await failed.close();
@@ -216,11 +234,10 @@ test('first variants: clear validation, editable base price and drafts survive a
       const post = new URLSearchParams(route.request().postData());
       assert.equal(post.get('operation'), 'generate');
       assert.equal(post.get('groups'), 'Velikost: XL');
-      assert.equal(post.get('confirm'), '1');
+      assert.equal(post.get('confirm'), null);
       await route.fulfill({ body: '<p>Generated without JS</p>', contentType: 'text/html' });
     });
     await noJs.locator('[name="groups"]').fill('Velikost: XL');
-    await noJs.locator('[data-variant-generate] [name="confirm"]').press('Space');
     await noJs.getByRole('button', { name: 'Vytvořit kombinace' }).press('Enter');
     await noJs.getByText('Generated without JS').waitFor(); await noJs.close();
   } finally {

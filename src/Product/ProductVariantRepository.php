@@ -68,6 +68,15 @@ final class ProductVariantRepository
     {
         return $this->snapshots([$key], $lock)[$key] ?? self::empty();
     }
+    /** Call only when the shared stock schema is installed. */
+    public function hasReservations(string $key): bool
+    {
+        self::key($key);
+        return (int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM shop_order_stock_reservations WHERE product_key=%s AND state=%s', $key, 'reserved') > 0 ||
+            ($this->installed() && (int) $this->db->queryFirstField(
+                'SELECT COUNT(*) FROM shop_order_variant_reservations WHERE product_key=%s AND state=%s', $key, 'reserved') > 0);
+    }
     public static function empty(): array
     {
         $value = ['enabled' => false, 'version' => 0, 'items' => []];
@@ -96,9 +105,7 @@ final class ProductVariantRepository
         if ($this->db->queryFirstField('SELECT product_key FROM shop_product_revisions WHERE product_key=%s AND active_product_key IS NOT NULL LIMIT 1 FOR UPDATE', $key) === null) throw new InvalidArgumentException('Produkt již neexistuje.');
         $current = $this->snapshot($key, true);
         if (!hash_equals($current['expected'], $data['expected'])) throw new InvalidArgumentException('Varianty nebo sklad se mezitím změnily. Obnov stránku nebo export.');
-        if ($data['enabled'] !== $current['enabled'] && ((int) $this->db->queryFirstField(
-            'SELECT COUNT(*) FROM shop_order_stock_reservations WHERE product_key=%s AND state=%s', $key, 'reserved') > 0 ||
-            (int) $this->db->queryFirstField('SELECT COUNT(*) FROM shop_order_variant_reservations WHERE product_key=%s AND state=%s', $key, 'reserved') > 0)) {
+        if ($data['enabled'] !== $current['enabled'] && $this->hasReservations($key)) {
             throw new InvalidArgumentException('Před změnou režimu skladu vyřiď nebo stornuj objednávky, které zde rezervují kusy.');
         }
         // Omitted identities remain as disabled inventory rows for historical reservations.

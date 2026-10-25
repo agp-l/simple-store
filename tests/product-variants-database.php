@@ -31,21 +31,43 @@ $generate = static function (array $post) use ($key): array {
     if (proc_close($process) !== 0) throw new RuntimeException($errors);
     return json_decode($output, true, 16, JSON_THROW_ON_ERROR);
 };
-$create = ['groups' => "Velikost: S | M\nBarva: Modrá | Červená", 'confirm' => '1', 'expected' => $variants->snapshot($key)['expected']];
+$bank = new BankTransferPayment('', '1004823033/3030', 'Test');
+$orders = new OrderRepository($db, $bank, 7, $stock);
+$controls = new OrderControlRepository($db, $stock);
+$shipping = ['method' => 'gls_home', 'label' => 'GLS domů', 'name' => 'Test variant'];
+$legacyOrder = $orders->create(null, 'variants@example.test', [[
+    'product_key' => $key, 'language' => 'cs', 'slug' => $prefix, 'name' => $prefix,
+    'image_path' => 'images/product-placeholder.png', 'quantity' => 1, 'unit_price_czk' => 100, 'options' => [],
+]], $shipping, 79, bin2hex(random_bytes(32)));
+$reservations = $db->query('SELECT * FROM shop_order_stock_reservations WHERE product_key=%s', $key);
+$check($variants->hasReservations($key), 'Shared order reservation was not detected.');
+$create = ['groups' => "Velikost: S | M\nBarva: Modrá | Červená", 'expected' => $variants->snapshot($key)['expected']];
 $missing = $generate(array_replace($create, ['groups' => '']));
 $check(isset($missing['variant_error']) && $variants->snapshot($key)['items'] === [], 'Empty generation changed inventory.');
-$unconfirmed = $generate(array_replace($create, ['confirm' => '0']));
-$check(isset($unconfirmed['variant_error']) && $variants->snapshot($key)['items'] === [], 'Unconfirmed mode switch created variants.');
 $created = $generate($create);
 $check(!isset($created['variant_error']), 'First generation failed: ' . ($created['variant_error']['message'] ?? ''));
 $generated = $variants->snapshot($key);
-$check($generated['enabled'] && count($generated['items']) === 4 && array_sum(array_column($generated['items'], 'quantity')) === 0,
+$check(!$generated['enabled'] && count($generated['items']) === 4 && array_sum(array_column($generated['items'], 'quantity')) === 0,
     'Controller failed to create the first zero-stock variants.');
+$check($products->current($key, 'cs')['stock_quantity'] === 9, 'Preparing variants changed the shared stock.');
+$check($db->query('SELECT * FROM shop_order_stock_reservations WHERE product_key=%s', $key) === $reservations, 'Preparing variants changed existing order reservations.');
 $check(count(array_filter($generated['items'], static fn (array $row): bool => $row['price_czk'] !== null)) === 0, 'New variants must inherit the base price.');
 $duplicate = $generate(array_replace($create, ['expected' => $generated['expected']]));
 $check(!isset($duplicate['variant_error']) && $variants->snapshot($key)['items'] === $generated['items'], 'Repeated generation duplicated variants or replaced their identities.');
 $stale = $generate($create);
 $check(isset($stale['variant_error']) && $variants->snapshot($key)['items'] === $generated['items'], 'Stale generation bypassed concurrency protection.');
+$mode = ['operation' => 'mode', 'enabled' => '1', 'confirm' => '1', 'expected' => $variants->snapshot($key)['expected']];
+$blocked = $generate($mode);
+$check(isset($blocked['variant_error']) && !$variants->snapshot($key)['enabled'] && $products->current($key, 'cs')['stock_quantity'] === 9,
+    'Mode switching bypassed a shared order reservation.');
+$controls->deleteOrder((int) $legacyOrder['id'], $legacyOrder['order_number'], 1, 'Variant preparation test cleanup');
+$check(!$variants->hasReservations($key) && $products->current($key, 'cs')['stock_quantity'] === 10, 'Removing the test order failed to release its shared reservation.');
+$unconfirmed = $generate(array_replace($mode, ['confirm' => '0']));
+$check(isset($unconfirmed['variant_error']) && !$variants->snapshot($key)['enabled'], 'Mode switching no longer requires explicit confirmation.');
+$activated = $generate($mode);
+$check(!isset($activated['variant_error']) && $variants->snapshot($key)['enabled'], 'Explicit activation failed after reservations were released.');
+$activeGeneration = $generate(array_replace($create, ['expected' => $variants->snapshot($key)['expected']]));
+$check(!isset($activeGeneration['variant_error']) && $variants->snapshot($key)['enabled'] && $variants->snapshot($key)['items'] === $generated['items'], 'Generating existing combinations changed the active mode or identities.');
 $rows = $generated['items'];
 $rows[0]['quantity'] = 3; $rows[0]['sku'] = 'S-BLUE'; $rows[0]['price_czk'] = 120;
 $rows[1]['quantity'] = 1;
@@ -58,20 +80,17 @@ $check((int) $db->queryFirstField('SELECT available_quantity FROM shop_product_i
 $check($products->current($key, 'cs')['stock_quantity'] === 4 && $products->current($key, 'cs')['offer_price_czk'] === 100, 'Catalog variant stock/price aggregation failed.');
 $reject(static fn () => $variants->save($key, $initial));
 $reject(static fn () => $stock->setAvailable($key, 0, 20));
-$bank = new BankTransferPayment('', '1004823033/3030', 'Test');
-$orders = new OrderRepository($db, $bank, 7, $stock);
-$controls = new OrderControlRepository($db, $stock);
 $item = static function (array $variant, int $quantity = 1) use ($key, $prefix): array { return [
     'product_key' => $key, 'language' => 'cs', 'slug' => $prefix, 'name' => $prefix,
     'image_path' => 'images/product-placeholder.png', 'quantity' => $quantity,
     'unit_price_czk' => $variant['price_czk'] ?? 100, 'options' => $variant['choices'],
     'variant_key' => $variant['id'], 'variant_sku' => $variant['sku'],
 ]; };
-$shipping = ['method' => 'gls_home', 'label' => 'GLS domů', 'name' => 'Test variant'];
 $token = bin2hex(random_bytes(32));
 $orderItems = [$item($rows[0], 2), $item($rows[1])];
 $order = $orders->create(null, 'variants@example.test', $orderItems, $shipping, 79, $token);
 $id = (int) $order['id'];
+$check($variants->hasReservations($key), 'Variant order reservation was not detected.');
 $after = $variants->snapshot($key);
 $check(array_column($after['items'], 'quantity') === [1, 0, 0, 0], 'Order reserved the wrong combinations.');
 $check($orders->create(null, 'variants@example.test', $orderItems, $shipping, 79, $token)['id'] === $order['id'], 'Order replay did not retain its identity.');

@@ -2,7 +2,6 @@
   const generate = document.querySelector('[data-variant-generate]');
   if (generate) {
     const groups = generate.elements.groups;
-    const confirm = generate.elements.confirm;
     const preview = generate.querySelector('[data-variant-generate-preview]');
     const error = generate.querySelector('[data-variant-generate-error]');
     const button = generate.querySelector('[type="submit"]');
@@ -47,10 +46,6 @@
         error.textContent = problem.message; error.hidden = false;
         groups.setAttribute('aria-invalid', 'true'); groups.focus(); return;
       }
-      if (confirm.type === 'checkbox' && !confirm.checked) {
-        error.textContent = 'Ještě zaškrtni potvrzení zapnutí skladu variant pod vlastnostmi.';
-        error.hidden = false; confirm.focus(); return;
-      }
       if (!generate.reportValidity()) return;
       submitting = true; generate.dataset.submitting = 'true'; button.disabled = true;
       preview.textContent = 'Ukládám varianty…';
@@ -90,6 +85,13 @@
   });
   const initial = JSON.stringify(collect());
   batch.hidden = false;
+  document.querySelector('#variant-stock-mode form')?.addEventListener('submit', event => {
+    if (root.dataset.dirty !== 'true') return;
+    event.preventDefault();
+    state.hidden = false;
+    state.textContent = 'Nejdřív ulož změny v tabulce variant, potom přepni režim skladu.';
+    root.querySelector('[data-variant-save-top]').focus();
+  });
 
   function update() {
     let ownPrices = 0;
