@@ -192,3 +192,7 @@ foreach(['product-family-preview','product-family-apply','product-family-undo']a
 $longChoice=SimpleStore\Product\ProductFamilyMerge::choices(['Barva'=>'sunburn','Velikost'=>'do 196 cm - prodloužený (L)'],'L');
 $check($longChoice['Velikost']==='do 196 cm - prodloužený (L)','Explicit size description was lost.');
 echo "Supplier prices: distinct merged variant prices and missing-combination guards passed.\n";
+
+$check(SimpleStore\Product\ProductFamilyMerge::family('Big Agnes Rapide SL Insulated — Long Wide')['size']==='Long Wide','Mat size not detected.');
+$check(SimpleStore\Product\ProductFamilyMerge::family('Sea to Summit Hydraulic Packing Cube XS')['name']==='Sea to Summit Hydraulic Packing Cube','Bare size suffix not detected.');
+$check(SimpleStore\Product\ProductFamilyMerge::choices([],'15 l')===['Objem'=>'15 l'],'Volume was stored as an unrelated size.');

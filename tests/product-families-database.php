@@ -82,5 +82,23 @@ try{
  $check((int)$db->queryFirstField('SELECT enabled FROM shop_product_supplier_variant_modes WHERE product_key=%s',$target)===1,'Stock edit disabled pricing.');
  $snapshot=$variants->snapshot($target);$snapshot['items'][0]['price_czk']=6000;$variants->save($target,$snapshot);
  $check((int)$db->queryFirstField('SELECT enabled FROM shop_product_supplier_variant_modes WHERE product_key=%s',$target)===0,'Manual price edit did not protect own prices.');
+ // Simple common-stock products transfer all their units into one explicit size, and can undo safely.
+ $simpleKeys=[];$simpleUrl='https://gramino.cz/p/hyperlite-mountain-gear-zippy';$simpleOffers=[];
+ foreach([1=>7,2=>9]as$litres=>$quantity){
+  $k=bin2hex(random_bytes(16));$simpleKeys[]=$k;$slug='zippy-'.$litres;
+  $db->insert('shop_product_revisions',['product_key'=>$k,'active_product_key'=>$k,'language'=>'cs','revision_number'=>1,'slug'=>$slug,'active_slug'=>$slug,'name'=>'Hyperlite Mountain Gear Zippy '.$litres.' l','brand'=>'Hyperlite','category'=>'batohy','subcategory'=>'doplnky','price_czk'=>1400,'description'=>'Same model','image_path'=>'','stock_status'=>'in_stock','published'=>1]);
+  $db->insert('shop_product_sales',['product_key'=>$k,'partner_id'=>$seller,'supplier_price_czk'=>1000,'mode'=>'assisted','variant_prices_json'=>'{}']);
+  $db->insert('shop_product_inventory',['product_key'=>$k,'available_quantity'=>$quantity]);$links->save($k,0,'Gramino',$simpleUrl);
+  $simpleOffers[]=['@type'=>'Product','name'=>'Hyperlite Mountain Gear Zippy – '.$litres.' l','offers'=>['@type'=>'Offer','url'=>$simpleUrl.'?v_id='.$litres,'price'=>1000,'priceCurrency'=>'CZK','availability'=>'https://schema.org/InStock']];
+ }
+ $simpleGroup=['@type'=>'ProductGroup','name'=>'Hyperlite Mountain Gear Zippy','url'=>$simpleUrl,'hasVariant'=>$simpleOffers];
+ $db->replace('shop_supplier_price_cache',['url_hash'=>hash('sha256','product:'.$simpleUrl),'expires_at'=>time()+3600,'data_json'=>json_encode(['document'=>PriceParser::document('<script type="application/ld+json">'.json_encode($simpleGroup).'</script>',$simpleUrl),'observed_at'=>time()])]);
+ $simplePlan=$family->preview($simpleKeys[0],'cs');$check(count($simplePlan['variants'])===2&&array_sum(array_column($simplePlan['variants'],'quantity'))===16,'Common inventory was divided into invented combinations.');
+ $db->update('shop_product_inventory',['available_quantity'=>8],'product_key=%s',$simpleKeys[0]);$reject(fn()=>$family->apply($simpleKeys[0],'cs',$simplePlan['expected']));$db->update('shop_product_inventory',['available_quantity'=>7],'product_key=%s',$simpleKeys[0]);
+ $simplePlan=$family->preview($simpleKeys[0],'cs');$family->apply($simpleKeys[0],'cs',$simplePlan['expected']);
+ $check(array_sum(array_column($variants->snapshot($simpleKeys[0])['items'],'quantity'))===16,'Common stock lost or doubled during conversion.');
+ $family->undo((int)$family->history()[0]['id']);
+ $check(array_map('intval',$db->queryFirstColumn('SELECT available_quantity FROM shop_product_inventory WHERE product_key IN %ls ORDER BY available_quantity',$simpleKeys))===[7,9],'Undo did not restore each common inventory.');
+ $check(!$variants->snapshot($simpleKeys[0])['enabled']&&count($family->preview($simpleKeys[0],'cs')['variants'])===2,'Undo of a common-stock family cannot be safely repeated.');
  echo "Product families: exact variants, stale previews, history, per-size parameters/prices, undo and manual overrides passed.\n";
 }finally{$db->disconnect();$admin->query('DROP DATABASE %b',$database);$admin->disconnect();}

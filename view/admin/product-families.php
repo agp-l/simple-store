@@ -1,5 +1,5 @@
-<section class="panel-panel"><p class="panel-eyebrow">Jeden model · všechny velikosti</p><h2>Sjednotit rozdělené produkty</h2>
-<p>Najdeme zveřejněné velikosti stejného modelu, značky a kategorie. Zachováme skutečně existující kombinace, jejich kusy, fotografie a rozdílné ceny. Staré adresy přesměrujeme; původní texty zůstanou v konceptech a historii.</p>
+<section class="panel-panel"><p class="panel-eyebrow">Jeden model · všechna provedení</p><h2>Sjednotit rozdělené produkty</h2>
+<p>Najdeme zveřejněné velikosti a objemy stejného modelu, značky a kategorie. Zachováme skutečně existující kombinace, jejich kusy, fotografie a rozdílné ceny. Staré adresy přesměrujeme; původní texty zůstanou v konceptech a historii.</p>
 <p>Sloučí se jen skupiny bez objednávek a se společným modelem potvrzeným nabídkou vybraného prodávajícího. Když známe přesnou cenu každé kombinace, zapneme automatický přepočet variant podle nastaveného zaokrouhlení. Jinak zachováme dosavadní ceny a nic neodhadujeme. Ruční úprava ceny varianty tuto automatiku pro produkt vypne.</p>
 <?php if($familyError!==''):?><p class="panel-error" role="alert"><?= $escape($familyError) ?></p><?php endif;?>
 <?php foreach($familyMessages as$message):?><p class="panel-notice" role="status"><?= $escape($message) ?></p><?php endforeach;?>

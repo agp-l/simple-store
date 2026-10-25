@@ -12,15 +12,20 @@ final class ProductFamilyMerge
     public function __construct(private MeekroDB $db) {}
     public static function family(string $name):?array
     {
-        return preg_match('/^(.+?)\s+[–—-]\s+(\d{2,3}\s*cm|XS|S|M|L|XL|XXL)(?:\s+([\p{L},\s\/]+))?$/uD',trim($name),$m)?['name'=>$m[1],'size'=>$m[2],'colors'=>isset($m[3])?array_map('trim',explode(',',$m[3])):[]]:null;
+        $name=trim($name);
+        if(preg_match('/^(.+?)\s+[–—-]\s+((?:\d{2,3}\s*cm|XS|S|M|L|XL|XXL))(?:\s+([\p{L},\s\/]+))?$/uD',$name,$m))return ['name'=>$m[1],'size'=>$m[2],'colors'=>isset($m[3])?array_map('trim',explode(',',$m[3])):[]];
+        if(preg_match('/^(.+?)\s+[–—-]\s+((?:Regular|Long|Small|Large)(?: (?:Wide|Mummy|Rectangular Wide))?|\d{2,3}\s*x\s*\d{2,3}(?:\s*cm)?(?:\s*-\s*[\p{L}, ]+)?)$/uD',$name,$m)||
+           preg_match('/^(.+?)\s+((?:XS|S|M|L|XL|XXL)|(?:\d{1,4}(?:[.,]\d+)?\s*(?:l|ml)))$/uD',$name,$m))return ['name'=>$m[1],'size'=>$m[2],'colors'=>[]];
+        return null;
     }
     public static function choices(array $choices,string $size):array
     {
         if(isset($choices['Varianta'])&&count($choices)===1&&preg_match('~^(.+?)\s*/\s*(Levá strana|Pravá strana|levý \(L\)|pravý \(R\))$~uD',$choices['Varianta'],$m)){
             $choices=['Barva'=>$m[1],'Zip'=>in_array($m[2],['Levá strana','levý (L)'],true)?'Levá strana':'Pravá strana'];
         }
-        if(isset($choices['Velikost'])&&$choices['Velikost']!==$size&&!(preg_match('/^do \d{2,3} cm - (?:prodloužený|standardní) \((XS|S|M|L|XL|XXL)\)$/uD',$choices['Velikost'],$m)&&$m[1]===$size))throw new InvalidArgumentException('Velikost v názvu odporuje vlastnostem varianty.');
-        $choices['Velikost']??=$size;return ProductVariants::choices($choices);
+        $dimension=preg_match('/\d\s*(?:l|ml)$/D',$size)?'Objem':'Velikost';
+        if(isset($choices[$dimension])&&$choices[$dimension]!==$size&&!(preg_match('/^do \d{2,3} cm - (?:prodloužený|standardní) \((XS|S|M|L|XL|XXL)\)$/uD',$choices[$dimension],$m)&&$m[1]===$size))throw new InvalidArgumentException('Velikost v názvu odporuje vlastnostem varianty.');
+        $choices[$dimension]??=$size;return ProductVariants::choices($choices);
     }
     public function installed():bool
     {return (int)$this->db->queryFirstField('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN %ls',['shop_product_family_merges','shop_product_supplier_variant_modes'])===2;}
@@ -67,13 +72,20 @@ final class ProductFamilyMerge
         $variants=[];$costs=[];$members=[];$seller=null;
         foreach(['summary','description']as$field)if(count(array_unique(array_column(array_map(static fn(array $s):array=>$s['products'][0],$state),$field)))!==1)throw new InvalidArgumentException('Popisy nebo úvodní texty se liší. Před sloučením je potřeba posoudit, které informace platí pro celý model.');
         foreach($state as$key=>$s){
-            if(count($s['products'])!==1||$s['products'][0]['language']!==$language||empty($s['settings']['enabled'])||!$s['sale'])throw new InvalidArgumentException('Tato verze slučuje produkty v jednom jazyce s již nastaveným skladem variant a způsobem prodeje.');
+            if(count($s['products'])!==1||$s['products'][0]['language']!==$language||!$s['sale'])throw new InvalidArgumentException('Slučované produkty musí být v jednom jazyce a mít nastavený způsob prodeje.');
             $p=$s['products'][0];$sourceFamily=self::family($p['name']);$size=$sourceFamily['size'];$seenColors=[];
             $identity=[$s['sale']['mode'],(int)$s['sale']['partner_id']];$seller??=$identity;
             if($seller!==$identity)throw new InvalidArgumentException('Slučované produkty musí mít stejný způsob prodeje a stejného prodávajícího.');
-            if((int)($s['inventory']['available_quantity']??0)!==0)throw new InvalidArgumentException('Produkt má zbylý společný sklad. Nejdřív vyjasni jeho přiřazení k variantám.');
+            $usesVariants=!empty($s['settings']['enabled']);
+            if($usesVariants&&(int)($s['inventory']['available_quantity']??0)!==0)throw new InvalidArgumentException('Produkt má zbylý společný sklad. Nejdřív vyjasni jeho přiřazení k variantám.');
             $own=json_decode($s['sale']['variant_prices_json']??'{}',true)??[];$n=0;
-            foreach($s['variants']as$v){
+            $sourceVariants=$s['variants'];
+            if(!$usesVariants){
+                $details=ProductDetails::decode($p['details_json'],$p['sizes']);
+                if($details['options']!==[]||array_filter($sourceVariants,static fn(array $v):bool=>(bool)$v['enabled']||(int)$v['available_quantity']>0))throw new InvalidArgumentException('Společný sklad má další volby nebo připravené varianty. Jejich rozdělení musí nejdřív vyjasnit správce.');
+                $sourceVariants=[['variant_key'=>md5('family:'.$key),'enabled'=>1,'choices_json'=>'{}','available_quantity'=>(int)($s['inventory']['available_quantity']??0),'price_czk'=>$p['price_czk'],'stock_status'=>$p['stock_status'],'image_path'=>$p['image_path'],'sku'=>'']];
+            }
+            foreach($sourceVariants as$v){
                 if(!(int)$v['enabled'])continue;$n++;
                 $choices=self::choices(json_decode($v['choices_json'],true,16,JSON_THROW_ON_ERROR),$size);
                 if(isset($choices['Barva']))$seenColors[]=$choices['Barva'];
@@ -87,7 +99,7 @@ final class ProductFamilyMerge
             $members[]=['key'=>$key,'name'=>$p['name'],'size'=>$size,'variants'=>$n,'price'=>(int)$p['price_czk']];
         }
         $variants=ProductVariants::normalize($variants);
-        usort($variants,static fn(array $a,array $b):int=>strnatcmp($a['choices']['Velikost'],$b['choices']['Velikost'])?:strcmp(ProductVariants::label($a['choices']),ProductVariants::label($b['choices'])));
+        usort($variants,static fn(array $a,array $b):int=>strnatcmp($a['choices']['Velikost']??$a['choices']['Objem'],$b['choices']['Velikost']??$b['choices']['Objem'])?:strcmp(ProductVariants::label($a['choices']),ProductVariants::label($b['choices'])));
         foreach($state as$s)if($this->db->queryFirstField('SELECT source_slug FROM shop_product_redirects WHERE target_key=%s OR (language=%s AND source_slug=%s) LIMIT 1',$s['products'][0]['product_key'],$language,$s['products'][0]['slug'])!==null)throw new InvalidArgumentException('Produkt už má historii slučování nebo přesměrování. Vyžaduje samostatné posouzení.');
         $proof=null;$models=[];$resolved=[];
         $proofLinks=[];foreach($state as$s)foreach($s['links']as$link){
@@ -154,7 +166,7 @@ final class ProductFamilyMerge
             foreach($before as$key=>$s){
                 $p=$s['products'][0];$allImages[]=$p['image_path'];$d=ProductDetails::decode($p['details_json'],$p['sizes']);$allImages=array_merge($allImages,$d['gallery']);
                 foreach($s['links']as$l)if(!isset($urls[$l['url']]))$urls[$l['url']]=$l['label'];
-                $this->db->update('shop_product_variant_settings',['enabled'=>$key===$target?1:0,'version'=>(int)$s['settings']['version']+1],'product_key=%s',$key);
+                $this->db->replace('shop_product_variant_settings',['product_key'=>$key,'enabled'=>$key===$target?1:0,'version'=>(int)($s['settings']['version']??0)+1]);
                 $this->db->update('shop_product_inventory',['available_quantity'=>0],'product_key=%s',$key);
                 $this->db->query('INSERT INTO shop_product_redirects(language,source_slug,target_key) VALUES(%s,%s,%s) ON DUPLICATE KEY UPDATE target_key=VALUES(target_key)',$language,$p['slug'],$target);
                 if($key!==$target)$this->revision($p,['published'=>0]);
@@ -217,7 +229,7 @@ final class ProductFamilyMerge
             foreach($before as$key=>$s){
                 $this->db->update('shop_product_variants',['enabled'=>0,'available_quantity'=>0],'product_key=%s',$key);
                 foreach($s['variants']as$v)$this->db->replace('shop_product_variants',$v);
-                $settings=$s['settings'];$settings['version']=(int)$current[$key]['settings']['version']+1;$this->db->replace('shop_product_variant_settings',$settings);
+                if($s['settings']){$settings=$s['settings'];$settings['version']=(int)$current[$key]['settings']['version']+1;$this->db->replace('shop_product_variant_settings',$settings);}else$this->db->query('DELETE FROM shop_product_variant_settings WHERE product_key=%s',$key);
                 if($s['inventory'])$this->db->replace('shop_product_inventory',$s['inventory']);
                 if($s['sale']){$sale=$s['sale'];$sale['version']=(int)$current[$key]['sale']['version']+1;$this->db->replace('shop_product_sales',$sale);}
                 foreach($s['products']as$old){
