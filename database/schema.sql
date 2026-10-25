@@ -1523,3 +1523,16 @@ CREATE TABLE IF NOT EXISTS shop_supplier_price_cache (
   data_json MEDIUMTEXT NOT NULL,
   KEY cache_expiry (expires_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Optional pricing policy; existing installations remain unchanged until explicitly enabled.
+SET @supplier_options_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_supplier_price_settings' AND COLUMN_NAME='options_json');
+SET @supplier_options_sql = IF(@supplier_options_exists=0, 'ALTER TABLE shop_supplier_price_settings ADD COLUMN options_json TEXT NULL', 'SELECT 1');
+PREPARE supplier_statement FROM @supplier_options_sql;
+EXECUTE supplier_statement;
+DEALLOCATE PREPARE supplier_statement;
+
+SET @supplier_retry_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_supplier_price_jobs' AND COLUMN_NAME='retry_of');
+SET @supplier_retry_sql = IF(@supplier_retry_exists=0, 'ALTER TABLE shop_supplier_price_jobs ADD COLUMN retry_of BIGINT UNSIGNED NOT NULL DEFAULT 0', 'SELECT 1');
+PREPARE supplier_statement FROM @supplier_retry_sql;
+EXECUTE supplier_statement;
+DEALLOCATE PREPARE supplier_statement;

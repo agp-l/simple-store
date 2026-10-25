@@ -67,3 +67,32 @@ $reject(fn()=>Parser::read($variantPage($fixture).$wrap($offer('https://www.pod7
 $check(PanelUrl::pretty('/admin.php?section=supplier-prices')==='/admin/supplier-prices/','Route missing.');
 $check(SimpleStore\Admin\AdminActionPolicy::allows('supplier-price-tick'),'Action missing.');
 echo "Supplier prices: explicit offers, variants, currencies, conditions, robots, SSRF rules and ordering passed.\n";
+
+$pricing=SimpleStore\Supplier\PricingPolicy::DEFAULTS;
+foreach([30=>100,99=>200,1130=>1300,1210=>1400,1000=>1100]as$cost=>$retail)$check(SimpleStore\Supplier\PricingPolicy::price($cost,$pricing)===$retail,'Incorrect transparent rounding.');
+$custom=SimpleStore\Supplier\PricingPolicy::settings(['pricing_enabled'=>'1','pricing_small_limit'=>'500','pricing_small_margin'=>'20','pricing_margin'=>'200','pricing_step'=>'50']);
+$check(SimpleStore\Supplier\PricingPolicy::price(1210,$custom)===1450,'Custom pricing ignored.');
+$reject(fn()=>SimpleStore\Supplier\PricingPolicy::settings(['pricing_step'=>'0']));
+$reject(fn()=>SimpleStore\Supplier\PricingPolicy::price(9999999,$pricing));
+foreach(['normal'=>[60,90],'fast'=>[15,23],'rapid'=>[1,2]]as$mode=>[$min,$max])for($i=0;$i<20;$i++){
+ $delay=Manager::delay($mode);$check($delay>=$min&&$delay<=$max,'Jitter out of bounds.');
+ $check(Manager::delay($mode,120)>=120,'Diagnostic speed ignored Crawl-delay.');
+}
+$group=['@type'=>'ProductGroup','url'=>'https://gramino.cz/p/mat','hasVariant'=>[
+ $offer('https://gramino.cz/p/mat?v_id=small',3040)+['name'=>'Sea To Summit Mat – Small'],
+ $offer('https://gramino.cz/p/mat?v_id=large',3110)+['name'=>'Sea To Summit Mat – Large']]];
+$parsed=Parser::read($wrap($group),'https://gramino.cz/p/mat?v_id=old','Sea to Summit Mat — Small');
+$check($parsed['price']===3040&&!$parsed['uncertain']&&str_ends_with($parsed['corrected_url'],'v_id=small'),'Exact variant name did not repair stale link.');
+$reject(fn()=>Parser::read($wrap($group),'https://gramino.cz/p/mat?v_id=old','Sea to Summit Mat'));
+$reject(fn()=>Parser::read($wrap($group),'https://gramino.cz/p/other?v_id=old','Sea to Summit Mat — Small'));
+$reject(fn()=>Parser::read($wrap($group),'https://gramino.cz/p/mat?v_id=old&size=large','Sea to Summit Mat — Small'));
+$group['hasVariant'][1]['offers']['price']=3040;
+$parsed=Parser::read($wrap($group),'https://gramino.cz/p/mat');
+$check($parsed['price']===3040&&$parsed['uniform_variants']&&!$parsed['uncertain'],'Uniform group unnecessarily rejected.');
+$check(Manager::reviewReason(['variantSettings'=>['enabled'=>1]],$parsed+['fallback'=>false])==='','Uniform variant prices needlessly reviewed.');
+$group['hasVariant'][1]['offers']['validForMemberTier']='club';
+$reject(fn()=>Parser::read($wrap($group),'https://gramino.cz/p/mat'));
+$f=$fixture;$f['data']['variantsInfo']['7472']['price']=1099;
+$check(Parser::read($variantPage($f),$f['url'])['uniform_variants'],'Identical Pod 7 kilo variant prices not recognized.');
+$check(!Parser::read($variantPage($fixture),$fixture['url'])['uniform_variants'],'Different Pod 7 kilo variant prices treated as uniform.');
+echo "Supplier prices: transparent pricing, jitter, exact-name repairs and uniform variant groups passed.\n";

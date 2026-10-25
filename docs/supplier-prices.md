@@ -41,3 +41,50 @@ V manageru zapnout **Jednou týdně zařadit všechny produkty**. První zařaze
 - https://www.4camping.cz/stranky/kontakt/
 
 Profil ForCamping s.r.o. – 4camping, IČO 24295825, je záměrně rozpracovaný (`confirmed: false`), import netvrdí uzavřenou spolupráci. Priorita 100 je upravitelná.
+
+## Nastavitelná společná prodejní cena
+
+V manageru je samostatná cenotvorba (po migraci zůstává vypnutá, dokud ji správce nezapne).
+Výchozí minimum odměny je 50 Kč pro nákup pod 1 000 Kč a 100 Kč od 1 000 Kč.
+K nákupní ceně se přičte minimum a výsledek se zaokrouhlí **nahoru** na násobek 100 Kč:
+30 → 100, 99 → 200, 1 130 → 1 300, 1 210 → 1 400. Všechny čtyři částky lze změnit.
+Uložení nastavení samo nepřeceňuje katalog; pravidlo se použije při dalším převzetí nabídky,
+i když je dodavatelská cena stejná. Přepočet a převzetí nákupní ceny jsou jedna transakce.
+Každý změněný jazyk dostane novou produktovou revizi. Přijaté objednávky, sklad ani vlastní
+prodejní/dodavatelské ceny variant se nepřepisují. Cena varianty pod jejím nákupním nákladem
+celou změnu zastaví ke kontrole. Historie kontroly obsahuje původní a novou společnou cenu.
+
+## Opakování, diagnostika a tempo
+
+Běžná kontrola zůstává nejvýše jednou za 24 hodin. U posledního výsledku „Ke kontrole“ nebo
+„Nepodařilo se“ lze hromadně i jednotlivě požádat o nové vyhodnocení. Bez zaškrtnutí nového
+stažení pracuje výhradně s platnou uloženou nabídkou a nikdy nevytvoří HTTP požadavek.
+Výslovné nové stažení je ruční výjimka: nejvýše **jeden dodatečný pokus na produkt za 24 hodin**,
+nejdříve 15 minut po předchozí kontrole. Jeden produkt má vždy nejvýše jednu čekající kontrolu.
+Stejná URL se v tomto opakování sdílí mezi produkty pomocí času obnovení; HTTP 403/429/503
+ani cache robots.txt se vynuceným opakováním neobcházejí. Historické výsledky zůstávají dohledatelné
+ve stavu „Znovu zařazeno“. Opakování samo není schválení nejasné ceny.
+
+Tempo lze změnit i již zařazeným produktům: šetrné 60–90 s, zrychlené 15–23 s,
+diagnostické 1–2 s na obchod. Rozestup má náhodný přídavek pro rozložení zátěže;
+User-Agent se pravdivě identifikuje jako DobrodruziSupplierCheck. Současně běží jediný
+HTTP požadavek, Crawl-delay, Retry-After a rezervované prodlevy mají vždy přednost.
+Desetiminutové dokončení nelze garantovat, zejména při pomalé odezvě, blokaci nebo cronu
+spouštěném jednou za minutu. Změna tempa nezkracuje existující bezpečnostní prodlevu.
+Dočasné chyby spojení/408/429/5xx mají nejvýše jeden automatický pokus za 24 hodin;
+403 a trvale nejednoznačné nabídky vyžadují vyřešení příčiny. Při změně produktu před
+zpracováním se kontrola nejvýše dvakrát obnoví s aktuálním nastavením.
+
+Parser ukládá kompaktní sadu strukturovaných nabídek, nikoliv dodavatelské HTML. Cena
+společná všem explicitním variantám jednoho ProductGroup nebo ověřeným variantsInfo
+Pod 7 kilo již sama o sobě nevyžaduje ruční schválení společné nákupní ceny. Rozdílné ceny,
+členské nabídky a neznámé varianty tento postup nesplňují. U Gramina lze opravit zastaralý
+variantní odkaz pouze jedinou přesnou shodou **celého** názvu varianty ve stejném modelu;
+ignoruje se pouze velikost písmen, mezery a typ pomlčky. Oprava odkazu se zaznamená a uloží
+spolu s převzetím ceny. Neprovádí se hledání podobných produktů ani odhadování ID.
+
+Export diagnostiky JSON obsahuje poslední kontrolu každého produktu, dodavatelské odkazy,
+strukturované nabídky, důvody odmítnutí, časy a stav prodlev obchodů. Neobsahuje zákazníky,
+objednávky, hesla ani klíč cronu. Je to diagnostický výstup, nikoliv soubor pro import cen;
+nelze jím obejít identifikaci variant nebo ruční schválení. Starší cache bez sady nabídek
+zůstane použitelná do vypršení, ale nové pravidlo parseru vyžaduje nové stažení.

@@ -4,8 +4,23 @@
   if (!config) return;
   const scope = document.querySelector('#supplier-scope');
   const field = document.querySelector('#supplier-product-field');
-  const syncScope = () => { field.hidden = scope.value !== 'one'; field.querySelector('select').required = scope.value === 'one'; };
+  const retry = document.querySelector('#supplier-retry-field');
+  const syncScope = () => { if (retry) { retry.hidden = !['review','failed','problems'].includes(scope.value); retry.querySelector('input').disabled = retry.hidden; } field.hidden = scope.value !== 'one'; field.querySelector('select').required = scope.value === 'one'; };
   scope.addEventListener('change', syncScope); syncScope();
+  const pricing = document.querySelector('#supplier-pricing-form');
+  if (pricing) {
+    const preview = () => {
+      const value = name => Number(pricing.elements[name].value);
+      const step = value('pricing_step');
+      for (const item of pricing.querySelectorAll('[data-pricing-example]')) {
+        const cost = Number(item.dataset.pricingExample);
+        const margin = value(cost < value('pricing_small_limit') ? 'pricing_small_margin' : 'pricing_margin');
+        const price = Math.ceil((cost + margin) / step) * step;
+        item.querySelector('strong').textContent = step > 0 && margin > 0 && price <= 10000000 ? `${price.toLocaleString('cs-CZ')} Kč` : 'Zkontroluj částky';
+      }
+    };
+    pricing.addEventListener('input', preview);
+  }
   const start = document.querySelector('#supplier-run');
   const stop = document.querySelector('#supplier-stop');
   const status = document.querySelector('#supplier-run-status');
@@ -24,7 +39,7 @@
       if (result.state === 'paused') { halt('Fronta je pozastavená v nastavení plánování.'); start.disabled = true; return; }
       steps++;
       status.textContent = `Zpracování běží · ${steps} kroků. Další krok za ${result.wait} s. Výsledky zobrazíš odkazem „Obnovit výsledky“.`;
-      timer = setTimeout(() => tick(current), Math.max(2,result.wait || 15)*1000);
+      timer = setTimeout(() => tick(current), Math.max(0.25,result.wait || 15)*1000);
     } catch (error) { if (current === generation) halt(error.message || 'Zpracování se přerušilo. Obnov stránku.'); }
   };
   start.addEventListener('click', () => { running = true; start.disabled = true; stop.disabled = false; status.textContent = 'Načítám další krok…'; tick(++generation); });

@@ -25,15 +25,8 @@ final class Pod7kiloVariantIdentity
         }
         if (count($canonical) !== 1 || !self::localUrl($canonical[0], $host) || !$sameUrl($canonical[0], $url)) return null;
 
-        // Decode the server-rendered JSON literal. No supplier JavaScript is executed.
-        preg_match_all('~<script\b[^>]*>(.*?)</script\s*>~is', $body, $scripts);
-        $definitions = [];
-        foreach ($scripts[1] as $script) {
-            if (!preg_match('~^\s*(?://<!--\s*)?var\s+data\s*=\s*(\{.*\})\s*;\s*(?://-->\s*)?$~sD', $script, $match)) continue;
-            $definitions[] = json_decode($match[1], true, 40);
-        }
-        if (count($definitions) !== 1 || !is_array($definitions[0])) return null;
-        $data = $definitions[0];
+        $data = self::data($body);
+        if ($data === null) return null;
         if (($data['variantsUrlEnabled'] ?? null) !== true || !is_string($data['currency'] ?? null) ||
             strtoupper($data['currency']) !== 'CZK' || !is_array($data['variantsInfo'] ?? null)) return null;
         $selected = $data['selectedVariantId'] ?? null;
@@ -58,6 +51,35 @@ final class Pod7kiloVariantIdentity
 
         return ['method' => 'pod7kilo_selected_variant', 'verified_url' => $url,
             'variant_id' => (string)$selected, 'ean' => (string)$ean];
+    }
+
+    public static function uniform(string $body,string $url,array $offer):bool
+    {
+        $host=strtolower((string)parse_url($url,PHP_URL_HOST));
+        if(!in_array($host,['pod7kilo.cz','www.pod7kilo.cz'],true))return false;
+        $data=self::data($body);
+        if($data===null||strtoupper((string)($data['currency']??''))!=='CZK'||($offer['priceCurrency']??'')!=='CZK'||
+            !is_array($data['variantsInfo']??null)||count($data['variantsInfo'])<2)return false;
+        foreach($data['variantsInfo']as$id=>$variant){
+            if(!is_array($variant)||!self::sameIdentifier($variant['id']??null,$id)||
+                !self::sameIdentifier($variant['productId']??null,$data['productId']??null)||
+                PriceParser::amount($variant['price']??null)===null||PriceParser::amount($offer['price']??null)===null||
+                number_format((float)$variant['price'],2,'.','')!==number_format((float)$offer['price'],2,'.',''))return false;
+        }
+        return true;
+    }
+
+    private static function data(string $body):?array
+    {
+        // Decode the server-rendered JSON literal. No supplier JavaScript is executed.
+        preg_match_all('~<script\b[^>]*>(.*?)</script\s*>~is', $body, $scripts);
+        $definitions = [];
+        foreach ($scripts[1] as $script) {
+            if (!preg_match('~^\s*(?://<!--\s*)?var\s+data\s*=\s*(\{.*\})\s*;\s*(?://-->\s*)?$~sD', $script, $match)) continue;
+            $definitions[] = json_decode($match[1], true, 40);
+        }
+        if (count($definitions) !== 1 || !is_array($definitions[0])) return null;
+        return $definitions[0];
     }
 
     private static function sameIdentifier(mixed $a, mixed $b): bool

@@ -7,9 +7,23 @@ $pricesAutoStart=false;$pricesError='';$pricesNotice='';$cronKey='';
 if($method==='POST'&&$pricesReady){
     try{
         if($action==='supplier-price-start'){
-            $result=$priceManager->enqueue(is_string($_POST['scope']??null)?$_POST['scope']:'',is_string($_POST['speed']??null)?$_POST['speed']:'',is_string($_POST['product_key']??null)?$_POST['product_key']:'');
+            $scope=is_string($_POST['scope']??null)?$_POST['scope']:'';$speed=is_string($_POST['speed']??null)?$_POST['speed']:'';
+            $result=in_array($scope,['review','failed','problems'],true)?$priceManager->retry($scope,$speed,($_POST['fresh']??'')==='1'):
+                $priceManager->enqueue($scope,$speed,is_string($_POST['product_key']??null)?$_POST['product_key']:'');
             $pricesAutoStart=$result['added']>0;
-            $pricesNotice='Do fronty přidáno: '.$result['added'].'. Již ve frontě nebo kontrolováno za posledních 24 hodin: '.$result['daily'].'. Bez použitelného odkazu/prodávajícího: '.$result['unconfigured'].'.';
+            $pricesNotice='Do fronty přidáno: '.$result['added'].'. Již ve frontě nebo vyčerpaný denní limit: '.$result['daily'].'. Bez použitelného odkazu/prodávajícího: '.$result['unconfigured'].'.';
+        }elseif($action==='supplier-price-retry'){
+            $id=filter_var($_POST['job_id']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);if(!$id)throw new InvalidArgumentException('Neplatná kontrola.');
+            $result=$priceManager->retry('one','rapid',($_POST['fresh']??'')==='1',$id);$pricesAutoStart=$result['added']>0;
+            $pricesNotice='K opakování přidáno: '.$result['added'].'. Vyčerpaný limit dodatečných načtení: '.$result['daily'].'.';
+        }elseif($action==='supplier-price-pricing'){
+            $priceManager->configurePricing($_POST);$pricesNotice='Cenotvorba uložena. Použije se při příštím převzetí nebo ověření dodavatelské ceny.';
+        }elseif($action==='supplier-price-tempo'){
+            $count=$priceManager->queueMode(is_string($_POST['speed']??null)?$_POST['speed']:'');$pricesAutoStart=$count>0;
+            $pricesNotice='Tempo upraveno pro '.$count.' čekajících kontrol. Prodlevy a limity dodavatelů zůstávají v platnosti.';
+        }elseif($action==='supplier-price-export'){
+            $report=$priceManager->diagnostics();header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
+            header('Content-Disposition: attachment; filename="supplier-price-diagnostics.json"');echo json_encode($report,JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);exit;
         }elseif($action==='supplier-price-tick'){
             if(session_status()===PHP_SESSION_ACTIVE)session_write_close();
             $result=$priceManager->tick();header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');echo json_encode($result,JSON_THROW_ON_ERROR);exit;

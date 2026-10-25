@@ -7,7 +7,15 @@ use InvalidArgumentException;
 /** Reads explicit offers, never guesses a price from arbitrary visible numbers. */
 final class PriceParser
 {
-    public static function read(string $body, string $url): array
+    public const VERSION = 3;
+
+    public static function read(string $body, string $url, string $expectedName = ''): array
+    {
+        return self::select(self::document($body, $url), $url, $expectedName);
+    }
+
+    /** Cache the offer set, not a choice made for a particular local product. */
+    public static function document(string $body, string $url): array
     {
         $documents = [];
         preg_match_all('~<script\b[^>]*\btype\s*=\s*["\']application/ld\+json["\'][^>]*>(.*?)</script\s*>~is', $body, $scripts);
@@ -36,25 +44,66 @@ final class PriceParser
                 $evidence = count($products) === 1 && count($raw) === 1 ? Pod7kiloVariantIdentity::verify($body, $url, $product, $offer,
                     static fn(string $a, string $b): bool => self::identity($a) === self::identity($b)) : null;
                 $offers[] = ['price' => $price, 'amount' => (string)$offer['price'], 'url' => $source,
-                    'identity_evidence' => $evidence, 'availability' => match($availability) {
+                    'supplier_uniform' => count($products)===1 && count($raw)===1 && Pod7kiloVariantIdentity::uniform($body,$url,$offer),
+                    'identity_evidence' => $evidence, 'product_name' => is_string($product['name']??null)?$product['name']:'',
+                    'group_url' => $product['_group_url']??'', 'group_name' => $product['_group_name']??'', 'availability' => match($availability) {
                         'InStock', 'LimitedAvailability' => 'in_stock',
                         'OutOfStock', 'SoldOut', 'Discontinued' => 'out_of_stock',
                         'PreOrder', 'PreSale', 'BackOrder' => 'on_order', default => 'unknown',
                     }];
             }
         }
+        return ['offers'=>$offers, 'product_count'=>count($products), 'parser_version'=>self::VERSION];
+    }
+
+    public static function select(array $document, string $url, string $expectedName = ''): array
+    {
+        $offers=$document['offers']??[];
         if ($offers === []) throw new InvalidArgumentException('Stránka neposkytla jednoznačnou strukturovanou cenu v CZK. Cena zůstala.');
+        $all=$offers;
+        $uniform=count($all)>1 && count($all)===$document['product_count'] &&
+            count(array_unique(array_column($all,'amount')))===1 &&
+            count(array_unique(array_column($all,'group_url')))===1 && ($all[0]['group_url']??'')!=='' &&
+            self::sameModel($all[0]['group_url'],$url);
         $exact = array_values(array_filter($offers, static fn(array $o): bool => self::identity($o['url']) === self::identity($url) || $o['identity_evidence'] !== null));
+        $repair=null;
+        // Gramino publishes stable variant URLs and full variant names in ProductGroup.
+        // Repair an old/missing v_id only from ONE exact full-name match in the same model.
+        if ($exact===[] && $expectedName!=='' && in_array(strtolower((string)parse_url($url,PHP_URL_HOST)),['gramino.cz','www.gramino.cz'],true)) {
+            $matches=array_values(array_filter($offers,static fn(array $o):bool=>
+                self::sameModel($url,$o['url']) && self::sameModel($url,$o['group_url']??'') &&
+                self::name($o['product_name'])!=='' && self::name($o['product_name'])===self::name($expectedName)));
+            if(count($matches)===1){$exact=$matches;$repair=['method'=>'exact_variant_name','verified_url'=>$matches[0]['url'],'name'=>$matches[0]['product_name']];}
+        }
         if ($exact !== []) $offers = $exact;
-        elseif (count($products) !== 1 || count($offers) !== 1) throw new InvalidArgumentException('Nabídka není jednoznačná. Doplň odkaz na konkrétní variantu; původní cena zůstala.');
-        if ($offers === []) throw new InvalidArgumentException('Stránka neposkytla jednoznačnou strukturovanou cenu v CZK. Cena zůstala.');
-        $prices = array_unique(array_column($offers, 'price'));
-        if (count($prices) !== 1) throw new InvalidArgumentException('Nabídky uvádějí různé ceny. Vyžaduje kontrolu konkrétní varianty.');
+        elseif ($uniform && self::identity($all[0]['group_url'])===self::identity($url)) $offers=$all;
+        elseif (($document['product_count']??0) !== 1 || count($offers) !== 1) throw new InvalidArgumentException('Nabídka není jednoznačná. Doplň odkaz na konkrétní variantu; původní cena zůstala.');
+        if (count(array_unique(array_column($offers,'amount'))) !== 1) throw new InvalidArgumentException('Nabídky uvádějí různé ceny. Vyžaduje kontrolu konkrétní varianty.');
         $result = $offers[0];
         if (count(array_unique(array_column($offers, 'availability'))) > 1) $result['availability'] = 'unknown';
-        $result['uncertain'] = $exact === [] && (parse_url($url, PHP_URL_QUERY) !== null ||
+        if($repair!==null){$result['identity_evidence']=$repair;$result['corrected_url']=$repair['verified_url'];}
+        $groupExact=$uniform && self::identity($all[0]['group_url'])===self::identity($url);
+        if($groupExact){$result['url']=$url;$result['identity_evidence']=['method'=>'uniform_product_group','verified_url'=>$url,'variants'=>count($all)];}
+        $result['uniform_variants']=$uniform || !empty($result['supplier_uniform']);
+        $result['uncertain'] = $exact === [] && !$groupExact && (parse_url($url, PHP_URL_QUERY) !== null ||
             ($result['url'] !== '' && self::identity($result['url']) !== self::identity($url)));
         return $result;
+    }
+
+    private static function name(string $value): string
+    {
+        $value=str_replace(['—','–','−'], '-', $value);
+        $value=preg_replace('/\s*-\s*/u','-',trim($value));
+        $value=preg_replace('/\s+/u',' ',$value);
+        return function_exists('mb_strtolower')?mb_strtolower($value,'UTF-8'):strtolower($value);
+    }
+
+    private static function sameModel(string $a,string $b):bool
+    {
+        try{if(preg_replace('/^www\./','',HttpClient::url($a))!==preg_replace('/^www\./','',HttpClient::url($b)))return false;}catch(InvalidArgumentException $e){return false;}
+        if(rtrim((string)parse_url($a,PHP_URL_PATH),'/')!==rtrim((string)parse_url($b,PHP_URL_PATH),'/'))return false;
+        foreach([$a,$b]as$url){parse_str((string)parse_url($url,PHP_URL_QUERY),$query);if(array_diff(array_keys($query),['v_id'])!==[])return false;}
+        return true;
     }
 
     public static function amount(mixed $value): ?int
@@ -76,7 +125,13 @@ final class PriceParser
         foreach (['@graph', 'hasVariant', 'mainEntity'] as $key) {
             if (!isset($node[$key]) || !is_array($node[$key])) continue;
             $items = isset($node[$key]['@type']) ? [$node[$key]] : $node[$key];
-            foreach ($items as $item) if (is_array($item)) self::products($item, $products);
+            foreach ($items as $item) if (is_array($item)) {
+                if($key==='hasVariant' && self::type($node,'ProductGroup')){
+                    $item['_group_url']=is_string($node['url']??null)?$node['url']:'';
+                    $item['_group_name']=is_string($node['name']??null)?$node['name']:'';
+                }
+                self::products($item, $products);
+            }
         }
         if (array_is_list($node)) foreach ($node as $item) if (is_array($item)) self::products($item, $products);
     }

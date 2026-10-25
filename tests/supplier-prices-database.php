@@ -31,7 +31,7 @@ try{
  $check($manager->enqueue('one','normal',$key)['added']===1,'Could not enqueue.');
  $check($manager->enqueue('one','fast',$key)['daily']===1,'Pending duplicated.');
  $manager->tick();$check(count($requests)===1&&str_ends_with($requests[0][0],'/robots.txt'),'First request must be robots.');
- $manager->tick();$check(count($requests)===1,'Host cooldown not enforced.');$now+=60;$manager->tick();
+ $manager->tick();$check(count($requests)===1,'Host cooldown not enforced.');$now+=90;$manager->tick();
  $check((int)$sale($key)['supplier_price_czk']===1100&&$job($key)['status']==='applied','Selected seller price not applied.');
  $check($manager->enqueue('one','fast',$key)['daily']===1,'Daily limit bypassed.');
  $db->update('shop_supplier_price_jobs',['created_at'=>$now-90000],'product_key=%s',$key);
@@ -54,7 +54,7 @@ try{
  $db->update('shop_product_supplier_links',['url'=>$f['url']],'product_key=%s',$podKey);
  $responses[$f['url']]=['code'=>200,'headers'=>[],'body'=>'<html><head><link rel="canonical" href="'.$f['url'].'">'.
   '<script>var data = '.json_encode($f['data']).';</script><script type="application/ld+json">'.json_encode($f['product']).'</script></head></html>'];
- $manager->enqueue('one','fast',$podKey);$run(3,15);
+ $manager->enqueue('one','fast',$podKey);$run(4,24);
  $check($job($podKey)['status']==='applied'&&(int)$sale($podKey)['supplier_price_czk']===1099,'Verified Pod 7 kilo XL did not update automatically.');
  $saved=json_decode($job($podKey)['result_json'],true);$check($saved['identity_evidence']['ean']==='8051411206200','Variant identity evidence not retained.');
  $blocked=$make('private/item');$responses['https://a.test/robots.txt']=['code'=>200,'body'=>"User-agent: *\nDisallow: /private\nCrawl-delay: 120\n",'headers'=>[]];
@@ -71,5 +71,38 @@ try{
  $check((int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$key)===7,'Supplier availability changed inventory.');
  $check((int)$db->queryFirstField('SELECT price_czk FROM shop_product_revisions WHERE product_key=%s',$key)===3000,'Retail price changed.');
  $check($manager->dashboard('failed','Product',1)['total']>=2,'History search/filter failed.');
+
+ // Atomic retail repricing creates a revision, preserves language content and existing stock.
+ $manager->configure(false,false);
+ // The prior weekly scheduling test queued the whole fixture catalog; isolate the next scenarios.
+ $db->update('shop_supplier_price_jobs',['status'=>'dismissed'],'status=%s','queued');$now+=86401;
+ $manager->configurePricing(['pricing_enabled'=>'1','pricing_small_limit'=>'1000','pricing_small_margin'=>'50','pricing_margin'=>'100','pricing_step'=>'100']);
+ $rounded=$make('rounded',1210);$responses['https://a.test/rounded']=$offer('https://a.test/rounded',1210);
+ $manager->enqueue('one','rapid',$rounded);$run(4,10000);
+ $current=$db->queryFirstRow('SELECT * FROM shop_product_revisions WHERE product_key=%s AND active_product_key IS NOT NULL',$rounded);
+ $check((int)$current['price_czk']===1400&&(int)$current['revision_number']===2&&$current['description']==='Keep','Common retail price/revision was not updated atomically.');
+ $check((int)$db->queryFirstField('SELECT price_czk FROM shop_product_revisions WHERE product_key=%s AND active_product_key IS NULL',$rounded)===3000,'Previous price missing from revision history.');
+ $check($job($rounded)['status']==='applied'&&(int)$sale($rounded)['supplier_price_czk']===1210,'Same cost did not trigger retail pricing.');
+ $audit=json_decode($job($rounded)['result_json'],true);$check($audit['retail_changes'][0]['new']===1400,'Retail audit missing.');
+ // Fresh retry is explicit, respects a minimum cooldown, and is limited to one extra per day.
+ $manual=$make('manual-retry',1000);$responses['https://a.test/manual-retry']=$offer('https://a.test/manual-retry',2000);
+ $manager->enqueue('one','rapid',$manual);$run(4,200);
+ $check($job($manual)['status']==='review','Retry fixture should require review.');
+ $before=count($requests);$oldId=(int)$job($manual)['id'];
+ $check($manager->retry('one','rapid',false,$oldId)['added']===1,'Cache re-evaluation not queued.');$run(2,10);
+ $check(count($requests)===$before&&$job($manual)['status']==='review','Local re-evaluation made a network request or applied a risky price.');
+ $check($manager->retry('one','rapid',true,(int)$job($manual)['id'])['added']===1,'Manual retry not queued.');
+ $check((int)$job($manual)['next_at']>$now,'Manual retry ignored minimum cooldown.');
+ $responses['https://a.test/manual-retry']=$offer('https://a.test/manual-retry',2100);$now+=901;$run(2,10);
+ $check($job($manual)['status']==='review'&&json_decode($job($manual)['result_json'],true)['price']===2100,'Fresh retry did not replace cached result.');
+ $check($manager->retry('one','rapid',true,(int)$job($manual)['id'])['daily']===1,'Unlimited extra daily requests allowed.');
+ // Verified uniform groups may populate common variant cost automatically; own variant prices remain.
+ $uniform=$make('uniform',1000);$db->insert('shop_product_variant_settings',['product_key'=>$uniform,'enabled'=>1]);
+ $node=['@type'=>'ProductGroup','url'=>'https://a.test/uniform','hasVariant'=>[]];
+ foreach(['blue','red']as$color)$node['hasVariant'][]=['@type'=>'Product','offers'=>['@type'=>'Offer','url'=>'https://a.test/uniform?v_id='.$color,'price'=>1100,'priceCurrency'=>'CZK','availability'=>'https://schema.org/InStock']];
+ $responses['https://a.test/uniform']=['code'=>200,'headers'=>[],'body'=>'<script type="application/ld+json">'.json_encode($node).'</script>'];
+ $manager->enqueue('one','rapid',$uniform);$run(3,100);
+ $check($job($uniform)['status']==='applied'&&(int)$sale($uniform)['supplier_price_czk']===1100,'Uniform variants did not apply automatically.');
+ $report=$manager->diagnostics();$check($report['format']==='dobrodruzi.supplier-price-diagnostics'&&!str_contains(json_encode($report),$token),'Diagnostics leaked cron token.');
  echo "Supplier prices: MySQL durable queue, selected/fallback sellers, daily and URL limits, pauses, locks, stale data, variants and cron passed.\n";
 }finally{$db->disconnect();$admin->query('DROP DATABASE %b',$database);}
