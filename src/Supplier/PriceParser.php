@@ -7,7 +7,17 @@ use InvalidArgumentException;
 /** Reads explicit offers, never guesses a price from arbitrary visible numbers. */
 final class PriceParser
 {
-    public const VERSION = 3;
+    public const VERSION = 4;
+    /** Gramino advertises this public mirror in /.well-known/ai-catalog.json and /openapi.json. */
+    public static function requestUrl(string $url):string
+    {
+        $host=strtolower((string)parse_url($url,PHP_URL_HOST));$path=(string)parse_url($url,PHP_URL_PATH);
+        if(in_array($host,['gramino.cz','www.gramino.cz'],true)&&str_starts_with($path,'/p/')){
+            $query=parse_url($url,PHP_URL_QUERY);
+            return 'https://'.$host.'/api/md'.$path.($query!==null?'?'.$query:'');
+        }
+        return $url;
+    }
 
     public static function read(string $body, string $url, string $expectedName = ''): array
     {
@@ -45,6 +55,7 @@ final class PriceParser
                 $evidence = count($products) === 1 && count($raw) === 1 ? Pod7kiloVariantIdentity::verify($body, $url, $product, $offer,
                     static fn(string $a, string $b): bool => self::identity($a) === self::identity($b)) : null;
                 $offers[] = ['price' => $price, 'amount' => (string)$offer['price'], 'url' => $source,
+                    'attributes'=>StructuredVariantScope::productAttributes($product,$body,$url,count($products)===1),
                     'supplier_uniform' => count($products)===1 && count($raw)===1 && Pod7kiloVariantIdentity::uniform($body,$url,$offer),
                     'identity_evidence' => $evidence, 'product_name' => is_string($product['name']??null)?$product['name']:'',
                     'group_url' => $product['_group_url']??'', 'group_name' => $product['_group_name']??'', 'availability' => match($availability) {
@@ -54,7 +65,12 @@ final class PriceParser
                     }];
             }
         }
-        return ['offers'=>$offers, 'product_count'=>count($products), 'single_offers'=>$singleOffers, 'parser_version'=>self::VERSION];
+        $document=['offers'=>$offers, 'product_count'=>count($products), 'single_offers'=>$singleOffers, 'parser_version'=>self::VERSION];
+        if(count($products)===1&&count($offers)===1&&$singleOffers){
+            $scoped=Pod7kiloVariantIdentity::offers($body,$url,$offers[0]);
+            if($scoped!==[])$document['scoped_offers']=$scoped;
+        }
+        return $document;
     }
 
     public static function select(array $document, string $url, string $expectedName = ''): array

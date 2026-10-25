@@ -11,14 +11,15 @@ final class GraminoVariantScope
         $offers=$document['offers']??[];
         if(!$offers||count($offers)!==($document['product_count']??0))return null;
         $group=$offers[0]['group_name']??'';
-        $suffix=self::suffix($snapshot['products'][0]['name']??'',$group);
+        $name=SupplierCatalogAliases::name($snapshot['products'][0]['name']??'',$group,$url);
+        $suffix=self::suffix($name,$group,$url);
         if($group===''||$suffix===null)return null;
         $base=self::constraints($suffix);
         if($base===null)return null;
         $parsed=[];
         foreach($offers as$i=>$offer){
             if(($offer['group_name']??'')!==$group||!PriceParser::sameModel($url,$offer['group_url']??'')||!PriceParser::sameModel($url,$offer['url']))return null;
-            $tail=self::suffix($offer['product_name']??'',$group);
+            $tail=self::suffix($offer['product_name']??'',$group,$url);
             // Gramino's full variant name explicitly lists colour, size; retain this evidence in old caches too.
             $dimensions=$tail===null?null:self::sourceDimensions($tail);
             if($dimensions===null)return null;
@@ -30,6 +31,11 @@ final class GraminoVariantScope
         foreach($variants as$variant){
             $constraints=$base;$choices=json_decode($variant['choices_json']??'null',true);
             if(!is_array($choices))return null;
+            foreach($choices as$key=>$value)if(self::normalize((string)$key)==='barva a velikost'){
+                if(!is_string($value)||!preg_match('~^(.+?)\s+/\s+([^/]+)$~u',str_replace('\\/','/',$value),$parts))return null;
+                if(isset($choices['Barva'])||isset($choices['Velikost'])||!self::size($parts[2]))return null;
+                unset($choices[$key]);$choices['Barva']=$parts[1];$choices['Velikost']=$parts[2];
+            }
             foreach($choices as$key=>$value){
                 $dimension=match(self::normalize((string)$key)){'barva','color','colour'=>'color','velikost','size','objem'=>'size','zip','strana zipu'=>'zip',default=>null};
                 if($dimension===null||!is_string($value))return null;
@@ -68,21 +74,38 @@ final class GraminoVariantScope
         $value=strtr(trim($value),['Č'=>'č','Š'=>'š','Ž'=>'ž','Ř'=>'ř','Ý'=>'ý','Á'=>'á','Í'=>'í','É'=>'é','Ě'=>'ě','Ů'=>'ů','Ú'=>'ú','Ď'=>'ď','Ť'=>'ť','Ň'=>'ň']);
         return strtolower(preg_replace('/\s+/u',' ',$value));
     }
-    private static function suffix(string $name,string $model):?string
+    private static function suffix(string $name,string $model,string $url=''):?string
     {
         // Only spacing in an otherwise identical model may differ: D890 and D 890.
         $name=self::normalize($name);$model=self::normalize($model);
+        // Gender can move within a title, but must never disappear or change.
+        $name=self::gender($name,$url);$model=self::gender($model,$url);
         if(str_replace(' ','',$name)===str_replace(' ','',$model))return '';
         if($model==='')return null;
         $pattern=str_replace(' ','\\s*',preg_quote($model,'~'));
         // A word boundary also permits catalog titles such as "Packing Cube M".
         return preg_match('~^'.$pattern.'(?:\s+[–—−-]\s+|\s+)(.+)$~uD',$name,$m)?$m[1]:null;
     }
+    private static function gender(string $name,string $url):string
+    {
+        $gender='';
+        foreach(['women'=>"women's|dámské|dámská|dámský",'men'=>"men's|pánské|pánská|pánský"]as$key=>$pattern){
+            if(preg_match('~(?:^|\s)(?:'.$pattern.')(?=\s|$)~u',$name)){
+                if($gender!=='')return $name;
+                $gender=$key;$name=preg_replace('~(?:^|\s)(?:'.$pattern.')(?=\s|$)~u',' ',$name);
+            }
+        }
+        $path=(string)parse_url($url,PHP_URL_PATH);
+        if($gender==='')foreach(['women','men']as$key)if(str_contains($path,'-'.$key.'s-')||str_ends_with($path,'-'.$key.'s'))$gender=$key;
+        $name=trim(preg_replace('/\s+/u',' ',$name));$name=preg_replace('/\s+[–—−-]$/u','',$name);
+        return ($gender!==''?$gender.' ':'').$name;
+    }
     private static function size(string $value):bool
-    {return (bool)preg_match('/^(?:[2-5]?x{0,3}[sml]|small|medium|large|regular|long|tall|wide|long wide|regular wide|\d+(?:\.\d+)?\s*(?:cm|l|ml))$/D',self::normalize($value));}
+    {return (bool)preg_match('/^(?:[2-5]?x{0,3}[sml]|small|medium|large|short|regular|long|tall|wide|long[ \/]wide|regular[ \/](?:regular|wide|short|mummy)|\d+(?:\s*[x×]\s*\d+)?(?:\.\d+)?\s*(?:cm|l|ml))$/uD',self::normalize($value));}
     private static function sizeValue(string $value):string
     {
-        $value=self::normalize($value);
+        $value=self::normalize($value);$value=preg_replace('/\s*[x×]\s*/u','x',$value);
+        $value=str_replace('/',' ',$value);
         return ['small'=>'s','medium'=>'m','large'=>'l'][$value]??preg_replace('/(?<=\d)\s+(?=cm$|ml$|l$)/','',$value);
     }
     private static function zip(string $value):?string
@@ -90,6 +113,8 @@ final class GraminoVariantScope
     private static function color(string $value):string
     {
         $value=self::normalize($value);
+        if(preg_match('/^(.+?)\s*\(([^()]+)\)$/uD',$value,$parts)&&self::color($parts[1])===self::color($parts[2]))$value=self::color($parts[1]);
+        $value=str_replace('hi-vis','hi vis',$value);
         if(str_contains($value,'/'))return implode('/',array_map([self::class,'color'],explode('/',$value)));
         return ['červená'=>'red','modrá'=>'blue','zelená'=>'green','žlutá'=>'yellow','černá'=>'black','bílá'=>'white',
             'šedá'=>'grey','gray'=>'grey','stříbrná'=>'silver','oranžová'=>'orange','fialová'=>'purple','růžová'=>'pink',

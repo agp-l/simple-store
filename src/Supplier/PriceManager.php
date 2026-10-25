@@ -10,6 +10,7 @@ use Throwable;
 
 final class PriceManager
 {
+    public const EVALUATOR_VERSION = 4;
     private $transport;
     private $clock;
     private ?bool $variantModesInstalled=null;
@@ -37,8 +38,9 @@ final class PriceManager
     public function configurePricing(array $input): void
     {
         $options=PricingPolicy::settings($input);
-        $this->locked(function()use($options):void{$this->settings();
-            $this->db->update('shop_supplier_price_settings',['options_json'=>self::json($options)],'id=1');});
+        $this->locked(function()use($options):void{$settings=$this->settings();
+            $stored=json_decode($settings['options_json']??'null',true)??[];
+            $this->db->update('shop_supplier_price_settings',['options_json'=>self::json(array_replace($stored,$options))],'id=1');});
     }
     private function locked(callable $run): mixed
     {
@@ -69,7 +71,10 @@ final class PriceManager
     public function retry(string $scope,string $mode,bool $fresh,int $id=0):array
     {
         if(!in_array($scope,['review','failed','problems','one'],true)||!in_array($mode,['normal','fast','rapid'],true))throw new InvalidArgumentException('Neplatný rozsah opakování.');
-        return $this->locked(function()use($scope,$mode,$fresh,$id):array{
+        return $this->locked(fn():array=>$this->retryInternal($scope,$mode,$fresh,$id));
+    }
+    private function retryInternal(string $scope,string $mode,bool $fresh,int $id=0):array
+    {
             $now=$this->now();$count=['added'=>0,'daily'=>0,'unconfigured'=>0];
             $rows=$this->db->query('SELECT j.* FROM shop_supplier_price_jobs j INNER JOIN
                 (SELECT product_key,MAX(id) AS id FROM shop_supplier_price_jobs GROUP BY product_key) latest ON latest.id=j.id
@@ -81,7 +86,7 @@ final class PriceManager
                 $snapshot=$this->snapshot($job['product_key']);
                 if(!$snapshot||$snapshot['candidates']===[]){$count['unconfigured']++;continue;}
                 $data=['snapshot'=>$snapshot,'fingerprint'=>hash('sha256',self::json($snapshot)),'index'=>0,'trace'=>[],'redirect'=>'','hops'=>0,
-                    'retry_of'=>(int)$job['id'],'refresh_after'=>$fresh?$now:0,'cache_only'=>!$fresh];
+                    'retry_of'=>(int)$job['id'],'refresh_after'=>$fresh?$now:0,'cache_only'=>!$fresh,'evaluator_version'=>self::EVALUATOR_VERSION];
                 $next=$fresh?max($now,(int)$job['checked_at']+900):$now;
                 $this->db->insert('shop_supplier_price_jobs',['product_key'=>$job['product_key'],'product_name'=>$snapshot['products'][0]['name'],
                     'mode'=>$mode,'created_at'=>$now,'next_at'=>$next,'retry_of'=>$fresh?(int)$job['id']:0,
@@ -91,7 +96,6 @@ final class PriceManager
                 $count['added']++;
             }
             return $count;
-        });
     }
     public function queueMode(string $mode):int
     {
@@ -117,7 +121,7 @@ final class PriceManager
             if($this->db->queryFirstField('SELECT id FROM shop_supplier_price_jobs WHERE product_key=%s AND (created_at>%i OR checked_at>%i OR status=%s) LIMIT 1',$key,$now-86400,$now-86400,'queued')){$count['daily']++;continue;}
             $snapshot=$this->snapshot($key);
             if($snapshot===null||$snapshot['candidates']===[]){$count['unconfigured']++;continue;}
-            $data=['snapshot'=>$snapshot,'fingerprint'=>hash('sha256',self::json($snapshot)),'index'=>0,'trace'=>[],'redirect'=>'','hops'=>0];
+            $data=['snapshot'=>$snapshot,'fingerprint'=>hash('sha256',self::json($snapshot)),'index'=>0,'trace'=>[],'redirect'=>'','hops'=>0,'evaluator_version'=>self::EVALUATOR_VERSION];
             $this->db->insert('shop_supplier_price_jobs',['product_key'=>$key,'product_name'=>$snapshot['products'][0]['name'],
                 'mode'=>$mode,'created_at'=>$now,'next_at'=>$now,'data_json'=>self::json($data)]);$count['added']++;
         }
@@ -158,11 +162,20 @@ final class PriceManager
         $variantPriceMode=$this->variantModesInstalled?$this->db->queryFirstRow('SELECT * FROM shop_product_supplier_variant_modes WHERE product_key=%s'.$suffix,$key):null;
         return compact('products','sale','links','partners','variants','variantSettings','candidates','variantPriceMode');
     }
-    public function tick(): array
+    public function tick(string $origin='browser'): array
     {
-        return $this->locked(function():array{
+        if(!in_array($origin,['browser','cron','cli'],true))throw new InvalidArgumentException('Neplatný zdroj workeru.');
+        return $this->locked(function()use($origin):array{
             $settings=$this->settings();$now=$this->now();
-            $this->db->update('shop_supplier_price_settings',['last_tick'=>$now],'id=1');
+            $options=json_decode($settings['options_json']??'null',true)??[];
+            $options['last_'.$origin.'_tick']=$now;
+            // Once per evaluator release, retry unresolved current products from cache only.
+            // This never bypasses supplier backoffs or creates fresh HTTP requests.
+            if(!(int)$settings['paused']&&(int)($options['rechecked_version']??0)<self::EVALUATOR_VERSION){
+                $this->retryInternal('problems','rapid',false);
+                $options['rechecked_version']=self::EVALUATOR_VERSION;
+            }
+            $this->db->update('shop_supplier_price_settings',['last_tick'=>$now,'options_json'=>self::json($options)],'id=1');
             if((int)$settings['paused'])return ['state'=>'paused','wait'=>30];
             if((int)$settings['weekly_enabled'] && (int)$settings['next_weekly']<=$now){
                 $this->enqueueInternal('all','normal');
@@ -191,6 +204,8 @@ final class PriceManager
                 if(isset($robots['error'])){$this->failure($job,$data,$robots['error'],!empty($robots['temporary']));
                     if(empty($robots['fetched']))continue;return ['state'=>'working','wait'=>$wait];}
                 $policy=Robots::policy($robots['body'],$target);
+                $requestPolicy=Robots::policy($robots['body'],PriceParser::requestUrl($target));
+                $policy=['allowed'=>$policy['allowed']&&$requestPolicy['allowed'],'delay'=>max($policy['delay'],$requestPolicy['delay'])];
                 if(!$policy['allowed']){$this->failure($job,$data,'robots.txt nepovoluje čtení této adresy.');
                     if(empty($robots['fetched']))continue;return ['state'=>'working','wait'=>$wait];}
                 if(!empty($robots['fetched'])){$this->defer($job,self::delay($job['mode'],$policy['delay']));return ['state'=>'working','wait'=>1];}
@@ -213,8 +228,7 @@ final class PriceManager
                     if(empty($result['fetched']))continue;return ['state'=>'working','wait'=>$wait];}
                 $remote=!empty($result['fetched']);
                 if(isset($result['document'])){
-                    try{$result=(GraminoVariantScope::select($result['document'],$target,$snapshot)??
-                        PriceParser::select($result['document'],$target,$snapshot['products'][0]['name']))+['observed_at'=>$result['observed_at']];}
+                    try{$result=PriceEvaluation::select($result['document'],$target,$snapshot)+['observed_at'=>$result['observed_at']];}
                     catch(InvalidArgumentException $e){$this->failure($job,$data,$e->getMessage());if(!$remote)continue;return ['state'=>'working','wait'=>$wait];}
                 }
                 if(!isset($result['corrected_url'])&&$data['hops']>0&&!empty($data['permanent_redirects'])&&!$result['uncertain']&&
@@ -257,7 +271,8 @@ final class PriceManager
         $this->db->replace('shop_supplier_price_cache',['url_hash'=>$hash,'expires_at'=>$now+86400,
             'data_json'=>self::json(['error'=>'Předchozí načtení bylo přerušeno. Další pokus nejdříve za 24 hodin.'])]);
         try{
-            $response=($this->transport)($url);$code=(int)$response['code'];$headers=$response['headers']??[];
+            $requestUrl=$kind==='product'?PriceParser::requestUrl($url):$url;
+            $response=($this->transport)($requestUrl);$code=(int)$response['code'];$headers=$response['headers']??[];
             if(in_array($code,[403,429,503],true)){
                 $retry=$headers['retry-after']??'';
                 $seconds=ctype_digit((string)$retry)?(int)$retry:max(0,(int)strtotime((string)$retry)-$now);
@@ -272,7 +287,7 @@ final class PriceManager
             }else{$result=['document'=>PriceParser::document($response['body'],$url),'observed_at'=>$now];}
         }catch(\Exception $error){$result=['error'=>$error instanceof InvalidArgumentException?$error->getMessage():'Načtení selhalo (spojení, DNS nebo limit stránky). Cena zůstala.',
             'temporary'=>!isset($code)||in_array($code,[408,429,500,502,503,504],true)];}
-        $result['fetched_at']=$now;$result['http_code']=$code??0;
+        $result['fetched_at']=$now;$result['http_code']=$code??0;$result['request_url']=$requestUrl??$url;
         $this->db->update('shop_supplier_price_cache',['data_json'=>self::json($result)],'url_hash=%s',$hash);
         // Keep cache storage bounded without retaining supplier HTML.
         $this->db->query('DELETE FROM shop_supplier_price_cache WHERE expires_at<%i LIMIT 100',$now-86400);
@@ -305,7 +320,7 @@ final class PriceManager
         if(!empty($snapshot['variantSettings']['enabled'])&&empty($result['uniform_variants'])&&empty($result['variant_offers']))return 'Produkt používá varianty. Ověř, zda cena platí pro varianty se základní dodavatelskou cenou.';
         $old=(int)($snapshot['sale']['supplier_price_czk']??0);
         if($old>0&&abs($result['price']-$old)/$old>0.30)return 'Změna přesahuje 30 %. Před převzetím ověř cenu.';
-        if($result['availability']==='out_of_stock')return 'Nabídka není skladem. Před převzetím ověř podmínky dodání.';
+        // Availability is independent of a valid public price; it never changes local inventory.
         return '';
     }
     public function apply(int $id,bool $variants):void{$this->locked(fn()=>$this->applyInternal($id,true,$variants));}
@@ -392,20 +407,28 @@ final class PriceManager
     }
     public function dismiss(int $id):void
     {$this->locked(function()use($id):void{$this->db->update('shop_supplier_price_jobs',['status'=>'dismissed','message'=>'Nabídka ponechána bez změny ceny.'],'id=%i AND status=%s',$id,'review');});}
-    public function dashboard(string $filter='',string $query='',int $page=1):array
+    private static function currentJobs():string
+    {
+        return 'id IN (SELECT latest.id FROM (SELECT product_key,MAX(id) AS id FROM shop_supplier_price_jobs GROUP BY product_key) latest
+            WHERE EXISTS (SELECT 1 FROM shop_product_revisions p WHERE p.product_key=latest.product_key AND p.active_product_key IS NOT NULL
+            AND NOT EXISTS (SELECT 1 FROM shop_product_redirects r WHERE r.language=p.language AND r.source_slug=p.slug AND r.target_key<>p.product_key)))';
+    }
+    public function dashboard(string $filter='',string $query='',int $page=1,bool $history=false):array
     {
         if(!in_array($filter,['','queued','review','failed','applied','checked','dismissed','retried'],true))$filter='';
-        $where='1=1';$args=[];
-        if($filter!==''){$where.=' AND status=%s';$args[]=$filter;}
+        $where=$history?'1=1':self::currentJobs();$args=[];
+        if($filter==='applied'&&!$history){$where.=' AND status IN %ls';$args[]=['applied','checked'];}
+        elseif($filter!==''){$where.=' AND status=%s';$args[]=$filter;}
         if($query!==''){$where.=' AND product_name LIKE %ss';$args[]=$query;}
         $total=(int)$this->db->queryFirstField('SELECT COUNT(*) FROM shop_supplier_price_jobs WHERE '.$where,...$args);
         $page=max(1,min($page,max(1,(int)ceil($total/30))));
         $rows=$this->db->query('SELECT * FROM shop_supplier_price_jobs WHERE '.$where.' ORDER BY id DESC LIMIT 30 OFFSET %i',...array_merge($args,[($page-1)*30]));
         $counts=['queued'=>0,'review'=>0,'failed'=>0,'applied'=>0,'checked'=>0];
-        foreach($this->db->query('SELECT status,COUNT(*) AS n FROM shop_supplier_price_jobs GROUP BY status')as$row)$counts[$row['status']]=(int)$row['n'];
+        foreach($this->db->query('SELECT status,COUNT(*) AS n FROM shop_supplier_price_jobs WHERE '.self::currentJobs().' GROUP BY status')as$row)$counts[$row['status']]=(int)$row['n'];
+        $counts['applied']+=$counts['checked'];
         $products=$this->db->query('SELECT p.product_key,MIN(p.name) AS name,MAX(s.supplier_price_czk) AS price FROM shop_product_revisions p
             LEFT JOIN shop_product_sales s ON s.product_key=p.product_key WHERE p.active_product_key IS NOT NULL GROUP BY p.product_key ORDER BY name');
-        return compact('rows','counts','products','total','page','filter','query');
+        return compact('rows','counts','products','total','page','filter','query','history');
     }
     /** Business diagnostics only: no customer data, auth tokens, supplier HTML or cron secrets. */
     public function diagnostics():array
@@ -414,8 +437,8 @@ final class PriceManager
         $rows=$this->db->query('SELECT j.* FROM shop_supplier_price_jobs j INNER JOIN
             (SELECT product_key,MAX(id) AS id FROM shop_supplier_price_jobs GROUP BY product_key) latest ON latest.id=j.id ORDER BY j.id LIMIT 5000');
         foreach($rows as$row){
-            $data=json_decode($row['data_json'],true);$sources=[];
-            foreach($data['snapshot']['candidates']??[]as$c){
+            $data=json_decode($row['data_json'],true);$sources=[];$snapshot=$this->snapshot($row['product_key']);
+            foreach(($snapshot??$data['snapshot'])['candidates']??[]as$c){
                 $resolved=$c['url'];$chain=[];
                 for($hop=0;$hop<4;$hop++){
                     $cache=$this->db->queryFirstRow('SELECT expires_at,data_json FROM shop_supplier_price_cache WHERE url_hash=%s',hash('sha256','product:'.$resolved));
@@ -430,10 +453,16 @@ final class PriceManager
             $items[]=['id'=>(int)$row['id'],'product_key'=>$row['product_key'],'name'=>$row['product_name'],'status'=>$row['status'],
                 'mode'=>$row['mode'],'created_at'=>(int)$row['created_at'],'checked_at'=>(int)$row['checked_at'],
                 'next_at'=>(int)$row['next_at'],'applied_at'=>(int)$row['applied_at'],'message'=>$row['message'],
-                'local_variants'=>$data['snapshot']['variants']??[],'variants_enabled'=>!empty($data['snapshot']['variantSettings']['enabled']),
+                'active'=>$snapshot!==null,'snapshot'=>$snapshot,
+                'local_variants'=>($snapshot??$data['snapshot'])['variants']??[],'variants_enabled'=>!empty(($snapshot??$data['snapshot'])['variantSettings']['enabled']),
+                'issue'=>PriceEvaluation::issue($row['status'],$row['message']),
                 'sources'=>$sources,'result'=>json_decode($row['result_json']??'null',true),'trace'=>$data['trace']??[]];
         }
-        return ['format'=>'dobrodruzi.supplier-price-diagnostics','version'=>1,'parser_version'=>PriceParser::VERSION,'exported_at'=>gmdate('c',$this->now()),
+        $settings=$this->settings();$summary=[];
+        foreach($items as$item)if($item['active']){$code=$item['issue'];$summary[$code]=($summary[$code]??0)+1;}
+        return ['format'=>'dobrodruzi.supplier-price-diagnostics','version'=>2,'parser_version'=>PriceParser::VERSION,'evaluator_version'=>self::EVALUATOR_VERSION,'exported_at'=>gmdate('c',$this->now()),
+            'summary'=>$summary,'worker'=>array_intersect_key($settings,array_flip(['paused','weekly_enabled','next_weekly','last_tick','last_browser_tick','last_cron_tick','last_cli_tick'])),
+            'pricing'=>array_intersect_key($settings,PricingPolicy::DEFAULTS),
             'hosts'=>$this->db->query('SELECT host,next_at FROM shop_supplier_price_hosts ORDER BY host'),'items'=>$items];
     }
 }

@@ -143,10 +143,29 @@ try{
  foreach(['Červená','Modrá']as$color)$db->insert('shop_product_variants',['product_key'=>$scoped,'variant_key'=>bin2hex(random_bytes(16)),'choices_json'=>json_encode(['Barva'=>$color]),'available_quantity'=>7]);
  $node=['@type'=>'ProductGroup','name'=>'Patizon D 890','url'=>$modelUrl,'hasVariant'=>[]];
  foreach([['Red','S',11990],['Blue','S',11990],['Red','L',12490]]as[$color,$size,$price])$node['hasVariant'][]=['@type'=>'Product','name'=>'Patizon D 890 – '.$color.', '.$size,'offers'=>['@type'=>'Offer','url'=>$modelUrl.'?v_id='.$color.$size,'price'=>$price,'priceCurrency'=>'CZK','availability'=>'https://schema.org/InStock']];
- $responses[$modelUrl]=['code'=>200,'headers'=>[],'body'=>'<script type="application/ld+json">'.json_encode($node).'</script>'];
+ $responses[\SimpleStore\Supplier\PriceParser::requestUrl($modelUrl)]=['code'=>200,'headers'=>[],'body'=>'<script type="application/ld+json">'.json_encode($node).'</script>'];
  $manager->enqueue('one','rapid',$scoped);$run(4,100);
  $check($job($scoped)['status']==='checked'&&(int)$sale($scoped)['supplier_price_czk']===11990,'Scoped local variants did not auto-verify their shared price.');
  $audit=json_decode($job($scoped)['result_json'],true);$check($audit['identity_evidence']['method']==='exact_local_variant_scope','Local variant proof missing.');
  $check((int)$db->queryFirstField('SELECT SUM(available_quantity) FROM shop_product_variants WHERE product_key=%s',$scoped)===14,'Scoped check changed physical stock.');
- echo "Supplier prices: MySQL durable queue, selected/fallback sellers, daily and URL limits, pauses, locks, stale data, variants and cron passed.\n";
+ // Current counters must ignore obsolete runs and removed cards, while history remains available.
+ $oldCount=$manager->dashboard()['counts'];
+ $db->insert('shop_supplier_price_jobs',['product_key'=>str_repeat('f',32),'product_name'=>'Removed product','mode'=>'normal','created_at'=>$now,'next_at'=>$now,'status'=>'failed','message'=>'Gone','data_json'=>'{"snapshot":{"candidates":[]}}']);
+ $check($manager->dashboard()['counts']===$oldCount,'Deleted product inflated current counters.');
+ $check($manager->dashboard('failed','Removed product')['total']===0&&$manager->dashboard('failed','Removed product',1,true)['total']===1,'Removed card cannot be isolated in history.');
+ $db->insert('shop_supplier_price_jobs',['product_key'=>$scoped,'product_name'=>'Patizon D890 – S','mode'=>'normal','created_at'=>$now,'next_at'=>$now,'status'=>'failed','message'=>'Newer result','data_json'=>$job($scoped)['data_json']]);
+ $check($manager->dashboard('checked','Patizon D890')['total']===0,'Superseded success counted as current.');
+ $check($manager->dashboard('failed','Patizon D890')['total']===1,'Newest failure missing.');
+ $db->update('shop_supplier_price_jobs',['status'=>'dismissed'],'status=%s','queued');
+ $options=json_decode($manager->settings()['options_json'],true);$options['rechecked_version']=3;
+ $db->update('shop_supplier_price_settings',['options_json'=>json_encode($options)],'id=1');
+ $before=count($requests);$manager->tick('cron');
+ $check(count($requests)===$before,'Evaluator upgrade fetched a supplier instead of replaying cache.');
+ $check((int)$manager->settings()['last_cron_tick']===$now,'Real cron heartbeat missing.');
+ $manager->configurePricing(['pricing_enabled'=>'1','pricing_small_limit'=>'1000','pricing_small_margin'=>'50','pricing_margin'=>'100','pricing_step'=>'100']);
+ $check((int)$manager->settings()['last_cron_tick']===$now&&(int)$manager->settings()['rechecked_version']===PriceManager::EVALUATOR_VERSION,'Pricing settings erased scheduler metadata.');
+ $report=$manager->diagnostics();$removed=array_values(array_filter($report['items'],static fn(array $item):bool=>$item['product_key']===str_repeat('f',32)))[0];
+ $check(!$removed['active']&&$removed['snapshot']===null&&$report['version']===2,'Diagnostic active/history boundary wrong.');
+ $check(!str_contains(json_encode($report),'cron_hash')&&!str_contains(json_encode($report),$token),'Diagnostic credential leak.');
+ echo "Supplier prices: MySQL durable queue, selected/fallback sellers, daily and URL limits, pauses, locks, stale data, variants, current counters and cron passed.\n";
 }finally{$db->disconnect();$admin->query('DROP DATABASE %b',$database);}

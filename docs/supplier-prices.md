@@ -8,7 +8,7 @@ Administrace: `/admin/supplier-prices/`. PHP 8.1+, cURL a stávající MySQL/Mar
 2. V manageru vybrat chybějící ceny, všechny produkty nebo jeden produkt. Zařazení zároveň spustí zpracování v otevřeném okně. Při chybě připojení lze pokračovat tlačítkem. Fronta je v databázi.
 3. Šetrně: rozestupy 60–90 s na obchod. Zrychleně: 15–23 s. Diagnosticky: 1–2 s. Větší prodleva z robots.txt nebo Retry-After má přednost. Robots a každý krok přesměrování také spotřebují tento limit. Každý worker provede nejvýše jeden vzdálený požadavek; nečeká se pomocí sleep.
 4. Běžná nová kontrola produktu nejdříve 24 hodin od zařazení i dokončení. Pro nevyřešené výsledky existuje níže popsané ruční opakování. Rozpracovaná kontrola se neduplikuje. Tentýž URL se po dobu 24 h sdílí z cache mezi produkty. Limity platí společně pro všechna okna i cron.
-5. Jednoznačná CZK cena vybraného prodávajícího se automaticky uloží do **Cena dodavatele**. Haléře se zaokrouhlí nahoru na celé Kč. Změna přes 30 %, nedostupnost, nejasný URL varianty a varianty bez důkazu společné ceny vyžadují kontrolu. Vlastní dodavatelské ceny variant zůstávají zachované. Společná prodejní cena se může přepočítat podle zapnuté cenotvorby; sklad se nemění.
+5. Jednoznačná CZK cena vybraného prodávajícího se automaticky uloží do **Cena dodavatele**. Haléře se zaokrouhlí nahoru na celé Kč. Změna přes 30 %, nejasný URL varianty a varianty bez důkazu společné ceny vyžadují kontrolu. Vlastní dodavatelské ceny variant zůstávají zachované. Společná prodejní cena se může přepočítat podle zapnuté cenotvorby; sklad se nemění.
 6. Záložní odkaz podle priority se použije až při chybě předchozího. Zjištěná záložní cena je návrh: tlačítko převezme cenu a prodávajícího společně. Vyžaduje dokončený profil nového prodávajícího. U vlastních dodavatelských cen variant je nutná společná úprava v produktu, protože ceny jiného obchodu by nebyly platné.
 7. Při převzetí se ověřuje stáří nabídky, nezměněná data produktu, odkazů, prodávajících a variant. Cena vyšší než nejnižší relevantní prodejní cena je zablokovaná. Historické objednávky se nikdy nepřepisují.
 
@@ -108,3 +108,67 @@ funguje i nad dříve uloženou sadou nabídek bez dalších dotazů. Diagnostic
 obsahuje také konečnou nabídku za uloženými přesměrováními a místní kombinace variant.
 Typografické značky ™/® a různé apostrofy nemění identitu modelu; normalizují se i
 výslovné dvojbarevné kombinace (např. žlutá/stříbrná). Rozdíl pánské/dámské se nezahazuje.
+
+
+## Diagnostika a automatické opravy (verze 4)
+
+Počítadla a výchozí seznam ukazují pouze **nejnovější kontrolu každého existujícího produktu**.
+Aktualizováno zahrnuje i ověření stejné ceny. Přepínač celé historie zpřístupní starší kontroly
+včetně odstraněných karet; jejich záznamy se nemažou.
+
+JSON export verze 2 obsahuje aktuální cenový snapshot, aktivní varianty, cache jednotlivých
+zdrojů, `active`, souhrn příčin `summary`, strojový kód `issue` a skutečné časy běhu workerů.
+Stejná data poskytuje `GET /admin/supplier-prices/?format=json` v přihlášené administrátorské
+relaci. Nepřihlášený přístup zůstává zablokovaný běžným přihlášením administrace.
+Export neobsahuje zákazníky, objednávky ani přístupové klíče. Pro práci bez GUI:
+
+```sh
+php tools/supplier-price-worker.php --diagnostics > diagnostics.json
+php tools/supplier-price-worker.php --replay diagnostics.json
+php tools/supplier-price-worker.php --retry-cached
+php tools/supplier-price-worker.php --tick
+```
+
+`--replay` funguje místně bez připojení k databázi i bez sítě. Ukáže, co nová pravidla rozpoznají;
+neukládá ceny a nenahrazuje kontrolu aktuálnosti v transakci. `--retry-cached` pouze znovu
+zařadí nevyřešené současné produkty. Po nasazení nové verze vyhodnocování se tento krok
+provede jednou automaticky při nejbližším běhu workeru. Nové stahování nadále dodržuje denní
+limity, robots.txt a prodlevy dodavatelů.
+
+Gramino má veřejné rozhraní popsané v `https://gramino.cz/openapi.json` a
+`https://gramino.cz/.well-known/ai-catalog.json`. Pro `/p/…` se používá `/api/md/p/…`
+se zachovaným `v_id`; robots se kontroluje pro obě cesty. Cena stále pochází z JSON-LD,
+vlastnosti jediného SKU navíc z jeho oddílu Specifikace. Související produkty se ignorují.
+Pod 7 kilo poskytuje úplné varianty v serverovém JSON `variantsInfo`; kontroluje se ID produktu,
+ID varianty, vybraná cena a příslušnost URL. HUDY poskytuje barvu a velikost v JSON-LD variantách.
+Každá aktivní místní kombinace musí mít přesnou shodu. Více místních kombinací s různými cenami
+se nepřevede na jednu nejlevnější cenu. Vlastní ceny variant nadále vyžadují zapnutou automatiku.
+
+Ověřená cena vyprodaného zboží se může aktualizovat. Dostupnost dodavatele zůstává informací;
+sklad, publikování produktu ani zákaznické objednávky se nemění. Rozdílný prodávající, neznámá
+varianta, skok přes 30 % a prodej pod náklady mají stále své kontroly.
+
+Převody názvů rozměrů jsou omezené na konkrétní model a dodavatelskou URL. Podklady:
+- https://gramino.cz/p/nemo-tensor-elite
+- https://gramino.cz/p/nemo-tensor-all-season
+- https://gramino.cz/p/therm-a-rest-neoair-xlite-nxt
+- https://gramino.cz/p/sea-to-summit-frontier-ul-collapsible-bowl
+- https://gramino.cz/p/eva-foam-pad-3-mm
+
+## Samostatný worker v GitHub Actions
+
+Workflow `Supplier price worker` běží každých 5 minut a po úspěšném nasazení. GitHub může
+naplánovaný běh opozdit; nejde o záruku přesného času. Každý běh zpracovává frontu nejvýše
+4 minuty, čeká podle odpovědí workeru a používá stejné databázové zámky a prodlevy jako
+administrace. Týdenní zařazování a pozastavení se dál řídí uloženým nastavením obchodu.
+
+Workflow využije stávající připojení pro nasazení. Při prvním běhu vytvoří samostatný náhodný
+klíč v chráněném `config/supplier-worker.php`; existující klíč nikdy nepřepíše. Klíč není v repozitáři,
+v URL ani ve výpisu úlohy. Přes HTTPS hlavičku autorizuje pouze `POST /supplier-price-cron.php`
+a nemůže číst diagnostiku ani upravovat produkty jinak než standardním workerem.
+Přesměrování HTTPS klient odmítne, takže klíč neodešle na jiný server. Původní hostingový
+cron s uloženým SHA-256 klíčem dál funguje. Samostatný klíč lze zneplatnit odstraněním souboru
+a vypnutím tohoto workflow, aby jej další běh znovu nevytvořil.
+
+Administrace a JSON rozlišují poslední krok z prohlížeče a skutečný běh cronu/CLI.
+Samotné zapnutí týdenního plánování už nelze zaměnit za důkaz běžícího workeru.

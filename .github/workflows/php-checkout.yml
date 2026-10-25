@@ -62,8 +62,12 @@ jobs:
           php -l tools/apply-schema.php
           php -l tools/fio-worker.php
           php -l fio-cron.php
+          php -l supplier-price-cron.php
+          php -l tools/supplier-price-worker.php
       - name: Verify deployment package excludes private data
-        run: python3 tests/deployment.py
+        run: |
+          python3 tests/deployment.py
+          python3 tests/supplier-worker.py
       - name: Test checkout and shared views
         run: |
           php tests/assisted-purchase.php

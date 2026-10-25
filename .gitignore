@@ -2,6 +2,7 @@
 /config/database.php
 /config/checkout.php
 /config/mail-cron.php
+/config/supplier-worker.php
 /config/admin.php
 /config/.admin-*
 /config/.smtp-key.php

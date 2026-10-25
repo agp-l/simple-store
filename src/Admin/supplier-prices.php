@@ -4,6 +4,10 @@ use SimpleStore\Supplier\PriceManager;
 
 $screen='supplier-prices';$priceManager=new PriceManager($db);$pricesReady=$priceManager->installed();
 $pricesAutoStart=false;$pricesError='';$pricesNotice='';$cronKey='';
+if($method==='GET'&&$pricesReady&&($_GET['format']??'')==='json'){
+    header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
+    echo json_encode($priceManager->diagnostics(),JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);exit;
+}
 if($method==='POST'&&$pricesReady){
     try{
         if($action==='supplier-price-start'){
@@ -43,5 +47,6 @@ if($method==='POST'&&$pricesReady){
 $pricesFilter=is_string($_GET['status']??null)?$_GET['status']:'';
 $pricesQuery=is_string($_GET['q']??null)?substr(trim($_GET['q']),0,200):'';
 $pricesPage=max(1,(int)($_GET['page']??1));
+$pricesHistory=($_GET['history']??'')==='1';
 $pricesSettings=$pricesReady?$priceManager->settings():[];
-$pricesDashboard=$pricesReady?$priceManager->dashboard($pricesFilter,$pricesQuery,$pricesPage):[];
+$pricesDashboard=$pricesReady?$priceManager->dashboard($pricesFilter,$pricesQuery,$pricesPage,$pricesHistory):[];

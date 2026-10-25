@@ -5,6 +5,34 @@ namespace SimpleStore\Supplier;
 /** Pod 7 kilo uses the model URL in Offer, but identifies the selected variant in page JSON. */
 final class Pod7kiloVariantIdentity
 {
+    public static function offers(string $body,string $url,array $offer):array
+    {
+        $host=strtolower((string)parse_url($url,PHP_URL_HOST));
+        if(!in_array($host,['pod7kilo.cz','www.pod7kilo.cz'],true)||!self::localUrl($offer['url'],$host))return [];
+        $parent=rtrim((string)parse_url($offer['url'],PHP_URL_PATH),'/');
+        $path=rtrim((string)parse_url($url,PHP_URL_PATH),'/');
+        if(!str_starts_with($parent,'/p/')||($path!==$parent&&!str_starts_with($path,$parent.'/')))return [];
+        $data=self::data($body);
+        if(!$data||!is_string($data['currency']??null)||strtoupper($data['currency'])!=='CZK'||empty($data['variantsInfo'])||!is_array($data['variantsInfo']))return [];
+        $selected=$data['variantsInfo'][$data['selectedVariantId']??'']??null;
+        if(!$selected||!isset($selected['price'])||number_format((float)$selected['price'],2,'.','')!==number_format((float)$offer['amount'],2,'.',''))return [];
+        $out=[];
+        foreach($data['variantsInfo']as$id=>$v){
+            if(!is_array($v)||!self::sameIdentifier($v['id']??null,$id)||!self::sameIdentifier($v['productId']??null,$data['productId']??null)||
+                PriceParser::amount($v['price']??null)===null||!is_string($v['url']??null)||!is_string($v['name']??null))return [];
+            $source=$v['url'];
+            if(str_starts_with($source,'/')&&!str_starts_with($source,'//'))$source='https://'.$host.$source;
+            if(!self::localUrl($source,$host)||!str_starts_with((string)parse_url($source,PHP_URL_PATH),$parent.'/'))return [];
+            preg_match_all('/(?:^|,\s+)([^:,]+):\s*(.*?)(?=,\s+[^:,]+:|$)/u',$v['name'],$parts,PREG_SET_ORDER);
+            $values=[];foreach($parts as$p)$values[trim($p[1])]=trim($p[2]);
+            $attributes=StructuredVariantScope::attributes($values);
+            if(!$attributes)return [];
+            $out[]=['url'=>$source,'price'=>PriceParser::amount($v['price']),'amount'=>(string)$v['price'],
+                'product_name'=>$v['productNameWithVariant']??$offer['product_name'],'group_name'=>$offer['product_name'],'group_url'=>$offer['url'],
+                'attributes'=>$attributes,'availability'=>str_contains($v['availability']??'','availability-in-stock')?'in_stock':'unknown','identity_evidence'=>null];
+        }
+        return $out;
+    }
     public static function verify(string $body, string $url, array $product, array $offer, callable $sameUrl): ?array
     {
         $host = strtolower((string)parse_url($url, PHP_URL_HOST));

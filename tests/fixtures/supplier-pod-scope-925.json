@@ -1,0 +1,116 @@
+{
+  "data": {
+    "productId": "9233",
+    "currency": "czk",
+    "variantsInfo": {
+      "23481": {
+        "id": 23481,
+        "productId": 9233,
+        "name": "Barva (vzor): tropical lily",
+        "price": 2690,
+        "url": "/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-tropical-lily/"
+      },
+      "25032": {
+        "id": 25032,
+        "productId": 9233,
+        "name": "Barva (vzor): vintage teal",
+        "price": 2690,
+        "url": "/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-vintage-teal/"
+      },
+      "21765": {
+        "id": 21765,
+        "productId": 9233,
+        "name": "Barva (vzor): evergreen proof (voděodolný)",
+        "price": 3190,
+        "url": "/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-proof-evergreen/"
+      },
+      "21768": {
+        "id": 21768,
+        "productId": 9233,
+        "name": "Barva (vzor): retro blue proof (voděodolný)",
+        "price": 3190,
+        "url": "/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-proof-retro-blue/"
+      },
+      "25026": {
+        "id": 25026,
+        "productId": 9233,
+        "name": "Barva (vzor): dual dip aqua drift proof (voděodolný)",
+        "price": 3190,
+        "url": "/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-proof-dual-dip-aqua-drift/"
+      },
+      "23487": {
+        "id": 23487,
+        "productId": 9233,
+        "name": "Barva (vzor): phantom purple proof (voděodolný)",
+        "price": 3190,
+        "url": "/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-proof-phantom-purple/"
+      },
+      "25029": {
+        "id": 25029,
+        "productId": 9233,
+        "name": "Barva (vzor): dual dip violet rush proof (voděodolný)",
+        "price": 3190,
+        "url": "/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-proof-dual-dip-violet-rush/"
+      },
+      "13346": {
+        "id": 13346,
+        "productId": 9233,
+        "name": "Barva (vzor): černá proof (voděodolný)",
+        "price": 3190,
+        "url": "/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-proof-black/"
+      },
+      "13349": {
+        "id": 13349,
+        "productId": 9233,
+        "name": "Barva (vzor): petrol proof (voděodolný)",
+        "price": 3190,
+        "url": "/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-proof-petrol/"
+      }
+    },
+    "selectedVariantId": 23481
+  },
+  "offer": {
+    "price": 2690,
+    "amount": "2690",
+    "url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/",
+    "supplier_uniform": false,
+    "identity_evidence": null,
+    "product_name": "Batoh Aevor Trip Pack",
+    "group_url": "",
+    "group_name": "",
+    "availability": "in_stock"
+  },
+  "url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/",
+  "variants": [
+    {
+      "variant_key": "299f4fc736e232f41a60e067bcbf39b2",
+      "price_czk": null,
+      "enabled": "1",
+      "choices_json": "{\"Barva\":\"phantom purple proof (voděodolný)\"}"
+    },
+    {
+      "variant_key": "8bd6d8a7f88db8e1d1794eb159b131fc",
+      "price_czk": null,
+      "enabled": "1",
+      "choices_json": "{\"Barva\":\"dual dip aqua drift proof (voděodolný)\"}"
+    },
+    {
+      "variant_key": "a277609a84f664bdf1860ba2f6c41a46",
+      "price_czk": null,
+      "enabled": "1",
+      "choices_json": "{\"Barva\":\"petrol proof (voděodolný)\"}"
+    },
+    {
+      "variant_key": "e912ade46b77ddec062a0d61e72de080",
+      "price_czk": null,
+      "enabled": "1",
+      "choices_json": "{\"Barva\":\"černá proof (voděodolný)\"}"
+    },
+    {
+      "variant_key": "f06964fbce8d8a329c61b08bf2d4ebc5",
+      "price_czk": null,
+      "enabled": "1",
+      "choices_json": "{\"Barva\":\"retro blue proof (voděodolný)\"}"
+    }
+  ]
+}

@@ -1,0 +1,36 @@
+{
+  "data": {
+    "productId": "9753",
+    "currency": "czk",
+    "variantsInfo": {
+      "15135": {
+        "id": 15135,
+        "productId": 9753,
+        "name": "Barva (vzor): černá",
+        "price": 3690,
+        "url": "/p/batoh-gossamer-gear-vagabond-jet/batoh-gossamer-gear-vagabond-jet/"
+      }
+    },
+    "selectedVariantId": 15135
+  },
+  "offer": {
+    "price": 3690,
+    "amount": "3690",
+    "url": "https://www.pod7kilo.cz/p/batoh-gossamer-gear-vagabond-jet/",
+    "supplier_uniform": false,
+    "identity_evidence": null,
+    "product_name": "Batoh Gossamer Gear Vagabond Jet",
+    "group_url": "",
+    "group_name": "",
+    "availability": "in_stock"
+  },
+  "url": "https://www.pod7kilo.cz/p/batoh-gossamer-gear-vagabond-jet/",
+  "variants": [
+    {
+      "variant_key": "2ce393cb4c9109afaeb79dd2ee5a0f35",
+      "price_czk": null,
+      "enabled": "1",
+      "choices_json": "{\"Barva\":\"černá\"}"
+    }
+  ]
+}

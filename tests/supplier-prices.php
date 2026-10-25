@@ -202,5 +202,37 @@ $copy=SimpleStore\Product\ProductFamilyMerge::combinedCopy([
 ]);
 $check($copy['description']==='Tloušťka 7,6 cm.'&&!str_contains($copy['summary'],'510')&&count($copy['sections'])===2,'Size-specific copy leaked into the common description.');
 $check(str_contains($copy['sections'][0]['body'],'510 g.')&&str_contains($copy['sections'][0]['body'],'183 × 51 cm.')&&$copy['sections'][1]['heading']==='Provedení Long Wide','Differing copy was discarded or assigned to the wrong size.');
+
+// Regression data from the 2026-10-25 diagnostic export: full variant scope, never cheapest offer.
+$fixtures=json_decode(file_get_contents(__DIR__.'/fixtures/supplier-scope-regressions.json'),true,64,JSON_THROW_ON_ERROR);
+foreach($fixtures as$f){
+ $local=['products'=>[['name'=>$f['name']]],'variants'=>$f['variants'],'variantSettings'=>['enabled'=>$f['enabled']]];
+ $result=SimpleStore\Supplier\PriceEvaluation::select($f['document'],$f['url'],$local);
+ $check(!$result['uncertain']&&$result['uniform_variants']&&$result['identity_evidence']['method']==='exact_local_variant_scope','Exact legacy variant not resolved: '.$f['name']);
+ $check(Manager::reviewReason($local,$result+['fallback'=>false])==='','Resolved price still requires review: '.$f['name']);
+ $local['variantSettings']['enabled']=1;$local['variants']=[['enabled'=>1,'choices_json'=>'{"Neznámá vlastnost":"jiná"}']];
+ $check(SimpleStore\Supplier\GraminoVariantScope::select($f['document'],$f['url'],$local)===null,'Unknown dimension ignored.');
+}
+foreach([923=>3690,925=>3190]as$id=>$price){
+ $f=json_decode(file_get_contents(__DIR__.'/fixtures/supplier-pod-scope-'.$id.'.json'),true,64,JSON_THROW_ON_ERROR);
+ $body='<script>var data = '.json_encode($f['data']).';</script>';
+ $offers=SimpleStore\Supplier\Pod7kiloVariantIdentity::offers($body,$f['url'],$f['offer']);
+ $doc=['single_offers'=>true,'scoped_offers'=>$offers];$local=['variantSettings'=>['enabled'=>1],'variants'=>$f['variants']];
+ $r=SimpleStore\Supplier\StructuredVariantScope::select($doc,$f['url'],$local);
+ $check($r!==null&&$r['price']===$price,'Pod7kilo exact local colour price failed.');
+ $local['variants'][]=['enabled'=>1,'choices_json'=>'{"Barva":"invented colour"}'];
+ $check(SimpleStore\Supplier\StructuredVariantScope::select($doc,$f['url'],$local)===null,'Missing Pod7kilo colour accepted.');
+ $bad=$f['data'];$bad['variantsInfo'][array_key_first($bad['variantsInfo'])]['productId']=99999;
+ $check(SimpleStore\Supplier\Pod7kiloVariantIdentity::offers('<script>var data = '.json_encode($bad).';</script>',$f['url'],$f['offer'])===[],'Foreign Pod7kilo product accepted.');
+}
+$md="## Specifikace\n\n- Barva: Lichen Green\n- Kapacita baterie: 20000 mAh\n\n## Související\n\n- Barva: Black\n";
+$attrs=SimpleStore\Supplier\StructuredVariantScope::productAttributes(['url'=>'https://gramino.cz/p/test'],$md,'https://gramino.cz/p/test',true);
+$check($attrs===['color'=>'lichen green','capacity'=>'20000mah'],'Markdown product specifications mixed with recommendations.');
+$check(SimpleStore\Supplier\StructuredVariantScope::productAttributes(['url'=>'https://gramino.cz/p/other'],$md,'https://gramino.cz/p/test',true)===[],'Foreign markdown identity accepted.');
+$check(Parser::requestUrl('https://gramino.cz/p/test?v_id=abc')==='https://gramino.cz/api/md/p/test?v_id=abc','Documented markdown mirror lost variant query.');
+$check(Parser::requestUrl('https://other.test/p/test')==='https://other.test/p/test','Supplier mirror leaked to another host.');
+$check(Manager::reviewReason([],['fallback'=>false,'uncertain'=>false,'price'=>100,'availability'=>'out_of_stock'])==='','Valid price was confused with availability.');
+$check(Manager::reviewReason(['sale'=>['supplier_price_czk'=>100]],['fallback'=>false,'uncertain'=>false,'price'=>200,'availability'=>'out_of_stock'])!=='','Out-of-stock price bypassed price-jump check.');
+echo "Supplier prices: real variant aliases, scoped attributes, mirror identity and out-of-stock pricing passed.\n";
 $keyedCopy=SimpleStore\Product\ProductFamilyMerge::combinedCopy(['key-a'=>['name'=>'Mat — Regular','summary'=>'Shared','description'=>'Common. Width 51 cm.'],'key-b'=>['name'=>'Mat — Long Wide','summary'=>'Shared','description'=>'Common. Width 64 cm.']]);
 $check($keyedCopy['summary']==='Shared'&&$keyedCopy['description']==='Common.'&&$keyedCopy['sections'][1]['heading']==='Provedení Long Wide','Product-keyed snapshots changed copy extraction.');

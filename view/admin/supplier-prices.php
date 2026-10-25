@@ -1,6 +1,7 @@
 <?php
 use SimpleStore\Navigation\PanelUrl;
 use SimpleStore\Rendering\Icon;
+$pricesHistory=$pricesHistory??false;
 $priceUrl=PanelUrl::pretty($adminUrl.'?section=supplier-prices');
 $date=static fn($value):string=>(int)$value>0?(new DateTimeImmutable('@'.(int)$value))->setTimezone(new DateTimeZone('Europe/Prague'))->format('j. n. Y H:i'):'—';
 $states=['queued'=>'Ve frontě','review'=>'Ke kontrole','failed'=>'Nepodařilo se','applied'=>'Aktualizováno','checked'=>'Cena ověřena','dismissed'=>'Ponecháno','retried'=>'Znovu zařazeno'];
@@ -18,10 +19,11 @@ $availability=['in_stock'=>'Skladem u dodavatele','out_of_stock'=>'U dodavatele 
 <?php if($pricesNotice!==''): ?><p class="panel-notice" role="status"><?= $escape($pricesNotice) ?></p><?php endif; ?>
 <?php if($pricesError!==''): ?><p class="panel-error" role="alert"><?= $escape($pricesError) ?></p><?php endif; ?>
 <div class="supplier-stats">
-<?php foreach(['queued'=>'Čeká na načtení','review'=>'Potřebuje kontrolu','applied'=>'Aktualizovaných cen','failed'=>'Neúspěšných kontrol'] as $state=>$label): ?>
+<?php foreach(['queued'=>'Čeká na načtení','review'=>'Potřebuje kontrolu','applied'=>'Ověřených / aktualizovaných cen','failed'=>'Neúspěšných kontrol'] as $state=>$label): ?>
 <a class="supplier-stat supplier-stat--<?= $state ?>" href="<?= $escape($priceUrl.'?status='.$state.'#price-history') ?>"><strong><?= (int)$pricesDashboard['counts'][$state] ?></strong><span><?= $label ?></span></a>
 <?php endforeach; ?>
 </div>
+<p class="panel-help">Počítá se poslední výsledek každého současného produktu. Starší kontroly a odstraněné karty zůstávají pouze v historii.</p>
 <div class="supplier-columns">
 <section class="panel-panel supplier-start"><h2><?= Icon::render('refresh') ?> Spustit kontrolu</h2>
 <p>Nejdřív použijeme odkazy vybraného prodávajícího. Pak zkusíme ostatní známé obchody podle priority (nižší číslo má přednost).</p>
@@ -41,7 +43,7 @@ $availability=['in_stock'=>'Skladem u dodavatele','out_of_stock'=>'U dodavatele 
 <form method="post" action="<?= $escape($priceUrl) ?>" class="supplier-tempo"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="supplier-price-tempo"><label>Tempo již zařazených produktů<select name="speed"><option value="normal">Šetrné · 60–90 s</option><option value="fast">Zrychlené · 15–23 s</option><option value="rapid">Diagnostické · 1–2 s</option></select></label><button class="panel-button">Změnit tempo a pokračovat</button></form>
 <p>Každý krok načte nejvýše jednu stránku. Během práce můžeš toto okno nechat otevřené. Po zavření pokračuje jen nastavený cron; fronta se neztratí.</p>
 <p><a href="<?= $escape($priceUrl.'?refresh='.bin2hex(random_bytes(6)).'#price-history') ?>">Obnovit výsledky</a> · Poslední krok: <strong><?= $escape($date($pricesSettings['last_tick'])) ?></strong></p>
-<div class="supplier-note"><strong>Co se uloží automaticky?</strong><p>Jednoznačná cena vybraného prodávajícího, také pro varianty s prokazatelně shodnou dodavatelskou cenou. Záložní obchod, nejasné varianty, nedostupné zboží a změny nad 30 % čekají na kontrolu. Společnou prodejní cenu řídí nastavení níže. U sloučených produktů s povolenou automatikou se každá varianta přepočítává z vlastní ověřené nabídky. Ostatní vlastní ceny variant, sklad a přijaté objednávky zůstávají zachované.</p><p>Ceny v haléřích se kvůli formátu cen e-shopu zaokrouhlí nahoru na celé Kč.</p></div>
+<div class="supplier-note"><strong>Co se uloží automaticky?</strong><p>Jednoznačná cena vybraného prodávajícího, také pro varianty s prokazatelně shodnou dodavatelskou cenou. Záložní obchod, nejasné varianty a změny nad 30 % čekají na kontrolu. Ověřená cena se aktualizuje i u vyprodaného zboží; dostupnost dodavatele nemění tvůj sklad. Společnou prodejní cenu řídí nastavení níže. U sloučených produktů s povolenou automatikou se každá varianta přepočítává z vlastní ověřené nabídky. Ostatní vlastní ceny variant, sklad a přijaté objednávky zůstávají zachované.</p><p>Ceny v haléřích se kvůli formátu cen e-shopu zaokrouhlí nahoru na celé Kč.</p></div>
 </section>
 </div>
 <section class="panel-panel supplier-pricing" id="supplier-pricing">
@@ -57,9 +59,10 @@ $availability=['in_stock'=>'Skladem u dodavatele','out_of_stock'=>'U dodavatele 
 <p class="panel-help">Zaokrouhluje se konečná cena v Kč ve všech jazykových verzích produktu. Varianty bez vlastní ceny ji přebírají. Vlastní ceny variant se přepočítají jen u sloučených produktů s povolenou automatikou. Případný prodej pod nákupní cenou zastavíme ke kontrole. Původní společná cena zůstane v historii revizí produktu.</p>
 <button class="panel-button panel-action">Uložit cenotvorbu</button></form>
 </section>
+<p class="panel-help">Poslední samostatný běh cronu: <strong><?= $escape($date(max((int)($pricesSettings['last_cron_tick']??0),(int)($pricesSettings['last_cli_tick']??0)))) ?></strong>. Práce v tomto okně se za běh cronu nepovažuje.</p>
 <section class="panel-panel supplier-history" id="price-history"><div class="supplier-heading"><div><h2>Historie a výsledky</h2><p>Časy jsou uvedené v českém místním čase. Dostupnost je informace od dodavatele, ne tvůj sklad.</p></div><a class="panel-icon-link" href="<?= PanelUrl::escape($adminUrl.'?section=purchase-partners') ?>">Prodávající a priority <?= Icon::render('arrow-right') ?></a></div>
 <form method="post" action="<?= $escape($priceUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><button class="panel-button" name="action" value="supplier-price-export">Export diagnostiky JSON</button><span class="panel-help"> Poslední stav každého produktu, zdroje a důvody chyb. Bez zákaznických dat a přístupových klíčů.</span></form>
-<form method="get" action="<?= $escape($priceUrl) ?>" class="supplier-filters"><label>Hledat produkt<input name="q" value="<?= $escape($pricesQuery) ?>" placeholder="Název produktu"></label><label>Výsledek<select name="status"><option value="">Všechny výsledky</option><?php foreach($states as $value=>$label): ?><option value="<?= $value ?>" <?= $pricesFilter===$value?'selected':'' ?>><?= $label ?></option><?php endforeach; ?></select></label><button class="panel-button">Zobrazit</button></form>
+<form method="get" action="<?= $escape($priceUrl) ?>" class="supplier-filters"><label>Hledat produkt<input name="q" value="<?= $escape($pricesQuery) ?>" placeholder="Název produktu"></label><label>Výsledek<select name="status"><option value="">Všechny výsledky</option><?php foreach($states as $value=>$label): ?><option value="<?= $value ?>" <?= $pricesFilter===$value?'selected':'' ?>><?= $label ?></option><?php endforeach; ?></select></label><label class="supplier-check"><input type="checkbox" name="history" value="1" <?= $pricesHistory?'checked':'' ?>> Zahrnout celou historii a odstraněné produkty</label><button class="panel-button">Zobrazit</button></form>
 <?php if($pricesDashboard['rows']===[]): ?><div class="supplier-empty"><?= Icon::render('package') ?><h3>Zatím žádné výsledky</h3><p>Začni jedním produktem. Uvidíš zdroj ceny, dostupnost i případný důvod, proč ji nelze převzít.</p></div><?php endif; ?>
 <div class="supplier-results">
 <?php foreach($pricesDashboard['rows'] as $job): $data=json_decode($job['data_json'],true);$result=json_decode($job['result_json']??'null',true);$product=$data['snapshot']['products'][0];$editUrl=$basePath.$product['language'].'/produkt/'.rawurlencode($product['slug']).'?edit=1'; ?>
@@ -80,7 +83,7 @@ $availability=['in_stock'=>'Skladem u dodavatele','out_of_stock'=>'U dodavatele 
 </div><?php endif; ?></div>
 </article><?php endforeach; ?>
 </div>
-<nav class="supplier-pagination" aria-label="Stránky historie"><?php $pages=max(1,(int)ceil($pricesDashboard['total']/30));$current=$pricesDashboard['page'];foreach(['Předchozí'=>$current-1,'Další'=>$current+1]as$label=>$page):if($page<1||$page>$pages)continue; ?><a href="<?= $escape($priceUrl.'?'.http_build_query(['status'=>$pricesFilter,'q'=>$pricesQuery,'page'=>$page]).'#price-history') ?>"><?= $label ?></a><?php endforeach; ?><span>Strana <?= $current ?> / <?= $pages ?> · <?= $pricesDashboard['total'] ?> kontrol</span></nav>
+<nav class="supplier-pagination" aria-label="Stránky historie"><?php $pages=max(1,(int)ceil($pricesDashboard['total']/30));$current=$pricesDashboard['page'];foreach(['Předchozí'=>$current-1,'Další'=>$current+1]as$label=>$page):if($page<1||$page>$pages)continue; ?><a href="<?= $escape($priceUrl.'?'.http_build_query(['status'=>$pricesFilter,'q'=>$pricesQuery,'page'=>$page,'history'=>$pricesHistory?'1':'0']).'#price-history') ?>"><?= $label ?></a><?php endforeach; ?><span>Strana <?= $current ?> / <?= $pages ?> · <?= $pricesDashboard['total'] ?> kontrol</span></nav>
 </section>
 <section class="panel-panel supplier-cron" id="supplier-cron"><h2>Týdenní automatická kontrola</h2><p>Na hostingu nastav spouštění workeru <strong>každou minutu</strong> (případně každých 5 minut). Worker zařadí produkty jednou za 7 dní a mezi tím po malých krocích zpracovává frontu. Jediné spuštění týdně by celou frontu nezpracovalo.</p>
 <form method="post" action="<?= $escape($priceUrl.'#supplier-cron') ?>" class="panel-form"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="supplier-price-settings"><label class="supplier-check"><input type="checkbox" name="weekly" value="1" <?= (int)$pricesSettings['weekly_enabled']?'checked':'' ?>> Jednou týdně zařadit všechny produkty (šetrné tempo)</label><label class="supplier-check"><input type="checkbox" name="paused" value="1" <?= (int)$pricesSettings['paused']?'checked':'' ?>> Pozastavit zpracování fronty včetně cronu</label><button class="panel-button">Uložit plánování</button></form>

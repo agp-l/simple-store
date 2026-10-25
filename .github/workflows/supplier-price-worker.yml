@@ -1,0 +1,39 @@
+name: Supplier price worker
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+  workflow_run:
+    workflows: [Deploy Webglobe test shop]
+    types: [completed]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supplier-price-worker
+  cancel-in-progress: false
+
+jobs:
+  process:
+    if: >-
+      vars.WEBGLOBE_DEPLOY_ENABLED == 'true' &&
+      (github.event_name != 'workflow_run' ||
+       (github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.head_branch == 'main'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: main
+          persist-credentials: false
+      - name: Process supplier queue within existing supplier limits
+        env:
+          FTP_HOST: ${{ secrets.WEBGLOBE_FTP_HOST }}
+          FTP_USER: ${{ secrets.WEBGLOBE_FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.WEBGLOBE_FTP_PASSWORD }}
+          FTP_SECURITY: ${{ vars.WEBGLOBE_FTP_SECURITY || 'ftp' }}
+          FTP_PORT: ${{ vars.WEBGLOBE_FTP_PORT || '21' }}
+        run: python3 scripts/run-supplier-worker.py
