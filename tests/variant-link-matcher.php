@@ -12,6 +12,8 @@ $document = static fn(array $group): array => PriceParser::document('<script typ
 $variant = ['variant_key'=>str_repeat('a',32), 'enabled'=>1, 'choices_json'=>'{"Barva":"Modrá","Velikost":"M"}'];
 $match = Matcher::match($document($group),$url.'?v_id=red-m','Patizon D590',$variant);
 $check($match['status']==='exact' && $match['url']===$url.'?v_id=blue-m','Inherited URL did not resolve to the right colour/size.');
+$cached = $document($group); $cached['parser_version'] = 3;
+$check(Matcher::match($cached,$url,'Patizon D590',$variant)['status']==='exact','Version 3 explicit ProductGroup offers were rejected.');
 $variant['choices_json']='{"Velikost":"M"}';
 $check(Matcher::match($document($group),$url,'Patizon D590',$variant)['status']==='ambiguous','Equal prices hid an ambiguous colour.');
 $variant['choices_json']='{"Barva":"Modrá","Velikost":"S"}';

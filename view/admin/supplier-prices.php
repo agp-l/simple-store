@@ -46,6 +46,18 @@ $availability=['in_stock'=>'Skladem u dodavatele','out_of_stock'=>'U dodavatele 
 <div class="supplier-note"><strong>Co se uloží automaticky?</strong><p>Jednoznačná cena vybraného prodávajícího, také pro varianty s prokazatelně shodnou dodavatelskou cenou. Záložní obchod, nejasné varianty a změny nad 30 % čekají na kontrolu. Ověřená cena se aktualizuje i u vyprodaného zboží; dostupnost dodavatele nemění tvůj sklad. Společnou prodejní cenu řídí nastavení níže. U produktů s povolenou automatikou se každá varianta přepočítává z vlastní ověřené nabídky. Ostatní vlastní ceny variant, sklad a přijaté objednávky zůstávají zachované.</p><p>Ceny v haléřích se kvůli formátu cen e-shopu zaokrouhlí nahoru na celé Kč.</p></div>
 </section>
 </div>
+<section class="panel-panel" id="supplier-variant-links">
+<h2>Přesné partnerské odkazy variant</h2>
+<p>U asistovaného nákupu přiřadíme konkrétní nabídku podle modelu, barvy a velikosti. Použijeme čerstvá data z běžné kontroly cen. Ruční adresy zůstanou zachované; nejasné shody uvidíš přímo v tabulce variant.</p>
+<form method="post" action="<?= $escape($priceUrl.'#supplier-variant-links') ?>" class="panel-form">
+<input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="supplier-variant-links-settings">
+<label class="supplier-check"><input type="checkbox" name="enabled" value="1" <?= !empty($pricesSettings['variant_links_enabled'])?'checked':'' ?>> Automaticky přiřazovat ověřené odkazy variant</label>
+<button class="panel-button">Uložit párování odkazů</button>
+</form>
+<p>Poslední dokončený průchod: <strong><?= $escape($date($pricesSettings['variant_links_last_scan']??0)) ?></strong>. Párování běží se zpracováním fronty nebo cronem.</p>
+<?php if(!empty($pricesSettings['variant_links_error'])): ?><p class="panel-error" role="alert"><?= $escape($pricesSettings['variant_links_error']) ?></p><?php endif; ?>
+<form method="post" action="<?= $escape($priceUrl) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><button class="panel-button" name="action" value="supplier-variant-links-export">Export náhledu párování (JSON)</button></form>
+</section>
 <section class="panel-panel supplier-pricing" id="supplier-pricing">
 <div class="supplier-heading"><div><p class="panel-eyebrow">Přehledné ceny bez devítek</p><h2>Společná prodejní cena</h2><p>K dodavatelské ceně přidáme minimální odměnu a výsledek zaokrouhlíme nahoru. Platí i při ověření stejné dodavatelské ceny.</p></div><span class="supplier-badge"><?= (int)$pricesSettings['pricing_enabled']?'Automatika zapnutá':'Automatika vypnutá' ?></span></div>
 <form method="post" action="<?= $escape($priceUrl.'#supplier-pricing') ?>" class="panel-form" id="supplier-pricing-form">

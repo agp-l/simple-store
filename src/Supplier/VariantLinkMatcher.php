@@ -13,7 +13,8 @@ final class VariantLinkMatcher
         try { $host = preg_replace('/^www\./', '', HttpClient::url($source)); }
         catch (\InvalidArgumentException $e) { return $none; }
         if (!in_array($host, ['gramino.cz', 'pod7kilo.cz', 'hudy.cz'], true)) return ['status' => 'unsupported', 'message' => 'Tento obchod zatím nepodporuje automatické párování variant.'];
-        if ((int) ($document['parser_version'] ?? 0) < PriceParser::VERSION) return ['status' => 'old_parser', 'message' => 'Uložená nabídka vyžaduje novější načtení s vlastnostmi variant.'];
+        // Version 3 already preserves Gramino's explicit ProductGroup names and URLs.
+        if ((int) ($document['parser_version'] ?? 0) < 3) return ['status' => 'old_parser', 'message' => 'Uložená nabídka vyžaduje novější načtení s vlastnostmi variant.'];
         $choices = json_decode($variant['choices_json'] ?? '{}', true);
         if (!is_array($choices) || !$choices) return $none;
         $id = $variant['variant_key'];

@@ -42,6 +42,15 @@ final class PriceManager
             $stored=json_decode($settings['options_json']??'null',true)??[];
             $this->db->update('shop_supplier_price_settings',['options_json'=>self::json(array_replace($stored,$options))],'id=1');});
     }
+    public function configureVariantLinks(bool $enabled): void
+    {
+        $this->locked(function()use($enabled):void{
+            $settings=$this->settings();$options=json_decode($settings['options_json']??'null',true)??[];
+            $options['variant_links_enabled']=$enabled;
+            $options['variant_links_cursor']='';$options['variant_links_next_at']=0;
+            $this->db->update('shop_supplier_price_settings',['options_json'=>self::json($options)],'id=1');
+        });
+    }
     private function locked(callable $run): mixed
     {
         $name = 'supplier-prices:' . sha1((string)$this->db->queryFirstField('SELECT DATABASE()'));
@@ -177,6 +186,22 @@ final class PriceManager
             }
             $this->db->update('shop_supplier_price_settings',['last_tick'=>$now,'options_json'=>self::json($options)],'id=1');
             if((int)$settings['paused'])return ['state'=>'paused','wait'=>30];
+            $variantLinksMore=false;
+            if(!empty($options['variant_links_enabled'])&&(int)($options['variant_links_next_at']??0)<=$now){
+                try{
+                    $batch=(new VariantLinkDiscovery($this->db,$now))->batch((string)($options['variant_links_cursor']??''));
+                    $variantLinksMore=$batch['more'];$options['variant_links_cursor']=$batch['cursor'];
+                    $options['variant_links_next_at']=$batch['more']?0:$now+300;
+                    $options['variant_links_last_tick']=$now;$options['variant_links_error']='';
+                    if(!$batch['more'])$options['variant_links_last_scan']=$now;
+                }catch(Throwable $e){
+                    // Isolate discovery from the existing price queue; retry a failed batch later.
+                    $options['variant_links_next_at']=$now+300;
+                    $options['variant_links_error']='Párování odkazů se nezdařilo. Automatika zopakuje dávku za 5 minut.';
+                    error_log('Variant link discovery: '.get_class($e));
+                }
+                $this->db->update('shop_supplier_price_settings',['options_json'=>self::json($options)],'id=1');
+            }
             if((int)$settings['weekly_enabled'] && (int)$settings['next_weekly']<=$now){
                 $this->enqueueInternal('all','normal');
                 $this->db->update('shop_supplier_price_settings',['next_weekly'=>$now+604800],'id=1');
@@ -255,6 +280,7 @@ final class PriceManager
                 return ['state'=>'working','wait'=>$wait];
             }
             $next=$this->db->queryFirstField('SELECT MIN(next_at) FROM shop_supplier_price_jobs WHERE status=%s','queued');
+            if($variantLinksMore)return ['state'=>'working','wait'=>1];
             return ['state'=>$next===null?'idle':'waiting','wait'=>$next===null?30:max(1,min(60,(int)$next-$now)),'next_at'=>$next===null?0:(int)$next];
         });
     }

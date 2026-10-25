@@ -11,9 +11,13 @@
     <?php if ($variantLink === null): ?><strong>Přidat partnerský odkaz</strong>
     <?php else: ?>
     <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($variantLink['url']) ?>" target="_blank" rel="noopener noreferrer"><?= $escape($variantLink['label']) ?> ↗</a>
-    <span><?= $escape(['verified' => 'Ověřená shoda', 'conflict' => 'Potřebuje kontrolu', 'unverified' => $variantLink['origin'] === 'inherited' ? 'Převzatý – varianta neověřena' : 'Varianta neověřena'][$variantLink['verification']] ?? 'Neověřeno') ?></span>
+    <span><?= $escape($variantLink['verification'] === 'verified' && (int)($variantLink['result']['expires_at']??0) <= time() ? 'Shoda čeká na nové ověření' : (['verified' => 'Ověřená shoda', 'conflict' => 'Potřebuje kontrolu', 'unverified' => $variantLink['origin'] === 'inherited' ? 'Převzatý – varianta neověřena' : 'Varianta neověřena'][$variantLink['verification']] ?? 'Neověřeno')) ?></span>
     <?php endif; ?>
   </div>
+  <?php if (!empty($variantLink['result']['message'])): ?><p class="panel-help"><?= $escape($variantLink['result']['message']) ?>
+    <?php if (!empty($variantLink['checked_at'])): ?> Poslední ověřená nabídka: <?= $escape((new DateTimeImmutable('@'.$variantLink['checked_at']))->setTimezone(new DateTimeZone('Europe/Prague'))->format('j. n. Y H:i')) ?>.<?php endif; ?>
+    <?php if (($variantLink['result']['status']??'') === 'manual_review' && !empty($variantLink['result']['url'])): ?><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($variantLink['result']['url']) ?>" target="_blank" rel="noopener noreferrer">Otevřít navrženou variantu ↗</a><?php endif; ?>
+  </p><?php endif; ?>
 <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>" class="variant-partner-form">
 <input type="hidden" name="action" value="product-supplier-link"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>">
 <input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">

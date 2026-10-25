@@ -4,6 +4,13 @@ use SimpleStore\Supplier\PriceManager;
 
 $screen='supplier-prices';$priceManager=new PriceManager($db);$pricesReady=$priceManager->installed();
 $pricesAutoStart=false;$pricesError='';$pricesNotice='';$cronKey='';
+if ($method === 'GET' && $pricesReady && ($_GET['format'] ?? '') === 'variant-link-plan') {
+    $key = is_string($_GET['product_key'] ?? null) ? $_GET['product_key'] : '';
+    if ($key !== '' && !preg_match('/^[a-f0-9]{32}$/D', $key)) { http_response_code(400); exit; }
+    $report = (new \SimpleStore\Supplier\VariantLinkDiscovery($db, time()))->report($key);
+    header('Content-Type: application/json; charset=utf-8'); header('Cache-Control: no-store');
+    echo json_encode($report, JSON_THROW_ON_ERROR | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES); exit;
+}
 if ($method === 'GET' && ($_GET['format'] ?? '') === 'variant-links') {
     $products = new \SimpleStore\Product\ProductRepository($db, $site['languages']);
     $rows = $db->query('SELECT product_key,language,name FROM shop_product_revisions WHERE active_product_key IS NOT NULL ORDER BY product_key,language');
@@ -17,7 +24,15 @@ if($method==='GET'&&$pricesReady&&($_GET['format']??'')==='json'){
 }
 if($method==='POST'&&$pricesReady){
     try{
-        if($action==='supplier-price-start'){
+        if($action==='supplier-variant-links-settings'){
+            $enabled=($_POST['enabled']??'')==='1';$priceManager->configureVariantLinks($enabled);$pricesAutoStart=$enabled;
+            $pricesNotice=$enabled?'Automatické párování přesných odkazů je zapnuté. Výsledky budou u jednotlivých variant.':'Automatické párování odkazů je vypnuté.';
+        }elseif($action==='supplier-variant-links-export'){
+            $report=(new \SimpleStore\Supplier\VariantLinkDiscovery($db,time()))->report();
+            header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
+            header('Content-Disposition: attachment; filename="variant-link-plan.json"');
+            echo json_encode($report,JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);exit;
+        }elseif($action==='supplier-price-start'){
             $scope=is_string($_POST['scope']??null)?$_POST['scope']:'';$speed=is_string($_POST['speed']??null)?$_POST['speed']:'';
             $result=in_array($scope,['review','failed','problems'],true)?$priceManager->retry($scope,$speed,($_POST['fresh']??'')==='1'):
                 $priceManager->enqueue($scope,$speed,is_string($_POST['product_key']??null)?$_POST['product_key']:'');
