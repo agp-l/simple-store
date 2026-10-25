@@ -146,6 +146,10 @@ Pod 7 kilo poskytuje úplné varianty v serverovém JSON `variantsInfo`; kontrol
 ID varianty, vybraná cena a příslušnost URL. HUDY poskytuje barvu a velikost v JSON-LD variantách.
 Každá aktivní místní kombinace musí mít přesnou shodu. Více místních kombinací s různými cenami
 se nepřevede na jednu nejlevnější cenu. Vlastní ceny variant nadále vyžadují zapnutou automatiku.
+Pokud je zapnutá společná cenotvorba a produkt ještě nemá žádné vlastní prodejní ani dodavatelské
+ceny variant ani uložené vypnutí variantové automatiky, lze při přesném doložení všech kombinací
+založit samostatné automatické ceny. Každá kombinace dostane svoji cenu dodavatele a svůj přepočet;
+povolení automatiky se uloží v téže transakci. Ruční ceny ani výslovné vypnutí se nepřepisují.
 
 Ověřená cena vyprodaného zboží se může aktualizovat. Dostupnost dodavatele zůstává informací;
 sklad, publikování produktu ani zákaznické objednávky se nemění. Rozdílný prodávající, neznámá

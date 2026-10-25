@@ -115,7 +115,7 @@ final class GraminoVariantScope
         $value=self::normalize($value);
         if(preg_match('/^(.+?)\s*\(([^()]+)\)$/uD',$value,$parts)&&self::color($parts[1])===self::color($parts[2]))$value=self::color($parts[1]);
         $value=str_replace('hi-vis','hi vis',$value);
-        if(str_contains($value,'/'))return implode('/',array_map([self::class,'color'],explode('/',$value)));
+        if(str_contains($value,'/'))return implode(' ',array_map([self::class,'color'],explode('/',$value)));
         return ['červená'=>'red','modrá'=>'blue','zelená'=>'green','žlutá'=>'yellow','černá'=>'black','bílá'=>'white',
             'šedá'=>'grey','gray'=>'grey','stříbrná'=>'silver','oranžová'=>'orange','fialová'=>'purple','růžová'=>'pink',
             'hnědá'=>'brown','antracitová'=>'anthracite'][$value]??$value;

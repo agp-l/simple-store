@@ -234,5 +234,16 @@ $check(Parser::requestUrl('https://other.test/p/test')==='https://other.test/p/t
 $check(Manager::reviewReason([],['fallback'=>false,'uncertain'=>false,'price'=>100,'availability'=>'out_of_stock'])==='','Valid price was confused with availability.');
 $check(Manager::reviewReason(['sale'=>['supplier_price_czk'=>100]],['fallback'=>false,'uncertain'=>false,'price'=>200,'availability'=>'out_of_stock'])!=='','Out-of-stock price bypassed price-jump check.');
 echo "Supplier prices: real variant aliases, scoped attributes, mirror identity and out-of-stock pricing passed.\n";
+$doc=Parser::document($wrap($scopeGroup),$scopeGroup['url']);
+$local=$scope('Patizon D890',[['Barva'=>'Červená','Velikost'=>'S'],['Barva'=>'Červená','Velikost'=>'L']]);
+foreach($local['variants']as$i=>&$v){$v['variant_key']=str_repeat((string)($i+1),32);$v['price_czk']=null;}unset($v);
+$r=SimpleStore\Supplier\PriceEvaluation::select($doc,$scopeGroup['url'],$local,['pricing_enabled'=>1]);
+$check(!empty($r['enable_variant_pricing'])&&array_column($r['variant_offers'],'price')===[11990,12490],'Inherited variants lost their separate exact costs.');
+$local['variantPriceMode']=['enabled'=>0];
+$check(!SimpleStore\Supplier\PriceEvaluation::mayEnableVariantPricing($local,['pricing_enabled'=>1]),'Explicitly disabled automation was enabled.');
+unset($local['variantPriceMode']);$local['variants'][0]['price_czk']=15000;
+$check(!SimpleStore\Supplier\PriceEvaluation::mayEnableVariantPricing($local,['pricing_enabled'=>1]),'Manual variant retail price was claimed by automation.');
+$local['variants'][0]['price_czk']=null;$local['sale']=['variant_prices_json'=>'{"manual":100}'];
+$check(!SimpleStore\Supplier\PriceEvaluation::mayEnableVariantPricing($local,['pricing_enabled'=>1]),'Manual supplier overrides were claimed by automation.');
 $keyedCopy=SimpleStore\Product\ProductFamilyMerge::combinedCopy(['key-a'=>['name'=>'Mat — Regular','summary'=>'Shared','description'=>'Common. Width 51 cm.'],'key-b'=>['name'=>'Mat — Long Wide','summary'=>'Shared','description'=>'Common. Width 64 cm.']]);
 $check($keyedCopy['summary']==='Shared'&&$keyedCopy['description']==='Common.'&&$keyedCopy['sections'][1]['heading']==='Provedení Long Wide','Product-keyed snapshots changed copy extraction.');

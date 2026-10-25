@@ -10,7 +10,7 @@ use Throwable;
 
 final class PriceManager
 {
-    public const EVALUATOR_VERSION = 5;
+    public const EVALUATOR_VERSION = 6;
     private $transport;
     private $clock;
     private ?bool $variantModesInstalled=null;
@@ -229,7 +229,7 @@ final class PriceManager
                 $remote=!empty($result['fetched']);
                 $legacy=!empty($result['document']['offers'])&&(int)($result['document']['parser_version']??0)<PriceParser::VERSION;
                 if(isset($result['document'])){
-                    try{$result=PriceEvaluation::select($result['document'],$target,$snapshot)+['observed_at'=>$result['observed_at']];}
+                    try{$result=PriceEvaluation::select($result['document'],$target,$snapshot,$this->variantModesInstalled?$settings:[])+['observed_at'=>$result['observed_at']];}
                     catch(InvalidArgumentException $e){
                         if($legacy&&$this->scheduleParserRefresh($job,$data))continue;
                         $this->failure($job,$data,$e->getMessage());if(!$remote)continue;return ['state'=>'working','wait'=>$wait];
@@ -362,6 +362,7 @@ final class PriceManager
                 if(!$partner||PurchasePartnerRepository::missing($partner)!==[])throw new InvalidArgumentException('Záložní prodávající nemá dokončený a potvrzený profil. Nejprve jej doplň.');
             }
             $pricing=$this->settings();
+            $enableVariantPricing=!empty($result['enable_variant_pricing'])&&!$result['fallback']&&$this->variantModesInstalled&&PriceEvaluation::mayEnableVariantPricing($snapshot,$pricing);
             $newRetail=(int)$pricing['pricing_enabled'] ? PricingPolicy::price($result['price'],$pricing) : null;
             $retail=$newRetail===null?array_map('intval',array_column($snapshot['products'],'price_czk')):[$newRetail];
             if($result['price']>min($retail))throw new InvalidArgumentException('Cena dodavatele je vyšší než prodejní cena. Zapni cenotvorbu nebo uprav cenu produktu.');
@@ -370,7 +371,7 @@ final class PriceManager
             $overrides=json_decode($sale['variant_prices_json']??'{}',true)??[];
             $variantPrices=[];$oldOverrides=$overrides;
             if(!empty($result['variant_offers'])){
-                if(empty($snapshot['variantPriceMode']['enabled'])||$result['fallback'])throw new InvalidArgumentException('Automatická cenotvorba variant není pro tento produkt povolená.');
+                if((empty($snapshot['variantPriceMode']['enabled'])&&!$enableVariantPricing)||$result['fallback'])throw new InvalidArgumentException('Automatická cenotvorba variant není pro tento produkt povolená.');
                 foreach($snapshot['variants']as$v){
                     if(!(int)$v['enabled'])continue;
                     $offer=$result['variant_offers'][$v['variant_key']]??null;
@@ -408,6 +409,7 @@ final class PriceManager
                 $result['link_repair']=['old'=>$candidate['url'],'new'=>$corrected];
             }
             $variantChanges=[];
+            if($enableVariantPricing)$this->db->insert('shop_product_supplier_variant_modes',['product_key'=>$job['product_key'],'enabled'=>1]);
             foreach($snapshot['variants']as$v)if(isset($variantPrices[$v['variant_key']])&&(int)$v['price_czk']!==$variantPrices[$v['variant_key']]){
                 $this->db->update('shop_product_variants',['price_czk'=>$variantPrices[$v['variant_key']]],'product_key=%s AND variant_key=%s',$job['product_key'],$v['variant_key']);
                 $variantChanges[]=['variant_key'=>$v['variant_key'],'old'=>$v['price_czk'],'new'=>$variantPrices[$v['variant_key']]];

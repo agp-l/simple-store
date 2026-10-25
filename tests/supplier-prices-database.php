@@ -189,5 +189,21 @@ try{
  $responses[\SimpleStore\Supplier\PriceParser::requestUrl($legacyUrl)]['body']='<script type="application/ld+json">'.json_encode($body).'</script>';
  $now+=86401;$run(4,100);
  $check($job($legacy)['status']==='applied','Scheduled legacy refresh did not apply the exact new attributes.');
+ // With global pricing on, blank inherited variant prices can adopt individually proven costs.
+ $inherited=$make('inherited-prices',1000);$inheritedUrl='https://gramino.cz/p/inherited-prices';
+ $db->update('shop_product_sales',['partner_id'=>$gramino],'product_key=%s',$inherited);
+ $db->update('shop_product_supplier_links',['url'=>$inheritedUrl],'product_key=%s',$inherited);
+ $db->insert('shop_product_variant_settings',['product_key'=>$inherited,'enabled'=>1]);
+ $node=['@type'=>'ProductGroup','name'=>'Inherited model','url'=>$inheritedUrl,'hasVariant'=>[]];$expected=[];
+ foreach(['Red'=>1100,'Blue'=>1200]as$color=>$cost){
+  $vk=bin2hex(random_bytes(16));$expected[$vk]=$cost;
+  $db->insert('shop_product_variants',['product_key'=>$inherited,'variant_key'=>$vk,'choices_json'=>json_encode(['Barva'=>$color]),'available_quantity'=>4]);
+  $node['hasVariant'][]=['@type'=>'Product','name'=>'Inherited model '.$color,'color'=>$color,'offers'=>['@type'=>'Offer','url'=>$inheritedUrl.'?v_id='.$color,'price'=>$cost,'priceCurrency'=>'CZK']];
+ }
+ $responses[\SimpleStore\Supplier\PriceParser::requestUrl($inheritedUrl)]=['code'=>200,'headers'=>[],'body'=>'<script type="application/ld+json">'.json_encode($node).'</script>'];
+ $manager->enqueue('one','rapid',$inherited);$run(4,100);
+ $check($job($inherited)['status']==='applied'&&json_decode($sale($inherited)['variant_prices_json'],true)==$expected,'Distinct inherited costs were not applied atomically.');
+ $check((int)$db->queryFirstField('SELECT enabled FROM shop_product_supplier_variant_modes WHERE product_key=%s',$inherited)===1,'Automatic variant pricing preference not recorded.');
+ $check((int)$db->queryFirstField('SELECT SUM(available_quantity) FROM shop_product_variants WHERE product_key=%s',$inherited)===8,'Enabling inherited variant prices changed stock.');
  echo "Supplier prices: MySQL durable queue, selected/fallback sellers, daily and URL limits, pauses, locks, stale data, variants, current counters and cron passed.\n";
 }finally{$db->disconnect();$admin->query('DROP DATABASE %b',$database);}

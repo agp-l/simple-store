@@ -4,11 +4,26 @@ namespace SimpleStore\Supplier;
 
 final class PriceEvaluation
 {
-    public static function select(array $document,string $url,array $snapshot):array
+    public static function mayEnableVariantPricing(array $snapshot,array $pricing):bool
     {
-        return StructuredVariantScope::select($document,$url,$snapshot)??
-            GraminoVariantScope::select($document,$url,$snapshot)??
+        if(empty($pricing['pricing_enabled'])||empty($snapshot['variantSettings']['enabled'])||($snapshot['variantPriceMode']??null)!==null||
+            !empty(json_decode($snapshot['sale']['variant_prices_json']??'{}',true)))return false;
+        $active=0;
+        foreach($snapshot['variants']??[]as$v)if(!empty($v['enabled'])){if(($v['price_czk']??null)!==null)return false;$active++;}
+        return $active>0;
+    }
+    public static function select(array $document,string $url,array $snapshot,array $pricing=[]):array
+    {
+        $inherited=self::mayEnableVariantPricing($snapshot,$pricing);$scope=$snapshot;
+        if($inherited)$scope['variantPriceMode']=['enabled'=>1];
+        $result=StructuredVariantScope::select($document,$url,$scope)??
+            GraminoVariantScope::select($document,$url,$scope)??
             PriceParser::select($document,$url,$snapshot['products'][0]['name']??'');
+        if($inherited&&!empty($result['variant_offers'])){
+            if(empty($result['uniform_variants']))$result['enable_variant_pricing']=true;
+            else unset($result['variant_offers']);
+        }
+        return $result;
     }
     public static function issue(string $status,string $message):string
     {
@@ -37,7 +52,7 @@ final class PriceEvaluation
                 if(!$cache)foreach($item['trace']??[]as$attempt)if(($attempt['seller']??'')===$source['seller'])$message=$attempt['message'];
                 if(isset($cache['document'])){
                     try{
-                        $result=self::select($cache['document'],$source['resolved_url'],$snapshot);
+                        $result=self::select($cache['document'],$source['resolved_url'],$snapshot,$report['pricing']??[]);
                         $result['fallback']=!$source['selected'];
                         $message=PriceManager::reviewReason($snapshot,$result);
                         $out['price']=$result['price'];$out['source_url']=$result['corrected_url']??$source['resolved_url'];
