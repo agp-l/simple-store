@@ -1,5 +1,7 @@
 # Varianty produktu a samostatný sklad
 
+Další sjednocení jednoduchých produktů a variant, přímé adresy variant a vazby na nabídky dodavatelů řeší [implementační návrh](variant-supplier-architecture.md). Následující návod popisuje současnou implementaci; nový návrh dosud nemění sklad ani objednávky.
+
 Jeden produkt má společný název, popis, kategorii, galerii a výchozí cenu. Každá skutečně prodávaná kombinace vlastností má vlastní stabilní identitu, volné kusy, dostupnost, SKU a případně jinou cenu či fotografii. Názvy vlastností nejsou pevně dané: může jít o velikost, barvu, délku, objem nebo jejich kombinace. Varianty a sklad jsou společné pro překlady produktu.
 
 ## Použití v administraci

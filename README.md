@@ -6,6 +6,8 @@ Online platby: [Comgate](docs/comgate.md), [GoPay](docs/gopay.md) a [BTCPay Serv
 
 Aktuální kritické nálezy, kroky před nasazením a pořadí dalších oprav jsou v [auditu projektu](docs/audit-2026-10.md).
 
+[Návrh jednotných variant a nabídek dodavatelů](docs/variant-supplier-architecture.md) popisuje další přestavbu: přesné URL variant, více dodavatelů každé varianty, ověřené párování, objednávkové snímky a bezpečnou migraci skladu. Jde o implementační plán z 25. 10. 2026; nové tabulky a rozhraní popsané v návrhu zatím nejsou zavedené.
+
 Testovací hosting Webglobe: [postup nasazení přes FTP a aktualizace databáze](docs/deploy-webglobe.md). GitHub workflow po úspěšných testech zveřejní změny pouze po zapnutí repository variable a nastavení FTP secrets. Soukromé konfigurace a nahrané fotografie se nepřenášejí ani nemažou.
 
 **Nejdřív spusť v kořeni projektu:**

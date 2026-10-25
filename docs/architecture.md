@@ -1,5 +1,7 @@
 # Návrh jádra Simple Store
 
+Navazující [návrh variant a nabídek dodavatelů z 25. 10. 2026](variant-supplier-architecture.md) obsahuje plán stabilních variantních URL, evidence více dodavatelů po variantě a migrace bez přepisování historických objednávek. Nový model je zatím návrh; níže je současná architektura.
+
 ## Současný stav
 
 CMS řeší stránky, blog a produkty s revizemi. Pokladna nabízí české doručení na adresu a výdejní místa, bankovní převod, Comgate, GoPay a BTCPay. Správce i zákazníci mají roli v `shop_users`; heslo se ukládá pouze jako hash. Host může objednat bez účtu. Heslo lze obnovit e-mailem nebo správcovským CLI nástrojem. Stav platby, expedice, dokladu a externího přepravce tvoří různé osy; nelze je odvodit pouze z jediného statusu objednávky. [Audit a otevřené otázky](audit-2026-10.md) rozlišují ověřené funkce od těch, které potřebují rozhodnutí před ostrým provozem.

@@ -1,5 +1,7 @@
 # Ceny dodavatelů
 
+Plán přechodu od odkazů celého produktu k ověřeným nabídkám jednotlivých variant je v [návrhu variant a dodavatelů](variant-supplier-architecture.md). Následující dokumentace popisuje nasazený cenový automat; návrh nového modelu není návodem k již dostupnému API.
+
 Administrace: `/admin/supplier-prices/`. PHP 8.1+, cURL a stávající MySQL/MariaDB. Před prvním použitím aktualizovat SQL tabulky v Administrace → Databáze. Není potřeba Python, prohlížeč na hostingu ani externí služba.
 
 ## Provoz
