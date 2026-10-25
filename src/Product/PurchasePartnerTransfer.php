@@ -47,7 +47,9 @@ final class PurchasePartnerTransfer
         $identities = [];
         foreach ($data['partners'] as $index => &$partner) {
             if (!is_array($partner)) throw new InvalidArgumentException('Neplatný profil prodávajícího na řádku ' . ($index + 1) . '.');
-            self::keys($partner, array_merge(['key', 'confirmed'], array_keys(PurchasePartnerRepository::FIELDS)));
+            self::keys($partner, array_merge(['key', 'confirmed', 'priority'], array_keys(PurchasePartnerRepository::FIELDS)));
+            $hasPriority = array_key_exists('priority', $partner);
+            if ($hasPriority && !is_int($partner['priority'])) throw new InvalidArgumentException('Priorita v JSON musí být celé číslo od 1 do 9 999.');
             foreach (PurchasePartnerRepository::FIELDS as $field => $_) {
                 if (!is_string($partner[$field] ?? null)) throw new InvalidArgumentException('Profil č. ' . ($index + 1) . ' musí obsahovat textové pole ' . $field . ' (může být prázdné).');
             }
@@ -61,6 +63,8 @@ final class PurchasePartnerTransfer
             if ($key !== '' && isset($identities[$key])) throw new InvalidArgumentException('Soubor obsahuje dvakrát stejný identifikátor prodávajícího.');
             if ($key !== '') $identities[$key] = true;
             $partner = ['key' => $key] + self::profile($values);
+            // Older version-1 backups retain the priority already saved in this shop.
+            if (!$hasPriority) unset($partner['priority']);
         }
         unset($partner);
         return $data;
@@ -113,7 +117,7 @@ final class PurchasePartnerTransfer
 
     private function rows(bool $lock = false): array
     {
-        if (!(new PurchasePartnerRepository($this->db))->transferReady()) throw new InvalidArgumentException('Nejprve aktualizuj databázi v administraci.');
+        if (!(new PurchasePartnerRepository($this->db))->assignmentReady()) throw new InvalidArgumentException('Nejprve aktualizuj databázi v administraci.');
         return $this->db->query('SELECT * FROM shop_purchase_partners ORDER BY id' . ($lock ? ' FOR UPDATE' : ''));
     }
 
@@ -156,6 +160,7 @@ final class PurchasePartnerTransfer
                 $newIcos[$ico] = true;
             }
             $after = self::profile($partner);
+            $after['priority'] = (int) ($partner['priority'] ?? $current['priority'] ?? PurchasePartnerRepository::DEFAULT_PRIORITY);
             $before = $current === null ? null : self::profile($current);
             $state = $current === null ? 'new' : ($before === $after ? 'same' : 'changed');
             $counts[$state]++;
@@ -169,7 +174,8 @@ final class PurchasePartnerTransfer
     {
         $profile = [];
         foreach (PurchasePartnerRepository::FIELDS as $field => $_) $profile[$field] = (string) ($row[$field] ?? '');
-        return $profile + ['confirmed' => (bool) ($row['confirmed'] ?? false)];
+        return $profile + ['confirmed' => (bool) ($row['confirmed'] ?? false),
+            'priority' => (int) ($row['priority'] ?? PurchasePartnerRepository::DEFAULT_PRIORITY)];
     }
 
     private static function keys(array $data, array $allowed): void

@@ -103,7 +103,7 @@ $batch = $repository->managementPage('cs', 'spani/spacaky', 'Spacák', 'draft', 
 [$sql, $parameters] = $db->listings[0];
 if (count($batch['items']) !== 12 || $batch['nextOffset'] !== 24 ||
     !str_contains($sql, 'active_product_key IS NOT NULL') ||
-    !str_contains($sql, 'published=0') || !str_contains($sql, 'ORDER BY id DESC') ||
+    !str_contains($sql, 'published=0') || !str_contains($sql, 'ORDER BY r.id DESC') ||
     !str_contains($sql, 'subcategory LIKE %s') ||
     $parameters !== ['cs', 'spani', 'spacaky', 'spacaky/%', 'spacaky',
         'Spacák', 'Spacák', 'Spacák', 13, 12]) {

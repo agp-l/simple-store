@@ -8,6 +8,9 @@ $form = [];
 $massStore = new ProductMassUpdate($db, (int) ($site['revision_limit'] ?? 50));
 $massValues = ['quantity' => '', 'stock_status' => '', 'visibility' => ''];
 $massPreview = null;
+$partnerAssignment = new \SimpleStore\Product\ProductPartnerAssignment($db, $site['default_language']);
+$partnerAssignmentReady = $partnerAssignment->installed();
+$partnerAssignmentPlans = [];
 $variantBulkStore = new \SimpleStore\Product\ProductVariantBulkCreate($db, $site['default_language']);
 $variantBulkQuantity = '10';
 $variantBulkPreview = null;
@@ -22,7 +25,18 @@ if ($method === 'POST') {
         if (is_string($_POST[$key] ?? null)) $massValues[$key] = $_POST[$key];
     }
     try {
-        if (in_array($_POST['action'] ?? '', ['products-sale-preview', 'products-sale-apply'], true)) {
+        if (($_POST['action'] ?? '') === 'products-partners-assign') {
+            if (!is_string($_POST['assignment_scope'] ?? null) || !is_string($_POST['assignment_token'] ?? null)) {
+                throw new InvalidArgumentException('Obnov přehled přiřazení prodávajících.');
+            }
+            $result = $partnerAssignment->apply($_POST['assignment_scope'], $_POST['assignment_token'], $csrf);
+            $_SESSION['product_mass_notice'] = 'Přiřazení dokončeno. Změněno: ' . $result['change'] .
+                ', ponecháno: ' . ($result['same'] + $result['kept']) . ', bez odkazu: ' . $result['no_links'] .
+                ', bez shody webu: ' . $result['no_match'] . ', shodná priorita: ' . $result['conflict'] .
+                '. Ceny a způsob prodeje se nezměnily.';
+            header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=settings&tab=products#product-partner-assignment'), true, 303);
+            exit;
+        } elseif (in_array($_POST['action'] ?? '', ['products-sale-preview', 'products-sale-apply'], true)) {
             if ($_POST['action'] === 'products-sale-preview') {
                 unset($_SESSION['product_sale_bulk_preview']);
                 $saleBulkPreview = $saleBulkStore->preview($saleBulkMode);
@@ -95,3 +109,11 @@ if ($method === 'POST') {
 }
 $massCount = $massStore->count();
 $saleBulkCounts = $saleBulkStore->counts();
+if ($partnerAssignmentReady) {
+    try { $partnerAssignmentPlans = $partnerAssignment->previews(); }
+    catch (Throwable $error) {
+        $partnerAssignmentReady = false;
+        $settingsError = 'Přehled přiřazení se nepodařilo načíst. Obnov stránku; při opakování chyby zkontroluj databázi.';
+        error_log('Partner assignment preview failed: ' . $error->getMessage());
+    }
+}

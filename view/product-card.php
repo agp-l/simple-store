@@ -32,6 +32,12 @@ $hasOptions = ($product['variant_inventory']['enabled'] ?? false) || ProductDeta
           <p class="product-brand"><?= $escape($product['brand']) ?></p>
           <?php if (($product['sale_mode'] ?? 'own') === 'assisted'): ?><small class="assisted-label">Asistovaný nákup · služba v ceně</small><?php endif; ?>
           <h3><a href="<?= $escape($productLink) ?>"><?= $escape($product['name']) ?></a></h3>
+          <?php if (($managingCatalog ?? false) && array_key_exists('admin_partner_id', $product)): ?>
+          <div class="manage-supplier-status">
+            <a class="<?= $product['admin_partner_id'] === null ? 'is-missing' : '' ?>" href="<?= $escape($productLink . '#product-sale') ?>"><?= $product['admin_partner_id'] === null ? 'Bez prodávajícího' : $escape($product['admin_partner_name'] ?: 'Prodávající #' . $product['admin_partner_id']) ?></a>
+            <a class="<?= (int) $product['admin_supplier_count'] === 0 ? 'is-missing' : '' ?>" href="<?= $escape($productLink . '#supplier-links') ?>"><?= (int) $product['admin_supplier_count'] === 0 ? 'Bez dodavatelských odkazů' : 'Odkazy dodavatelů: ' . (int) $product['admin_supplier_count'] ?></a>
+          </div>
+          <?php endif; ?>
           <?php if ($product['summary'] !== ''): ?><p class="product-summary"><?= $escape($product['summary']) ?></p><?php endif; ?>
           <div class="product-meta"><span class="stock <?= $availability === 'in_stock' ? '' : 'stock-wait' ?>"><span class="stock-dot" aria-hidden="true"></span><?= $escape($stockText[$availability] ?? '') ?></span><?php if (($managingCatalog ?? false) && isset($product['stock_quantity'])): ?> <small>Volné: <?= (int) $product['stock_quantity'] ?> ks</small><?php endif; ?></div>
           <?php if (isset($product['weight_grams'])): ?><small class="product-weight">Hmotnost: <?= $escape((string) $product['weight_grams']) ?> g</small><?php endif; ?>

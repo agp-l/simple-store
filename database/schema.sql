@@ -417,6 +417,15 @@ PREPARE partner_key_fill_statement FROM @partner_key_fill;
 EXECUTE partner_key_fill_statement;
 DEALLOCATE PREPARE partner_key_fill_statement;
 
+-- Lower numbers win when matching private supplier URLs to seller websites.
+SET @partner_priority_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_purchase_partners' AND COLUMN_NAME='priority');
+SET @partner_priority_upgrade = IF(@partner_priority_exists=0,
+  'ALTER TABLE shop_purchase_partners ADD COLUMN priority SMALLINT UNSIGNED NOT NULL DEFAULT 100', 'SELECT 1');
+PREPARE partner_priority_statement FROM @partner_priority_upgrade;
+EXECUTE partner_priority_statement;
+DEALLOCATE PREPARE partner_priority_statement;
+
 CREATE TABLE IF NOT EXISTS shop_product_sales (
   product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
   mode VARCHAR(12) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'own',

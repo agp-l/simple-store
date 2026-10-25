@@ -7,7 +7,7 @@
           <span class="logo">dobrodruzi</span>
         </a>
         <button class="menu-toggle" type="button" id="menu-toggle" aria-controls="main-nav" aria-expanded="false" aria-label="Otevřít nabídku"><span></span><span></span><span></span></button>
-        <form class="search" id="search-form" role="search" method="get" action="<?= htmlspecialchars($searchAction, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?php if ($managingCatalog ?? false): ?><input type="hidden" name="manage" value="1"><?php if ($catalogVisibility !== 'all'): ?><input type="hidden" name="visibility" value="<?= htmlspecialchars($catalogVisibility, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?php endif; ?><?php endif; ?><svg viewBox="0 0 24 24" aria-hidden="true">
+        <form class="search" id="search-form" role="search" method="get" action="<?= htmlspecialchars($searchAction, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?php if ($managingCatalog ?? false): ?><input type="hidden" name="manage" value="1"><input type="hidden" name="supplier_state" value="<?= htmlspecialchars($catalogSupplierState ?? 'all', ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?php if ($catalogVisibility !== 'all'): ?><input type="hidden" name="visibility" value="<?= htmlspecialchars($catalogVisibility, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?php endif; ?><?php endif; ?><svg viewBox="0 0 24 24" aria-hidden="true">
             <circle cx="10.5" cy="10.5" r="6.5" />
             <path d="m15.5 15.5 5 5" />
           </svg><input type="search" id="search-input" name="search" value="<?= htmlspecialchars($searchTerm, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="Hledat produkty" placeholder="Co hledáte do výbavy?"

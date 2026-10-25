@@ -1,0 +1,10 @@
+.partner-assignment { scroll-margin-top:100px; border-top:4px solid #6366f1; }
+.partner-assignment-counts { display:flex; gap:12px; flex-wrap:wrap; margin:16px 0; }
+.partner-assignment-counts span { padding:10px 14px; background:#eef2ff; color:#1e1b4b; border:1px solid #c7d2fe; border-radius:7px; }
+.partner-assignment-counts strong { font-size:22px; }
+.partner-assignment details { margin:18px 0; }
+.partner-assignment summary { font-weight:650; cursor:pointer; padding:8px 0; }
+.partner-assignment .partner-assignment-replace { padding:12px 18px; border:1px solid #cbd5e1; border-radius:8px; background:#f8fafc; }
+.partner-assignment td { vertical-align:top; overflow-wrap:anywhere; }
+.partner-assignment-links { display:flex; gap:10px 24px; flex-wrap:wrap; }
+@media(max-width:600px) { .partner-assignment-counts { display:grid; grid-template-columns:minmax(0,1fr); } .partner-assignment .panel-table { min-width:0; } .partner-assignment th, .partner-assignment td { padding:10px 6px; } }

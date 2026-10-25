@@ -114,6 +114,7 @@ jobs:
           php tests/product-import.php
           php tests/product-variants.php
           php tests/purchase-partner-transfer.php
+          php tests/product-partner-assignment.php
           php tests/inline-editor.php
           php tests/content-cover.php
           php tests/media-catalog.php
@@ -195,6 +196,7 @@ jobs:
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
           php tests/purchase-partner-transfer-database.php
+          php tests/product-partner-assignment-database.php
           php tests/product-sales-mass-database.php
           php tests/media-archive.php
           php tests/media-owners-database.php
@@ -254,6 +256,7 @@ jobs:
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
           php tests/purchase-partner-transfer-database.php
+          php tests/product-partner-assignment-database.php
           php tests/product-sales-mass-database.php
           php tests/media-archive.php
           php tests/media-owners-database.php
@@ -293,6 +296,7 @@ jobs:
           node --test tests/product-variants-browser.mjs
           node --test tests/product-sale-browser.mjs
           node --test tests/purchase-partners-browser.mjs
+          node --test tests/product-partner-assignment-browser.mjs
           node --test tests/product-sales-mass-browser.mjs
           node --test tests/checkout-presentation-browser.mjs
           node --test tests/tax-evidence-browser.mjs

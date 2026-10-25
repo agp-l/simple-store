@@ -21,3 +21,15 @@ Po nasazení této změny použij **Databáze → Aktualizovat tabulky**. Migrac
 - Alza: [obchodní podmínky](https://www.alza.cz/obchodni-podminky-art10.htm). Aktuálně uvádějí telefon a kontaktní formulář; obecný e-mail nebyl spolehlivě ověřen, proto zůstává prázdný.
 
 Všechny tři profily mají `confirmed: false`. Import je připraví k doplnění a ověření, neoznačí je automaticky za schválené partnery ani je nepřiřadí k produktům.
+
+## Priority a přiřazení z dodavatelských odkazů
+
+U prodávajícího nastav **Prioritu při automatickém přiřazení**, celé číslo 1–9 999. Menší číslo vyhrává; výchozí je 100. Web se porovnává s doménou adres v produktové sekci **Dodavatelé**, bez rozdílu velikosti písmen a úvodního `www.`. Jiné poddomény se neslučují a názvy firem ani texty URL se neodhadují. Více odkazů na stejný obchod znamená jediného kandidáta; shodná nejlepší priorita různých profilů vyžaduje ruční rozhodnutí. Prázdný web se nepáruje.
+
+V **Nastavení → Produkty → Přiřadit prodávající podle dodavatelů** je aktuální souhrn i rozbalovací seznam návrhů. **Doplnit chybějící prodávající** provede přiřazení jedním kliknutím; již zvoleného prodávajícího zachová. Samostatná rozbalovací volba **Přepočítat i již vybrané prodávající** dovoluje přepsat i ruční volbu podle nových priorit. Bez jednoznačné shody zůstane stávající výběr. Operace zahrnuje koncepty a všechny jazyky, každý produkt jednou. Změní pouze přiřazeného prodávajícího a verzi nastavení; nevytváří objednávky, nezapíná asistovaný nákup, nepotvrzuje spolupráci a nemění ceny ani sklad. Po změně prodávajícího je potřeba zkontrolovat uložené ceny dodavatele. Žádné ceny ani stránky dodavatelů se nestahují.
+
+Před zápisem se v transakci znovu zkontrolují produkty, odkazy a profily včetně priorit. Při souběžné změně se celá operace odmítne a zobrazí nový přehled. Opakování stejného přiřazení nezvyšuje verze nezměněných produktů. Produktové odkazy ani starší objednávky se nepřepisují.
+
+Správa produktů má filtr **Prodávající a dodavatelé**: bez prodávajícího, bez odkazů, chybí alespoň jedno, nebo chybí obojí. Filtr funguje společně s hledáním, kategorií, viditelností a stránkováním. Rozpracovaný, ale existující profil se počítá jako přiřazený; odkaz na již neexistující profil jako chybějící. Karty ukazují vybraného prodávajícího a počet odkazů pouze ve správě, zákaznický katalog tyto údaje nezobrazuje.
+
+JSON verze 1 nyní exportuje také celočíselné `priority`. Starší záloha bez tohoto pole zachová existující prioritu; novému profilu nastaví 100. Po nasazení aktualizuj SQL tabulky v administraci. Migrace při opakování nastavené priority nepřepisuje.

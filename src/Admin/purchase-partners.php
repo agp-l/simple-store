@@ -6,7 +6,7 @@ use SimpleStore\Product\PurchasePartnerRepository;
 // Session authentication and POST CSRF validation are enforced by admin.php.
 $screen = 'purchase-partners';
 $partnersRepository = new PurchasePartnerRepository($db);
-$partnersReady = $partnersRepository->transferReady();
+$partnersReady = $partnersRepository->assignmentReady();
 $partnerError = '';
 $partnerForm = [];
 $rawId = $method === 'POST' ? ($_POST['id'] ?? '0') : ($_GET['id'] ?? '0');
@@ -23,6 +23,7 @@ if ($method === 'POST' && $action === 'purchase-partner-save') {
         $partnerForm[$field] = is_string($_POST[$field] ?? null) ? $_POST[$field] : '';
     }
     $partnerForm['confirmed'] = ($_POST['confirmed'] ?? '') === '1' ? 1 : 0;
+    $partnerForm['priority'] = is_string($_POST['priority'] ?? null) ? $_POST['priority'] : '';
     $partnerForm['version'] = is_scalar($_POST['version'] ?? null) ? $_POST['version'] : '';
     $partnerForm['id'] = $partnerId;
     try {
@@ -37,6 +38,7 @@ if ($method === 'POST' && $action === 'purchase-partner-save') {
     }
 }
 $partnerRows = $partnersRepository->all();
+usort($partnerRows, static fn (array $a, array $b): int => [(int) ($a['priority'] ?? 100), $a['name'], $a['id']] <=> [(int) ($b['priority'] ?? 100), $b['name'], $b['id']]);
 $partnerMissing = PurchasePartnerRepository::missing($partnerForm);
 $partnerQuery = is_string($_GET['q'] ?? null) ? trim($_GET['q']) : '';
 if ($partnerQuery !== '') {

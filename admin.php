@@ -316,7 +316,7 @@ try {
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }
-    if (in_array($action, ['products-sale-preview', 'products-sale-apply', 'products-mass-preview', 'products-mass-apply', 'products-variants-preview', 'products-variants-apply', 'save-checkout-settings', 'fio-cron-rotate', 'save-site-copy', 'save-mail-settings', 'preview-mail', 'mail-test'], true) ||
+    if (in_array($action, ['products-partners-assign', 'products-sale-preview', 'products-sale-apply', 'products-mass-preview', 'products-mass-apply', 'products-variants-preview', 'products-variants-apply', 'save-checkout-settings', 'fio-cron-rotate', 'save-site-copy', 'save-mail-settings', 'preview-mail', 'mail-test'], true) ||
         ($method !== 'POST' && $section === 'settings')) {
         require __DIR__ . '/src/Admin/settings.php';
         require __DIR__ . '/view/admin/layout.php';

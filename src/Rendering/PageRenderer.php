@@ -43,6 +43,7 @@ final class PageRenderer
         $canManageCatalog = (bool) ($data['canManageCatalog'] ?? false);
         $managingCatalog = (bool) ($data['managingCatalog'] ?? false);
         $catalogVisibility = (string) ($data['catalogVisibility'] ?? 'all');
+        $catalogSupplierState = (string) ($data['catalogSupplierState'] ?? 'all');
         $managementCategories = $data['managementCategories'] ?? [];
         $categoryTipsScope = (string) ($data['categoryTipsScope'] ?? '');
         $categoryTipsSelected = $data['categoryTipsSelected'] ?? [];

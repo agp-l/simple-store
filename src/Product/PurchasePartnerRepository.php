@@ -10,6 +10,7 @@ use MeekroDB;
 final class PurchasePartnerRepository
 {
     private ?bool $ready = null;
+    public const DEFAULT_PRIORITY = 100;
     public const FIELDS = ['name' => 190, 'ico' => 8, 'address' => 500, 'email' => 190, 'website_url' => 1000, 'terms_url' => 1000];
 
     public function __construct(private MeekroDB $db) {}
@@ -40,10 +41,17 @@ final class PurchasePartnerRepository
         return $this->installed() ? $this->db->queryFirstRow('SELECT * FROM shop_purchase_partners WHERE id=%i', $id) : null;
     }
 
+    public function assignmentReady(): bool
+    {
+        return $this->transferReady() && (int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE()
+             AND TABLE_NAME=%s AND COLUMN_NAME=%s', 'shop_purchase_partners', 'priority') === 1;
+    }
+
     /** Missing or unfinished contact data is valid draft data, never a checkout-ready identity. */
     public function save(int $id, array $input): int
     {
-        if (!$this->transferReady()) throw new InvalidArgumentException('Nejprve aktualizuj databázi v administraci.');
+        if (!$this->assignmentReady()) throw new InvalidArgumentException('Nejprve aktualizuj databázi v administraci.');
         $values = self::values($input);
         if ($id === 0) {
             if (implode('', array_intersect_key($values, self::FIELDS)) === '') throw new InvalidArgumentException('Vyplň alespoň jeden údaj nového prodávajícího.');
@@ -52,6 +60,7 @@ final class PurchasePartnerRepository
         }
         $version = filter_var($input['version'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
         if ($id < 1 || $version === false) throw new InvalidArgumentException('Neplatná verze prodávajícího. Obnov stránku.');
+        if (!array_key_exists('priority', $input)) unset($values['priority']);
         $this->db->update('shop_purchase_partners', $values + ['version' => $version + 1],
             'id=%i AND version=%i', $id, $version);
         if ($this->db->affectedRows() !== 1) {
@@ -75,6 +84,12 @@ final class PurchasePartnerRepository
             throw new InvalidArgumentException('IČO může obsahovat nejvýše osm číslic.');
         }
         $values['confirmed'] = ($input['confirmed'] ?? '') === '1' ? 1 : 0;
+        $priority = array_key_exists('priority', $input) ? $input['priority'] : self::DEFAULT_PRIORITY;
+        if ((!is_string($priority) && !is_int($priority)) ||
+            preg_match('/^[1-9][0-9]{0,3}$/D', (string) $priority) !== 1) {
+            throw new InvalidArgumentException('Priorita musí být celé číslo od 1 do 9 999. Menší číslo má přednost.');
+        }
+        $values['priority'] = (int) $priority;
         if ($values['website_url'] !== '' && !self::validWebsite($values['website_url'])) {
             throw new InvalidArgumentException('Web prodávajícího musí být úplná HTTP nebo HTTPS adresa bez přihlašovacích údajů.');
         }
@@ -84,7 +99,7 @@ final class PurchasePartnerRepository
     public static function validWebsite(string $url): bool
     {
         return filter_var($url, FILTER_VALIDATE_URL) !== false &&
-            in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true) &&
+            in_array(strtolower((string) parse_url($url, PHP_URL_SCHEME)), ['http', 'https'], true) &&
             parse_url($url, PHP_URL_USER) === null && parse_url($url, PHP_URL_PASS) === null;
     }
 

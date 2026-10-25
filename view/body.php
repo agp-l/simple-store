@@ -35,17 +35,18 @@ if ($manualCategoryMenu) {
         <?php if ($currentCategory === null && $homepageConfigured && !$managingCatalog && !$homepageEditing): ?><p class="catalog-public-links"><?php if ($homepageSelectionActive): ?><a href="<?= $escape($siteRoot . $language . '?all=1#produkty') ?>">Prohlédnout veškeré vybavení →</a><?php else: ?><a href="<?= $escape($siteRoot . $language . '#produkty') ?>">Zpět na výběr pro úvodní stránku →</a><?php endif; ?></p><?php endif; ?>
       </div><span class="result-count" id="result-count" aria-live="polite">Načteno <?= $productCount . ' ' . $productWord ?></span>
     </div>
-    <?php if ($managingCatalog): ?>
+    <?php if ($managingCatalog): $catalogSupplierState ??= 'all'; ?>
       <nav class="catalog-manage-filter" aria-label="Stav produktů">
         <?php foreach (['all' => 'Všechny', 'draft' => 'Skryté a koncepty', 'published' => 'Zveřejněné'] as $state => $label): ?>
-          <a href="<?= $escape($searchAction . '?' . http_build_query(array_filter(['manage' => '1', 'visibility' => $state === 'all' ? '' : $state, 'search' => $searchTerm], 'strlen'))) ?>" <?= $catalogVisibility === $state ? 'aria-current="page"' : '' ?>><?= $label ?></a>
+          <a href="<?= $escape($searchAction . '?' . http_build_query(array_filter(['manage' => '1', 'visibility' => $state === 'all' ? '' : $state, 'search' => $searchTerm, 'supplier_state' => $catalogSupplierState === 'all' ? '' : $catalogSupplierState], 'strlen'))) ?>" <?= $catalogVisibility === $state ? 'aria-current="page"' : '' ?>><?= $label ?></a>
         <?php endforeach; ?>
       </nav>
+      <?php require __DIR__ . '/manage/product-supplier-filter.php'; ?>
       <?php if ($managementCategories !== []): ?><details class="catalog-manage-categories"><summary>Vybrat kategorii<?= $currentCategory === null ? '' : ': ' . $escape($currentCategory['title']) ?></summary>
         <nav aria-label="Kategorie spravovaných produktů">
-          <a href="<?= $escape($siteRoot . $language . '?manage=1') ?>">Všechny kategorie</a>
+          <a href="<?= $escape($siteRoot . $language . '?' . http_build_query(['manage' => '1', 'visibility' => $catalogVisibility, 'search' => $searchTerm, 'supplier_state' => $catalogSupplierState])) ?>">Všechny kategorie</a>
           <?php foreach ($managementCategories as $category): ?>
-            <a href="<?= $escape($siteRoot . $language . '/kategorie-produktu/' . $category['path'] . '?' . http_build_query(array_filter(['manage' => '1', 'visibility' => $catalogVisibility === 'all' ? '' : $catalogVisibility, 'search' => $searchTerm], 'strlen'))) ?>"><?= $escape($category['title']) ?></a>
+            <a href="<?= $escape($siteRoot . $language . '/kategorie-produktu/' . $category['path'] . '?' . http_build_query(array_filter(['manage' => '1', 'visibility' => $catalogVisibility === 'all' ? '' : $catalogVisibility, 'search' => $searchTerm, 'supplier_state' => $catalogSupplierState === 'all' ? '' : $catalogSupplierState], 'strlen'))) ?>"><?= $escape($category['title']) ?></a>
           <?php endforeach; ?>
         </nav>
       </details><?php endif; ?>
@@ -56,7 +57,7 @@ if ($manualCategoryMenu) {
           <?php foreach ($filterLinks as $link): ?>
             <?php $isCurrent = isset($link['path']) && ($currentCategory['path'] ?? '') === $link['path']; ?>
             <?php $filterHref = $managingCatalog && isset($link['path'])
-                ? $siteRoot . $language . '/kategorie-produktu/' . $link['path'] . '?' . http_build_query(array_filter(['manage' => '1', 'visibility' => $catalogVisibility === 'all' ? '' : $catalogVisibility, 'search' => $searchTerm], 'strlen')) . '#produkty'
+                ? $siteRoot . $language . '/kategorie-produktu/' . $link['path'] . '?' . http_build_query(array_filter(['manage' => '1', 'visibility' => $catalogVisibility === 'all' ? '' : $catalogVisibility, 'search' => $searchTerm, 'supplier_state' => $catalogSupplierState === 'all' ? '' : $catalogSupplierState], 'strlen')) . '#produkty'
                 : $link['href'] . (isset($link['path']) ? '#produkty' : ''); ?>
             <a class="filter<?= $link['active'] ? ' active' : '' ?>" href="<?= $escape($filterHref) ?>" <?= $isCurrent ? 'aria-current="page"' : '' ?><?= !empty($link['newTab']) ? ' target="_blank" rel="noopener noreferrer"' : '' ?>><?php if (($link['depth'] ?? 0) > 0): ?><span aria-hidden="true">↳ </span><?php endif; ?><?= $escape($link['label']) ?></a>
           <?php endforeach; ?>

@@ -6,6 +6,7 @@
   <?php if (!$partnersReady): ?>
     <p><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">Nejprve aktualizuj databázi.</a></p>
   <?php else: ?>
+  <p class="panel-help">Pro přiřazení z dodavatelských odkazů vyplň web. Priorita 1 má přednost před 2; při stejné prioritě více prodávajících rozhodni ručně. Nastavení se použije při spuštění v Nastavení → Produkty.</p>
   <div class="partner-tools"><a class="panel-action" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=purchase-partners#partner-form') ?>"><?= \SimpleStore\Rendering\Icon::render('plus') ?> Nový prodávající</a><a class="panel-icon-link" href="#partner-backup"><?= \SimpleStore\Rendering\Icon::render('download') ?> Import a export JSON</a></div>
   <form method="get" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>" class="panel-form">
     <input type="hidden" name="section" value="purchase-partners">
@@ -13,13 +14,13 @@
     <button class="panel-button" type="submit">Hledat</button>
     <?php if ($partnerQuery !== ''): ?><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=purchase-partners') ?>">Zobrazit všechny</a><?php endif; ?>
   </form>
-  <div class="panel-table-wrap"><table class="panel-table"><thead><tr><th>Prodávající</th><th>IČO / kontakt</th><th>Stav</th><th>Produkty</th><th></th></tr></thead><tbody>
+  <div class="panel-table-wrap"><table class="panel-table"><thead><tr><th>Prodávající</th><th>IČO / kontakt</th><th>Priorita</th><th>Stav</th><th>Produkty</th><th></th></tr></thead><tbody>
   <?php foreach ($partnerRows as $row): $missing = Partners::missing($row); ?>
     <tr><td data-label="Prodávající"><strong><?= $escape(Partners::label($row)) ?></strong><?php if (Partners::validWebsite($row['website_url'] ?? '')): ?><a class="partner-website" href="<?= $escape($row['website_url']) ?>" target="_blank" rel="noopener noreferrer"><?= \SimpleStore\Rendering\Icon::render('external') ?> <?= $escape(parse_url($row['website_url'], PHP_URL_HOST)) ?></a><?php else: ?><small>Web zatím není vyplněný</small><?php endif; ?></td><td data-label="IČO / kontakt"><?= $escape($row['ico']) ?><br><?= $escape($row['email']) ?></td>
-      <td data-label="Stav"><span class="partner-state <?= $missing === [] ? 'is-ready' : 'is-draft' ?>"><?= $missing === [] ? 'Připravený' : 'Rozpracovaný' ?></span></td><td data-label="Produkty"><?= (int) $row['product_count'] ?></td>
+      <td data-label="Priorita"><strong><?= (int) ($row['priority'] ?? 100) ?></strong></td><td data-label="Stav"><span class="partner-state <?= $missing === [] ? 'is-ready' : 'is-draft' ?>"><?= $missing === [] ? 'Připravený' : 'Rozpracovaný' ?></span></td><td data-label="Produkty"><?= (int) $row['product_count'] ?></td>
       <td data-label="Úprava"><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=purchase-partners&id=' . (int) $row['id'] . '#partner-form') ?>">Zobrazit / upravit</a></td></tr>
   <?php endforeach; ?>
-  <?php if ($partnerRows === []): ?><tr><td colspan="5">Žádní prodávající<?= $partnerQuery !== '' ? ' neodpovídají hledání' : ' zatím nejsou uloženi' ?>.</td></tr><?php endif; ?>
+  <?php if ($partnerRows === []): ?><tr><td colspan="6">Žádní prodávající<?= $partnerQuery !== '' ? ' neodpovídají hledání' : ' zatím nejsou uloženi' ?>.</td></tr><?php endif; ?>
   </tbody></table></div>
   <?php endif; ?>
 </section>
@@ -36,6 +37,7 @@
     <input type="hidden" name="action" value="purchase-partner-save"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
     <input type="hidden" name="id" value="<?= (int) $partnerForm['id'] ?>"><input type="hidden" name="version" value="<?= $escape($partnerForm['version']) ?>">
     <?php $partnerFields = $partnerForm; $partnerPrefix = ''; require __DIR__ . '/../manage/purchase-partner-fields.php'; ?>
+    <label>Priorita při automatickém přiřazení<input type="number" name="priority" min="1" max="9999" step="1" required value="<?= $escape($partnerForm['priority'] ?? 100) ?>"><small>Menší číslo má přednost. Výchozí hodnota je 100.</small></label>
     <button class="panel-button panel-action" type="submit">Uložit prodávajícího</button>
     <p class="panel-help">Uložit můžeš i neúplné kontakty. Stav „Připravený“ se nastaví automaticky po doplnění všech údajů a potvrzení spolupráce.</p>
   </form>

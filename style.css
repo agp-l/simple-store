@@ -1574,3 +1574,14 @@ main {
 /* A clear, quiet sales-mode label; full partner details are available in checkout. */
 .assisted-label { display: block; margin: 6px 0; color: #52604f; font-size: 12px; line-height: 1.6; }
 .assisted-label a { color: var(--forest-dark); text-underline-offset: 3px; }
+
+/* Private product-management controls only. */
+.catalog-supplier-filter { display:flex; align-items:end; gap:12px; flex-wrap:wrap; padding:16px; margin:0 0 18px; border:1px solid #cbd5e1; border-radius:8px; background:#f8fafc; color:#172033; }
+.catalog-supplier-filter label { display:grid; gap:6px; flex:1 1 260px; font-size:14px; font-weight:700; }
+.catalog-supplier-filter select { width:100%; min-width:0; max-width:100%; padding:10px; border:1px solid #94a3b8; border-radius:5px; background:white; color:#172033; font:inherit; }
+.catalog-supplier-filter button { padding:11px 16px; background:#334b86; color:white; border:0; border-radius:5px; font:700 14px var(--font-body); cursor:pointer; }
+.catalog-supplier-filter a { color:#233e78; padding:10px 0; }
+.catalog-supplier-filter p { flex-basis:100%; margin:0; font-size:13px; line-height:1.5; }
+.manage-supplier-status { display:flex; flex-wrap:wrap; gap:6px; margin:8px 0; }
+.manage-supplier-status a { padding:4px 7px; border:1px solid #cbd5e1; border-radius:5px; background:#eff6ff; color:#1e3a6e; font-size:12px; line-height:1.4; overflow-wrap:anywhere; }
+.manage-supplier-status a.is-missing { background:#fffbeb; color:#78350f; border-color:#fde68a; }

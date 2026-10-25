@@ -217,6 +217,11 @@ try {
             exit;
         }
         $visibility = $_GET['visibility'] ?? 'all';
+        $supplierState = $managingCatalog ? ($_GET['supplier_state'] ?? 'all') : 'all';
+        if (!is_string($supplierState) || !isset(ProductRepository::SUPPLIER_FILTERS[$supplierState])) {
+            $renderer->render('not-found', $shared, 400);
+            exit;
+        }
         if ($managingCatalog && (!is_string($visibility) || !in_array($visibility, ['all', 'draft', 'published'], true))) {
             $renderer->render('not-found', $shared, 400);
             exit;
@@ -275,7 +280,7 @@ try {
             ($homepageSelectionActive
                 ? ['items' => $homepage->products($url->getLanguage(), $homepageKeys, $productStock), 'nextOffset' => null]
                 : ($managingCatalog
-                    ? $repository->managementPage($url->getLanguage(), $path, $search, $visibility, $offset)
+                    ? $repository->managementPage($url->getLanguage(), $path, $search, $visibility, $offset, 12, $supplierState)
                     : (new \SimpleStore\Product\CatalogSelection($repository))->page($url->getLanguage(), $path, $search, $sort, $offset, $seed, $tipKeys, $maxWeight)));
         if ($homepageEditing) {
             $pick = $_GET['pick'] ?? '';
@@ -319,6 +324,7 @@ try {
         $shared['products'] = $batch['items'];
         $shared['managingCatalog'] = $managingCatalog;
         $shared['catalogVisibility'] = $visibility;
+        $shared['catalogSupplierState'] = $supplierState;
         $shared['managementCategories'] = $managingCatalog ? $categories->allForAdmin($url->getLanguage()) : [];
         $shared['privatePage'] = $managingCatalog || $homepageEditing;
         $shared['productDeleted'] = $managingCatalog && ($_GET['deleted'] ?? '') === '1';
@@ -327,6 +333,7 @@ try {
         $shared['searchAction'] = $path === null ? $url->path() : $url->category($path);
         $nextUrl = $batch['nextOffset'] === null ? '' : $shared['searchAction'] . '?' . http_build_query(
             array_filter(['manage' => $managingCatalog ? '1' : '', 'visibility' => $managingCatalog && $visibility !== 'all' ? $visibility : '',
+                'supplier_state' => $managingCatalog && $supplierState !== 'all' ? $supplierState : '',
                 'search' => $search, 'sort' => !$managingCatalog ? $sort : '', 'seed' => $seed, 'max_weight' => $maxWeight ?? '', 'all' => ($_GET['all'] ?? '') === '1' ? '1' : '',
                 'offset' => $batch['nextOffset']], static fn (mixed $value): bool => $value !== '')
         );

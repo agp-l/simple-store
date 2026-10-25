@@ -4,7 +4,7 @@ $partnerBackupError = $partnerBackupError ?? '';
 $partnerBackupPlan = $partnerBackupPlan ?? null;
 $partnerBackupJson = $partnerBackupJson ?? '';
 $partnerBackupUrl = $partnerBackupUrl ?? ($adminUrl . '?section=purchase-partners');
-$partnerFieldLabels = ['name' => 'Firma', 'ico' => 'IČO', 'address' => 'Adresa', 'email' => 'E-mail', 'website_url' => 'Web', 'terms_url' => 'Obchodní podmínky', 'confirmed' => 'Nákup jménem zákazníka ověřen'];
+$partnerFieldLabels = ['name' => 'Firma', 'ico' => 'IČO', 'address' => 'Adresa', 'email' => 'E-mail', 'website_url' => 'Web', 'terms_url' => 'Obchodní podmínky', 'priority' => 'Priorita', 'confirmed' => 'Nákup jménem zákazníka ověřen'];
 ?>
 <section class="panel-panel partner-backup" id="partner-backup" aria-labelledby="partner-backup-title">
   <h2 id="partner-backup-title"><?= \SimpleStore\Rendering\Icon::render('download') ?> Import a export prodávajících</h2>

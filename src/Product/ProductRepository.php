@@ -14,6 +14,8 @@ use Throwable;
 /** Store each product edit as a new complete snapshot. */
 final class ProductRepository
 {
+    public const SUPPLIER_FILTERS = ['all' => 'Všechny produkty', 'no_partner' => 'Bez prodávajícího',
+        'no_links' => 'Bez dodavatelských odkazů', 'either' => 'Chybí prodávající nebo odkaz', 'both' => 'Chybí prodávající i odkazy'];
     private const STOCK = ['in_stock', 'on_order', 'out_of_stock'];
 
     public function __construct(
@@ -97,11 +99,12 @@ final class ProductRepository
         string $search = '',
         string $visibility = 'all',
         int $offset = 0,
-        int $limit = 12
+        int $limit = 12,
+        string $supplierState = 'all'
     ): array
     {
         if (!in_array($language, $this->languages, true) ||
-            !in_array($visibility, ['all', 'draft', 'published'], true) ||
+            !in_array($visibility, ['all', 'draft', 'published'], true) || !isset(self::SUPPLIER_FILTERS[$supplierState]) ||
             $offset < 0 || $offset > 100000 || $limit < 1 || $limit > 48 || strlen($search) > 200) {
             throw new InvalidArgumentException('Invalid product management page.');
         }
@@ -120,12 +123,27 @@ final class ProductRepository
             $where .= ' AND (LOCATE(%s, name)>0 OR LOCATE(%s, brand)>0 OR LOCATE(%s, summary)>0)';
             array_push($values, $search, $search, $search);
         }
+        $supplierTablesReady = (int) $this->db->queryFirstField('SELECT COUNT(*) FROM information_schema.TABLES
+            WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN (%s,%s,%s)',
+            'shop_product_sales', 'shop_purchase_partners', 'shop_product_supplier_links') === 3;
+        $sellerQuery = 'SELECT p.id FROM shop_product_sales s JOIN shop_purchase_partners p ON p.id=s.partner_id WHERE s.product_key=r.product_key';
+        $linksQuery = 'SELECT 1 FROM shop_product_supplier_links l WHERE l.product_key=r.product_key';
+        if ($supplierTablesReady && $supplierState !== 'all') {
+            $withoutSeller = 'NOT EXISTS (' . $sellerQuery . ')';
+            $withoutLinks = 'NOT EXISTS (' . $linksQuery . ')';
+            $where .= ' AND (' . ['no_partner' => $withoutSeller, 'no_links' => $withoutLinks,
+                'either' => $withoutSeller . ' OR ' . $withoutLinks, 'both' => $withoutSeller . ' AND ' . $withoutLinks][$supplierState] . ')';
+        }
+        $supplierColumns = $supplierTablesReady
+            ? ', (' . $sellerQuery . ') AS admin_partner_id, (' . str_replace('SELECT p.id', 'SELECT p.name', $sellerQuery) . ') AS admin_partner_name,
+                (SELECT COUNT(*) FROM shop_product_supplier_links l WHERE l.product_key=r.product_key) AS admin_supplier_count'
+            : ', NULL AS admin_partner_id, NULL AS admin_partner_name, 0 AS admin_supplier_count';
         array_push($values, $limit + 1, $offset);
         $rows = $this->db->query(
             'SELECT product_key, language, slug, name, brand, summary, details_json,
                     category, subcategory, price_czk, image_path, sizes, stock_status,
-                    published, revision_number, saved_at
-             FROM shop_product_revisions WHERE ' . $where . ' ORDER BY id DESC LIMIT %i OFFSET %i',
+                    published, revision_number, saved_at ' . $supplierColumns . '
+             FROM shop_product_revisions r WHERE ' . $where . ' ORDER BY r.id DESC LIMIT %i OFFSET %i',
             ...$values
         );
         return ['items' => $this->stock?->decorate(array_slice($rows, 0, $limit)) ?? array_slice($rows, 0, $limit),
