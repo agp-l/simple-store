@@ -49,6 +49,7 @@ final class PageRenderer
         $categoryTipsSelected = $data['categoryTipsSelected'] ?? [];
         $variantError = $data['variantError'] ?? '';
         $variantForm = $data['variantForm'] ?? [];
+        $supplierVariantPricing = (bool) ($data['supplierVariantPricing'] ?? false);
         $variantModeBlocked = (bool) ($data['variantModeBlocked'] ?? false);
         $catalogPosts = $data['catalogPosts'] ?? [];
         $catalogPostKeys = $data['catalogPostKeys'] ?? [];

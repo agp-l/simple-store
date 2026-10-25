@@ -61,7 +61,8 @@ $check(!isset(ProductImport::fields($doc, $product)['variant_inventory']), 'Comm
 $renderer = new PageRenderer(dirname(__DIR__) . '/view');
 ob_start(); $renderer->render('product-record', ['product' => $product, 'basePath' => '/shop/', 'language' => 'cs']); $html = ob_get_clean();
 $check(str_contains($html, 'name="variant_key"') && str_contains($html, 'Barva: Modrá') && !str_contains($html, 'value="' . $rows[2]['id'] . '"') && !str_contains($html, 'Volné kusy'), 'Public variant picker leaked admin inventory or retired combinations.');
-ob_start(); $renderer->render('product-record', ['product' => $product, 'basePath' => '/shop/', 'language' => 'cs', 'editMode' => true, 'canEditProduct' => true]); $adminHtml = ob_get_clean();
+ob_start(); $renderer->render('product-record', ['product' => $product, 'basePath' => '/shop/', 'language' => 'cs', 'editMode' => true, 'canEditProduct' => true, 'supplierVariantPricing' => true]); $adminHtml = ob_get_clean();
+$check(str_contains($adminHtml, 'Ceny těchto sloučených variant se automaticky počítají'), 'Managed pricing notice was lost by the renderer.');
 $check(str_contains($adminHtml, 'id="variant-batch"') && str_contains($adminHtml, 'name="merge_groups"') && str_contains($adminHtml, 'BLUE-S'), 'Variant controls did not render.');
 $check(str_contains($adminHtml, 'id="detail-image" src="/shop/' . $product['image_path'] . '"'), 'Variant photo choices corrupted the main image URL.');
 $check(str_contains($adminHtml, '/assets/product-variants.js?'), 'Variant photo preview is missing in edit mode.');
