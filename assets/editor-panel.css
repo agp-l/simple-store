@@ -157,13 +157,3 @@
 .content-admin-panel .inline-settings > label,
 .content-admin-panel .inline-stock-form > label { gap: 6px; font-weight: 600; }
 .content-admin-panel .inline-settings :is(input:not([type="checkbox"]), select) { background: #fff; }
-
-/* Variant partner links need room for full URLs alongside size/colour context. */
-.editor-panel-sections .supplier-links.variant-supplier-panel {
-  grid-column: 1 / -1;
-  border-left: 0;
-  border-top: 1px solid #d6e4d2;
-}
-.variant-supplier-panel .supplier-form select { width: 100%; min-width: 0; padding: 10px; }
-.variant-supplier-panel details { min-width: 0; }
-.variant-supplier-panel p a { overflow-wrap: anywhere; }

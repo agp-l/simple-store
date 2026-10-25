@@ -10,6 +10,8 @@ if (($variantForm['operation'] ?? '') === 'batch' && is_string($variantForm['row
         if (is_array($submittedRow) && is_string($submittedRow['variant_id'] ?? null)) $variantFailedRows[$submittedRow['variant_id']] = $submittedRow;
     }
 }
+$variantLinksById = [];
+foreach ($variantSupplierLinks as $link) $variantLinksById[$link['variant_key']][] = $link;
 $variantGroups = [];
 foreach ($details['options'] as $group) $variantGroups[] = $group['name'] . ': ' . implode(' | ', $group['values']);
 ?>
@@ -41,14 +43,33 @@ foreach ($details['options'] as $group) $variantGroups[] = $group['name'] . ': '
   <?php if ($variantRows !== []): ?>
   <p data-variant-save-state role="status" hidden></p>
   <p>SKU je nepovinný interní kód varianty, například BUNDA-M-MODRA. Prázdná fotografie přebírá obrázek produktu. Vlastnosti varianty jsou stálé; jinou kombinaci přidej jako novou.</p>
-  <div class="variant-table-wrap"><table class="variant-table"><thead><tr><th>Varianta</th><th>SKU</th><th>Volné kusy</th><th>Dostupnost</th><th>Vlastní cena Kč</th><th>Fotografie</th><th>Nabízet</th><th></th></tr></thead><tbody>
+  <div class="variant-partner-tools" id="variant-supplier-links">
+    <p>Partnerské odkazy upravíš přímo pod údaji každé varianty. Převzaté odkazy zatím nepotvrzují správnou velikost či barvu.</p>
+    <?php if (!$variantSupplierReady): ?>
+    <p>Pro ukládání odkazů variant <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/?section=database') ?>">aktualizuj databázi</a>.</p>
+    <?php else: ?>
+    <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>">
+      <input type="hidden" name="csrf" value="<?= $escape($editToken) ?>"><input type="hidden" name="action" value="product-supplier-link"><input type="hidden" name="operation" value="inherit">
+      <input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
+      <button class="inline-small" type="submit">Doplnit chybějící společné odkazy k variantám</button>
+    </form>
+    <?php endif; ?>
+    <?php if (($_GET['supplier_variant'] ?? '') === 'all'): ?>
+      <?php if (($_GET['supplier_saved'] ?? '') === '1'): ?><p role="status">Partnerské odkazy variant byly aktualizovány.</p><?php endif; ?>
+      <?php if (isset($_GET['supplier_error']) && is_string($_GET['supplier_error'])): ?><p class="supplier-error" role="alert"><?= $escape($_GET['supplier_error']) ?></p><?php endif; ?>
+    <?php endif; ?>
+  </div>
+  <div class="variant-table-wrap"><table class="variant-table"><thead><tr><th>Varianta</th><th>SKU</th><th>Volné kusy</th><th>Dostupnost</th><th>Vlastní cena Kč</th><th>Fotografie</th><th>Nabízet</th><th></th></tr></thead>
   <?php foreach ($variantRows as $variant):
       $formId = 'variant-' . $variant['id'];
       $rowForm = $variantFailedRows[$variant['id']] ?? $variantForm;
       $failedRow = ($rowForm['variant_id'] ?? '') === $variant['id'];
       $value = static fn (string $field, mixed $fallback): mixed => $failedRow ? ($rowForm[$field] ?? $fallback) : $fallback;
   ?>
-    <tr data-variant-row="<?= $variant['id'] ?>" class="<?= $variant['enabled'] ? '' : 'variant-disabled' ?>"><th scope="row"><?= $escape(\SimpleStore\Product\ProductVariants::label($variant['choices'])) ?></th>
+    <tbody class="variant-table-group">
+    <tr data-variant-row="<?= $variant['id'] ?>" class="<?= $variant['enabled'] ? '' : 'variant-disabled' ?>"><th scope="row" id="variant-label-<?= $variant['id'] ?>"><?= $escape(\SimpleStore\Product\ProductVariants::label($variant['choices'])) ?>
+        <?php if ($variantMode && $variant['enabled']): ?><a class="variant-public-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug']) . '?variant=' . $variant['id']) ?>" target="_blank" rel="noopener noreferrer">Otevřít variantu ↗</a><?php endif; ?>
+      </th>
       <td data-label="SKU"><input form="<?= $formId ?>" name="sku" aria-label="SKU" maxlength="100" value="<?= $escape($value('sku', $variant['sku'])) ?>"></td>
       <td data-label="Volné kusy"><input form="<?= $formId ?>" name="quantity" aria-label="Volné kusy" type="number" min="0" max="1000000" required value="<?= $escape($value('quantity', $variant['quantity'])) ?>"></td>
       <td data-label="Dostupnost"><select form="<?= $formId ?>" name="stock_status" aria-label="Dostupnost"><?php foreach ($stockText as $code => $label): ?><option value="<?= $code ?>" <?= $value('stock_status', $variant['stock_status']) === $code ? 'selected' : '' ?>><?= $escape($label) ?></option><?php endforeach; ?></select></td>
@@ -60,7 +81,13 @@ foreach ($details['options'] as $group) $variantGroups[] = $group['name'] . ': '
         <button class="inline-small" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit</button>
       </form></td>
     </tr>
-  <?php endforeach; ?></tbody></table></div>
+    <?php if ($variantSupplierReady): ?>
+    <tr class="variant-partner-row" id="variant-suppliers-<?= $variant['id'] ?>"><td colspan="8">
+      <?php require __DIR__ . '/product-variant-suppliers.php'; ?>
+    </td></tr>
+    <?php endif; ?>
+    </tbody>
+  <?php endforeach; ?></table></div>
   <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>" id="variant-batch" hidden>
     <input type="hidden" name="action" value="product-variants"><input type="hidden" name="operation" value="batch"><input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>"><input type="hidden" name="expected" value="<?= $escape($variantForm['expected'] ?? $variantInventory['expected']) ?>"><input type="hidden" name="rows_json">
     <button class="inline-small" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit celou tabulku variant</button>

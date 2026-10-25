@@ -58,6 +58,11 @@ try {
     $returnUrl .= '&supplier_error=' . rawurlencode($exception->getMessage());
 }
 $variantOperation = $operation === 'inherit' || str_starts_with($operation, 'variant-');
-if ($variantOperation) $returnUrl .= '&supplier_variant=' . rawurlencode(is_string($_POST['variant_key'] ?? null) ? $_POST['variant_key'] : 'all');
-header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($returnUrl . ($variantOperation ? '#variant-supplier-links' : '#supplier-links')), true, 303);
+$returnAnchor = $variantOperation ? '#variant-supplier-links' : '#supplier-links';
+if ($variantOperation) {
+    $variantKey = is_string($_POST['variant_key'] ?? null) ? $_POST['variant_key'] : 'all';
+    $returnUrl .= '&supplier_variant=' . rawurlencode($variantKey);
+    if (preg_match('/^[a-f0-9]{32}$/D', $variantKey)) $returnAnchor = '#variant-suppliers-' . $variantKey;
+}
+header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($returnUrl . $returnAnchor), true, 303);
 exit;

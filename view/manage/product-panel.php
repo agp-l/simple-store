@@ -49,7 +49,6 @@
     <?php endif; ?>
     <?php require __DIR__ . '/product-suppliers.php'; ?>
     <?php require __DIR__ . '/product-sale.php'; ?>
-    <?php require __DIR__ . '/product-variant-suppliers.php'; ?>
     <?php require __DIR__ . '/product-variants.php'; ?>
     <?php require __DIR__ . '/product-selection.php'; ?>
     <?php require __DIR__ . '/product-relations.php'; ?>
