@@ -237,7 +237,60 @@ final class ProductFamilyMerge
         $this->db->insert('shop_product_revisions',array_replace($row,$changes));
     }
     public function history():array
-    {return $this->installed()?$this->db->query('SELECT id,target_key,created_at,undone FROM shop_product_family_merges ORDER BY id DESC LIMIT 100'):[];}
+    {
+        if(!$this->installed())return [];
+        $rows=$this->db->query('SELECT id,target_key,created_at,undone,before_json FROM shop_product_family_merges ORDER BY id DESC LIMIT 100');$keys=[];
+        foreach($rows as&$row){$row['source_keys']=array_values(array_diff(array_keys(json_decode($row['before_json'],true,64,JSON_THROW_ON_ERROR)),[$row['target_key']]));$keys=array_merge($keys,$row['source_keys']);unset($row['before_json']);}unset($row);
+        $present=$keys?$this->db->queryFirstColumn('SELECT DISTINCT product_key FROM shop_product_revisions WHERE active_product_key IS NOT NULL AND product_key IN %ls',array_values(array_unique($keys))):[];
+        foreach($rows as&$row){$row['sources_deleted']=!$row['undone']&&array_intersect($row['source_keys'],$present)===[];unset($row['source_keys']);}unset($row);
+        return $rows;
+    }
+    /** Only obsolete source cards recorded by a completed merge can be removed. */
+    public function deletionPreview(int $id,bool $lock=false):array
+    {
+        $entry=$this->db->queryFirstRow('SELECT * FROM shop_product_family_merges WHERE id=%i'.($lock?' FOR UPDATE':''),$id);
+        if(!$entry||$entry['undone'])throw new InvalidArgumentException('Toto sloučení není připravené k odstranění původních karet.');
+        $before=json_decode($entry['before_json'],true,64,JSON_THROW_ON_ERROR);$target=$entry['target_key'];
+        $current=$this->state(array_keys($before),$lock);$parent=$current[$target]??null;
+        if(!$parent||count($parent['products'])!==1||!$parent['products'][0]['published']||empty($parent['settings']['enabled']))throw new InvalidArgumentException('Společný produkt už není zveřejněný nebo nemá zapnuté varianty.');
+        $active=[];foreach($parent['variants']as$v)if($v['enabled'])$active[$v['variant_key']]=$v;
+        $sources=[];$redirects=[];
+        foreach($before as$key=>$old){
+            if($key===$target)continue;
+            $live=$current[$key];if($live['products']===[])continue;
+            if(count($old['products'])!==1||count($live['products'])!==1)throw new InvalidArgumentException('Původní karta má nečekané jazykové verze.');
+            $p=$live['products'][0];$original=$old['products'][0];$expected=$original;$expected['published']=0;$expected['revision_number']=(int)$original['revision_number']+1;
+            $comparable=$p;foreach(['id','saved_at']as$field){unset($expected[$field],$comparable[$field]);}
+            if($expected!=$comparable||$live['sale']!=$old['sale']||$live['links']!=$old['links']||$live['mode']!=$old['mode']||!empty($live['settings']['enabled'])||(int)($live['inventory']['available_quantity']??0)!==0)throw new InvalidArgumentException('Původní karta byla po sloučení upravena. Automatické odstranění je zastavené.');
+            foreach($live['variants']as$v)if($v['enabled']||(int)$v['available_quantity']!==0)throw new InvalidArgumentException('Původní karta má aktivní variantu nebo skladové kusy.');
+            $originalVariants=!empty($old['settings']['enabled'])?array_filter($old['variants'],static fn(array $v):bool=>(bool)$v['enabled']):[['variant_key'=>md5('family:'.$key),'choices_json'=>'{}']];
+            $size=self::family($original['name'])['size'];
+            foreach($originalVariants as$v){
+                $moved=$active[$v['variant_key']]??null;
+                if(!$moved||json_decode($moved['choices_json'],true)!=self::choices(json_decode($v['choices_json'],true),$size))throw new InvalidArgumentException('Ve společném produktu chybí některá původní kombinace.');
+            }
+            $redirect=$this->db->queryFirstRow('SELECT language,source_slug,target_key FROM shop_product_redirects WHERE language=%s AND source_slug=%s'.($lock?' FOR UPDATE':''),$p['language'],$p['slug']);
+            if(!$redirect||$redirect['target_key']!==$target)throw new InvalidArgumentException('Původní adresa nemá správné přesměrování.');
+            $redirects[]=$redirect;$sources[]=['key'=>$key,'name'=>$p['name'],'language'=>$p['language']];
+        }
+        $this->noOrders(array_column($sources,'key'));
+        return ['id'=>$id,'name'=>$parent['products'][0]['name'],'sources'=>$sources,'expected'=>self::hash([$current,$redirects])];
+    }
+    public function deleteSources(int $id,string $expected):int
+    {
+        $this->db->startTransaction();
+        try{
+            $plan=$this->deletionPreview($id,true);
+            if(!hash_equals($plan['expected'],$expected))throw new InvalidArgumentException('Od náhledu se změnily produkty, ceny nebo sklad. Připrav nový náhled odstranění.');
+            $relations=(new ProductRelationRepository($this->db))->installed();
+            foreach($plan['sources']as$source){
+                if($relations)$this->db->query('DELETE FROM shop_product_relations WHERE language=%s AND (product_a=%s OR product_b=%s)',$source['language'],$source['key'],$source['key']);
+                $this->db->query('DELETE FROM shop_product_revisions WHERE product_key=%s AND language=%s',$source['key'],$source['language']);
+            }
+            // Keep redirects, media, order history and the complete pre-merge backup.
+            $this->db->commit();return count($plan['sources']);
+        }catch(Throwable $e){$this->db->rollback();throw $e;}
+    }
     public function undo(int $id):void
     {
         $this->db->startTransaction();

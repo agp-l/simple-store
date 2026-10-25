@@ -80,3 +80,9 @@ V editoru lze výběrem varianty zobrazit její fotografii v hlavní galerii i v
 Ve **Způsobu prodeje → Nákupní ceny variant** lze obdobně použít společnou nákupní cenu dodavatele. Po sjednocení potvrď **Uložit způsob prodeje**. Jednotlivou nákupní cenu vyplň jen pro výjimku. Přepočet odměny používá skutečnou prodejní cenu každé varianty. Bez JavaScriptu tlačítko uloží celý formulář způsobu prodeje rovnou.
 
 Formulář pro první varianty je otevřený, ukazuje počet zadaných kombinací a vysvětluje chybějící hodnoty nebo nepotvrzené přepnutí skladu. Po serverové chybě zůstává otevřený se zadanými hodnotami. Automatické obnovení po změně společné ceny počká na uložení rozepsané tabulky i formuláře nových kombinací. Vytvoření kombinací nejprve počká na dokončení ukládání ceny; neodešle se opakovaně při dvojkliku. Hromadné uložení tabulky nejprve vyčká na dokončení rozpracovaného ukládání ceny produktu. Chyba ani souběžná změna skladu se tiše nepřepíše; sklad, fotografie a SKU se sjednocením cen nemění.
+
+## Odstranění původních karet po sloučení
+
+V **Import a export → Sjednotit produkty** lze připravit náhled odstranění původních karet. Seznam vychází výhradně ze záloh dokončených sloučení, nikoli ze všech konceptů. Správce vybere skupiny a potvrdí odstranění.
+
+Odstranění vyžaduje nezměněnou skrytou původní kartu bez skladu a objednávek, existující kombinace ve zveřejněném společném produktu a zachované přesměrování. Změna dat od náhledu operaci zastaví. Každá skupina se odstraní v jedné transakci. Mažou se karty a jejich revize; společné produkty, varianty, fotografie, historie objednávek a přesměrování se nemění. Úplná záloha před sloučením zůstává uložená. Automatické vrácení sloučení už po odstranění původních karet není dostupné.

@@ -26,6 +26,28 @@ try{
     if($method==='POST'&&$action==='product-family-undo'){
         $familyStore->undo((int)($_POST['merge_id']??0));$familyMessages[]='Sloučení vráceno. Původní produkty a jejich aktivní varianty jsou obnovené.';
     }
+    if($method==='POST'&&$action==='product-family-delete-preview'){
+        $plans=[];$blocked=[];
+        foreach($familyStore->history()as$entry){
+            if($entry['undone'])continue;
+            try{$plan=$familyStore->deletionPreview((int)$entry['id']);if($plan['sources']!==[])$plans[]=$plan;}
+            catch(InvalidArgumentException $e){$blocked[]='Sloučení #'.$entry['id'].': '.$e->getMessage();}
+        }
+        $_SESSION['product_family_delete_preview']=['plans'=>$plans,'blocked'=>$blocked];
+    }
+    if($method==='POST'&&$action==='product-family-delete-sources'){
+        if(($_POST['confirm_delete']??'')!=='1')throw new InvalidArgumentException('Potvrď odstranění původních karet podle náhledu.');
+        $selected=$_POST['merges']??[];
+        if(!is_array($selected)||$selected===[]||count($selected)>100)throw new InvalidArgumentException('Vyber skupiny z náhledu odstranění.');
+        $deleted=0;
+        foreach(($_SESSION['product_family_delete_preview']['plans']??[])as$i=>$plan){
+            if(!in_array((string)$plan['id'],$selected,true))continue;
+            try{$deleted+=$familyStore->deleteSources($plan['id'],$plan['expected']);unset($_SESSION['product_family_delete_preview']['plans'][$i]);}
+            catch(InvalidArgumentException $e){$familyMessages[]=$plan['name'].': ponecháno beze změny. '.$e->getMessage();}
+        }
+        $familyMessages[]='Odstraněno '.$deleted.' původních karet. Společné produkty, varianty, fotografie, přesměrování a záloha sloučení zůstaly zachované.';
+    }
 }catch(InvalidArgumentException $e){$familyError=$e->getMessage();}
 $familyPreview=$_SESSION['product_family_preview']??['plans'=>[],'blocked'=>[]];
+$familyDeletePreview=$_SESSION['product_family_delete_preview']??null;
 $familyHistory=$familyStore->history();

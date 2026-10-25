@@ -17,6 +17,9 @@ test('family preview shows exact combinations and requires an explicit selection
    assert.ok(await page.locator('input[name="confirm"]').evaluate(el=>el.required));
    assert.match(await page.locator('table').innerText(),/170 cm/);assert.match(await page.locator('table').innerText(),/195 cm/);
    assert.equal(await page.getByRole('button',{name:'Vrátit sloučení #1',exact:true}).count(),1);
+   assert.equal(await page.locator('input[name="merges[]"]:checked').count(),0);
+   assert.ok(await page.locator('input[name="confirm_delete"]').evaluate(el=>el.required));
+   assert.equal(await page.getByRole('button',{name:'Smazat vybrané původní karty',exact:true}).count(),1);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`Family UI overflows at ${width}`);
    await page.close();
   }

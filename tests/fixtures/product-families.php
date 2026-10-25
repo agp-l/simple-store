@@ -9,4 +9,5 @@ $familyPreview=['plans'=>[['target'=>str_repeat('a',32),'name'=>'Warmpeace Vikin
  'variants'=>[['id'=>'first','choices'=>['Barva'=>'Modrá','Velikost'=>'170 cm','Zip'=>'Levá strana'],'quantity'=>10,'price_czk'=>4800],['id'=>'second','choices'=>['Barva'=>'Zelená','Velikost'=>'195 cm','Zip'=>'Pravá strana'],'quantity'=>10,'price_czk'=>5300]],'costs'=>['first'=>4690,'second'=>5190],'previous_prices'=>['first'=>4800,'second'=>5300]]],
  'blocked'=>[['name'=>'Jiný model <bezpečný>','message'=>'Nelze doložit přesnou variantu.']]];
 $familyHistory=[['id'=>1,'created_at'=>'2026-10-25 08:00:00','undone'=>0]];
+$familyDeletePreview=['plans'=>[['id'=>1,'name'=>'Warmpeace Viking 300','sources'=>[['name'=>'Warmpeace Viking 300 – 195 cm']]]],'blocked'=>[]];
 require dirname(__DIR__,2).'/view/admin/layout.php';

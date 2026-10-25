@@ -82,6 +82,26 @@ try{
  $check((int)$db->queryFirstField('SELECT enabled FROM shop_product_supplier_variant_modes WHERE product_key=%s',$target)===1,'Stock edit disabled pricing.');
  $snapshot=$variants->snapshot($target);$snapshot['items'][0]['price_czk']=6000;$variants->save($target,$snapshot);
  $check((int)$db->queryFirstField('SELECT enabled FROM shop_product_supplier_variant_modes WHERE product_key=%s',$target)===0,'Manual price edit did not protect own prices.');
+ // Delete only recorded obsolete sources; published targets can have newer prices and stock.
+ $mergeId=(int)$family->history()[0]['id'];$deletion=$family->deletionPreview($mergeId);
+ $check(array_column($deletion['sources'],'key')===[$source],'Deletion selected the parent or unrelated cards.');
+ $db->update('shop_product_inventory',['available_quantity'=>1],'product_key=%s',$source);$reject(fn()=>$family->deleteSources($mergeId,$deletion['expected']));$db->update('shop_product_inventory',['available_quantity'=>0],'product_key=%s',$source);
+ $sourceRow=$db->queryFirstRow('SELECT * FROM shop_product_revisions WHERE active_product_key=%s',$source);
+ $db->update('shop_product_revisions',['summary'=>'Changed after consolidation'],'id=%i',$sourceRow['id']);$reject(fn()=>$family->deletionPreview($mergeId));$db->update('shop_product_revisions',['summary'=>$sourceRow['summary']],'id=%i',$sourceRow['id']);
+ $db->update('shop_product_redirects',['target_key'=>str_repeat('f',32)],'source_slug=%s',$sourceRow['slug']);$reject(fn()=>$family->deletionPreview($mergeId));$db->update('shop_product_redirects',['target_key'=>$target],'source_slug=%s',$sourceRow['slug']);
+ $db->update('shop_product_variants',['enabled'=>0],'product_key=%s AND variant_key=%s',$target,$ids[1]);$reject(fn()=>$family->deletionPreview($mergeId));$db->update('shop_product_variants',['enabled'=>1],'product_key=%s AND variant_key=%s',$target,$ids[1]);
+ $db->insert('shop_order_variant_reservations',['order_id'=>124,'product_key'=>$source,'variant_key'=>$ids[1],'quantity'=>1,'state'=>'consumed']);$reject(fn()=>$family->deletionPreview($mergeId));$db->query('DELETE FROM shop_order_variant_reservations WHERE order_id=124');
+ $deletion=$family->deletionPreview($mergeId);$db->update('shop_product_variants',['available_quantity'=>7],'product_key=%s AND variant_key=%s',$target,$ids[0]);$reject(fn()=>$family->deleteSources($mergeId,$deletion['expected']));
+ $targetRows=$db->query('SELECT * FROM shop_product_revisions WHERE product_key=%s ORDER BY id',$target);$targetStock=$variants->snapshot($target);$backup=$db->queryFirstField('SELECT before_json FROM shop_product_family_merges WHERE id=%i',$mergeId);
+ $unrelated=str_repeat('e',32);$unrelatedRow=$sourceRow;unset($unrelatedRow['id']);$unrelatedRow['product_key']=$unrelatedRow['active_product_key']=$unrelated;$unrelatedRow['slug']=$unrelatedRow['active_slug']='unrelated-draft';$db->insert('shop_product_revisions',$unrelatedRow);
+ $deletion=$family->deletionPreview($mergeId);$check($family->deleteSources($mergeId,$deletion['expected'])===1,'Source card was not deleted.');
+ $check((int)$db->queryFirstField('SELECT COUNT(*) FROM shop_product_revisions WHERE product_key=%s',$source)===0,'Source revisions remain.');
+ $check((int)$db->queryFirstField('SELECT COUNT(*) FROM shop_product_revisions WHERE product_key=%s',$unrelated)===1,'Unrelated draft deleted.');
+ $check($targetRows===$db->query('SELECT * FROM shop_product_revisions WHERE product_key=%s ORDER BY id',$target)&&$targetStock===$variants->snapshot($target),'Deleting source changed the common product or its variants.');
+ $check(count($db->query('SELECT * FROM shop_product_redirects WHERE target_key=%s',$target))===2,'Deletion broke redirects.');
+ $check($backup===$db->queryFirstField('SELECT before_json FROM shop_product_family_merges WHERE id=%i',$mergeId),'Deletion erased the original backup.');
+ $check($family->history()[0]['sources_deleted'],'History still offers automatic undo after deletion.');$reject(fn()=>$family->undo($mergeId));$reject(fn()=>$family->deleteSources($mergeId,$deletion['expected']));
+ $empty=$family->deletionPreview($mergeId);$check($empty['sources']===[]&&$family->deleteSources($mergeId,$empty['expected'])===0,'Repeated cleanup selected more cards.');
  // Simple common-stock products transfer all their units into one explicit size, and can undo safely.
  $simpleKeys=[];$simpleUrl='https://gramino.cz/p/hyperlite-mountain-gear-zippy';$simpleOffers=[];
  foreach([1=>7,2=>9]as$litres=>$quantity){
@@ -103,5 +123,7 @@ try{
  $check($db->queryFirstField('SELECT description FROM shop_product_revisions WHERE active_product_key=%s',$simpleKeys[0])==='Same model. Objem 1 l.','Undo lost the original size description.');
  $check(array_map('intval',$db->queryFirstColumn('SELECT available_quantity FROM shop_product_inventory WHERE product_key IN %ls ORDER BY available_quantity',$simpleKeys))===[7,9],'Undo did not restore each common inventory.');
  $check(!$variants->snapshot($simpleKeys[0])['enabled']&&count($family->preview($simpleKeys[0],'cs')['variants'])===2,'Undo of a common-stock family cannot be safely repeated.');
+ $simplePlan=$family->preview($simpleKeys[0],'cs');$family->apply($simpleKeys[0],'cs',$simplePlan['expected']);$simpleId=(int)$family->history()[0]['id'];$simpleDelete=$family->deletionPreview($simpleId);
+ $check($family->deleteSources($simpleId,$simpleDelete['expected'])===1&&array_sum(array_column($variants->snapshot($simpleKeys[0])['items'],'quantity'))===16,'Deleting common-stock source damaged the transferred inventory.');
  echo "Product families: exact variants, stale previews, history, per-size parameters/prices, undo and manual overrides passed.\n";
 }finally{$db->disconnect();$admin->query('DROP DATABASE %b',$database);$admin->disconnect();}
