@@ -17,7 +17,7 @@ test('supplier manager responsive controls, safe review and single-step runner',
    assert.equal(await page.locator('#supplier-product-field').isVisible(),false);
    await page.locator('#supplier-scope').selectOption('one');assert.equal(await page.locator('#supplier-product-field').isVisible(),true);
    assert.ok(await page.locator('[name=product_key]').evaluate(el=>el.required));
-   assert.match(await page.locator('.supplier-result-title a').first().getAttribute('href'),/\/cs\/produkt\/spacak\?manage=1/);
+   assert.match(await page.locator('.supplier-result-title a').first().getAttribute('href'),/\/cs\/produkt\/spacak\?edit=1/);
    assert.equal(await page.getByRole('button',{name:'Použít cenu i prodávajícího',exact:true}).count(),1);
    assert.equal(await page.getByText('Cena platí pro varianty používající základní dodavatelskou cenu.',{exact:false}).count(),1);
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`Overflow at ${width}`);
