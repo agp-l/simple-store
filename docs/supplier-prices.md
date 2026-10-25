@@ -27,6 +27,7 @@ V manageru zapnout **Jednou týdně zařadit všechny produkty**. První zařaze
 ## Spolehlivost a hranice
 
 - Čte se schema.org Product/Offer z JSON-LD v HTML nebo JSON bloku v Markdownu (např. Gramino). U ProductGroup se vybere nabídka přesného URL varianty. Doporučené zboží, ItemList, cenové intervaly AggregateOffer, cizí měny a podmíněné klubové nabídky se nezaměňují za běžnou cenu.
+- U Pod 7 kilo může Offer odkazovat na společný model. Konkrétní variantu uznáme pouze při shodě kanonické adresy, vybraného ID varianty a produktu, EANu, kódu výrobce, přesné ceny a měny v serverovém JSON. Jde o ověření dodatečných dat, nikoli o odstranění kontroly variant. Starší návrhy „Ke kontrole“ zůstanou v historii a lze je po ověření převzít běžným tlačítkem; oprava neobchází denní limit ani znovu nestahuje stránky.
 - Není to univerzální čtečka libovolného webu. Chybějící strukturovaná nabídka, cena pouze v JavaScriptu, přihlášení nebo ochrana proti robotům znamenají zaznamenaný neúspěch. Žádné obcházení CAPTCHA, rotace proxy nebo předstírání jiného robota. Pro takový obchod je další cestou domluvený XML/CSV feed nebo API; nový formát musí mít vlastní ověřený parser.
 - Jedna veřejná cena neznamená všechny velikosti/barvy. Odkaz má ukazovat na konkrétní odpovídající produkt/variantu. Dostupnost dodavatele je informativní, nemění sklad e-shopu ani automaticky nezakazuje prodej.
 - Přesměrování pouze v rámci stejné domény obchodu, nejvýše 3, každý krok kontroluje robots. Přechod jinam musí správce opravit v odkazu.

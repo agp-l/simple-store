@@ -33,8 +33,10 @@ final class PriceParser
                 if ($price === null) continue;
                 $source = is_string($offer['url'] ?? null) ? $offer['url'] : (is_string($product['url'] ?? null) ? $product['url'] : '');
                 $availability = basename(str_replace('#', '/', (is_string($offer['availability'] ?? null) ? $offer['availability'] : '')));
+                $evidence = count($products) === 1 && count($raw) === 1 ? Pod7kiloVariantIdentity::verify($body, $url, $product, $offer,
+                    static fn(string $a, string $b): bool => self::identity($a) === self::identity($b)) : null;
                 $offers[] = ['price' => $price, 'amount' => (string)$offer['price'], 'url' => $source,
-                    'availability' => match($availability) {
+                    'identity_evidence' => $evidence, 'availability' => match($availability) {
                         'InStock', 'LimitedAvailability' => 'in_stock',
                         'OutOfStock', 'SoldOut', 'Discontinued' => 'out_of_stock',
                         'PreOrder', 'PreSale', 'BackOrder' => 'on_order', default => 'unknown',
@@ -42,7 +44,7 @@ final class PriceParser
             }
         }
         if ($offers === []) throw new InvalidArgumentException('Stránka neposkytla jednoznačnou strukturovanou cenu v CZK. Cena zůstala.');
-        $exact = array_values(array_filter($offers, static fn(array $o): bool => self::identity($o['url']) === self::identity($url)));
+        $exact = array_values(array_filter($offers, static fn(array $o): bool => self::identity($o['url']) === self::identity($url) || $o['identity_evidence'] !== null));
         if ($exact !== []) $offers = $exact;
         elseif (count($products) !== 1 || count($offers) !== 1) throw new InvalidArgumentException('Nabídka není jednoznačná. Doplň odkaz na konkrétní variantu; původní cena zůstala.');
         if ($offers === []) throw new InvalidArgumentException('Stránka neposkytla jednoznačnou strukturovanou cenu v CZK. Cena zůstala.');

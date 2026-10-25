@@ -47,6 +47,16 @@ try{
  $over=$make('too-expensive');$responses['https://a.test/too-expensive']=$offer('https://a.test/too-expensive',4000);$manager->enqueue('one','fast',$over);$run();$reject(fn()=>$manager->apply((int)$job($over)['id'],false));
  $variant=$make('variants');$db->insert('shop_product_variant_settings',['product_key'=>$variant,'enabled'=>1]);$responses['https://a.test/variants']=$offer('https://a.test/variants',1100);$manager->enqueue('one','fast',$variant);$run();
  $check($job($variant)['status']==='review','Variant cost overwritten automatically.');$reject(fn()=>$manager->apply((int)$job($variant)['id'],false));$manager->apply((int)$job($variant)['id'],true);
+ // The real Pod 7 kilo model/variant URL mismatch is safe only with matching selected-variant evidence.
+ $f=json_decode(file_get_contents(__DIR__.'/fixtures/pod7kilo-variant.json'),true,32,JSON_THROW_ON_ERROR);
+ $pod=$partners->save(0,['name'=>'Pod 7 kilo','website_url'=>'https://www.pod7kilo.cz/','priority'=>'100']);
+ $podKey=$make('pod7-variant');$db->update('shop_product_sales',['partner_id'=>$pod],'product_key=%s',$podKey);
+ $db->update('shop_product_supplier_links',['url'=>$f['url']],'product_key=%s',$podKey);
+ $responses[$f['url']]=['code'=>200,'headers'=>[],'body'=>'<html><head><link rel="canonical" href="'.$f['url'].'">'.
+  '<script>var data = '.json_encode($f['data']).';</script><script type="application/ld+json">'.json_encode($f['product']).'</script></head></html>'];
+ $manager->enqueue('one','fast',$podKey);$run(3,15);
+ $check($job($podKey)['status']==='applied'&&(int)$sale($podKey)['supplier_price_czk']===1099,'Verified Pod 7 kilo XL did not update automatically.');
+ $saved=json_decode($job($podKey)['result_json'],true);$check($saved['identity_evidence']['ean']==='8051411206200','Variant identity evidence not retained.');
  $blocked=$make('private/item');$responses['https://a.test/robots.txt']=['code'=>200,'body'=>"User-agent: *\nDisallow: /private\nCrawl-delay: 120\n",'headers'=>[]];
  $now+=86401;$manager->enqueue('one','fast',$blocked);$run();$check($job($blocked)['status']==='failed','Robots ignored.');
  $check(!in_array('https://a.test/private/item',array_column($requests,0),true),'Disallowed page fetched.');

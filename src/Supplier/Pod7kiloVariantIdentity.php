@@ -1,0 +1,85 @@
+<?php
+declare(strict_types=1);
+namespace SimpleStore\Supplier;
+
+/** Pod 7 kilo uses the model URL in Offer, but identifies the selected variant in page JSON. */
+final class Pod7kiloVariantIdentity
+{
+    public static function verify(string $body, string $url, array $product, array $offer, callable $sameUrl): ?array
+    {
+        $host = strtolower((string)parse_url($url, PHP_URL_HOST));
+        if (!in_array($host, ['pod7kilo.cz', 'www.pod7kilo.cz'], true) || parse_url($url, PHP_URL_SCHEME) !== 'https') return null;
+        $source = $offer['url'] ?? null;
+        if (!is_string($source) || !self::localUrl($source, $host)) return null;
+        $parent = rtrim((string)parse_url($source, PHP_URL_PATH), '/') . '/';
+        $path = (string)parse_url($url, PHP_URL_PATH);
+        // A model URL may identify its own variant, never an unrelated model or sibling variant.
+        if (!str_starts_with($parent, '/p/') || !str_starts_with($path, $parent) || rtrim($path, '/') === rtrim($parent, '/')) return null;
+
+        if (!preg_match('~<head\b[^>]*>(.*?)</head\s*>~is', $body, $head)) return null;
+        preg_match_all('~<link\b([^>]*)>~is', $head[1], $links);
+        $canonical = [];
+        foreach ($links[1] as $tag) {
+            $attributes = self::attributes($tag);
+            if (in_array('canonical', preg_split('/\s+/', strtolower($attributes['rel'] ?? '')), true)) $canonical[] = $attributes['href'] ?? '';
+        }
+        if (count($canonical) !== 1 || !self::localUrl($canonical[0], $host) || !$sameUrl($canonical[0], $url)) return null;
+
+        // Decode the server-rendered JSON literal. No supplier JavaScript is executed.
+        preg_match_all('~<script\b[^>]*>(.*?)</script\s*>~is', $body, $scripts);
+        $definitions = [];
+        foreach ($scripts[1] as $script) {
+            if (!preg_match('~^\s*(?://<!--\s*)?var\s+data\s*=\s*(\{.*\})\s*;\s*(?://-->\s*)?$~sD', $script, $match)) continue;
+            $definitions[] = json_decode($match[1], true, 40);
+        }
+        if (count($definitions) !== 1 || !is_array($definitions[0])) return null;
+        $data = $definitions[0];
+        if (($data['variantsUrlEnabled'] ?? null) !== true || !is_string($data['currency'] ?? null) ||
+            strtoupper($data['currency']) !== 'CZK' || !is_array($data['variantsInfo'] ?? null)) return null;
+        $selected = $data['selectedVariantId'] ?? null;
+        if ((!is_string($selected) && !is_int($selected)) || !ctype_digit((string)$selected)) return null;
+        $variant = $data['variantsInfo'][$selected] ?? null;
+        if (!is_array($variant) || !self::sameIdentifier($variant['id'] ?? null, $selected) ||
+            !self::sameIdentifier($variant['productId'] ?? null, $data['productId'] ?? null)) return null;
+        $variantUrl = $variant['url'] ?? null;
+        if (!is_string($variantUrl)) return null;
+        if (str_starts_with($variantUrl, '/') && !str_starts_with($variantUrl, '//')) $variantUrl = 'https://' . $host . $variantUrl;
+        if (!self::localUrl($variantUrl, $host) || !$sameUrl($variantUrl, $url)) return null;
+
+        // The selected variant must agree with the JSON-LD product, not just have a similar name.
+        $ean = $product['gtin13'] ?? null;
+        if ((!is_string($ean) && !is_int($ean)) || preg_match('/^\d{13}$/D', (string)$ean) !== 1 ||
+            !self::sameIdentifier($ean, $variant['ean'] ?? null) ||
+            !self::sameIdentifier($product['mpn'] ?? null, $variant['code'] ?? null)) return null;
+        $price = $variant['price'] ?? null;
+        if (PriceParser::amount($price) === null || PriceParser::amount($offer['price'] ?? null) === null ||
+            number_format((float)$price, 2, '.', '') !== number_format((float)$offer['price'], 2, '.', '')) return null;
+        if (($offer['priceCurrency'] ?? null) !== 'CZK') return null;
+
+        return ['method' => 'pod7kilo_selected_variant', 'verified_url' => $url,
+            'variant_id' => (string)$selected, 'ean' => (string)$ean];
+    }
+
+    private static function sameIdentifier(mixed $a, mixed $b): bool
+    {
+        return (is_string($a) || is_int($a)) && (is_string($b) || is_int($b)) && (string)$a !== '' && (string)$a === (string)$b;
+    }
+
+    private static function localUrl(string $url, string $host): bool
+    {
+        try { $actual = HttpClient::url($url); } catch (\InvalidArgumentException $error) { return false; }
+        return preg_replace('/^www\./', '', $actual) === preg_replace('/^www\./', '', $host);
+    }
+
+    private static function attributes(string $tag): array
+    {
+        preg_match_all('~\b([a-z][a-z0-9:_-]*)\s*=\s*(["\'])(.*?)\2~is', $tag, $matches, PREG_SET_ORDER);
+        $attributes = [];
+        foreach ($matches as $match) {
+            $name = strtolower($match[1]);
+            if (isset($attributes[$name])) return [];
+            $attributes[$name] = html_entity_decode($match[3], ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        }
+        return $attributes;
+    }
+}

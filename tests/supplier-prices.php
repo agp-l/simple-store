@@ -39,6 +39,31 @@ $partners=[['id'=>1,'website_url'=>'https://a.test','priority'=>100,'name'=>'A']
 $links=[['id'=>1,'url'=>'https://b.test/p'],['id'=>2,'url'=>$url],['id'=>3,'url'=>'https://a.test.evil.test/p']];
 $items=Manager::candidates($links,$partners,1);$check(array_column($items,'partner_id')===[1,2],'Selected seller must precede priority; suffix host must not match.');
 $partners[]=['id'=>3,'website_url'=>'https://www.a.test','priority'=>1,'name'=>'Duplicate'];$check(count(Manager::candidates($links,$partners,1))===1,'Ambiguous host mapped to arbitrary seller.');
+// Regression: Pod 7 kilo's selected XL is 1099 CZK; its Offer points to the parent model.
+$fixture=json_decode(file_get_contents(__DIR__.'/fixtures/pod7kilo-variant.json'),true,32,JSON_THROW_ON_ERROR);
+$variantPage=static function(array $f)use($wrap):string{return '<html><head><link href="'.htmlspecialchars($f['url'],ENT_QUOTES).'" rel="canonical">'.
+    '<script>//<!--' . "\nvar data = ".json_encode($f['data']).'; //-->'."\n</script>".$wrap($f['product']).'</head></html>';};
+$parsed=Parser::read($variantPage($fixture),$fixture['url']);
+$check(!$parsed['uncertain']&&$parsed['price']===1099&&$parsed['identity_evidence']['variant_id']==='7475','Selected XL with matching EAN, MPN, price and canonical was not recognized.');
+$check(Manager::reviewReason(['variantSettings'=>['enabled'=>0],'sale'=>['supplier_price_czk'=>null]],$parsed+['fallback'=>false])==='','Verified single variant still needs URL review.');
+$mutations=[
+ static function(array &$f):void{$f['data']['selectedVariantId']='7472';},
+ static function(array &$f):void{$f['data']['variantsInfo']['7475']['ean']='8051411206163';},
+ static function(array &$f):void{$f['data']['variantsInfo']['7475']['code']='930319MNN';},
+ static function(array &$f):void{$f['data']['variantsInfo']['7475']['price']=949;},
+ static function(array &$f):void{$f['data']['variantsInfo']['7475']['price']='1099.01';$f['product']['offers']['price']='1099.99';},
+ static function(array &$f):void{$f['data']['currency']='EUR';},
+ static function(array &$f):void{$f['data']['variantsInfo']['7475']['url']=$f['data']['variantsInfo']['7472']['url'];},
+ static function(array &$f):void{$f['data']['variantsInfo']['7475']['url']='https://elsewhere.test/p/xl';},
+ static function(array &$f):void{$f['data']['variantsInfo']['7475']['productId']=999;},
+ static function(array &$f):void{unset($f['product']['gtin13']);},
+ static function(array &$f):void{$f['data']['variantsUrlEnabled']=false;},
+ static function(array &$f):void{$f['url']=$f['data']['variantsInfo']['7472']['url'];},
+];
+foreach($mutations as $mutate){$f=$fixture;$mutate($f);$check(Parser::read($variantPage($f),$fixture['url'])['uncertain'],'Conflicting/missing variant evidence was accepted.');}
+$f=$fixture;$f['url']=str_replace('www.pod7kilo.cz','another.test',$f['url']);
+$check(Parser::read($variantPage($f),$f['url'])['uncertain'],'Site-specific identity rule leaked to another shop.');
+$reject(fn()=>Parser::read($variantPage($fixture).$wrap($offer('https://www.pod7kilo.cz/recommended',1)),$fixture['url']));
 $check(PanelUrl::pretty('/admin.php?section=supplier-prices')==='/admin/supplier-prices/','Route missing.');
 $check(SimpleStore\Admin\AdminActionPolicy::allows('supplier-price-tick'),'Action missing.');
 echo "Supplier prices: explicit offers, variants, currencies, conditions, robots, SSRF rules and ordering passed.\n";

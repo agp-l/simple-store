@@ -1,0 +1,42 @@
+{
+  "url": "https://www.pod7kilo.cz/p/nuz-antonini-old-bear-total-black/nuz-antonini-old-bear-total-black-xl/",
+  "product": {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "Nůž Antonini Old Bear Total Black",
+    "offers": {
+      "@type": "Offer",
+      "availability": "https://schema.org/InStock",
+      "itemCondition": "https://schema.org/NewCondition",
+      "price": 1099,
+      "priceCurrency": "CZK",
+      "url": "https://www.pod7kilo.cz/p/nuz-antonini-old-bear-total-black/"
+    },
+    "gtin13": "8051411206200",
+    "mpn": "930323MNN"
+  },
+  "data": {
+    "productId": "6218",
+    "variantsUrlEnabled": true,
+    "currency": "czk",
+    "selectedVariantId": "7475",
+    "variantsInfo": {
+      "7472": {
+        "id": 7472,
+        "productId": 6218,
+        "ean": "8051411206163",
+        "code": "930319MNN",
+        "price": 949,
+        "url": "/p/nuz-antonini-old-bear-total-black/nuz-antonini-old-bear-total-black-m/"
+      },
+      "7475": {
+        "id": 7475,
+        "productId": 6218,
+        "ean": "8051411206200",
+        "code": "930323MNN",
+        "price": 1099,
+        "url": "/p/nuz-antonini-old-bear-total-black/nuz-antonini-old-bear-total-black-xl/"
+      }
+    }
+  }
+}
