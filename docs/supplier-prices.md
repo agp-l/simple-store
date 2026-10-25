@@ -94,3 +94,14 @@ Platné odpovědi z cache a známá přesměrování se zpracují po malých mí
 provést nejvýše jeden HTTP požadavek. Trvalé přesměrování 301/308 na stejném obchodě
 může opravit uložený odkaz, pokud se zároveň přesně shodne celý název produktu nebo
 skupiny variant s katalogem. Neznámý typ historického přesměrování tuto podmínku nesplňuje.
+
+U Gramina se navíc porovnává přesný model, velikost a všechny aktivní místní barevné
+kombinace. Zápis `D890`/`D 890` a základní české/anglické názvy barev se normalizují;
+obchodní názvy odstínů se neodhadují. Například `Patizon D890 – S` s červenou a modrou
+variantou smí převzít společnou cenu pouze tehdy, když jsou obě přesně doložené a stejně
+drahé. Chybějící kombinace, neznámá vlastnost (např. strana zipu), rozpor velikostí nebo
+odlišné ceny automatické převzetí zastaví. Vlastní ceny variant zůstávají zachované.
+Pro jednu přesnou variantu lze opravit variantní URL; pro několik stejně drahých barev
+se uloží odkaz společného modelu a důkaz všech zahrnutých nabídek. Toto vyhodnocení
+funguje i nad dříve uloženou sadou nabídek bez dalších dotazů. Diagnostický export
+obsahuje také konečnou nabídku za uloženými přesměrováními.

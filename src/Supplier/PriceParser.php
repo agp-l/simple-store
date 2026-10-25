@@ -105,7 +105,7 @@ final class PriceParser
         return $name!==''&&in_array($name,[self::name($result['product_name']??''),self::name($result['group_name']??'')],true);
     }
 
-    private static function sameModel(string $a,string $b):bool
+    public static function sameModel(string $a,string $b):bool
     {
         try{if(preg_replace('/^www\./','',HttpClient::url($a))!==preg_replace('/^www\./','',HttpClient::url($b)))return false;}catch(InvalidArgumentException $e){return false;}
         if(rtrim((string)parse_url($a,PHP_URL_PATH),'/')!==rtrim((string)parse_url($b,PHP_URL_PATH),'/'))return false;

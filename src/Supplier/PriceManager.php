@@ -146,7 +146,7 @@ final class PriceManager
         $sale=$this->db->queryFirstRow('SELECT * FROM shop_product_sales WHERE product_key=%s'.$suffix,$key);
         $links=$this->db->query('SELECT id,url FROM shop_product_supplier_links WHERE product_key=%s ORDER BY id'.$suffix,$key);
         $partners=$this->db->query('SELECT id,name,website_url,priority,version FROM shop_purchase_partners ORDER BY id'.$suffix);
-        $variants=$this->db->query('SELECT variant_key,price_czk,enabled FROM shop_product_variants WHERE product_key=%s ORDER BY variant_key'.$suffix,$key);
+        $variants=$this->db->query('SELECT variant_key,price_czk,enabled,choices_json FROM shop_product_variants WHERE product_key=%s ORDER BY variant_key'.$suffix,$key);
         $variantSettings=$this->db->queryFirstRow('SELECT enabled,version FROM shop_product_variant_settings WHERE product_key=%s'.$suffix,$key);
         // Only relevant merchant profiles participate in the optimistic check.
         $candidates=self::candidates($links,$partners,(int)($sale['partner_id']??0));
@@ -209,7 +209,8 @@ final class PriceManager
                     if(empty($result['fetched']))continue;return ['state'=>'working','wait'=>$wait];}
                 $remote=!empty($result['fetched']);
                 if(isset($result['document'])){
-                    try{$result=PriceParser::select($result['document'],$target,$snapshot['products'][0]['name'])+['observed_at'=>$result['observed_at']];}
+                    try{$result=(GraminoVariantScope::select($result['document'],$target,$snapshot)??
+                        PriceParser::select($result['document'],$target,$snapshot['products'][0]['name']))+['observed_at'=>$result['observed_at']];}
                     catch(InvalidArgumentException $e){$this->failure($job,$data,$e->getMessage());if(!$remote)continue;return ['state'=>'working','wait'=>$wait];}
                 }
                 if(!isset($result['corrected_url'])&&$data['hops']>0&&!empty($data['permanent_redirects'])&&!$result['uncertain']&&
@@ -390,9 +391,16 @@ final class PriceManager
         foreach($rows as$row){
             $data=json_decode($row['data_json'],true);$sources=[];
             foreach($data['snapshot']['candidates']??[]as$c){
-                $cache=$this->db->queryFirstRow('SELECT expires_at,data_json FROM shop_supplier_price_cache WHERE url_hash=%s',hash('sha256','product:'.$c['url']));
+                $resolved=$c['url'];$chain=[];
+                for($hop=0;$hop<4;$hop++){
+                    $cache=$this->db->queryFirstRow('SELECT expires_at,data_json FROM shop_supplier_price_cache WHERE url_hash=%s',hash('sha256','product:'.$resolved));
+                    $cached=$cache?json_decode($cache['data_json'],true):null;
+                    if(empty($cached['redirect']))break;
+                    $chain[]=['url'=>$resolved,'redirect'=>$cached['redirect'],'http_code'=>$cached['http_code']??null];
+                    try{$resolved=HttpClient::redirect($resolved,$cached['redirect']);}catch(InvalidArgumentException $e){break;}
+                }
                 $sources[]=['url'=>$c['url'],'seller'=>$c['name'],'selected'=>$c['selected'],'priority'=>$c['priority'],
-                    'cache'=>$cache?json_decode($cache['data_json'],true):null,'expires_at'=>$cache?(int)$cache['expires_at']:0];
+                    'resolved_url'=>$resolved,'redirects'=>$chain,'cache'=>$cached,'expires_at'=>$cache?(int)$cache['expires_at']:0];
             }
             $items[]=['id'=>(int)$row['id'],'product_key'=>$row['product_key'],'name'=>$row['product_name'],'status'=>$row['status'],
                 'mode'=>$row['mode'],'created_at'=>(int)$row['created_at'],'checked_at'=>(int)$row['checked_at'],

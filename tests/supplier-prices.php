@@ -101,3 +101,34 @@ foreach(['supplier-price-pricing','supplier-price-retry','supplier-price-tempo',
  $check(in_array($action,SimpleStore\Admin\AdminActionPolicy::SUPPLIER_PRICES,true)&&SimpleStore\Admin\AdminActionPolicy::allows($action),'Supplier action is not in the shared authorization/routing policy.');
 }
 $check(!SimpleStore\Admin\AdminActionPolicy::allows('supplier-price-unknown'),'Unknown supplier action authorized.');
+
+// Gramino lists colour before size and spaces D 890, while the local product uses D890 – S.
+$scope=static fn(string $name,array $choices):array=>['products'=>[['name'=>$name]],'variantSettings'=>['enabled'=>1],
+ 'variants'=>array_map(static fn(array $c):array=>['enabled'=>1,'choices_json'=>json_encode($c)],$choices)];
+$scopeGroup=['@type'=>'ProductGroup','name'=>'Patizon D 890','url'=>'https://gramino.cz/p/patizon-d-890','hasVariant'=>[
+ $offer('https://gramino.cz/p/patizon-d-890?v_id=red-s',11990)+['name'=>'Patizon D 890 – Red, S'],
+ $offer('https://gramino.cz/p/patizon-d-890?v_id=blue-s','11990.00')+['name'=>'Patizon D 890 – Blue, S'],
+ $offer('https://gramino.cz/p/patizon-d-890?v_id=red-l',12490)+['name'=>'Patizon D 890 – Red, L'],
+ $offer('https://gramino.cz/p/patizon-d-890?v_id=green-m',11391)+['name'=>'Patizon D 890 – Green, M'],
+ $offer('https://gramino.cz/p/patizon-d-890?v_id=blue-m',11391)+['name'=>'Patizon D 890 – Blue, M']]];
+$doc=Parser::document($wrap($scopeGroup),$scopeGroup['url']);
+$local=$scope('Patizon D890 – S',[['Barva'=>'Červená'],['Barva'=>'Modrá']]);
+$resolved=SimpleStore\Supplier\GraminoVariantScope::select($doc,$scopeGroup['url'],$local);
+$check($resolved!==null&&$resolved['price']===11990&&$resolved['uniform_variants']&&!$resolved['uncertain'],'Exact local colour/size scope not resolved.');
+$check(count($resolved['identity_evidence']['matched_offers'])===2&&$resolved['corrected_url']===$scopeGroup['url'],'Common price was tied to an arbitrary colour.');
+$local=$scope('Patizon D890 – M Modrá, Zelená',[['Barva'=>'Modrá'],['Barva'=>'Zelená']]);
+$check(SimpleStore\Supplier\GraminoVariantScope::select($doc,$scopeGroup['url'],$local)['price']===11391,'Explicit local colour list failed.');
+foreach([
+ $scope('Patizon D890 – S',[['Barva'=>'Červená'],['Barva'=>'Žlutá']]),
+ $scope('Patizon D890 – S',[['Velikost'=>'L']]),
+ $scope('Patizon D890',[['Velikost'=>'S'],['Velikost'=>'L']]),
+ $scope('Patizon D890 – M Šedozelená',[['Barva'=>'Zelená']]),
+ $scope('Patizon D890 – S',[['Zip'=>'Levý']]),
+ $scope('Patizon D290 – S',[['Barva'=>'Červená']]),
+ ]as$local)$check(SimpleStore\Supplier\GraminoVariantScope::select($doc,$scopeGroup['url'],$local)===null,'Missing, conflicting or differently priced variant accepted.');
+$local=$scope('Patizon D890 – L Červená',[['Barva'=>'Červená']]);
+$resolved=SimpleStore\Supplier\GraminoVariantScope::select($doc,$scopeGroup['url'],$local);
+$check($resolved!==null&&str_ends_with($resolved['corrected_url'],'v_id=red-l'),'Single proven variant did not repair its link.');
+$check(SimpleStore\Supplier\GraminoVariantScope::select($doc,'https://another.test/p/patizon-d-890',$local)===null,'Gramino scope leaked to a different supplier.');
+$doc['single_offers']=false;$check(SimpleStore\Supplier\GraminoVariantScope::select($doc,$scopeGroup['url'],$local)===null,'Conditional/extra offers ignored.');
+echo "Supplier prices: explicit local model, colour and size scope passed.\n";

@@ -132,5 +132,21 @@ try{
  $manager->enqueue('one','rapid',$cachedMove);$before=count($requests);$manager->tick();
  $check($job($cachedMove)['status']==='applied'&&count($requests)===$before,'Cached redirect and offer were not resolved in one local tick.');
  $report=$manager->diagnostics();$check($report['format']==='dobrodruzi.supplier-price-diagnostics'&&!str_contains(json_encode($report),$token),'Diagnostics leaked cron token.');
+ $entry=array_values(array_filter($report['items'],static fn(array $item):bool=>$item['product_key']===$cachedMove))[0];
+ $check($entry['sources'][0]['resolved_url']==='https://a.test/new-link'&&isset($entry['sources'][0]['cache']['document']),'Diagnostics omitted the offer behind a cached redirect.');
+ $gramino=$partners->save(0,['name'=>'Gramino','website_url'=>'https://gramino.cz/','priority'=>'100']);
+ $scoped=$make('patizon-d890-s',11990);$modelUrl='https://gramino.cz/p/patizon-d-890';
+ $db->update('shop_product_sales',['partner_id'=>$gramino],'product_key=%s',$scoped);
+ $db->update('shop_product_revisions',['name'=>'Patizon D890 – S','price_czk'=>12100],'product_key=%s',$scoped);
+ $db->update('shop_product_supplier_links',['url'=>$modelUrl],'product_key=%s',$scoped);
+ $db->insert('shop_product_variant_settings',['product_key'=>$scoped,'enabled'=>1]);
+ foreach(['Červená','Modrá']as$color)$db->insert('shop_product_variants',['product_key'=>$scoped,'variant_key'=>bin2hex(random_bytes(16)),'choices_json'=>json_encode(['Barva'=>$color]),'available_quantity'=>7]);
+ $node=['@type'=>'ProductGroup','name'=>'Patizon D 890','url'=>$modelUrl,'hasVariant'=>[]];
+ foreach([['Red','S',11990],['Blue','S',11990],['Red','L',12490]]as[$color,$size,$price])$node['hasVariant'][]=['@type'=>'Product','name'=>'Patizon D 890 – '.$color.', '.$size,'offers'=>['@type'=>'Offer','url'=>$modelUrl.'?v_id='.$color.$size,'price'=>$price,'priceCurrency'=>'CZK','availability'=>'https://schema.org/InStock']];
+ $responses[$modelUrl]=['code'=>200,'headers'=>[],'body'=>'<script type="application/ld+json">'.json_encode($node).'</script>'];
+ $manager->enqueue('one','rapid',$scoped);$run(4,100);
+ $check($job($scoped)['status']==='checked'&&(int)$sale($scoped)['supplier_price_czk']===11990,'Scoped local variants did not auto-verify their shared price.');
+ $audit=json_decode($job($scoped)['result_json'],true);$check($audit['identity_evidence']['method']==='exact_local_variant_scope','Local variant proof missing.');
+ $check((int)$db->queryFirstField('SELECT SUM(available_quantity) FROM shop_product_variants WHERE product_key=%s',$scoped)===14,'Scoped check changed physical stock.');
  echo "Supplier prices: MySQL durable queue, selected/fallback sellers, daily and URL limits, pauses, locks, stale data, variants and cron passed.\n";
 }finally{$db->disconnect();$admin->query('DROP DATABASE %b',$database);}
