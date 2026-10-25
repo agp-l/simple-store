@@ -374,6 +374,14 @@ try {
             }
         }
         $editMode = $editRequested && $canEdit && $item !== null;
+        if ($item !== null) {
+            try {
+                $shared['selectedVariant'] = \SimpleStore\Product\ProductVariantSelection::resolve($item, $_GET['variant'] ?? null);
+            } catch (InvalidArgumentException $e) {
+                $renderer->render('not-found', $shared, $e->getCode());
+                exit;
+            }
+        }
         $supplierLinks = [];
         $supplierLinksReady = false;
         if ($canEdit && $item !== null) {

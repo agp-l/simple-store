@@ -76,5 +76,17 @@ $check(str_contains($emptyHtml, 'id="variant-create" open') && str_contains($emp
 ob_start(); $renderer->render('product-record', ['product' => $product, 'basePath' => '/shop/', 'language' => 'cs', 'editMode' => true, 'canEditProduct' => true,
     'variantError' => 'Zkontroluj vlastnosti.', 'variantForm' => ['operation' => 'generate', 'groups' => 'Velikost: XL', 'confirm' => '1']]); $failedGenerate = ob_get_clean();
 $check(str_contains($failedGenerate, 'id="variant-create" open') && str_contains($failedGenerate, '>Velikost: XL</textarea>') && str_contains($failedGenerate, 'Zkontroluj vlastnosti.'), 'Failed generation closed or lost the submitted values.');
+$selected = \SimpleStore\Product\ProductVariantSelection::resolve($product, $rows[1]['id']);
+$check($selected['id'] === $rows[1]['id'], 'Deep link selected another variant.');
+foreach (['', [], str_repeat('f', 32), $rows[2]['id']] as $badId) {
+    $invalid(static fn () => \SimpleStore\Product\ProductVariantSelection::resolve($product, $badId));
+}
+$invalid(static fn () => \SimpleStore\Product\ProductVariantSelection::resolve($withoutVariants, $rows[0]['id']));
+ob_start(); $renderer->render('product-record', ['product' => $product, 'selectedVariant' => $selected]); $selectedHtml = ob_get_clean();
+$check(str_contains($selectedHtml, 'value="' . $selected['id'] . '" selected'), 'PHP-only variant link was not selected.');
+$check(str_contains($selectedHtml, 'data-variant-price>' . number_format($selected['price_czk'], 0, ',', ' ')), 'PHP-only variant link has the wrong price.');
+$selected['quantity'] = 0;
+ob_start(); $renderer->render('product-record', ['product' => $product, 'selectedVariant' => $selected]); $unavailableHtml = ob_get_clean();
+$check(str_contains($unavailableHtml, 'id="detail-add" disabled'), 'Unavailable deep link remained purchasable.');
 $cart->clear();
 echo "Variant validation, cart, import and rendering passed.\n";

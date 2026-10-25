@@ -9,7 +9,9 @@ $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, 
 $editing = (bool) ($editMode ?? false);
 $canEdit = (bool) ($canEditProduct ?? false);
 $imageUrl = static fn (string $path): string => str_starts_with($path, 'images/') ? $basePath . $path : $path;
-$image = $imageUrl($product['image_path']);
+$selectedVariant = $editing ? null : ($selectedVariant ?? null);
+$displayImagePath = !empty($selectedVariant['image_path']) ? $selectedVariant['image_path'] : $product['image_path'];
+$image = $imageUrl($displayImagePath);
 $mediaLibraryUrl = $basePath . 'admin/?' . http_build_query([
     'section' => 'media', 'type' => 'product', 'key' => $product['product_key'], 'language' => $language,
 ]);
@@ -20,10 +22,17 @@ $galleryPaths = array_values(array_unique($galleryPaths));
 $categoryPath = CategoryPath::fromProduct($product);
 $categoryLabel = $categoryLabels[$categoryPath] ?? $categoryLabels[explode('/', $categoryPath)[0]] ?? 'Vybavení';
 $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_stock' => 'Není skladem'];
-if (!$editing && ($product['sale_mode'] ?? 'own') === 'assisted') $stockText['in_stock'] = 'Dostupné u partnera';
+if (!$editing && ($product['sale_mode'] ?? 'own') === 'assisted') $stockText['in_stock'] = 'Skladem u partnera';
 $variantMode = (bool) ($product['variant_inventory']['enabled'] ?? false);
 $offerPrice = $editing ? (int) $product['price_czk'] : (int) ($product['offer_price_czk'] ?? $product['price_czk']);
 $availability = $product['availability_status'] ?? $product['stock_status'];
+$baseOfferPrice = $offerPrice;
+$baseAvailability = $availability;
+$basePriceText = (!$editing && !empty($product['price_varies']) ? 'od ' : '') . number_format($offerPrice, 0, ',', ' ');
+if ($selectedVariant !== null) {
+    $offerPrice = $selectedVariant['price_czk'] ?? (int) $product['price_czk'];
+    $availability = \SimpleStore\Product\ProductVariants::availability($selectedVariant);
+}
 $editable = static function (string $field, string $value, ?int $index = null, string $operation = 'set') use ($editing, $escape): string {
     if (!$editing) return '';
     return ' contenteditable="plaintext-only" spellcheck="true" role="textbox"'
@@ -43,7 +52,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         <?php if ($editing): ?><div class="inline-image-actions"><button type="button" class="inline-small" data-editor-action="main-image">✎ Hlavní obrázek</button><button type="button" class="inline-small" data-editor-action="gallery-add">＋ Přidat fotografii</button></div><?php endif; ?>
         <?php if (count($galleryPaths) > 1): ?><div class="detail-thumbs" aria-label="Fotografie produktu">
           <?php foreach ($galleryPaths as $i => $path): ?>
-            <span class="inline-thumb"><button type="button" class="detail-thumb" data-gallery-image="<?= $escape($imageUrl($path)) ?>" aria-label="Zobrazit fotografii <?= $i + 1 ?>" aria-pressed="<?= $i === 0 ? 'true' : 'false' ?>"><img src="<?= $escape($imageUrl(MediaPath::variant($path, 'thumb'))) ?>" alt="" loading="lazy"></button>
+            <span class="inline-thumb"><button type="button" class="detail-thumb" data-gallery-image="<?= $escape($imageUrl($path)) ?>" aria-label="Zobrazit fotografii <?= $i + 1 ?>" aria-pressed="<?= $path === $displayImagePath ? 'true' : 'false' ?>"><img src="<?= $escape($imageUrl(MediaPath::variant($path, 'thumb'))) ?>" alt="" loading="lazy"></button>
               <?php if ($editing && $i > 0 && isset($details['gallery'][$i - 1]) && $details['gallery'][$i - 1] === $path): ?><button type="button" class="inline-tiny" data-editor-action="gallery-set" data-editor-index="<?= $i - 1 ?>" data-editor-value="<?= $escape($path) ?>" aria-label="Upravit fotografii <?= $i + 1 ?>">✎</button><button type="button" class="inline-tiny" data-editor-action="gallery-remove" data-editor-index="<?= $i - 1 ?>" aria-label="Odebrat fotografii <?= $i + 1 ?>">×</button><?php endif; ?>
             </span>
           <?php endforeach; ?></div><?php endif; ?>
@@ -75,7 +84,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         <?php endforeach; ?>
         <?php if ($editing): ?><button class="inline-small" type="button" data-editor-action="option-add">＋ Přidat výběr (barva, velikost…)</button><?php endif; ?>
         <?php endif; ?>
-        <div class="detail-price"><div class="detail-prices"><?php if ($editing && $variantMode): ?><small>Výchozí cena variant</small><?php endif; ?><strong><span<?= !$editing ? ' data-variant-price' : '' ?><?= $editable('price_czk', (string) $product['price_czk']) ?>><?= !$editing && !empty($product['price_varies']) ? 'od ' : '' ?><?= number_format($offerPrice, 0, ',', ' ') ?></span> Kč</strong><?php $btcPrice = $priceDisplay instanceof \SimpleStore\Pricing\BitcoinPriceDisplay ? $priceDisplay->bitcoin($offerPrice) : null; ?><?php if ($btcPrice !== null): ?><small class="price-secondary" data-variant-btc title="Orientační přepočet na bitcoin"><?= $escape($btcPrice) ?></small><?php endif; ?></div><span class="stock <?= $availability === 'in_stock' ? '' : 'stock-wait' ?>"><span class="stock-dot" aria-hidden="true"></span><span data-variant-stock><?= $escape($stockText[$availability] ?? '') ?></span></span></div>
+        <div class="detail-price"><div class="detail-prices"><?php if ($editing && $variantMode): ?><small>Výchozí cena variant</small><?php endif; ?><strong><span<?= !$editing ? ' data-variant-price' : '' ?><?= $editable('price_czk', (string) $product['price_czk']) ?>><?= !$editing && $selectedVariant === null && !empty($product['price_varies']) ? 'od ' : '' ?><?= number_format($offerPrice, 0, ',', ' ') ?></span> Kč</strong><?php $btcPrice = $priceDisplay instanceof \SimpleStore\Pricing\BitcoinPriceDisplay ? $priceDisplay->bitcoin($offerPrice) : null; ?><?php if ($btcPrice !== null): ?><small class="price-secondary" data-variant-btc title="Orientační přepočet na bitcoin"><?= $escape($btcPrice) ?></small><?php endif; ?></div><span class="stock <?= $availability === 'in_stock' ? '' : 'stock-wait' ?>"><span class="stock-dot" aria-hidden="true"></span><span data-variant-stock><?= $escape($stockText[$availability] ?? '') ?></span></span></div>
         <div class="buy-row"><div class="quantity"><button type="button" id="minus" aria-label="Ubrat kus">−</button><input id="qty" type="number" name="quantity" min="1" max="99" value="1" aria-label="Počet kusů" required><button type="button" id="plus" aria-label="Přidat kus">＋</button></div>
           <button class="detail-add" type="submit" id="detail-add" <?= $availability === 'out_of_stock' || empty($product['published']) ? 'disabled' : '' ?>><?= empty($product['published']) ? 'Neveřejný koncept' : ($availability === 'out_of_stock' ? 'Není skladem' : 'Přidat do košíku') ?></button></div>
         </form>

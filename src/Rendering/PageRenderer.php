@@ -85,6 +85,7 @@ final class PageRenderer
         $searchAction = (string) ($data['searchAction'] ?? $basePath . $language);
         $sortChoice = (string) ($data['sortChoice'] ?? 'default');
         $product = $data['product'] ?? null;
+        $selectedVariant = $data['selectedVariant'] ?? null;
         $stockReady = (bool) ($data['stockReady'] ?? false);
         $canEditProduct = (bool) ($data['canEditProduct'] ?? false);
         $editMode = (bool) ($data['editMode'] ?? false);

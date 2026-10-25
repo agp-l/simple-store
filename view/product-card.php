@@ -14,7 +14,7 @@ while ($categoryPath !== '' && !isset($categoryLabels[$categoryPath])) $category
 $categoryHref = $categoryPath === '' ? $basePath . $language . '?all=1#produkty' : $basePath . $language . '/kategorie-produktu/' . $categoryPath;
 $categoryLabel = $categoryLabels[$categoryPath] ?? $categoryLabels[explode('/', $categoryPath)[0]] ?? 'Vybavení';
 $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_stock' => 'Není skladem'];
-if (($product['sale_mode'] ?? 'own') === 'assisted') $stockText['in_stock'] = 'Dostupné u partnera';
+if (($product['sale_mode'] ?? 'own') === 'assisted') $stockText['in_stock'] = 'Skladem u partnera';
 $availability = $product['availability_status'] ?? $product['stock_status'];
 $offerPrice = (int) ($product['offer_price_czk'] ?? $product['price_czk']);
 $hasOptions = ($product['variant_inventory']['enabled'] ?? false) || ProductDetails::decode($product['details_json'] ?? null, $product['sizes'] ?? '')['options'] !== [];

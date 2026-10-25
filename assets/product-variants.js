@@ -6,7 +6,7 @@
   if (!picker || !stock) return;
   const editing = Boolean(picker.closest('.is-editing'));
   const mainImage = document.getElementById('detail-image');
-  const initialImage = mainImage?.getAttribute('src');
+  const initialImage = picker.dataset.baseImage || mainImage?.getAttribute('src');
   const selectImage = image => {
     const thumbnail = Array.from(document.querySelectorAll('[data-gallery-image]'))
       .find(button => button.dataset.galleryImage === image);
@@ -17,9 +17,14 @@
     selectImage(picker.selectedOptions[0]?.dataset.image || initialImage);
   });
   if (editing || !price) return;
-  const initial = { price: price.textContent, stock: stock.textContent, btc: btc?.textContent || '', waiting: stock.parentElement.classList.contains('stock-wait') };
+  const buy = document.getElementById('detail-add');
+  const initial = { price: picker.dataset.basePrice, stock: picker.dataset.baseStock, btc: picker.dataset.baseBtc, waiting: picker.dataset.baseState !== 'in_stock' };
   picker.addEventListener('change', () => {
     const option = picker.selectedOptions[0];
+    if (buy) {
+      buy.disabled = picker.dataset.published !== '1' || option?.dataset.state === 'out_of_stock' || (!option?.value && picker.dataset.baseState === 'out_of_stock');
+      buy.textContent = picker.dataset.published !== '1' ? 'Neveřejný koncept' : (buy.disabled ? 'Není skladem' : 'Přidat do košíku');
+    }
     if (!option?.value) {
       price.textContent = initial.price; stock.textContent = initial.stock;
       if (btc) btc.textContent = initial.btc;
@@ -46,19 +51,30 @@
     values.forEach(value => { const option = document.createElement('option'); option.value = value; option.textContent = value; select.append(option); });
     label.append(select); container.append(label); return select;
   });
-  const refresh = () => {
+  const refresh = (preserveUnavailable = false) => {
     selectors.forEach((select, index) => {
       const allowed = variants.filter(variant => !variant.option.disabled && names.slice(0, index).every((name, previous) => !selectors[previous].value || variant.choices[name] === selectors[previous].value));
       Array.from(select.options).forEach(option => { option.disabled = option.value !== '' && !allowed.some(variant => variant.choices[names[index]] === option.value); });
-      if (select.selectedOptions[0]?.disabled) select.value = '';
+      if (!preserveUnavailable && select.selectedOptions[0]?.disabled) select.value = '';
     });
-    const selected = variants.find(variant => !variant.option.disabled && names.every((name, index) => variant.choices[name] === selectors[index].value));
+    const selected = variants.find(variant => (preserveUnavailable || !variant.option.disabled) && names.every((name, index) => variant.choices[name] === selectors[index].value));
     picker.value = selected?.option.value || '';
     picker.dispatchEvent(new Event('change', { bubbles: true }));
   };
-  selectors.forEach(select => select.addEventListener('change', refresh));
+  const setAddress = () => {
+    const url = new URL(location.href);
+    if (picker.value) url.searchParams.set('variant', picker.value); else url.searchParams.delete('variant');
+    if (url.href !== location.href) history.pushState(null, '', url);
+  };
+  const restore = id => {
+    const variant = variants.find(row => row.option.value === id);
+    selectors.forEach((select, i) => { select.value = variant?.choices[names[i]] || ''; });
+    refresh(true);
+  };
+  selectors.forEach(select => select.addEventListener('change', () => { refresh(); setAddress(); }));
+  window.addEventListener('popstate', () => restore(new URL(location.href).searchParams.get('variant')));
   picker.before(container); picker.hidden = true; picker.required = false;
   const label = document.querySelector('label[for="product-variant"]'); if (label) label.hidden = true;
   const note = document.querySelector('.variant-purchase-note'); if (note) note.hidden = true;
-  refresh();
+  restore(picker.value);
 })();

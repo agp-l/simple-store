@@ -32,9 +32,15 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
       await page.locator('#variant-choice-1').selectOption('M');
       const selected = await page.locator('#product-variant').inputValue();
       assert.match(selected, /^[a-f0-9]{32}$/);
+      assert.equal(new URL(page.url()).searchParams.get('variant'), selected);
       assert.equal(await page.locator('.product-purchase').evaluate(form => new FormData(form).get('variant_key')), selected);
       assert.match(await page.locator('[data-variant-price]').textContent(), /2\s*490/);
       await page.locator('#variant-choice-1').selectOption('L');
+      const large = await page.locator('#product-variant').inputValue();
+      await page.goBack();
+      assert.equal(await page.locator('#product-variant').inputValue(), selected);
+      await page.goForward();
+      assert.equal(await page.locator('#product-variant').inputValue(), large);
       assert.match(await page.locator('[data-variant-price]').textContent(), /2\s*490/);
       await page.locator('#variant-choice-0').selectOption('Červená');
       assert.match(await page.locator('[data-variant-price]').textContent(), /2\s*890/);
