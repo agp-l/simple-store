@@ -12,6 +12,7 @@ final class PriceManager
 {
     private $transport;
     private $clock;
+    private ?bool $variantModesInstalled=null;
     public function __construct(private MeekroDB $db, ?callable $transport = null, ?callable $clock = null)
     {
         $this->transport = $transport ?? [new HttpClient(),'get'];
@@ -143,6 +144,7 @@ final class PriceManager
         $suffix=$lock?' FOR UPDATE':'';
         $products=$this->db->query('SELECT id,name,language,slug,price_czk FROM shop_product_revisions WHERE product_key=%s AND active_product_key IS NOT NULL ORDER BY (language=%s) DESC,language'.$suffix,$key,'cs');
         if($products===[])return null;
+        if($this->db->queryFirstField('SELECT target_key FROM shop_product_redirects WHERE language=%s AND source_slug=%s AND target_key<>%s LIMIT 1',$products[0]['language'],$products[0]['slug'],$key)!==null)return null;
         $sale=$this->db->queryFirstRow('SELECT * FROM shop_product_sales WHERE product_key=%s'.$suffix,$key);
         $links=$this->db->query('SELECT id,url FROM shop_product_supplier_links WHERE product_key=%s ORDER BY id'.$suffix,$key);
         $partners=$this->db->query('SELECT id,name,website_url,priority,version FROM shop_purchase_partners ORDER BY id'.$suffix);
@@ -152,7 +154,9 @@ final class PriceManager
         $candidates=self::candidates($links,$partners,(int)($sale['partner_id']??0));
         $ids=array_column($candidates,'partner_id');$ids[]=(int)($sale['partner_id']??0);
         $partners=array_values(array_filter($partners,static fn(array $p):bool=>in_array((int)$p['id'],$ids,true)));
-        return compact('products','sale','links','partners','variants','variantSettings','candidates');
+        $this->variantModesInstalled??=(int)$this->db->queryFirstField('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s','shop_product_supplier_variant_modes')===1;
+        $variantPriceMode=$this->variantModesInstalled?$this->db->queryFirstRow('SELECT * FROM shop_product_supplier_variant_modes WHERE product_key=%s'.$suffix,$key):null;
+        return compact('products','sale','links','partners','variants','variantSettings','candidates','variantPriceMode');
     }
     public function tick(): array
     {
@@ -298,7 +302,7 @@ final class PriceManager
     {
         if($result['fallback'])return 'Cena pochází ze záložního obchodu. Zkontroluj nabídku a případně převezmi cenu i prodávajícího.';
         if($result['uncertain'])return 'Odkaz a strukturovaná nabídka se přesně neshodují. Ověř variantu.';
-        if(!empty($snapshot['variantSettings']['enabled'])&&empty($result['uniform_variants']))return 'Produkt používá varianty. Ověř, zda cena platí pro varianty se základní dodavatelskou cenou.';
+        if(!empty($snapshot['variantSettings']['enabled'])&&empty($result['uniform_variants'])&&empty($result['variant_offers']))return 'Produkt používá varianty. Ověř, zda cena platí pro varianty se základní dodavatelskou cenou.';
         $old=(int)($snapshot['sale']['supplier_price_czk']??0);
         if($old>0&&abs($result['price']-$old)/$old>0.30)return 'Změna přesahuje 30 %. Před převzetím ověř cenu.';
         if($result['availability']==='out_of_stock')return 'Nabídka není skladem. Před převzetím ověř podmínky dodání.';
@@ -316,7 +320,7 @@ final class PriceManager
             if(!$snapshot||!hash_equals($data['fingerprint'],hash('sha256',self::json($snapshot))))throw new InvalidArgumentException('Produkt se mezitím změnil. Nabídku už nelze bezpečně převzít.');
             if((int)$result['observed_at']<=$this->now()-86400)throw new InvalidArgumentException('Nabídka je starší než 24 hodin. Spusť novou kontrolu.');
             if(!$manual&&self::reviewReason($snapshot,$result)!=='')throw new InvalidArgumentException('Nabídka vyžaduje ruční kontrolu.');
-            if(!empty($snapshot['variantSettings']['enabled'])&&!$variants&&empty($result['uniform_variants']))throw new InvalidArgumentException('Potvrď, že cena platí pro varianty se základní cenou.');
+            if(!empty($snapshot['variantSettings']['enabled'])&&!$variants&&empty($result['uniform_variants'])&&empty($result['variant_offers']))throw new InvalidArgumentException('Potvrď, že cena platí pro varianty se základní cenou.');
             if($result['fallback']&&!empty(json_decode($snapshot['sale']['variant_prices_json']??'{}',true)))throw new InvalidArgumentException('Produkt má vlastní dodavatelské ceny variant. Změň prodávajícího a tyto ceny společně v detailu produktu.');
             if($result['fallback']){
                 $partner=$this->db->queryFirstRow('SELECT * FROM shop_purchase_partners WHERE id=%i FOR UPDATE',$result['partner_id']);
@@ -329,10 +333,23 @@ final class PriceManager
             $sale=$snapshot['sale'];
             if(!$sale)throw new InvalidArgumentException('Produkt nemá uložené nastavení prodeje. Nejprve ho doplň v detailu.');
             $overrides=json_decode($sale['variant_prices_json']??'{}',true)??[];
+            $variantPrices=[];$oldOverrides=$overrides;
+            if(!empty($result['variant_offers'])){
+                if(empty($snapshot['variantPriceMode']['enabled'])||$result['fallback'])throw new InvalidArgumentException('Automatická cenotvorba variant není pro tento produkt povolená.');
+                foreach($snapshot['variants']as$v){
+                    if(!(int)$v['enabled'])continue;
+                    $offer=$result['variant_offers'][$v['variant_key']]??null;
+                    if(!$offer)throw new InvalidArgumentException('Chybí přesná cena některé aktivní varianty.');
+                    $old=(int)($overrides[$v['variant_key']]??0);
+                    if(!$manual&&$old>0&&abs($offer['price']-$old)/$old>0.30)throw new InvalidArgumentException('Cena některé varianty se změnila o více než 30 %. Ověř nabídku.');
+                    $overrides[$v['variant_key']]=(int)$offer['price'];
+                    if($newRetail!==null)$variantPrices[$v['variant_key']]=PricingPolicy::price((int)$offer['price'],$pricing);
+                }
+            }
             if(!empty($snapshot['variantSettings']['enabled']))foreach($snapshot['variants']as$v){
                 if(!(int)$v['enabled'])continue;
                 $cost=(int)($overrides[$v['variant_key']]??$result['price']);
-                $selling=$v['price_czk']===null?min($retail):(int)$v['price_czk'];
+                $selling=$variantPrices[$v['variant_key']]??($v['price_czk']===null?min($retail):(int)$v['price_czk']);
                 if($cost>$selling)throw new InvalidArgumentException('Vlastní cena některé varianty je nižší než její nákupní cena. Uprav ji v detailu produktu.');
             }
             $retailChanges=[];
@@ -355,8 +372,16 @@ final class PriceManager
                     'id=%i AND product_key=%s AND url=%s',$candidate['id'],$job['product_key'],$candidate['url']);
                 $result['link_repair']=['old'=>$candidate['url'],'new'=>$corrected];
             }
-            if(!$same||$retailChanges!==[])$this->db->update('shop_product_sales',['supplier_price_czk'=>$result['price'],'partner_id'=>$result['partner_id'],'version'=>(int)$sale['version']+1],
+            $variantChanges=[];
+            foreach($snapshot['variants']as$v)if(isset($variantPrices[$v['variant_key']])&&(int)$v['price_czk']!==$variantPrices[$v['variant_key']]){
+                $this->db->update('shop_product_variants',['price_czk'=>$variantPrices[$v['variant_key']]],'product_key=%s AND variant_key=%s',$job['product_key'],$v['variant_key']);
+                $variantChanges[]=['variant_key'=>$v['variant_key'],'old'=>$v['price_czk'],'new'=>$variantPrices[$v['variant_key']]];
+            }
+            if($variantChanges!==[])$this->db->query('UPDATE shop_product_variant_settings SET version=version+1 WHERE product_key=%s',$job['product_key']);
+            $same=$same&&$overrides===$oldOverrides&&$variantChanges===[];
+            if(!$same||$retailChanges!==[])$this->db->update('shop_product_sales',['supplier_price_czk'=>$result['price'],'partner_id'=>$result['partner_id'],'variant_prices_json'=>self::json((array)$overrides),'version'=>(int)$sale['version']+1],
                 'product_key=%s AND version=%i',$job['product_key'],$sale['version']);
+            $result['variant_price_changes']=$variantChanges;
             $result['retail_changes']=$retailChanges;$result['pricing_policy']=$newRetail===null?null:array_intersect_key($pricing,PricingPolicy::DEFAULTS);
             $same=$same&&$retailChanges===[];
             $this->db->update('shop_supplier_price_jobs',['status'=>$same?'checked':'applied','applied_at'=>$same?0:$this->now(),

@@ -1531,6 +1531,21 @@ PREPARE supplier_statement FROM @supplier_options_sql;
 EXECUTE supplier_statement;
 DEALLOCATE PREPARE supplier_statement;
 
+CREATE TABLE IF NOT EXISTS shop_product_supplier_variant_modes (
+  product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+  enabled TINYINT(1) NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shop_product_family_merges (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  target_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  before_json LONGTEXT NOT NULL,
+  after_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  undone TINYINT(1) NOT NULL DEFAULT 0,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  KEY family_target (target_key,id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 SET @supplier_retry_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_supplier_price_jobs' AND COLUMN_NAME='retry_of');
 SET @supplier_retry_sql = IF(@supplier_retry_exists=0, 'ALTER TABLE shop_supplier_price_jobs ADD COLUMN retry_of BIGINT UNSIGNED NOT NULL DEFAULT 0', 'SELECT 1');
 PREPARE supplier_statement FROM @supplier_retry_sql;

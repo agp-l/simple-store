@@ -283,7 +283,7 @@ try {
         exit;
     }
 
-    if (in_array($action, ['product-prompt-save', 'product-bulk-export', 'product-bulk-prepare', 'product-bulk-step', 'product-bulk-clear', 'product-import-preview', 'product-import-save', 'product-zip-upload', 'product-zip-step', 'product-zip-clear'], true) ||
+    if (in_array($action, ['product-family-preview', 'product-family-apply', 'product-family-undo', 'product-prompt-save', 'product-bulk-export', 'product-bulk-prepare', 'product-bulk-step', 'product-bulk-clear', 'product-import-preview', 'product-import-save', 'product-zip-upload', 'product-zip-step', 'product-zip-clear'], true) ||
         ($method !== 'POST' && $section === 'product-import')) {
         require __DIR__ . '/src/Admin/product-import.php';
         require __DIR__ . '/view/admin/layout.php';

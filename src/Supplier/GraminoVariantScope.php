@@ -26,7 +26,7 @@ final class GraminoVariantScope
         }
         $variants=!empty($snapshot['variantSettings']['enabled'])?array_values(array_filter($snapshot['variants']??[],static fn(array $v):bool=>!empty($v['enabled']))):[['choices_json'=>'{}']];
         if(!$variants)return null;
-        $matched=[];
+        $matched=[];$variantOffers=[];
         foreach($variants as$variant){
             $constraints=$base;$choices=json_decode($variant['choices_json']??'null',true);
             if(!is_array($choices))return null;
@@ -38,14 +38,20 @@ final class GraminoVariantScope
                 if($value===''||(isset($constraints[$dimension])&&!in_array($value,$constraints[$dimension],true)))return null;
                 $constraints[$dimension]=[$value];
             }
-            $found=false;
+            $found=false;$variantMatches=[];
             foreach($parsed as$i=>$dimensions){
                 foreach($constraints as$key=>$values)if(!isset($dimensions[$key])||!in_array($dimensions[$key],$values,true))continue 2;
-                $matched[$i]=$offers[$i];$found=true;
+                $matched[$i]=$offers[$i];$variantMatches[$i]=$offers[$i];$found=true;
             }
             if(!$found)return null; // Every enabled local combination must be represented.
+            if(!empty($snapshot['variantPriceMode']['enabled'])){
+                if(count(array_unique(array_map(static fn(array $o):string=>number_format((float)$o['amount'],2,'.',''),$variantMatches)))!==1)return null;
+                $choice=reset($variantMatches);$states=array_unique(array_column($variantMatches,'availability'));
+                $variantOffers[$variant['variant_key']]=['price'=>$choice['price'],'availability'=>count($states)===1?reset($states):'unknown','urls'=>array_column($variantMatches,'url')];
+            }
         }
-        if(count(array_unique(array_map(static fn(array $o):string=>number_format((float)$o['amount'],2,'.',''),$matched)))!==1)return null;
+        $uniform=count(array_unique(array_map(static fn(array $o):string=>number_format((float)$o['amount'],2,'.',''),$matched)))===1;
+        if(!$uniform&&$variantOffers===[])return null;
         $result=reset($matched);$result['url']=$url;$result['uniform_variants']=true;$result['uncertain']=false;
         $availability=array_unique(array_column($matched,'availability'));
         $result['availability']=count($availability)===1?reset($availability):'unknown';
@@ -53,6 +59,7 @@ final class GraminoVariantScope
             'local_variants'=>count($variants),'matched_offers'=>array_values(array_map(static fn(array $o):array=>array_intersect_key($o,array_flip(['url','product_name','amount'])),$matched))];
         // A single exact choice has a stable variant link. For a shared price keep the model URL.
         $result['corrected_url']=count($matched)===1?$result['identity_evidence']['matched_offers'][0]['url']:$offers[0]['group_url'];
+        if($variantOffers!==[]){$result['variant_offers']=$variantOffers;$result['price']=min(array_column($variantOffers,'price'));$result['uniform_variants']=$uniform;}
         return $result;
     }
     private static function normalize(string $value):string

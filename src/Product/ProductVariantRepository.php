@@ -119,6 +119,11 @@ final class ProductVariantRepository
             }
         }
         ProductVariants::normalize($rows);
+        // A deliberate manual price edit opts this product out of managed family pricing.
+        $pricesChanged=false;$oldPrices=array_column($current['items'],'price_czk','id');
+        foreach($rows as$row)if(array_key_exists($row['id'],$oldPrices)&&$row['price_czk']!==$oldPrices[$row['id']])$pricesChanged=true;
+        if($pricesChanged&&(int)$this->db->queryFirstField('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s','shop_product_supplier_variant_modes')===1)
+            $this->db->update('shop_product_supplier_variant_modes',['enabled'=>0],'product_key=%s',$key);
         foreach ($rows as $position => $row) {
             $this->db->query('INSERT INTO shop_product_variants
                 (product_key,variant_key,choices_json,available_quantity,stock_status,sku,price_czk,image_path,enabled,position)

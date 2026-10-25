@@ -416,6 +416,8 @@ try {
             }
         }
         if ($editMode) {
+            $shared['supplierVariantPricing']=(int)$db->queryFirstField('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s','shop_product_supplier_variant_modes')===1
+                &&(bool)$db->queryFirstField('SELECT enabled FROM shop_product_supplier_variant_modes WHERE product_key=%s',$item['product_key']);
             $shared['variantModeBlocked'] = $stockReady && (new \SimpleStore\Product\ProductVariantRepository($db))->hasReservations($item['product_key']);
             $rows = [];
             foreach ($categories->allForAdmin($url->getLanguage()) as $node) {

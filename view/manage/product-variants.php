@@ -15,6 +15,7 @@ foreach ($details['options'] as $group) $variantGroups[] = $group['name'] . ': '
 ?>
 <section class="product-admin-settings variant-manager" id="product-variants" aria-labelledby="variant-heading" data-variant-manager data-base-price="<?= (int) $product['price_czk'] ?>" data-recovered="<?= $variantError !== '' && in_array($variantForm['operation'] ?? '', ['row', 'batch', 'inherit-prices'], true) ? '1' : '0' ?>">
   <div class="product-admin-settings-heading"><strong id="variant-heading"><?= \SimpleStore\Rendering\Icon::render('package') ?> Varianty a sklad</strong><span class="editor-chip"><?= $variantInventory['enabled'] ? 'Sklad po variantách' : 'Společný sklad produktu' ?> · <?= count($variantRows) ?> variant</span></div>
+  <?php if(!empty($supplierVariantPricing)):?><p class="inline-stock-notice" role="status">Ceny těchto sloučených variant se automaticky počítají z jejich vlastních nabídek dodavatele a nastaveného zaokrouhlení. Ruční změna ceny v tabulce automatiku pro tento produkt vypne.</p><?php endif;?>
   <?php if (($_GET['variants_saved'] ?? '') === '1' && $variantError === ''): ?><p class="inline-stock-notice" role="status"><?= $variantInventory['enabled'] ? 'Varianty a sklad byly uloženy.' : 'Varianty jsou uložené. Společný sklad zůstal zachovaný.' ?></p><?php endif; ?>
   <?php if ($variantError !== '' && !in_array($variantForm['operation'] ?? '', ['merge', 'merge-preview'], true)): ?><p class="panel-error" role="alert"><?= $escape($variantError) ?></p><?php endif; ?>
   <?php if ($variantRows !== [] && !$variantInventory['enabled']): ?>

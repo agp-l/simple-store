@@ -2,12 +2,13 @@
 <p>Vyber produkty pro zálohu nebo AI. Upravená data nahraj zpět jako jeden JSON; nové fotografie lze přiložit v ZIP.</p>
 <p><a class="panel-icon-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=content-import') ?>"><?= \SimpleStore\Rendering\Icon::render('document') ?> Import a export stránek a článků</a></p></div></div>
 <nav class="panel-order-tabs product-transfer-tabs" aria-label="Import a export">
-<?php foreach (['export' => 'Export a seznam pro AI', 'bulk' => 'Hromadný JSON', 'single' => 'Jeden produkt', 'zip' => 'ZIP s fotografiemi', 'help' => 'Zadání pro AI'] as $tab => $label): ?>
-<a <?= $importTab === $tab ? 'aria-current="page"' : '' ?> href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=product-import&tab=' . $tab . '&language=' . $language) ?>"><span class="admin-tab-icon" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render(['export' => 'download', 'bulk' => 'list', 'single' => 'plus', 'zip' => 'package', 'help' => 'edit'][$tab]) ?></span><span><?= $escape($label) ?></span></a>
+<?php foreach (['export' => 'Export a seznam pro AI', 'families'=>'Sjednotit produkty', 'bulk' => 'Hromadný JSON', 'single' => 'Jeden produkt', 'zip' => 'ZIP s fotografiemi', 'help' => 'Zadání pro AI'] as $tab => $label): ?>
+<a <?= $importTab === $tab ? 'aria-current="page"' : '' ?> href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=product-import&tab=' . $tab . '&language=' . $language) ?>"><span class="admin-tab-icon" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render(['export' => 'download','families'=>'package', 'bulk' => 'list', 'single' => 'plus', 'zip' => 'package', 'help' => 'edit'][$tab]) ?></span><span><?= $escape($label) ?></span></a>
 <?php endforeach; ?></nav>
 <?php if ($importError !== ''): ?><p class="panel-error" role="alert"><?= $escape($importError) ?></p><?php endif; ?>
 <?php if ($transferError !== ''): ?><p class="panel-error" role="alert"><?= $escape($transferError) ?></p><?php endif; ?>
 <?php if ($importTab === 'export') require __DIR__ . '/product-export.php'; ?>
+<?php if ($importTab === 'families') require __DIR__ . '/product-families.php'; ?>
 <?php if ($importTab === 'bulk') require __DIR__ . '/product-import-bulk.php'; ?>
 <?php if ($importTab === 'zip') require __DIR__ . '/product-import-zip.php'; ?>
 <link rel="stylesheet" href="<?= \SimpleStore\Navigation\PanelUrl::escape($basePath . 'assets/product-transfer.css?v=' . filemtime(__DIR__ . '/../../assets/product-transfer.css')) ?>">

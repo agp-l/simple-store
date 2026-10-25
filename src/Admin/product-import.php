@@ -17,7 +17,9 @@ if (!is_string($language) || !in_array($language, $site['languages'], true)) $la
 $categories = new CategoryRepository($db);
 $repository = new ProductRepository($db, $site['languages'], $categories, $site['revision_limit'], new ProductStockRepository($db));
 $importTab = $_GET['tab'] ?? (isset($_GET['key']) || isset($_GET['example']) ? 'single' : 'export');
-if (!is_string($importTab) || !in_array($importTab, ['export', 'bulk', 'single', 'zip', 'help'], true)) $importTab = 'export';
+if (!is_string($importTab) || !in_array($importTab, ['export', 'bulk', 'single', 'zip', 'help','families'], true)) $importTab = 'export';
+if(str_starts_with((string)$action,'product-family-'))$importTab='families';
+if($importTab==='families')require __DIR__.'/product-families.php';
 if (str_starts_with((string) $action, 'product-zip-')) $importTab = 'zip';
 if (str_starts_with((string) $action, 'product-import-')) $importTab = 'single';
 if (str_starts_with((string) $action, 'product-bulk-')) $importTab = $action === 'product-bulk-export' ? 'export' : 'bulk';

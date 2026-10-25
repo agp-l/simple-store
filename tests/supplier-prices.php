@@ -174,3 +174,19 @@ $check(SimpleStore\Supplier\GraminoVariantScope::select($doc,$typed['url'],$loca
 $typed['hasVariant'][1]['name']='Therm-a-Rest Z Seat – Green / Silver';$doc=Parser::document($wrap($typed),$typed['url']);
 $check(SimpleStore\Supplier\GraminoVariantScope::select($doc,$typed['url'],$local)===null,'Different two-colour combination accepted.');
 echo "Supplier prices: typography and exact two-colour combinations passed.\n";
+
+// Opted-in merged families retain a separate, fully proven cost for every exact combination.
+$doc=Parser::document($wrap($scopeGroup),$scopeGroup['url']);
+$local=$scope('Patizon D890',[['Barva'=>'Červená','Velikost'=>'S'],['Barva'=>'Červená','Velikost'=>'L']]);
+$local['variantPriceMode']=['enabled'=>1];foreach($local['variants']as$i=>&$v)$v['variant_key']=str_repeat((string)($i+1),32);unset($v);
+$result=SimpleStore\Supplier\GraminoVariantScope::select($doc,$scopeGroup['url'],$local);
+$check($result!==null&&array_column($result['variant_offers'],'price')===[11990,12490]&&!$result['uniform_variants'],'Distinct exact variant prices collapsed.');
+$local['variants'][1]['choices_json']=json_encode(['Barva'=>'Modrá','Velikost'=>'L']);
+$check(SimpleStore\Supplier\GraminoVariantScope::select($doc,$scopeGroup['url'],$local)===null,'Invented size/colour combination priced.');
+$family=SimpleStore\Product\ProductFamilyMerge::family('Warmpeace Viking 300 – 195 cm');
+$check($family['name']==='Warmpeace Viking 300'&&$family['size']==='195 cm','Family boundary wrong.');
+$check(SimpleStore\Product\ProductFamilyMerge::family('Warmpeace Viking 600')===null,'Model number treated as a size.');
+$choices=SimpleStore\Product\ProductFamilyMerge::choices(['Varianta'=>'silver pine / levý (L)'],'M');
+$check($choices===['Barva'=>'silver pine','Velikost'=>'M','Zip'=>'Levá strana'],'Explicit zipper/colour lost.');
+foreach(['product-family-preview','product-family-apply','product-family-undo']as$action)$check(SimpleStore\Admin\AdminActionPolicy::allows($action),'Family action not authorized by shared policy.');
+echo "Supplier prices: distinct merged variant prices and missing-combination guards passed.\n";
