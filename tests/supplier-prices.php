@@ -189,4 +189,6 @@ $check(SimpleStore\Product\ProductFamilyMerge::family('Warmpeace Viking 600')===
 $choices=SimpleStore\Product\ProductFamilyMerge::choices(['Varianta'=>'silver pine / levý (L)'],'M');
 $check($choices===['Barva'=>'silver pine','Velikost'=>'M','Zip'=>'Levá strana'],'Explicit zipper/colour lost.');
 foreach(['product-family-preview','product-family-apply','product-family-undo']as$action)$check(SimpleStore\Admin\AdminActionPolicy::allows($action),'Family action not authorized by shared policy.');
+$longChoice=SimpleStore\Product\ProductFamilyMerge::choices(['Barva'=>'sunburn','Velikost'=>'do 196 cm - prodloužený (L)'],'L');
+$check($longChoice['Velikost']==='do 196 cm - prodloužený (L)','Explicit size description was lost.');
 echo "Supplier prices: distinct merged variant prices and missing-combination guards passed.\n";

@@ -42,7 +42,14 @@ try{
  $reject(fn()=>$family->preview($target,'cs'));$db->query('DELETE FROM shop_order_variant_reservations WHERE order_id=123');
  $db->insert('shop_orders',['order_number'=>'FAMILY-HISTORY','status'=>'completed','total_czk'=>100,'items_json'=>json_encode([['product_key'=>$source]]),'shipping_json'=>'{}']);
  $reject(fn()=>$family->preview($target,'cs'));$db->query('DELETE FROM shop_orders WHERE order_number=%s','FAMILY-HISTORY');
- $cache($group,time()-1);$reject(fn()=>$family->preview($target,'cs'));$bad=$group;array_pop($bad['hasVariant']);$cache($bad);$reject(fn()=>$family->preview($target,'cs'));$cache($group);
+ $cache($group,time()-1);$reject(fn()=>$family->preview($target,'cs'));$bad=$group;array_pop($bad['hasVariant']);$cache($bad);$limited=$family->preview($target,'cs');$check(!$limited['managed_prices']&&array_column($limited['variants'],'price_czk')===[4800,5300],'Incomplete offer invented variant prices.');$cache($group);
+ // A known model can be consolidated without guessing any missing variant cost.
+ $db->update('shop_product_sales',['supplier_price_czk'=>null],'product_key=%s',$source);$cache($bad);
+ $preserve=$family->preview($target,'cs');$check(!$preserve['managed_prices'],'Incomplete price proof enabled automation.');
+ $family->apply($target,'cs',$preserve['expected']);
+ $check($db->queryFirstField('SELECT supplier_price_czk FROM shop_product_sales WHERE product_key=%s',$target)===null,'Unknown cost inherited another size price.');
+ $check((int)$db->queryFirstField('SELECT enabled FROM shop_product_supplier_variant_modes WHERE product_key=%s',$target)===0,'Unverified prices became managed.');
+ $family->undo((int)$family->history()[0]['id']);$db->update('shop_product_sales',['supplier_price_czk'=>5190],'product_key=%s',$source);$cache($group);
  $plan=$family->preview($target,'cs');$family->apply($target,'cs',$plan['expected']);$history=$family->history();$mergeId=(int)$history[0]['id'];
  $current=$db->queryFirstRow('SELECT * FROM shop_product_revisions WHERE product_key=%s AND active_product_key IS NOT NULL',$target);
  $check($current['slug']==='warmpeace-viking-300'&&$current['name']==='Warmpeace Viking 300'&&(int)$current['price_czk']===4800,'Parent identity/price wrong.');

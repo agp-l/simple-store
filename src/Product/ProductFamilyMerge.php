@@ -19,8 +19,8 @@ final class ProductFamilyMerge
         if(isset($choices['Varianta'])&&count($choices)===1&&preg_match('~^(.+?)\s*/\s*(Levá strana|Pravá strana|levý \(L\)|pravý \(R\))$~uD',$choices['Varianta'],$m)){
             $choices=['Barva'=>$m[1],'Zip'=>in_array($m[2],['Levá strana','levý (L)'],true)?'Levá strana':'Pravá strana'];
         }
-        if(isset($choices['Velikost'])&&$choices['Velikost']!==$size)throw new InvalidArgumentException('Velikost v názvu odporuje vlastnostem varianty.');
-        $choices['Velikost']=$size;return ProductVariants::choices($choices);
+        if(isset($choices['Velikost'])&&$choices['Velikost']!==$size&&!(preg_match('/^do \d{2,3} cm - (?:prodloužený|standardní) \((XS|S|M|L|XL|XXL)\)$/uD',$choices['Velikost'],$m)&&$m[1]===$size))throw new InvalidArgumentException('Velikost v názvu odporuje vlastnostem varianty.');
+        $choices['Velikost']??=$size;return ProductVariants::choices($choices);
     }
     public function installed():bool
     {return (int)$this->db->queryFirstField('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN %ls',['shop_product_family_merges','shop_product_supplier_variant_modes'])===2;}
@@ -89,7 +89,7 @@ final class ProductFamilyMerge
         $variants=ProductVariants::normalize($variants);
         usort($variants,static fn(array $a,array $b):int=>strnatcmp($a['choices']['Velikost'],$b['choices']['Velikost'])?:strcmp(ProductVariants::label($a['choices']),ProductVariants::label($b['choices'])));
         foreach($state as$s)if($this->db->queryFirstField('SELECT source_slug FROM shop_product_redirects WHERE target_key=%s OR (language=%s AND source_slug=%s) LIMIT 1',$s['products'][0]['product_key'],$language,$s['products'][0]['slug'])!==null)throw new InvalidArgumentException('Produkt už má historii slučování nebo přesměrování. Vyžaduje samostatné posouzení.');
-        $proof=null;
+        $proof=null;$models=[];$resolved=[];
         $proofLinks=[];foreach($state as$s)foreach($s['links']as$link)$proofLinks[$link['url']]=$link;
         foreach($proofLinks as$link){
             $url=$link['url'];
@@ -99,16 +99,24 @@ final class ProductFamilyMerge
                 if(empty($data['redirect']))break;
                 try{$url=\SimpleStore\Supplier\HttpClient::redirect($url,$data['redirect']);}catch(InvalidArgumentException $e){$data=null;break;}
             }
+            $resolved[$link['url']]=$url;
             if(empty($data['document']))continue;
             $partner=$this->db->queryFirstRow('SELECT website_url FROM shop_purchase_partners WHERE id=%i',(int)$seller[1]);
             if(!$partner||ProductPartnerAssignment::host($partner['website_url'])!==ProductPartnerAssignment::host($url))continue;
+            $offers=$data['document']['offers']??[];$modelName=static fn(string $n):string=>strtolower(preg_replace('/\s+/u','',$n));
+            $sameModel=$offers!==[];foreach($offers as$o)if($modelName($o['group_name']?:$o['product_name'])!==$modelName($family['name'])||!\SimpleStore\Supplier\PriceParser::sameModel($url,$o['group_url']?:$o['url']))$sameModel=false;
+            if($sameModel)$models[]=$url;
             $mapped=array_map(static fn(array $v):array=>['variant_key'=>$v['id'],'enabled'=>1,'choices_json'=>json_encode($v['choices'])],$variants);
-            $proof=\SimpleStore\Supplier\GraminoVariantScope::select($data['document'],$url,['products'=>[['name'=>$family['name']]],'variants'=>$mapped,'variantSettings'=>['enabled'=>1],'variantPriceMode'=>['enabled'=>1]]);
-            if($proof!==null)break;
+            $foundProof=\SimpleStore\Supplier\GraminoVariantScope::select($data['document'],$url,['products'=>[['name'=>$family['name']]],'variants'=>$mapped,'variantSettings'=>['enabled'=>1],'variantPriceMode'=>['enabled'=>1]]);
+            if($foundProof!==null)$proof=$foundProof;
         }
-        if(!$proof||count($proof['variant_offers']??[])!==count($variants))throw new InvalidArgumentException('Chybí čerstvé jednoznačné nabídky pro všechny výsledné varianty. Nejdřív spusť kontrolu dodavatelských cen; neznámé kombinace se neslučují.');
+        foreach($state as$s){$verified=false;foreach($s['links']as$link)foreach($models as$model)if(\SimpleStore\Supplier\PriceParser::sameModel($resolved[$link['url']]??$link['url'],$model))$verified=true;
+            if(!$verified)throw new InvalidArgumentException('U některé velikosti nelze potvrdit společný model z uložené nabídky vybraného prodávajícího. Nejdřív ověř dodavatelský odkaz.');}
+        $managedPrices=$proof!==null&&count($proof['variant_offers']??[])===count($variants);
         $pricing=(new \SimpleStore\Supplier\PriceManager($this->db))->settings();$previousPrices=[];
         foreach($variants as&$v){
+            $previousPrices[$v['id']]=$v['price_czk'];
+            if(!$managedPrices)continue;
             $price=(int)$proof['variant_offers'][$v['id']]['price'];$old=$costs[$v['id']]??0;
             if($old>0&&abs($price-$old)/$old>0.30)throw new InvalidArgumentException('Cena některé varianty se změnila o více než 30 %. Nejdřív ji ověř samostatně.');
             $costs[$v['id']]=$price;$previousPrices[$v['id']]=$v['price_czk'];
@@ -116,7 +124,7 @@ final class ProductFamilyMerge
             if($v['price_czk']<$price)throw new InvalidArgumentException('Prodejní cena některé varianty nepokrývá dodavatele. Nejdřív uprav cenotvorbu.');
         }unset($v);
         return ['target'=>$target,'language'=>$language,'name'=>$family['name'],'slug'=>$slug,'keys'=>$keys,'members'=>$members,'variants'=>$variants,'costs'=>$costs,'previous_prices'=>$previousPrices,
-            'state_hash'=>self::hash($state),'expected'=>self::hash([$state,$costs,array_column($variants,'price_czk')]),'proof'=>$proof];
+            'state_hash'=>self::hash($state),'expected'=>self::hash([$state,$costs,array_column($variants,'price_czk'),$managedPrices]),'proof'=>$proof,'managed_prices'=>$managedPrices];
     }
     public function candidates(string $language):array
     {
@@ -155,8 +163,8 @@ final class ProductFamilyMerge
                 'details_json'=>json_encode($details,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),'sizes'=>'']);
             $links=new ProductSupplierLinkRepository($this->db);$existing=array_column($before[$target]['links'],'url');
             foreach($urls as$url=>$label)if(!in_array($url,$existing,true))$links->save($target,0,$label,$url);
-            $sale=$before[$target]['sale'];$this->db->update('shop_product_sales',['supplier_price_czk'=>min($preview['costs']),'variant_prices_json'=>json_encode((object)$preview['costs'],JSON_THROW_ON_ERROR),'version'=>(int)$sale['version']+1],'product_key=%s',$target);
-            $this->db->replace('shop_product_supplier_variant_modes',['product_key'=>$target,'enabled'=>1]);
+            $sale=$before[$target]['sale'];$this->db->update('shop_product_sales',['supplier_price_czk'=>count($preview['costs'])===count($preview['variants'])?min($preview['costs']):null,'variant_prices_json'=>json_encode((object)$preview['costs'],JSON_THROW_ON_ERROR),'version'=>(int)$sale['version']+1],'product_key=%s',$target);
+            $this->db->replace('shop_product_supplier_variant_modes',['product_key'=>$target,'enabled'=>(int)$preview['managed_prices']]);
             $this->db->insert('shop_product_family_merges',['target_key'=>$target,'before_json'=>json_encode($before,JSON_THROW_ON_ERROR),'after_hash'=>self::hash($this->state($preview['keys']))]);
             $this->db->update('shop_supplier_price_jobs',['status'=>'dismissed','message'=>'Produkt byl sloučen do společné nabídky; spusť kontrolu výsledného produktu.'],'product_key IN %ls AND status IN %ls',$preview['keys'],['queued','review','failed']);
             $this->db->commit();return $preview['slug'];
