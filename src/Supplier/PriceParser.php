@@ -26,11 +26,12 @@ final class PriceParser
         }
         $products = [];
         foreach ($documents as $node) self::products($node, $products);
-        $offers = [];
+        $offers = []; $singleOffers = true;
         foreach ($products as $product) {
             $raw = $product['offers'] ?? [];
-            if (!is_array($raw)) continue;
+            if (!is_array($raw)) {$singleOffers=false;continue;}
             if (isset($raw['@type'])) $raw = [$raw];
+            if(count($raw)!==1)$singleOffers=false;
             foreach ($raw as $offer) {
                 if (!is_array($offer) || !self::type($offer, 'Offer') || !isset($offer['price'], $offer['priceCurrency'])) continue;
                 // Conditional/member prices and expired offers must not become the general cost.
@@ -53,7 +54,7 @@ final class PriceParser
                     }];
             }
         }
-        return ['offers'=>$offers, 'product_count'=>count($products), 'parser_version'=>self::VERSION];
+        return ['offers'=>$offers, 'product_count'=>count($products), 'single_offers'=>$singleOffers, 'parser_version'=>self::VERSION];
     }
 
     public static function select(array $document, string $url, string $expectedName = ''): array
@@ -61,7 +62,7 @@ final class PriceParser
         $offers=$document['offers']??[];
         if ($offers === []) throw new InvalidArgumentException('Stránka neposkytla jednoznačnou strukturovanou cenu v CZK. Cena zůstala.');
         $all=$offers;
-        $uniform=count($all)>1 && count($all)===$document['product_count'] &&
+        $uniform=!empty($document['single_offers']) && count($all)>1 && count($all)===$document['product_count'] &&
             count(array_unique(array_column($all,'amount')))===1 &&
             count(array_unique(array_column($all,'group_url')))===1 && ($all[0]['group_url']??'')!=='' &&
             self::sameModel($all[0]['group_url'],$url);

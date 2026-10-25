@@ -58,7 +58,7 @@ final class Pod7kiloVariantIdentity
         $host=strtolower((string)parse_url($url,PHP_URL_HOST));
         if(!in_array($host,['pod7kilo.cz','www.pod7kilo.cz'],true))return false;
         $data=self::data($body);
-        if($data===null||strtoupper((string)($data['currency']??''))!=='CZK'||($offer['priceCurrency']??'')!=='CZK'||
+        if($data===null||!is_string($data['currency']??null)||strtoupper($data['currency'])!=='CZK'||($offer['priceCurrency']??'')!=='CZK'||
             !is_array($data['variantsInfo']??null)||count($data['variantsInfo'])<2)return false;
         foreach($data['variantsInfo']as$id=>$variant){
             if(!is_array($variant)||!self::sameIdentifier($variant['id']??null,$id)||

@@ -62,6 +62,7 @@ try{
  $check(!in_array('https://a.test/private/item',array_column($requests,0),true),'Disallowed page fetched.');
  $rate=$make('rate');$responses['https://a.test/rate']=['code'=>429,'body'=>'','headers'=>['retry-after'=>'7200']];$manager->enqueue('one','fast',$rate);$run();
  $check((int)$db->queryFirstField('SELECT next_at FROM shop_supplier_price_hosts WHERE host=%s','a.test')>$now+6000,'Retry-After backoff ignored.');
+ $check($job($rate)['status']==='queued'&&(int)$job($rate)['next_at']>$now+80000,'Temporary failure was not deferred for a single automatic retry.');
  $check($manager->enqueue('one','normal',$rate)['daily']===1,'Failure bypassed daily limit.');
  $pause=$make('pause');$manager->enqueue('one','normal',$pause);$manager->configure(false,true);$before=count($requests);$check($manager->tick()['state']==='paused'&&count($requests)===$before,'Pause still fetched.');
  $manager->configure(false,false);
@@ -70,7 +71,7 @@ try{
  $manager->configure(true,false);$manager->tick();$next=(int)$manager->settings()['next_weekly'];$check($next===$now+604800,'Weekly enqueue not scheduled.');$manager->tick();$check((int)$manager->settings()['next_weekly']===$next,'Weekly cadence moved on each tick.');
  $check((int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$key)===7,'Supplier availability changed inventory.');
  $check((int)$db->queryFirstField('SELECT price_czk FROM shop_product_revisions WHERE product_key=%s',$key)===3000,'Retail price changed.');
- $check($manager->dashboard('failed','Product',1)['total']>=2,'History search/filter failed.');
+ $check($manager->dashboard('failed','Product private/item',1)['total']===1,'History search/filter failed.');
 
  // Atomic retail repricing creates a revision, preserves language content and existing stock.
  $manager->configure(false,false);
