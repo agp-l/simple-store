@@ -60,7 +60,7 @@ try {
  $check($links->forProduct($ambiguous)[0]['result']['status']==='ambiguous','Uniform price hid identity ambiguity.');
  $missing=$make('assisted','{"Velikost":"S","Barva":"Modrá"}');(new VariantLinkDiscovery($db,$now))->process($missing);
  $check($links->forProduct($missing)[0]['url']===$url&&$links->forProduct($missing)[0]['verification']==='unverified','Missing size fabricated.');
- $conflict=$make();$alternate=$url.'?view=alternate';$different=$group;$different['hasVariant'][0]['offers']['url']=$url.'?v_id=different-blue-m';
+ $conflict=$make();$alternate=$url.'?v_id=alternate';$different=$group;$different['hasVariant'][0]['offers']['url']=$url.'?v_id=different-blue-m';
  $cache($alternate,$document($different));$common->save($conflict,0,'Other evidence',$alternate);$links->inherit($conflict);
  $check((new VariantLinkDiscovery($db,$now))->report($conflict)['summary']['conflict']===2,'Contradictory exact source URLs accepted.');
  $fresh=$make();(new VariantLinkDiscovery($db,$now))->process($fresh);$now+=86401;
