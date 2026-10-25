@@ -132,3 +132,29 @@ $check($resolved!==null&&str_ends_with($resolved['corrected_url'],'v_id=red-l'),
 $check(SimpleStore\Supplier\GraminoVariantScope::select($doc,'https://another.test/p/patizon-d-890',$local)===null,'Gramino scope leaked to a different supplier.');
 $doc['single_offers']=false;$check(SimpleStore\Supplier\GraminoVariantScope::select($doc,$scopeGroup['url'],$local)===null,'Conditional/extra offers ignored.');
 echo "Supplier prices: explicit local model, colour and size scope passed.\n";
+
+$sizedGroup=['@type'=>'ProductGroup','name'=>'Warmpeace Viking 300','url'=>'https://gramino.cz/p/viking','hasVariant'=>[
+ $offer('https://gramino.cz/p/viking?v_id=blue170',4690)+['name'=>'Warmpeace Viking 300 – Blue, 170 cm, Levá strana'],
+ $offer('https://gramino.cz/p/viking?v_id=green170',4690)+['name'=>'Warmpeace Viking 300 – Green, 170 cm, Levá strana'],
+ $offer('https://gramino.cz/p/viking?v_id=blue180',4990)+['name'=>'Warmpeace Viking 300 – Blue, 180 cm, Levá strana']]];
+$doc=Parser::document($wrap($sizedGroup),$sizedGroup['url']);
+$local=$scope('Warmpeace Viking 300 – 170 cm',[['Barva'=>'Modrá','Zip'=>'Levý'],['Barva'=>'Zelená','Zip'=>'Levý']]);
+$resolved=SimpleStore\Supplier\GraminoVariantScope::select($doc,$sizedGroup['url'],$local);
+$check($resolved!==null&&$resolved['price']===4690,'Explicit centimetres and zipper sides not resolved.');
+$local['variants'][1]['choices_json']=json_encode(['Barva'=>'Zelená','Zip'=>'Pravý']);
+$check(SimpleStore\Supplier\GraminoVariantScope::select($doc,$sizedGroup['url'],$local)===null,'Missing right zipper accepted.');
+$sizedGroup=['@type'=>'ProductGroup','name'=>'Hyperlite Food Bag','url'=>'https://gramino.cz/p/food-bag','hasVariant'=>[
+ $offer('https://gramino.cz/p/food-bag?v_id=10',1590)+['name'=>'Hyperlite Food Bag – 10 l'],
+ $offer('https://gramino.cz/p/food-bag?v_id=15',1890)+['name'=>'Hyperlite Food Bag – 15 l']]];
+$doc=Parser::document($wrap($sizedGroup),$sizedGroup['url']);
+$local=['products'=>[['name'=>'Hyperlite Food Bag 10 l']],'variantSettings'=>['enabled'=>0]];
+$check(SimpleStore\Supplier\GraminoVariantScope::select($doc,$sizedGroup['url'],$local)['price']===1590,'Explicit volume without dash not resolved.');
+$local['products'][0]['name']='Hyperlite Food Bag 100 l';
+$check(SimpleStore\Supplier\GraminoVariantScope::select($doc,$sizedGroup['url'],$local)===null,'Volume prefix matched a different volume.');
+$sizedGroup['name']='Cumulus Lite Line 200';
+$sizedGroup['hasVariant'][0]['name']='Cumulus Lite Line 200 – S, Levá strana';
+$sizedGroup['hasVariant'][1]['name']='Cumulus Lite Line 200 – L, Levá strana';
+$doc=Parser::document($wrap($sizedGroup),$sizedGroup['url']);
+$local=$scope('Cumulus Lite Line 200 – S',[['Zip'=>'Levý']]);
+$check(SimpleStore\Supplier\GraminoVariantScope::select($doc,$sizedGroup['url'],$local)['price']===1590,'Size and zipper without colour not resolved.');
+echo "Supplier prices: explicit volume, dimensions, model boundaries and zipper sides passed.\n";

@@ -405,6 +405,7 @@ final class PriceManager
             $items[]=['id'=>(int)$row['id'],'product_key'=>$row['product_key'],'name'=>$row['product_name'],'status'=>$row['status'],
                 'mode'=>$row['mode'],'created_at'=>(int)$row['created_at'],'checked_at'=>(int)$row['checked_at'],
                 'next_at'=>(int)$row['next_at'],'applied_at'=>(int)$row['applied_at'],'message'=>$row['message'],
+                'local_variants'=>$data['snapshot']['variants']??[],'variants_enabled'=>!empty($data['snapshot']['variantSettings']['enabled']),
                 'sources'=>$sources,'result'=>json_decode($row['result_json']??'null',true),'trace'=>$data['trace']??[]];
         }
         return ['format'=>'dobrodruzi.supplier-price-diagnostics','version'=>1,'parser_version'=>PriceParser::VERSION,'exported_at'=>gmdate('c',$this->now()),

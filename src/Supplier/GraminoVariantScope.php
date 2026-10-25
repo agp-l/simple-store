@@ -31,9 +31,10 @@ final class GraminoVariantScope
             $constraints=$base;$choices=json_decode($variant['choices_json']??'null',true);
             if(!is_array($choices))return null;
             foreach($choices as$key=>$value){
-                $dimension=match(self::normalize((string)$key)){'barva','color','colour'=>'color','velikost','size'=>'size',default=>null};
+                $dimension=match(self::normalize((string)$key)){'barva','color','colour'=>'color','velikost','size','objem'=>'size','zip','strana zipu'=>'zip',default=>null};
                 if($dimension===null||!is_string($value))return null;
-                $value=$dimension==='color'?self::color($value):self::normalize($value);
+                $value=match($dimension){'color'=>self::color($value),'size'=>self::sizeValue($value),'zip'=>self::zip($value)};
+                if($value===null)return null;
                 if($value===''||(isset($constraints[$dimension])&&!in_array($value,$constraints[$dimension],true)))return null;
                 $constraints[$dimension]=[$value];
             }
@@ -61,13 +62,23 @@ final class GraminoVariantScope
     }
     private static function suffix(string $name,string $model):?string
     {
-        $parts=preg_split('/\s+[–—−-]\s+/u',trim($name),2);
         // Only spacing in an otherwise identical model may differ: D890 and D 890.
-        if(str_replace(' ','',self::normalize($parts[0]))!==str_replace(' ','',self::normalize($model)))return null;
-        return $parts[1]??'';
+        $name=self::normalize($name);$model=self::normalize($model);
+        if(str_replace(' ','',$name)===str_replace(' ','',$model))return '';
+        if($model==='')return null;
+        $pattern=str_replace(' ','\\s*',preg_quote($model,'~'));
+        // A word boundary also permits catalog titles such as "Packing Cube M".
+        return preg_match('~^'.$pattern.'(?:\s+[–—−-]\s+|\s+)(.+)$~uD',$name,$m)?$m[1]:null;
     }
     private static function size(string $value):bool
-    {return (bool)preg_match('/^(?:[2-5]?x{0,3}[sml]|small|medium|large)$/D',self::normalize($value));}
+    {return (bool)preg_match('/^(?:[2-5]?x{0,3}[sml]|small|medium|large|regular|long|tall|wide|long wide|regular wide|\d+(?:\.\d+)?\s*(?:cm|l|ml))$/D',self::normalize($value));}
+    private static function sizeValue(string $value):string
+    {
+        $value=self::normalize($value);
+        return ['small'=>'s','medium'=>'m','large'=>'l'][$value]??preg_replace('/(?<=\d)\s+(?=cm$|ml$|l$)/','',$value);
+    }
+    private static function zip(string $value):?string
+    {return match(self::normalize($value)){'levá strana','levý','levá','left'=>'left','pravá strana','pravý','pravá','right'=>'right',default=>null};}
     private static function color(string $value):string
     {
         $value=self::normalize($value);
@@ -78,17 +89,24 @@ final class GraminoVariantScope
     private static function sourceDimensions(string $tail):?array
     {
         if($tail==='')return null;
-        $parts=array_map('trim',explode(',',$tail));
-        if(count($parts)===2&&self::size($parts[1]))return ['color'=>self::color($parts[0]),'size'=>self::normalize($parts[1])];
-        if(count($parts)!==1)return null;
-        return self::size($tail)?['size'=>self::normalize($tail)]:['color'=>self::color($tail)];
+        $parts=array_map('trim',explode(',',$tail));$dimensions=[];
+        foreach($parts as$part){
+            if($part==='')return null;
+            if(self::size($part)){$key='size';$value=self::sizeValue($part);}
+            elseif(($zip=self::zip($part))!==null){$key='zip';$value=$zip;}
+            else{$key='color';$value=self::color($part);}
+            if(isset($dimensions[$key]))return null;
+            $dimensions[$key]=$value;
+        }
+        return $dimensions;
     }
     private static function constraints(string $tail):?array
     {
         if($tail==='')return [];
         $result=[];
-        if(preg_match('/^(\S+)(?:\s+|$)/u',$tail,$m)&&self::size($m[1])){
-            $result['size']=[self::normalize($m[1])];$tail=trim(substr($tail,strlen($m[0])));
+        if(self::size($tail))return ['size'=>[self::sizeValue($tail)]];
+        if(preg_match('/^((?:\d+(?:\.\d+)?\s*(?:cm|ml|l))|\S+)(?:\s+|$)/u',$tail,$m)&&self::size($m[1])){
+            $result['size']=[self::sizeValue($m[1])];$tail=trim(substr($tail,strlen($m[0])));
         }
         if($tail!==''){
             $colors=array_map([self::class,'color'],array_map('trim',explode(',',$tail)));
