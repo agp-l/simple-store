@@ -93,6 +93,7 @@ final class PriceParser
 
     private static function name(string $value): string
     {
+        $value=str_replace(['™','®','’','‘'],['','','\'','\''],$value);
         $value=str_replace(['—','–','−'], '-', $value);
         $value=preg_replace('/\s*-\s*/u','-',trim($value));
         $value=preg_replace('/\s+/u',' ',$value);

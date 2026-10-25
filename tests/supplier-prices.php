@@ -158,3 +158,19 @@ $doc=Parser::document($wrap($sizedGroup),$sizedGroup['url']);
 $local=$scope('Cumulus Lite Line 200 – S',[['Zip'=>'Levý']]);
 $check(SimpleStore\Supplier\GraminoVariantScope::select($doc,$sizedGroup['url'],$local)['price']===1590,'Size and zipper without colour not resolved.');
 echo "Supplier prices: explicit volume, dimensions, model boundaries and zipper sides passed.\n";
+
+$typed=['@type'=>'ProductGroup','name'=>"Sea To Summit Ultralight™ Insulated Women's",'url'=>'https://gramino.cz/p/womens','hasVariant'=>[
+ $offer('https://gramino.cz/p/womens?v_id=regular',3400)+['name'=>"Sea To Summit Ultralight™ Insulated Women's – Regular"],
+ $offer('https://gramino.cz/p/womens?v_id=large',3700)+['name'=>"Sea To Summit Ultralight™ Insulated Women's – Large"]]];
+$doc=Parser::document($wrap($typed),$typed['url']);$local=['products'=>[['name'=>'Sea to Summit Ultralight Insulated Women’s — Regular']],'variantSettings'=>['enabled'=>0]];
+$check(SimpleStore\Supplier\GraminoVariantScope::select($doc,$typed['url'],$local)['price']===3400,'Trademark or apostrophe prevented an exact variant match.');
+$check(Parser::read($wrap($typed),$typed['url'],$local['products'][0]['name'])['price']===3400,'Exact-name repair failed on typography.');
+$local['products'][0]['name']='Sea to Summit Ultralight Insulated Men’s — Regular';
+$check(SimpleStore\Supplier\GraminoVariantScope::select($doc,$typed['url'],$local)===null,'Meaningful gender difference was normalized away.');
+$typed['name']='Therm-a-Rest Z Seat';$typed['hasVariant'][0]['name']='Therm-a-Rest Z Seat – Yellow / Silver';$typed['hasVariant'][1]['name']='Therm-a-Rest Z Seat – Blue / Silver';
+$typed['hasVariant'][1]['offers']['price']=3400;$doc=Parser::document($wrap($typed),$typed['url']);
+$local=$scope('Therm-a-Rest Z Seat — Modrá/stříbrná, Žlutá/stříbrná',[['Barva'=>'Modrá/stříbrná'],['Barva'=>'Žlutá/stříbrná']]);
+$check(SimpleStore\Supplier\GraminoVariantScope::select($doc,$typed['url'],$local)['price']===3400,'Explicit two-colour combination not recognized.');
+$typed['hasVariant'][1]['name']='Therm-a-Rest Z Seat – Green / Silver';$doc=Parser::document($wrap($typed),$typed['url']);
+$check(SimpleStore\Supplier\GraminoVariantScope::select($doc,$typed['url'],$local)===null,'Different two-colour combination accepted.');
+echo "Supplier prices: typography and exact two-colour combinations passed.\n";

@@ -106,3 +106,5 @@ Pro jednu přesnou variantu lze opravit variantní URL; pro několik stejně dra
 se uloží odkaz společného modelu a důkaz všech zahrnutých nabídek. Toto vyhodnocení
 funguje i nad dříve uloženou sadou nabídek bez dalších dotazů. Diagnostický export
 obsahuje také konečnou nabídku za uloženými přesměrováními a místní kombinace variant.
+Typografické značky ™/® a různé apostrofy nemění identitu modelu; normalizují se i
+výslovné dvojbarevné kombinace (např. žlutá/stříbrná). Rozdíl pánské/dámské se nezahazuje.

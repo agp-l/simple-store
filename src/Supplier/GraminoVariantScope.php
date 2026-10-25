@@ -57,6 +57,7 @@ final class GraminoVariantScope
     }
     private static function normalize(string $value):string
     {
+        $value=str_replace(['™','®','’','‘'],['','','\'','\''],$value);
         $value=strtr(trim($value),['Č'=>'č','Š'=>'š','Ž'=>'ž','Ř'=>'ř','Ý'=>'ý','Á'=>'á','Í'=>'í','É'=>'é','Ě'=>'ě','Ů'=>'ů','Ú'=>'ú','Ď'=>'ď','Ť'=>'ť','Ň'=>'ň']);
         return strtolower(preg_replace('/\s+/u',' ',$value));
     }
@@ -82,6 +83,7 @@ final class GraminoVariantScope
     private static function color(string $value):string
     {
         $value=self::normalize($value);
+        if(str_contains($value,'/'))return implode('/',array_map([self::class,'color'],explode('/',$value)));
         return ['červená'=>'red','modrá'=>'blue','zelená'=>'green','žlutá'=>'yellow','černá'=>'black','bílá'=>'white',
             'šedá'=>'grey','gray'=>'grey','stříbrná'=>'silver','oranžová'=>'orange','fialová'=>'purple','růžová'=>'pink',
             'hnědá'=>'brown','antracitová'=>'anthracite'][$value]??$value;
