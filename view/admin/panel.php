@@ -11,6 +11,7 @@ $inside = $adminWorkspace;
     $panelLinks = [
         ['key' => 'editor', 'label' => 'Stránky', 'icon_name' => 'document', 'href' => $adminUrl . '?section=contents'],
         ['key' => 'products', 'label' => 'Produkty', 'icon_name' => 'package', 'href' => $basePath . $site['default_language'] . '?manage=1#produkty'],
+        ['key' => 'supplier-prices', 'label' => 'Ceny dodavatelů', 'icon_name' => 'refresh', 'href' => $adminUrl . '?section=supplier-prices'],
         ['key' => 'purchase-partners', 'label' => 'Prodávající', 'icon_name' => 'users', 'href' => $adminUrl . '?section=purchase-partners'],
         ['key' => 'product-import', 'label' => 'Import a export', 'icon_name' => 'upload', 'href' => $adminUrl . '?section=product-import'],
         ['key' => 'orders', 'label' => 'Objednávky', 'icon_name' => 'package', 'href' => $adminUrl . '?section=orders'],
@@ -74,6 +75,8 @@ $inside = $adminWorkspace;
       </section>
     <?php elseif ($screen === 'content-import'): ?>
       <?php require __DIR__ . '/content-import.php'; ?>
+    <?php elseif ($screen === 'supplier-prices'): ?>
+      <?php require __DIR__ . '/supplier-prices.php'; ?>
     <?php elseif ($screen === 'purchase-partners'): ?>
       <?php require __DIR__ . '/purchase-partners.php'; ?>
     <?php elseif ($screen === 'product-import'): ?>

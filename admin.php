@@ -289,6 +289,11 @@ try {
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }
+    if (in_array($action, ['supplier-price-start', 'supplier-price-tick', 'supplier-price-settings', 'supplier-price-key', 'supplier-price-apply', 'supplier-price-dismiss'], true) || ($method !== 'POST' && $section === 'supplier-prices')) {
+        require __DIR__ . '/src/Admin/supplier-prices.php';
+        require __DIR__ . '/view/admin/layout.php';
+        exit;
+    }
     if (in_array($action, ['purchase-partner-save', 'purchase-partner-preview', 'purchase-partner-import'], true) || ($method !== 'POST' && $section === 'purchase-partners')) {
         require __DIR__ . '/src/Admin/purchase-partners.php';
         require __DIR__ . '/view/admin/layout.php';

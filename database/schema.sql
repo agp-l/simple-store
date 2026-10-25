@@ -1488,3 +1488,38 @@ EXECUTE ev_statement;
 DEALLOCATE PREPARE ev_statement;
 
 INSERT IGNORE INTO shop_document_numbers (document_number,calendar_year) SELECT document_number,YEAR(issue_date) FROM shop_invoice_corrections;
+
+-- Durable supplier checks: one bounded request per worker tick; no product data is deleted.
+CREATE TABLE IF NOT EXISTS shop_supplier_price_settings (
+  id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+  paused TINYINT(1) NOT NULL DEFAULT 0,
+  weekly_enabled TINYINT(1) NOT NULL DEFAULT 0,
+  next_weekly BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  cron_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '',
+  last_tick BIGINT UNSIGNED NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_supplier_price_jobs (
+  id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  product_name VARCHAR(255) NOT NULL,
+  status VARCHAR(16) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'queued',
+  mode VARCHAR(8) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'normal',
+  created_at BIGINT UNSIGNED NOT NULL,
+  checked_at BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  applied_at BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  next_at BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  message VARCHAR(1000) NOT NULL DEFAULT '',
+  data_json MEDIUMTEXT NOT NULL,
+  result_json TEXT NULL,
+  KEY product_checks (product_key, created_at), KEY pending_checks (status, next_at, id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_supplier_price_hosts (
+  host VARCHAR(253) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+  next_at BIGINT UNSIGNED NOT NULL DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_supplier_price_cache (
+  url_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+  expires_at BIGINT UNSIGNED NOT NULL,
+  data_json MEDIUMTEXT NOT NULL,
+  KEY cache_expiry (expires_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

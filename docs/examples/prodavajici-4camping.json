@@ -1,0 +1,16 @@
+{
+  "format": "simple-store-purchase-partners",
+  "version": 1,
+  "partners": [
+    {
+      "name": "ForCamping s.r.o. – 4camping",
+      "ico": "24295825",
+      "address": "Veselská 699, 199 00 Praha 18 – Letňany",
+      "email": "objednavky@4camping.cz",
+      "website_url": "https://www.4camping.cz/",
+      "terms_url": "https://www.4camping.cz/stranky/obchodni-podminky/",
+      "confirmed": false,
+      "priority": 100
+    }
+  ]
+}

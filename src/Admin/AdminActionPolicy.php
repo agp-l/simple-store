@@ -29,6 +29,7 @@ final class AdminActionPolicy
     public const USERS = ['user-create', 'user-update', 'user-password', 'user-delete', 'user-address-save', 'user-address-delete'];
 
     private const OTHER = [
+        'supplier-price-start', 'supplier-price-tick', 'supplier-price-settings', 'supplier-price-key', 'supplier-price-apply', 'supplier-price-dismiss',
         'content-import-preview', 'content-import-save',
         'product-prompt-save', 'product-bulk-export', 'product-bulk-prepare', 'product-bulk-step', 'product-bulk-clear', 'product-zip-upload', 'product-zip-step', 'product-zip-clear', 'product-import-preview', 'product-import-save', 'create-content', 'create-translation', 'inline-content', 'create-product',
         'inline-product', 'product-variants', 'set-product-stock', 'category-create', 'category-update', 'category-order',

@@ -2,7 +2,7 @@
 // Administration owns its navigation; the customer account keeps panel/sidebar.php.
 $adminLinks = array_column($panelLinks, null, 'key');
 $adminGroups = [
-    'Prodej' => ['orders', 'products', 'purchase-partners', 'returns', 'accounting'],
+    'Prodej' => ['orders', 'products', 'purchase-partners', 'supplier-prices', 'returns', 'accounting'],
     'Obsah a katalog' => ['editor', 'categories', 'menus', 'media', 'product-import'],
     'Správa' => ['settings', 'users', 'database'],
 ];
