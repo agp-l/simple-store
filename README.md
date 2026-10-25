@@ -6,7 +6,7 @@ Online platby: [Comgate](docs/comgate.md), [GoPay](docs/gopay.md) a [BTCPay Serv
 
 Aktuální kritické nálezy, kroky před nasazením a pořadí dalších oprav jsou v [auditu projektu](docs/audit-2026-10.md).
 
-[Upravený plán odkazů partnerů u variant](docs/variant-supplier-architecture.md) zachovává současné režimy „Prodáváme my“ a „Asistovaný nákup“. Partner znamená jiný e-shop výhradně pro asistenci. Plán nejdřív doplňuje variantní odkazy a až potom přesnou partnerskou dostupnost; nezavádí dodavatele vlastního skladu ani jeho plošnou migraci. Jde o návrh z 25. 10. 2026, nikoli již nasazenou funkci.
+[Upravený plán odkazů partnerů u variant](docs/variant-supplier-architecture.md) zachovává současné režimy „Prodáváme my“ a „Asistovaný nákup“. Partner znamená jiný e-shop výhradně pro asistenci. Plán nejdřív doplňuje variantní odkazy a až potom přesnou partnerskou dostupnost; nezavádí dodavatele vlastního skladu ani jeho plošnou migraci. Etapy A/B jsou implementované: soukromé odkazy variant, opakovatelné převzetí, editor, JSON a `?variant=...`. Automatické řízení partnerské dostupnosti C/D následuje samostatně.
 
 Testovací hosting Webglobe: [postup nasazení přes FTP a aktualizace databáze](docs/deploy-webglobe.md). GitHub workflow po úspěšných testech zveřejní změny pouze po zapnutí repository variable a nastavení FTP secrets. Soukromé konfigurace a nahrané fotografie se nepřenášejí ani nemažou.
 

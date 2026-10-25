@@ -1,6 +1,6 @@
 # Odkazy partnerů u variant a dostupnost asistovaného nákupu
 
-Stav: **upravený návrh k implementaci**, 25. 10. 2026. Upřesnění uživatele zde nahrazuje širší návrh z commitů `dd14f4f` a `2e26198`. Současný provoz popisují [varianty](product-variants.md), [asistovaný nákup](assisted-purchase.md) a [cenový automat](supplier-prices.md). Tento dokument sám nemění kód, databázi, ceny ani sklad.
+Stav: **etapy A/B implementované; C/D navazující**, 25. 10. 2026. Upřesnění uživatele zde nahrazuje širší návrh z commitů `dd14f4f` a `2e26198`. Současný provoz popisují [varianty](product-variants.md), [asistovaný nákup](assisted-purchase.md) a [cenový automat](supplier-prices.md). Etapy A/B přidávají evidenci odkazů, editor, JSON a přímé URL; automatické ověřování přesných URL a změny dostupnosti C/D ještě nejsou aktivované.
 
 ## Význam partnera a režimů prodeje
 
@@ -99,8 +99,8 @@ Dosavadní objednávkový snímek asistované položky se rozšíří o konkrét
 
 | Etapa | Výsledek | Ověření |
 | --- | --- | --- |
-| A. Odkazy variant | Jedna doplňující tabulka, editor, soukromý JSON; opakovatelné převzetí společných odkazů ke všem současným variantám. | Stejné ceny, režimy, kusy, variantní ID a objednávky před/po; přesný odkaz se nepřepíše. |
-| B. Přímý odkaz | `?variant=...` pro existující varianty. | Reload, bez JS, mobil, neplatné ID, jazyk a správná varianta v košíku. |
+| A. Odkazy variant — hotovo | Jedna doplňující tabulka, editor, soukromý JSON; opakovatelné převzetí společných odkazů ke všem současným variantám. | Stejné ceny, režimy, kusy, variantní ID a objednávky před/po; přesný odkaz se nepřepíše. |
+| B. Přímý odkaz — hotovo | `?variant=...` pro existující varianty. | Reload, bez JS, mobil, neplatné ID, jazyk a správná varianta v košíku. |
 | C. Přesné URL partnerů | Ruční doplnění a automatické návrhy ze současných zdrojů. | Převzatý odkaz na jinou velikost není potvrzený; prodávající se nepřepne. |
 | D. Dostupnost asistence | Pravidla 3 / skutečný počet / poslední kus, texty, ochrana rezervací a přepnutí režimu. | Náhled dopadu a malý vzorek; vlastní sklad chráněný, souběh objednávek neobejde limit. |
 

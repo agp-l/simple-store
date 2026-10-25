@@ -33,6 +33,7 @@ if ($saleFixture) { $product['price_czk'] = 1800; $product['offer_price_czk'] = 
 
 (new \SimpleStore\Rendering\PageRenderer(dirname(__DIR__, 2) . '/view'))->render('product-record', [
     'basePath' => '/', 'language' => 'cs', 'product' => $product, 'canEditProduct' => $admin,
+    'selectedVariant' => in_array('--selected', $argv, true) ? $items[2] : (in_array('--unavailable', $argv, true) ? $items[0] : null),
     'editMode' => $admin, 'editToken' => 'test-token', 'stockReady' => true,
     'variantError' => in_array('--generate-error', $argv, true) ? 'Varianty nebo sklad se mezitím změnily. Obnov stránku nebo export.' : '',
     'variantForm' => in_array('--generate-error', $argv, true) ? ['operation' => 'generate', 'groups' => 'Velikost: XL', 'confirm' => '1'] : [],

@@ -1,6 +1,6 @@
 # Varianty produktu a samostatný sklad
 
-[Upravený implementační plán](variant-supplier-architecture.md) doplňuje partnerské odkazy ke stávajícím variantám a jejich přímé adresy. Zachovává současný sklad a režimy prodeje; převod všech jednoduchých produktů na varianty byl odložen. Následující návod popisuje současnou implementaci.
+[Implementační plán a stav](variant-supplier-architecture.md) popisuje partnerské odkazy ke stávajícím variantám a jejich přímé adresy. Etapy A/B jsou implementované. Zachovává současný sklad a režimy prodeje; převod všech jednoduchých produktů na varianty byl odložen. Následující návod popisuje současnou implementaci.
 
 Jeden produkt má společný název, popis, kategorii, galerii a výchozí cenu. Každá skutečně prodávaná kombinace vlastností má vlastní stabilní identitu, volné kusy, dostupnost, SKU a případně jinou cenu či fotografii. Názvy vlastností nejsou pevně dané: může jít o velikost, barvu, délku, objem nebo jejich kombinace. Varianty a sklad jsou společné pro překlady produktu.
 
@@ -88,3 +88,15 @@ Formulář pro první varianty je otevřený, ukazuje počet zadaných kombinac�
 V **Import a export → Sjednotit produkty** lze připravit náhled odstranění původních karet. Seznam vychází výhradně ze záloh dokončených sloučení, nikoli ze všech konceptů. Správce vybere skupiny a potvrdí odstranění.
 
 Odstranění vyžaduje nezměněnou skrytou původní kartu bez skladu a objednávek, existující kombinace ve zveřejněném společném produktu a zachované přesměrování. Změna dat od náhledu operaci zastaví. Každá skupina se odstraní v jedné transakci. Mažou se karty a jejich revize; společné produkty, varianty, fotografie, historie objednávek a přesměrování se nemění. Úplná záloha před sloučením zůstává uložená. Automatické vrácení sloučení už po odstranění původních karet není dostupné.
+
+## Přímé adresy a soukromé partnerské odkazy
+
+Detail podporuje `?variant=<stávající variant_key>`. Server vybere existující aktivní variantu, cenu, fotografii a dostupnost i bez JavaScriptu. Neplatný parametr vrátí 400, cizí nebo vyřazené ID 404. Vyprodaná varianta má svůj detail, ale nelze ji koupit. Při výběru se adresa mění a tlačítka zpět/vpřed obnovují výběr. Cena editovaného produktu se náhledem varianty nemění.
+
+V detailu pro správce otevři **Dodavatelé → Partnerské odkazy jednotlivých variant**. Každá varianta může mít více URL různých partnerů. Parametry `variant`, `size` a `v_id` se ukládají beze změny. Změna URL ruší dřívější ověření; samotné ruční vložení není automatický důkaz shody. Prodávající zůstává určený v režimu prodeje celého produktu.
+
+Po aktualizaci schématu lze v **Import a export → Export → Partnerské odkazy variant** doplnit všechny společné odkazy produktu ke všem existujícím variantám. Převzetí běží po produktech a lze je opakovat po přerušení. Identita převzatého odkazu nezávisí na číselném ID společného odkazu, opakování neobnoví odstraněné řádky ani nepřepíše opravené URL. Nově vytvořené varianty přebírají odkazy automaticky; jednoduché produkty dál používají společné odkazy.
+
+Soukromý export **Partnerské odkazy variant — soukromý JSON** používá `simple-store.variant-suppliers.v1`. Read-only přístup pro přihlášeného správce: `/admin/supplier-prices/?format=variant-links`. Zápis probíhá přes stávající Hromadný JSON s přihlášením, CSRF, náhledem a kontrolou verzí. Import upravuje pouze odkazy: `product_key`, `language`, `variants[].variant_key`, `links[].link_key`, `version`, `partner_key`, `label`, `url`. Nový odkaz má prázdný/vynechaný `link_key` a verzi 0; partner může být `null`. Vynechané odkazy zůstávají. Exportovaný původ, ověření a výsledky kontroly jsou informativní, import je nepřebírá. Současný úplný produktový JSON tato soukromá data neobsahuje; zálohuj je tímto samostatným exportem nebo databází.
+
+Etapy A/B nemění sklad, rezervace, ceny, režimy ani objednávky. Automatická tvorba přesných URL a řízení partnerského limitu 3 / skutečný počet / poslední kus zůstávají navazující etapou C/D; převzatá URL tento limit nespouští.

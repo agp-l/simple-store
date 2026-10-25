@@ -1,6 +1,6 @@
 # Ceny dodavatelů
 
-[Upravený plán variantních odkazů](variant-supplier-architecture.md) používá partnery výhradně pro asistovaný nákup. Převzaté společné odkazy se nejdříve přiřadí variantám jako neověřené; přesné párování a pravidla partnerského množství následují samostatně. Následující dokumentace popisuje nasazený cenový automat; pravidla z plánu zatím nejsou implementovaná.
+[Upravený plán variantních odkazů](variant-supplier-architecture.md) používá partnery výhradně pro asistovaný nákup. Převzaté společné odkazy se nejdříve přiřadí variantám jako neověřené; přesné párování a pravidla partnerského množství následují samostatně. Následující dokumentace popisuje nasazený cenový automat; variantní odkazy už mají vlastní evidenci a soukromý JSON. Automatické řízení množství podle partnera zatím není aktivní.
 
 Administrace: `/admin/supplier-prices/`. PHP 8.1+, cURL a stávající MySQL/MariaDB. Před prvním použitím aktualizovat SQL tabulky v Administrace → Databáze. Není potřeba Python, prohlížeč na hostingu ani externí služba.
 

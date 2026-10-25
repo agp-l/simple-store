@@ -1,6 +1,6 @@
 # Návrh jádra Simple Store
 
-Navazující [upravený plán partnerských odkazů z 25. 10. 2026](variant-supplier-architecture.md) zachovává současné režimy prodeje a sklad. Partner je jiný e-shop pro asistovaný nákup; první změnou mají být odkazy u existujících variant. Širší přestavba katalogu byla po upřesnění uživatele odložena. Níže je současná architektura.
+Navazující [upravený plán partnerských odkazů z 25. 10. 2026](variant-supplier-architecture.md) zachovává současné režimy prodeje a sklad. Partner je jiný e-shop pro asistovaný nákup; doplňující tabulka `shop_product_variant_supplier_links` uchovává soukromé odkazy existujících variant, verze a původ bez změny skladu. Širší přestavba katalogu byla po upřesnění uživatele odložena. Níže je současná architektura.
 
 ## Současný stav
 

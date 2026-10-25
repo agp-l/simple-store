@@ -8,6 +8,10 @@ import { chromium } from 'playwright';
 test('variant controls on desktop, mobile, keyboard and PHP-only fallback', async () => {
   const publicPath = 'tests/fixtures/variant-public.html';
   const adminPath = 'tests/fixtures/variant-admin.html';
+  const selectedPath = 'tests/fixtures/variant-selected.html';
+  const unavailablePath = 'tests/fixtures/variant-unavailable.html';
+  writeFileSync(selectedPath, execFileSync('php', ['tests/fixtures/product-variants.php', '--selected']));
+  writeFileSync(unavailablePath, execFileSync('php', ['tests/fixtures/product-variants.php', '--unavailable']));
   writeFileSync(publicPath, execFileSync('php', ['tests/fixtures/product-variants.php']));
   writeFileSync(adminPath, execFileSync('php', ['tests/fixtures/product-variants.php', '--admin']));
   const server = spawn('php', ['-S', '127.0.0.1:8765', '-t', process.cwd()], { stdio: 'ignore' });
@@ -49,6 +53,18 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
       await page.locator('#variant-choice-1').focus(); await page.keyboard.press('Home'); await page.keyboard.press('ArrowDown');
       assert.equal(await page.locator('#variant-choice-1').inputValue(), 'M');
       await page.locator('.product-purchase').screenshot({ path: `/tmp/variant-screenshots/customer-${width}.png` });
+      await page.goto('http://127.0.0.1:8765/' + selectedPath);
+      assert.equal(await page.locator('#variant-choice-0').inputValue(), 'Modrá');
+      assert.equal(await page.locator('#variant-choice-1').inputValue(), 'M');
+      assert.match(await page.locator('#product-variant').inputValue(), /^[a-f0-9]{32}$/);
+      assert.equal(await page.locator('#detail-image').getAttribute('src'), '/images/batoh.webp');
+      await page.reload();
+      assert.equal(await page.locator('#variant-choice-1').inputValue(), 'M');
+      await page.goto('http://127.0.0.1:8765/' + unavailablePath);
+      assert.equal(await page.locator('#variant-choice-1').inputValue(), 'S');
+      assert.equal(await page.locator('#detail-add').isDisabled(), true);
+      await page.locator('#variant-choice-1').selectOption('M');
+      assert.equal(await page.locator('#detail-add').isDisabled(), false);
       await page.goto('http://127.0.0.1:8765/' + adminPath);
       assert.equal(await page.locator('#detail-image').getAttribute('src'), '/images/product-placeholder.png');
       assert.ok(await page.locator('#detail-image').evaluate(img => img.complete && img.naturalWidth > 0));
@@ -121,6 +137,12 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
     const option = noJs.locator('#product-variant option:enabled').nth(1);
     await noJs.locator('#product-variant').selectOption(await option.getAttribute('value'));
     assert.ok(await noJs.locator('.product-purchase').evaluate(form => form.checkValidity()));
+    await noJs.goto('http://127.0.0.1:8765/' + selectedPath);
+    assert.match(await noJs.locator('#product-variant').inputValue(), /^[a-f0-9]{32}$/);
+    assert.equal(await noJs.locator('#detail-image').getAttribute('src'), '/images/batoh.webp');
+    assert.match(await noJs.locator('[data-variant-price]').textContent(), /^2\s*490$/);
+    await noJs.goto('http://127.0.0.1:8765/' + unavailablePath);
+    assert.equal(await noJs.locator('#detail-add').isDisabled(), true);
     await noJs.goto('http://127.0.0.1:8765/' + adminPath);
     await noJs.route('**/admin/', async route => {
       const form = new URLSearchParams(route.request().postData());
@@ -132,7 +154,7 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
     await noJs.getByText('Inherited without JS').waitFor();
     await noJs.close();
   } finally {
-    await browser?.close(); server.kill(); unlinkSync(publicPath); unlinkSync(adminPath);
+    await browser?.close(); server.kill(); unlinkSync(publicPath); unlinkSync(adminPath); unlinkSync(selectedPath); unlinkSync(unavailablePath);
   }
 });
 
