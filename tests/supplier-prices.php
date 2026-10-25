@@ -196,3 +196,9 @@ echo "Supplier prices: distinct merged variant prices and missing-combination gu
 $check(SimpleStore\Product\ProductFamilyMerge::family('Big Agnes Rapide SL Insulated — Long Wide')['size']==='Long Wide','Mat size not detected.');
 $check(SimpleStore\Product\ProductFamilyMerge::family('Sea to Summit Hydraulic Packing Cube XS')['name']==='Sea to Summit Hydraulic Packing Cube','Bare size suffix not detected.');
 $check(SimpleStore\Product\ProductFamilyMerge::choices([],'15 l')===['Objem'=>'15 l'],'Volume was stored as an unrelated size.');
+$copy=SimpleStore\Product\ProductFamilyMerge::combinedCopy([
+ ['name'=>'Mat — Regular','summary'=>'Mat, Regular. Hmotnost 510 g.','description'=>'Tloušťka 7,6 cm. Provedení Regular má plochu 183 × 51 cm.'],
+ ['name'=>'Mat — Long Wide','summary'=>'Mat, Long Wide. Hmotnost 709 g.','description'=>'Tloušťka 7,6 cm. Provedení Long Wide má plochu 198 × 64 cm.'],
+]);
+$check($copy['description']==='Tloušťka 7,6 cm.'&&!str_contains($copy['summary'],'510')&&count($copy['sections'])===2,'Size-specific copy leaked into the common description.');
+$check(str_contains($copy['sections'][0]['body'],'510 g.')&&str_contains($copy['sections'][0]['body'],'183 × 51 cm.')&&$copy['sections'][1]['heading']==='Provedení Long Wide','Differing copy was discarded or assigned to the wrong size.');

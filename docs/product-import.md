@@ -1,5 +1,13 @@
 # Import produktů z AI: JSON a ZIP
 
+## Sjednocení rozdělených velikostí
+
+**Import a export → Sjednotit produkty** připraví náhled společného produktu se všemi původními kombinacemi. Shoda vyžaduje stejný model, značku, kategorii a prodávajícího, potvrzený společný model v uložené nabídce dodavatele a žádné objednávky ani rezervace. Podobný název sám nestačí. Kontrola využívá uložená data, neposílá nové požadavky dodavateli.
+
+Přesouvají se skutečné varianty se stejnými identifikátory a kusy. Samostatná velikost se společným skladem se převede na jednu variantu s přesně stejným počtem kusů. Nevytvářejí se další kombinace. Fotografie a technické údaje zůstávají zachované; rozdílné popisy se zobrazí v blocích označených velikostí, společný popis obsahuje pouze shodné věty. Při překročení limitu obsahu se sloučení zastaví.
+
+Známé ceny všech variant umožní automatický přepočet podle nastaveného zaokrouhlení. Když přesné ceny některých kombinací chybějí, zachovají se dosavadní ceny a automatika zůstane vypnutá. Původní adresy přesměrují na společný produkt, ostatní karty se skryjí jako koncepty. Historie dovoluje sloučení vrátit, dokud nevznikne objednávka nebo se nezmění související produkt, sklad či cena; úplný snímek původních dat se uchovává i poté. Funkce vyžaduje aktuální schéma databáze.
+
 V administraci otevři **Import z AI**, dostupný i nad katalogem. Nepotřebuje veřejné API ani další klíč: všechny akce vyžadují relaci správce a CSRF. SQL dodané AI se nikdy neprovádí. Databázová migrace není potřeba (používá existující produkty, sklad a tabulku dodavatelů).
 
 ## Přesné zadání pro AI

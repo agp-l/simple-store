@@ -70,7 +70,9 @@ final class ProductFamilyMerge
         $slug=\SimpleStore\Navigation\Slugger::fromTitle($family['name']);
         if($slug===$row['slug']||$this->db->queryFirstField('SELECT id FROM shop_product_revisions WHERE language=%s AND active_slug=%s AND product_key<>%s LIMIT 1',$language,$slug,$target))throw new InvalidArgumentException('Nelze bezpečně odvodit volnou společnou adresu produktu.');
         $variants=[];$costs=[];$members=[];$seller=null;
-        foreach(['summary','description']as$field)if(count(array_unique(array_column(array_map(static fn(array $s):array=>$s['products'][0],$state),$field)))!==1)throw new InvalidArgumentException('Popisy nebo úvodní texty se liší. Před sloučením je potřeba posoudit, které informace platí pro celý model.');
+        $products=array_map(static fn(array $s):array=>$s['products'][0],$state);
+        $copy=self::combinedCopy($products);
+        if(count(self::combinedDetails($products)['sections'])+count($copy['sections'])>30)throw new InvalidArgumentException('Sloučený obsah by přesáhl 30 bloků. Nejdřív zkrať opakované popisy jednotlivých velikostí.');
         foreach($state as$key=>$s){
             if(count($s['products'])!==1||$s['products'][0]['language']!==$language||!$s['sale'])throw new InvalidArgumentException('Slučované produkty musí být v jednom jazyce a mít nastavený způsob prodeje.');
             $p=$s['products'][0];$sourceFamily=self::family($p['name']);$size=$sourceFamily['size'];$seenColors=[];
@@ -140,7 +142,7 @@ final class ProductFamilyMerge
             if($v['price_czk']<$price)throw new InvalidArgumentException('Prodejní cena některé varianty nepokrývá dodavatele. Nejdřív uprav cenotvorbu.');
         }unset($v);
         return ['target'=>$target,'language'=>$language,'name'=>$family['name'],'slug'=>$slug,'keys'=>$keys,'members'=>$members,'variants'=>$variants,'costs'=>$costs,'previous_prices'=>$previousPrices,
-            'state_hash'=>self::hash($state),'expected'=>self::hash([$state,$costs,array_column($variants,'price_czk'),$managedPrices]),'proof'=>$proof,'managed_prices'=>$managedPrices];
+            'state_hash'=>self::hash($state),'expected'=>self::hash([$state,$costs,array_column($variants,'price_czk'),$managedPrices]),'proof'=>$proof,'managed_prices'=>$managedPrices,'copy'=>$copy];
     }
     public function candidates(string $language):array
     {
@@ -174,9 +176,9 @@ final class ProductFamilyMerge
             $p=$before[$target]['products'][0];$details=ProductDetails::decode($p['details_json'],$p['sizes']);
             $details['options']=[];$details['gallery']=array_values(array_filter(array_unique($allImages),static fn(string $path):bool=>$path!==''&&$path!==$p['image_path']));
             $mergedDetails=self::combinedDetails(array_map(static fn(array $s):array=>$s['products'][0],$before));
-            $details['specifications']=$mergedDetails['specifications'];$details['sections']=$mergedDetails['sections'];
+            $details['specifications']=$mergedDetails['specifications'];$details['sections']=array_merge($preview['copy']['sections'],$mergedDetails['sections']);
             $this->revision($p,['name'=>$preview['name'],'slug'=>$preview['slug'],'active_slug'=>$preview['slug'],'price_czk'=>min(array_column($preview['variants'],'price_czk')),
-                'details_json'=>json_encode($details,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),'sizes'=>'']);
+                'summary'=>$preview['copy']['summary'],'description'=>$preview['copy']['description'],'details_json'=>json_encode($details,JSON_UNESCAPED_UNICODE|JSON_THROW_ON_ERROR),'sizes'=>'']);
             $links=new ProductSupplierLinkRepository($this->db);$existing=array_column($before[$target]['links'],'url');
             foreach($urls as$url=>$label)if(!in_array($url,$existing,true))$links->save($target,0,$label,$url);
             $sale=$before[$target]['sale'];$this->db->update('shop_product_sales',['supplier_price_czk'=>count($preview['costs'])===count($preview['variants'])?min($preview['costs']):null,'variant_prices_json'=>json_encode((object)$preview['costs'],JSON_THROW_ON_ERROR),'version'=>(int)$sale['version']+1],'product_key=%s',$target);
@@ -185,6 +187,24 @@ final class ProductFamilyMerge
             $this->db->update('shop_supplier_price_jobs',['status'=>'dismissed','message'=>'Produkt byl sloučen do společné nabídky; spusť kontrolu výsledného produktu.'],'product_key IN %ls AND status IN %ls',$preview['keys'],['queued','review','failed']);
             $this->db->commit();return $preview['slug'];
         }catch(Throwable $e){$this->db->rollback();throw $e;}
+    }
+    /** Only verbatim shared sentences describe the whole model; all differences stay size-labelled. */
+    public static function combinedCopy(array $products):array
+    {
+        $result=['summary'=>'','description'=>'','sections'=>[],'changed'=>false];$specific=[];
+        foreach(['summary','description']as$field){
+            $texts=array_map(static fn(array $p):string=>trim((string)($p[$field]??'')),$products);
+            if(count(array_unique($texts))===1){$result[$field]=$texts[0];continue;}
+            $result['changed']=true;
+            $sentences=array_map(static fn(string $text):array=>array_values(array_filter(preg_split('/(?<=[.!?])\s+(?=[\p{Lu}\d])/u',$text)?:[])),$texts);
+            $common=array_values(array_intersect(...$sentences));$result[$field]=implode(' ',$common);
+            foreach($sentences as$i=>$parts){$unique=array_values(array_diff($parts,$common));if($unique!==[])$specific[$i][]=implode(' ',$unique);}
+        }
+        if($result['summary']===''&&$result['changed'])$result['summary']='Vyberte provedení podle svých potřeb. Jednotlivé varianty mají vlastní rozměry, cenu a dostupnost.';
+        if($result['description']===''&&$result['changed'])$result['description']='Podrobnosti jednotlivých provedení najdete níže. Cenu a dostupnost uvidíte po výběru varianty.';
+        foreach($specific as$i=>$parts){$f=self::family($products[$i]['name']);$label=$f['size'].($f['colors']?' '.implode(', ',$f['colors']):'');
+            $result['sections'][]=['type'=>'text','heading'=>'Provedení '.$label,'body'=>implode("\n\n",array_unique($parts))];}
+        return $result;
     }
     /** Keep differing weights and construction details explicitly tied to their original size. */
     public static function combinedDetails(array $products):array

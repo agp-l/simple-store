@@ -86,7 +86,7 @@ try{
  $simpleKeys=[];$simpleUrl='https://gramino.cz/p/hyperlite-mountain-gear-zippy';$simpleOffers=[];
  foreach([1=>7,2=>9]as$litres=>$quantity){
   $k=bin2hex(random_bytes(16));$simpleKeys[]=$k;$slug='zippy-'.$litres;
-  $db->insert('shop_product_revisions',['product_key'=>$k,'active_product_key'=>$k,'language'=>'cs','revision_number'=>1,'slug'=>$slug,'active_slug'=>$slug,'name'=>'Hyperlite Mountain Gear Zippy '.$litres.' l','brand'=>'Hyperlite','category'=>'batohy','subcategory'=>'doplnky','price_czk'=>1400,'description'=>'Same model','image_path'=>'','stock_status'=>'in_stock','published'=>1]);
+  $db->insert('shop_product_revisions',['product_key'=>$k,'active_product_key'=>$k,'language'=>'cs','revision_number'=>1,'slug'=>$slug,'active_slug'=>$slug,'name'=>'Hyperlite Mountain Gear Zippy '.$litres.' l','brand'=>'Hyperlite','category'=>'batohy','subcategory'=>'doplnky','price_czk'=>1400,'summary'=>'Vak '.$litres.' l.','description'=>'Same model. Objem '.$litres.' l.','image_path'=>'','stock_status'=>'in_stock','published'=>1]);
   $db->insert('shop_product_sales',['product_key'=>$k,'partner_id'=>$seller,'supplier_price_czk'=>1000,'mode'=>'assisted','variant_prices_json'=>'{}']);
   $db->insert('shop_product_inventory',['product_key'=>$k,'available_quantity'=>$quantity]);$links->save($k,0,'Gramino',$simpleUrl);
   $simpleOffers[]=['@type'=>'Product','name'=>'Hyperlite Mountain Gear Zippy – '.$litres.' l','offers'=>['@type'=>'Offer','url'=>$simpleUrl.'?v_id='.$litres,'price'=>1000,'priceCurrency'=>'CZK','availability'=>'https://schema.org/InStock']];
@@ -96,8 +96,11 @@ try{
  $simplePlan=$family->preview($simpleKeys[0],'cs');$check(count($simplePlan['variants'])===2&&array_sum(array_column($simplePlan['variants'],'quantity'))===16,'Common inventory was divided into invented combinations.');
  $db->update('shop_product_inventory',['available_quantity'=>8],'product_key=%s',$simpleKeys[0]);$reject(fn()=>$family->apply($simpleKeys[0],'cs',$simplePlan['expected']));$db->update('shop_product_inventory',['available_quantity'=>7],'product_key=%s',$simpleKeys[0]);
  $simplePlan=$family->preview($simpleKeys[0],'cs');$family->apply($simpleKeys[0],'cs',$simplePlan['expected']);
+ $merged=$db->queryFirstRow('SELECT * FROM shop_product_revisions WHERE active_product_key=%s',$simpleKeys[0]);$mergedBlocks=ProductDetails::decode($merged['details_json'])['sections'];
+ $check($merged['description']==='Same model.'&&str_contains(json_encode($mergedBlocks),'Objem 1 l.')&&str_contains(json_encode($mergedBlocks),'Objem 2 l.'),'Size-specific descriptions were discarded or generalized.');
  $check(array_sum(array_column($variants->snapshot($simpleKeys[0])['items'],'quantity'))===16,'Common stock lost or doubled during conversion.');
  $family->undo((int)$family->history()[0]['id']);
+ $check($db->queryFirstField('SELECT description FROM shop_product_revisions WHERE active_product_key=%s',$simpleKeys[0])==='Same model. Objem 1 l.','Undo lost the original size description.');
  $check(array_map('intval',$db->queryFirstColumn('SELECT available_quantity FROM shop_product_inventory WHERE product_key IN %ls ORDER BY available_quantity',$simpleKeys))===[7,9],'Undo did not restore each common inventory.');
  $check(!$variants->snapshot($simpleKeys[0])['enabled']&&count($family->preview($simpleKeys[0],'cs')['variants'])===2,'Undo of a common-stock family cannot be safely repeated.');
  echo "Product families: exact variants, stale previews, history, per-size parameters/prices, undo and manual overrides passed.\n";
