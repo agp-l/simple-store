@@ -104,6 +104,23 @@ try{
  $responses['https://a.test/uniform']=['code'=>200,'headers'=>[],'body'=>'<script type="application/ld+json">'.json_encode($node).'</script>'];
  $manager->enqueue('one','rapid',$uniform);$run(3,100);
  $check($job($uniform)['status']==='applied'&&(int)$sale($uniform)['supplier_price_czk']===1100,'Uniform variants did not apply automatically.');
+
+ $protected=$make('protected-variant',1000);$v=bin2hex(random_bytes(16));
+ $db->insert('shop_product_variant_settings',['product_key'=>$protected,'enabled'=>1]);
+ $db->insert('shop_product_variants',['product_key'=>$protected,'variant_key'=>$v,'choices_json'=>'{}','price_czk'=>1000,'available_quantity'=>7]);
+ $responses['https://a.test/protected-variant']=$offer('https://a.test/protected-variant',1100);
+ $manager->enqueue('one','rapid',$protected);$run(4,200);$reject(fn()=>$manager->apply((int)$job($protected)['id'],true));
+ $check((int)$sale($protected)['supplier_price_czk']===1000&&(int)$db->queryFirstField('SELECT price_czk FROM shop_product_revisions WHERE product_key=%s AND active_product_key IS NOT NULL',$protected)===3000,'Rejected variant repricing partially changed the product.');
+ $check((int)$db->queryFirstField('SELECT price_czk FROM shop_product_variants WHERE product_key=%s',$protected)===1000,'Explicit variant retail price overwritten.');
+ // A lower explicit supplier cost belongs to its own variant and must not block common-cost pricing.
+ $ownCost=$make('own-variant-cost',1000);$v=bin2hex(random_bytes(16));
+ $db->insert('shop_product_variant_settings',['product_key'=>$ownCost,'enabled'=>1]);
+ $db->insert('shop_product_variants',['product_key'=>$ownCost,'variant_key'=>$v,'choices_json'=>'{}','price_czk'=>1000,'available_quantity'=>7]);
+ $db->update('shop_product_sales',['variant_prices_json'=>json_encode([$v=>900])],'product_key=%s',$ownCost);
+ $responses['https://a.test/own-variant-cost']=$offer('https://a.test/own-variant-cost',1100);
+ $manager->enqueue('one','rapid',$ownCost);$run(4,200);$manager->apply((int)$job($ownCost)['id'],true);
+ $check((int)$sale($ownCost)['supplier_price_czk']===1100&&json_decode($sale($ownCost)['variant_prices_json'],true)[$v]===900,'Explicit variant supplier cost lost.');
+ $check((int)$db->queryFirstField('SELECT price_czk FROM shop_product_variants WHERE product_key=%s',$ownCost)===1000,'Explicit variant retail price lost.');
  $report=$manager->diagnostics();$check($report['format']==='dobrodruzi.supplier-price-diagnostics'&&!str_contains(json_encode($report),$token),'Diagnostics leaked cron token.');
  echo "Supplier prices: MySQL durable queue, selected/fallback sellers, daily and URL limits, pauses, locks, stale data, variants and cron passed.\n";
 }finally{$db->disconnect();$admin->query('DROP DATABASE %b',$database);}

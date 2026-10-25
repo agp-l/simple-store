@@ -96,3 +96,8 @@ $f=$fixture;$f['data']['variantsInfo']['7472']['price']=1099;
 $check(Parser::read($variantPage($f),$f['url'])['uniform_variants'],'Identical Pod 7 kilo variant prices not recognized.');
 $check(!Parser::read($variantPage($fixture),$fixture['url'])['uniform_variants'],'Different Pod 7 kilo variant prices treated as uniform.');
 echo "Supplier prices: transparent pricing, jitter, exact-name repairs and uniform variant groups passed.\n";
+
+foreach(['supplier-price-pricing','supplier-price-retry','supplier-price-tempo','supplier-price-export']as$action){
+ $check(in_array($action,SimpleStore\Admin\AdminActionPolicy::SUPPLIER_PRICES,true)&&SimpleStore\Admin\AdminActionPolicy::allows($action),'Supplier action is not in the shared authorization/routing policy.');
+}
+$check(!SimpleStore\Admin\AdminActionPolicy::allows('supplier-price-unknown'),'Unknown supplier action authorized.');
