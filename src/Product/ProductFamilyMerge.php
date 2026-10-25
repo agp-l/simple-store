@@ -90,7 +90,8 @@ final class ProductFamilyMerge
         usort($variants,static fn(array $a,array $b):int=>strnatcmp($a['choices']['Velikost'],$b['choices']['Velikost'])?:strcmp(ProductVariants::label($a['choices']),ProductVariants::label($b['choices'])));
         foreach($state as$s)if($this->db->queryFirstField('SELECT source_slug FROM shop_product_redirects WHERE target_key=%s OR (language=%s AND source_slug=%s) LIMIT 1',$s['products'][0]['product_key'],$language,$s['products'][0]['slug'])!==null)throw new InvalidArgumentException('Produkt už má historii slučování nebo přesměrování. Vyžaduje samostatné posouzení.');
         $proof=null;
-        foreach($state[$target]['links']as$link){
+        $proofLinks=[];foreach($state as$s)foreach($s['links']as$link)$proofLinks[$link['url']]=$link;
+        foreach($proofLinks as$link){
             $url=$link['url'];
             for($hop=0;$hop<4;$hop++){
                 $cache=$this->db->queryFirstRow('SELECT data_json FROM shop_supplier_price_cache WHERE url_hash=%s AND expires_at>%i',hash('sha256','product:'.$url),time());

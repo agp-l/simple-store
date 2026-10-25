@@ -30,6 +30,8 @@ try{
  $group=['@type'=>'ProductGroup','name'=>'Warmpeace Viking 300','url'=>$url,'hasVariant'=>$offers];
  $cache=static function(array $g,int $expires=0)use($db,$url):void{$document=PriceParser::document('<script type="application/ld+json">'.json_encode($g).'</script>',$url);$db->replace('shop_supplier_price_cache',['url_hash'=>hash('sha256','product:'.$url),'expires_at'=>$expires?:time()+3600,'data_json'=>json_encode(['document'=>$document,'observed_at'=>time()])]);};
  $cache($group);$target=$keys[0];$source=$keys[1];
+ // A previously repaired target link may have no cache of its own; use a proved family source.
+ $db->update('shop_product_supplier_links',['url'=>$url.'?v_id=170'],'product_key=%s',$target);
  $check(count($family->candidates('cs'))===1,'Family not detected.');
  $plan=$family->preview($target,'cs');$check(count($plan['variants'])===2&&array_sum(array_column($plan['variants'],'quantity'))===20,'Invented or lost combinations.');
  $check(array_column($plan['variants'],'price_czk')===[4800,5300],'Per-size pricing wrong.');
