@@ -366,10 +366,10 @@ try {
         $item = $editRequested && $canEdit
             ? $repository->findCurrentBySlug($route['slug'], $url->getLanguage())
             : $repository->findPublished($route['slug'], $url->getLanguage());
-        if ($item === null && !($editRequested && $canEdit)) {
+        if ($item === null || ($editRequested && $canEdit && empty($item['published']))) {
             $redirectSlug = (new \SimpleStore\Product\ProductVariantMerge($db))->redirect($url->getLanguage(), $route['slug']);
             if ($redirectSlug !== null) {
-                header('Location: ' . $basePath . $url->getLanguage() . '/produkt/' . rawurlencode($redirectSlug), true, 302);
+                header('Location: ' . $basePath . $url->getLanguage() . '/produkt/' . rawurlencode($redirectSlug) . ($editRequested && $canEdit ? '?edit=1' : ''), true, 302);
                 exit;
             }
         }
