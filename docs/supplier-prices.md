@@ -1,6 +1,6 @@
 # Ceny dodavatelů
 
-[Upravený plán variantních odkazů](variant-supplier-architecture.md) používá partnery výhradně pro asistovaný nákup. Převzaté společné odkazy se nejdříve přiřadí variantám jako neověřené; přesné párování a pravidla partnerského množství následují samostatně. Následující dokumentace popisuje nasazený cenový automat; variantní odkazy už mají vlastní evidenci a soukromý JSON. Automatické řízení množství podle partnera zatím není aktivní.
+[Upravený plán variantních odkazů](variant-supplier-architecture.md) používá partnery výhradně pro asistovaný nákup. Převzaté společné odkazy se nejdříve přiřadí variantám jako neověřené; volitelné přesné párování popisuje následující oddíl. Pravidla partnerského množství následují samostatně. Následující dokumentace popisuje nasazený cenový automat; variantní odkazy už mají vlastní evidenci a soukromý JSON. Automatické řízení množství podle partnera zatím není aktivní.
 
 Administrace: `/admin/supplier-prices/`. PHP 8.1+, cURL a stávající MySQL/MariaDB. Před prvním použitím aktualizovat SQL tabulky v Administrace → Databáze. Není potřeba Python, prohlížeč na hostingu ani externí služba.
 
@@ -181,3 +181,22 @@ a vypnutím tohoto workflow, aby jej další běh znovu nevytvořil.
 
 Administrace a JSON rozlišují poslední krok z prohlížeče a skutečný běh cronu/CLI.
 Samotné zapnutí týdenního plánování už nelze zaměnit za důkaz běžícího workeru.
+
+## Přesné partnerské odkazy variant (etapa C)
+
+V administraci cen zapni **Automaticky přiřazovat ověřené odkazy variant**. Párování běží se stejným workerem, nejvýše tři produkty v jednom kroku, po dokončení celého průchodu s odstupem pěti minut. Pozastavení fronty pozastaví i párování. Nastavení je na nové instalaci vypnuté a nemění cenotvorbu.
+
+`VariantLinkDiscovery` čte pouze uložené nabídky z běžných kontrol cen; neprovádí HTTP požadavky. Čas načtení i platnost musí být mladší než 24 hodin. Umí využít společnou modelovou stránku pro více variant a bezpečná uložená přesměrování. Neplatná či chybějící nabídka se nepovažuje za důkaz dostupnosti.
+
+Přesná shoda vyžaduje podporovaný zdroj (Gramino, Pod7kilo nebo strukturovaná nabídka HUDY), shodu modelu a vlastností a právě jeden explicitní URL jedné nabídky. Shodné ceny několika barev nejsou důkazem identity. HUDY vyžaduje parametr `variant` a při velikosti také `size`. Rozporné zdroje, chybějící partner, nejasná kombinace a nepodporovaný web zůstávají označené s důvodem.
+
+Převzatý odkaz se nahradí jen přesnou shodou. Ručně zadaná odlišná adresa se nepřepíše, uloží se návrh. Existující přesný odkaz a dříve odebraná adresa blokují duplicitu. Identita odkazu, zdroj převzetí a původní URL se zachovají; opakování se stejnými daty nezvyšuje verzi. Transakce drží zámek produktu a kontroluje verzi odkazu. Výsledky včetně času nabídky jsou vidět přímo u varianty v tabulce.
+
+Soukromé nástroje (vyžadují přihlášení administrátora):
+
+- `GET /admin/supplier-prices/?format=variant-link-plan` — náhled bez zápisu a bez síťového načítání, případně `&product_key=<32hex>`.
+- Tlačítko **Export náhledu párování (JSON)** — stejný report ke stažení, formát `simple-store.variant-link-plan.v1`.
+- `GET /admin/supplier-prices/?format=variant-links` — skutečně uložené odkazy a výsledky; dřívější export/import zůstává zachovaný.
+- `php tools/supplier-price-worker.php --variant-link-plan` — náhled přes CLI. Zápisy provádí běžný `--tick` jen při zapnutém párování.
+
+Párování zapisuje pouze partnerské odkazy a jejich důkazy. Nemění vybraného prodávajícího, režim prodeje, ceny, vlastní zásoby, rezervace ani objednávky. Pravidla dostupnosti 3 / skutečný počet / poslední kus patří do samostatné etapy D.

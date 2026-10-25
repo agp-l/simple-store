@@ -79,7 +79,8 @@ final class VariantLinkDiscovery
             }
             if ($matches === []) {
                 // Prefer a concrete mismatch over an absent secondary cache entry.
-                usort($failures, static fn(array $a, array $b): int => (int) in_array($a['status'], ['missing_cache','expired'], true) <=> (int) in_array($b['status'], ['missing_cache','expired'], true));
+                $priority = ['missing_cache' => 2, 'expired' => 1];
+                usort($failures, static fn(array $a, array $b): int => ($priority[$a['status']] ?? 0) <=> ($priority[$b['status']] ?? 0));
                 $entries[] = array_replace($out, $failures[0] ?? self::issue('missing_cache', 'Chybí uložená nabídka.')); continue;
             }
             if (count(array_unique(array_column($matches, 'url'))) !== 1 || count(array_unique(array_map(static fn(array $m): string => (string) ($m['offer']['amount'] ?? ''), $matches))) !== 1) {

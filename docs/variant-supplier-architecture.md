@@ -1,6 +1,6 @@
 # Odkazy partnerů u variant a dostupnost asistovaného nákupu
 
-Stav: **etapy A/B implementované; C/D navazující**, 25. 10. 2026. Upřesnění uživatele zde nahrazuje širší návrh z commitů `dd14f4f` a `2e26198`. Současný provoz popisují [varianty](product-variants.md), [asistovaný nákup](assisted-purchase.md) a [cenový automat](supplier-prices.md). Etapy A/B přidávají evidenci odkazů, editor, JSON a přímé URL; automatické ověřování přesných URL a změny dostupnosti C/D ještě nejsou aktivované.
+Stav: **etapy A/B/C implementované; D navazující**, 25. 10. 2026. Upřesnění uživatele zde nahrazuje širší návrh z commitů `dd14f4f` a `2e26198`. Současný provoz popisují [varianty](product-variants.md), [asistovaný nákup](assisted-purchase.md) a [cenový automat](supplier-prices.md). Etapy A/B přidávají evidenci odkazů, editor, JSON a přímé URL. Etapa C doplňuje volitelné automatické ověřování přesných URL z čerstvých uložených nabídek; zapíná se v administraci cen. Změny dostupnosti D zatím nejsou implementované.
 
 ## Význam partnera a režimů prodeje
 
@@ -101,7 +101,7 @@ Dosavadní objednávkový snímek asistované položky se rozšíří o konkrét
 | --- | --- | --- |
 | A. Odkazy variant — hotovo | Jedna doplňující tabulka, editor, soukromý JSON; opakovatelné převzetí společných odkazů ke všem současným variantám. | Stejné ceny, režimy, kusy, variantní ID a objednávky před/po; přesný odkaz se nepřepíše. |
 | B. Přímý odkaz — hotovo | `?variant=...` pro existující varianty. | Reload, bez JS, mobil, neplatné ID, jazyk a správná varianta v košíku. |
-| C. Přesné URL partnerů | Ruční doplnění a automatické návrhy ze současných zdrojů. | Převzatý odkaz na jinou velikost není potvrzený; prodávající se nepřepne. |
+| C. Přesné URL partnerů — hotovo | Ruční doplnění, náhled JSON a automatické přesné shody z čerstvých uložených zdrojů; ruční URL pouze jako návrhy. | Převzatý odkaz na jinou velikost není potvrzený; prodávající se nepřepne. |
 | D. Dostupnost asistence | Pravidla 3 / skutečný počet / poslední kus, texty, ochrana rezervací a přepnutí režimu. | Náhled dopadu a malý vzorek; vlastní sklad chráněný, souběh objednávek neobejde limit. |
 
 Každá etapa má vlastní commit a odpovídající testy. Schéma je doplňující, s podporou prefixu tabulek a MySQL/MariaDB. Převzetí odkazů běží po produktech s kontrolou verzí, pokračováním po přerušení a bez zásahu do skladu. GET nesmí spouštět migraci ani vzdálené načítání.
