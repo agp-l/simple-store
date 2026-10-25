@@ -191,6 +191,7 @@ final class ProductFamilyMerge
     /** Only verbatim shared sentences describe the whole model; all differences stay size-labelled. */
     public static function combinedCopy(array $products):array
     {
+        $products=array_values($products);
         $result=['summary'=>'','description'=>'','sections'=>[],'changed'=>false];$specific=[];
         foreach(['summary','description']as$field){
             $texts=array_map(static fn(array $p):string=>trim((string)($p[$field]??'')),$products);

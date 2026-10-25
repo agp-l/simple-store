@@ -202,3 +202,5 @@ $copy=SimpleStore\Product\ProductFamilyMerge::combinedCopy([
 ]);
 $check($copy['description']==='Tloušťka 7,6 cm.'&&!str_contains($copy['summary'],'510')&&count($copy['sections'])===2,'Size-specific copy leaked into the common description.');
 $check(str_contains($copy['sections'][0]['body'],'510 g.')&&str_contains($copy['sections'][0]['body'],'183 × 51 cm.')&&$copy['sections'][1]['heading']==='Provedení Long Wide','Differing copy was discarded or assigned to the wrong size.');
+$keyedCopy=SimpleStore\Product\ProductFamilyMerge::combinedCopy(['key-a'=>['name'=>'Mat — Regular','summary'=>'Shared','description'=>'Common. Width 51 cm.'],'key-b'=>['name'=>'Mat — Long Wide','summary'=>'Shared','description'=>'Common. Width 64 cm.']]);
+$check($keyedCopy['summary']==='Shared'&&$keyedCopy['description']==='Common.'&&$keyedCopy['sections'][1]['heading']==='Provedení Long Wide','Product-keyed snapshots changed copy extraction.');
