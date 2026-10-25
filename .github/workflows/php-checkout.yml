@@ -113,6 +113,7 @@ jobs:
           php tests/password-reset-url.php
           php tests/product-import.php
           php tests/product-variants.php
+          php tests/purchase-partner-transfer.php
           php tests/inline-editor.php
           php tests/content-cover.php
           php tests/media-catalog.php
@@ -193,6 +194,7 @@ jobs:
           php tests/configuration-backup-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
+          php tests/purchase-partner-transfer-database.php
           php tests/product-sales-mass-database.php
           php tests/media-archive.php
           php tests/media-owners-database.php
@@ -251,6 +253,7 @@ jobs:
           php tests/configuration-backup-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
+          php tests/purchase-partner-transfer-database.php
           php tests/product-sales-mass-database.php
           php tests/media-archive.php
           php tests/media-owners-database.php
@@ -289,6 +292,7 @@ jobs:
         run: |
           node --test tests/product-variants-browser.mjs
           node --test tests/product-sale-browser.mjs
+          node --test tests/purchase-partners-browser.mjs
           node --test tests/product-sales-mass-browser.mjs
           node --test tests/checkout-presentation-browser.mjs
           node --test tests/tax-evidence-browser.mjs

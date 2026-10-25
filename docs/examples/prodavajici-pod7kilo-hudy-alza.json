@@ -1,0 +1,33 @@
+{
+  "format": "simple-store-purchase-partners",
+  "version": 1,
+  "partners": [
+    {
+      "name": "Ing. Štěpán Trojánek – Pod 7 kilo",
+      "ico": "88719499",
+      "address": "Milady Horákové 546/50, 170 00 Praha 7",
+      "email": "info@pod7kilo.cz",
+      "website_url": "https://www.pod7kilo.cz/",
+      "terms_url": "https://www.pod7kilo.cz/stranky/obchodni-podminky/",
+      "confirmed": false
+    },
+    {
+      "name": "HUDYsport, a.s.",
+      "ico": "27268560",
+      "address": "Bynovec 138, 405 02 Děčín",
+      "email": "objednavky@hudy.cz",
+      "website_url": "https://www.hudy.cz/",
+      "terms_url": "https://www.hudy.cz/obchodni-podminky",
+      "confirmed": false
+    },
+    {
+      "name": "Alza.cz a.s.",
+      "ico": "27082440",
+      "address": "Jankovcova 1522/53, 170 00 Praha 7 – Holešovice",
+      "email": "",
+      "website_url": "https://www.alza.cz/",
+      "terms_url": "https://www.alza.cz/obchodni-podminky-art10.htm",
+      "confirmed": false
+    }
+  ]
+}

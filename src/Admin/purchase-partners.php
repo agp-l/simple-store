@@ -6,7 +6,7 @@ use SimpleStore\Product\PurchasePartnerRepository;
 // Session authentication and POST CSRF validation are enforced by admin.php.
 $screen = 'purchase-partners';
 $partnersRepository = new PurchasePartnerRepository($db);
-$partnersReady = $partnersRepository->installed();
+$partnersReady = $partnersRepository->transferReady();
 $partnerError = '';
 $partnerForm = [];
 $rawId = $method === 'POST' ? ($_POST['id'] ?? '0') : ($_GET['id'] ?? '0');
@@ -41,5 +41,6 @@ $partnerMissing = PurchasePartnerRepository::missing($partnerForm);
 $partnerQuery = is_string($_GET['q'] ?? null) ? trim($_GET['q']) : '';
 if ($partnerQuery !== '') {
     $partnerRows = array_values(array_filter($partnerRows, static fn (array $row): bool =>
-        stripos(implode(' ', [$row['name'], $row['ico'], $row['email'], $row['address']]), $partnerQuery) !== false));
+        stripos(implode(' ', [$row['name'], $row['ico'], $row['email'], $row['address'], $row['website_url'] ?? '']), $partnerQuery) !== false));
 }
+require __DIR__ . '/purchase-partner-transfer.php';

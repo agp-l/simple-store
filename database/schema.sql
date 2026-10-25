@@ -396,6 +396,27 @@ PREPARE partner_version_statement FROM @partner_version_upgrade;
 EXECUTE partner_version_statement;
 DEALLOCATE PREPARE partner_version_statement;
 
+-- Optional website and portable identity. Existing product foreign keys remain unchanged.
+SET @partner_website_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_purchase_partners' AND COLUMN_NAME='website_url');
+SET @partner_website_upgrade = IF(@partner_website_exists=0,
+  'ALTER TABLE shop_purchase_partners ADD COLUMN website_url VARCHAR(1000) NOT NULL DEFAULT ''''', 'SELECT 1');
+PREPARE partner_website_statement FROM @partner_website_upgrade;
+EXECUTE partner_website_statement;
+DEALLOCATE PREPARE partner_website_statement;
+
+SET @partner_key_exists = (SELECT COUNT(*) FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='shop_purchase_partners' AND COLUMN_NAME='partner_key');
+SET @partner_key_upgrade = IF(@partner_key_exists=0,
+  'ALTER TABLE shop_purchase_partners ADD COLUMN partner_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NULL, ADD UNIQUE KEY partner_identity (partner_key)', 'SELECT 1');
+PREPARE partner_key_statement FROM @partner_key_upgrade;
+EXECUTE partner_key_statement;
+DEALLOCATE PREPARE partner_key_statement;
+SET @partner_key_fill = 'UPDATE shop_purchase_partners SET partner_key=REPLACE(UUID(),''-'','''') WHERE partner_key IS NULL';
+PREPARE partner_key_fill_statement FROM @partner_key_fill;
+EXECUTE partner_key_fill_statement;
+DEALLOCATE PREPARE partner_key_fill_statement;
+
 CREATE TABLE IF NOT EXISTS shop_product_sales (
   product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
   mode VARCHAR(12) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT 'own',

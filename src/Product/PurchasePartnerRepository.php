@@ -10,7 +10,7 @@ use MeekroDB;
 final class PurchasePartnerRepository
 {
     private ?bool $ready = null;
-    public const FIELDS = ['name' => 190, 'ico' => 8, 'address' => 500, 'email' => 190, 'terms_url' => 1000];
+    public const FIELDS = ['name' => 190, 'ico' => 8, 'address' => 500, 'email' => 190, 'website_url' => 1000, 'terms_url' => 1000];
 
     public function __construct(private MeekroDB $db) {}
 
@@ -28,6 +28,13 @@ final class PurchasePartnerRepository
             WHERE s.partner_id=p.id) AS product_count FROM shop_purchase_partners p ORDER BY p.name, p.id');
     }
 
+    public function transferReady(): bool
+    {
+        return $this->installed() && (int) $this->db->queryFirstField(
+            'SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA=DATABASE()
+             AND TABLE_NAME=%s AND COLUMN_NAME IN (%s,%s)', 'shop_purchase_partners', 'website_url', 'partner_key') === 2;
+    }
+
     public function find(int $id): ?array
     {
         return $this->installed() ? $this->db->queryFirstRow('SELECT * FROM shop_purchase_partners WHERE id=%i', $id) : null;
@@ -36,7 +43,25 @@ final class PurchasePartnerRepository
     /** Missing or unfinished contact data is valid draft data, never a checkout-ready identity. */
     public function save(int $id, array $input): int
     {
-        if (!$this->installed()) throw new InvalidArgumentException('Nejprve aktualizuj databázi v administraci.');
+        if (!$this->transferReady()) throw new InvalidArgumentException('Nejprve aktualizuj databázi v administraci.');
+        $values = self::values($input);
+        if ($id === 0) {
+            if (implode('', array_intersect_key($values, self::FIELDS)) === '') throw new InvalidArgumentException('Vyplň alespoň jeden údaj nového prodávajícího.');
+            $this->db->insert('shop_purchase_partners', $values + ['version' => 1, 'partner_key' => bin2hex(random_bytes(16))]);
+            return (int) $this->db->insertId();
+        }
+        $version = filter_var($input['version'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($id < 1 || $version === false) throw new InvalidArgumentException('Neplatná verze prodávajícího. Obnov stránku.');
+        $this->db->update('shop_purchase_partners', $values + ['version' => $version + 1],
+            'id=%i AND version=%i', $id, $version);
+        if ($this->db->affectedRows() !== 1) {
+            throw new InvalidArgumentException('Prodávajícího mezitím někdo změnil. Tvé údaje zůstaly ve formuláři; před dalším uložením otevři aktuální profil v nové kartě a porovnej změny.');
+        }
+        return $id;
+    }
+
+    public static function values(array $input): array
+    {
         $values = [];
         foreach (self::FIELDS as $field => $limit) {
             $value = $input[$field] ?? '';
@@ -50,21 +75,17 @@ final class PurchasePartnerRepository
             throw new InvalidArgumentException('IČO může obsahovat nejvýše osm číslic.');
         }
         $values['confirmed'] = ($input['confirmed'] ?? '') === '1' ? 1 : 0;
-        if ($id === 0) {
-            if (implode('', array_intersect_key($values, self::FIELDS)) === '') {
-                throw new InvalidArgumentException('Vyplň alespoň jeden údaj nového prodávajícího.');
-            }
-            $this->db->insert('shop_purchase_partners', $values + ['version' => 1]);
-            return (int) $this->db->insertId();
+        if ($values['website_url'] !== '' && !self::validWebsite($values['website_url'])) {
+            throw new InvalidArgumentException('Web prodávajícího musí být úplná HTTP nebo HTTPS adresa bez přihlašovacích údajů.');
         }
-        $version = filter_var($input['version'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
-        if ($id < 1 || $version === false) throw new InvalidArgumentException('Neplatná verze prodávajícího. Obnov stránku.');
-        $this->db->update('shop_purchase_partners', $values + ['version' => $version + 1],
-            'id=%i AND version=%i', $id, $version);
-        if ($this->db->affectedRows() !== 1) {
-            throw new InvalidArgumentException('Prodávajícího mezitím někdo změnil. Tvé údaje zůstaly ve formuláři; před dalším uložením otevři aktuální profil v nové kartě a porovnej změny.');
-        }
-        return $id;
+        return $values;
+    }
+
+    public static function validWebsite(string $url): bool
+    {
+        return filter_var($url, FILTER_VALIDATE_URL) !== false &&
+            in_array(parse_url($url, PHP_URL_SCHEME), ['http', 'https'], true) &&
+            parse_url($url, PHP_URL_USER) === null && parse_url($url, PHP_URL_PASS) === null;
     }
 
     public static function missing(array $partner): array

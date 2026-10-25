@@ -6,5 +6,6 @@ $partnerValue = static fn (string $field): string => is_string($partnerFields[$f
 <label>IČO <input name="<?= $partnerPrefix ?>ico" inputmode="numeric" maxlength="8" value="<?= $escape($partnerValue('ico')) ?>"></label>
 <label>Sídlo a adresa pro stížnosti <input name="<?= $partnerPrefix ?>address" maxlength="500" value="<?= $escape($partnerValue('address')) ?>"></label>
 <label>E-mail prodávajícího <input type="email" name="<?= $partnerPrefix ?>email" maxlength="190" value="<?= $escape($partnerValue('email')) ?>"></label>
+<label>Web prodávajícího <input type="url" name="<?= $partnerPrefix ?>website_url" maxlength="1000" placeholder="https://www.obchod.cz/" value="<?= $escape($partnerValue('website_url')) ?>"><small>Nepovinná hlavní adresa obchodu; obchodní podmínky vyplň samostatně.</small></label>
 <label>HTTPS adresa obchodních podmínek <input type="url" name="<?= $partnerPrefix ?>terms_url" maxlength="1000" value="<?= $escape($partnerValue('terms_url')) ?>"></label>
 <label><input type="checkbox" name="<?= $partnerPrefix ?>confirmed" value="1" <?= (string) ($partnerFields['confirmed'] ?? '') === '1' ? 'checked' : '' ?>> Ověřil jsem, že partner umožňuje nákup jménem zákazníka a doklad vystaví zákazníkovi.</label>
