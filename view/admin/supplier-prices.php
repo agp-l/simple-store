@@ -37,7 +37,7 @@ $availability=['in_stock'=>'Skladem u dodavatele','out_of_stock'=>'U dodavatele 
 <p id="supplier-run-status" role="status" aria-live="polite"><?= (int)$pricesSettings['paused']?'Fronta je pozastavená.':'Fronta je připravená ke zpracování.' ?></p>
 <div class="supplier-actions"><button type="button" class="panel-button" id="supplier-run" <?= (int)$pricesSettings['paused']?'disabled':'' ?>>Zpracovávat v tomto okně</button><button type="button" class="panel-button" id="supplier-stop" disabled>Přerušit v tomto okně</button></div>
 <p>Každý krok načte nejvýše jednu stránku. Během práce můžeš toto okno nechat otevřené. Po zavření pokračuje jen nastavený cron; fronta se neztratí.</p>
-<p><a href="<?= $escape($priceUrl.'#price-history') ?>">Obnovit výsledky</a> · Poslední krok: <strong><?= $escape($date($pricesSettings['last_tick'])) ?></strong></p>
+<p><a href="<?= $escape($priceUrl.'?refresh='.bin2hex(random_bytes(6)).'#price-history') ?>">Obnovit výsledky</a> · Poslední krok: <strong><?= $escape($date($pricesSettings['last_tick'])) ?></strong></p>
 <div class="supplier-note"><strong>Co se uloží automaticky?</strong><p>Jednoznačná cena vybraného prodávajícího. Záložní obchod, varianty, nedostupné zboží a změny nad 30 % čekají na kontrolu. Prodejní cenu, vlastní sklad a přijaté objednávky neměníme.</p><p>Ceny v haléřích se kvůli formátu cen e-shopu zaokrouhlí nahoru na celé Kč.</p></div>
 </section>
 </div>
