@@ -369,7 +369,7 @@ try {
         if ($item === null || ($editRequested && $canEdit && empty($item['published']))) {
             $redirectSlug = (new \SimpleStore\Product\ProductVariantMerge($db))->redirect($url->getLanguage(), $route['slug']);
             if ($redirectSlug !== null) {
-                header('Location: ' . $basePath . $url->getLanguage() . '/produkt/' . rawurlencode($redirectSlug) . ($editRequested && $canEdit ? '?edit=1' : ''), true, 302);
+                header('Location: ' . $url->path('produkt/' . rawurlencode($redirectSlug)) . ($editRequested && $canEdit ? '?edit=1' : ''), true, 302);
                 exit;
             }
         }
