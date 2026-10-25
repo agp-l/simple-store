@@ -99,6 +99,12 @@ final class PriceParser
         return function_exists('mb_strtolower')?mb_strtolower($value,'UTF-8'):strtolower($value);
     }
 
+    public static function sameProductName(array $result,string $name):bool
+    {
+        $name=self::name($name);
+        return $name!==''&&in_array($name,[self::name($result['product_name']??''),self::name($result['group_name']??'')],true);
+    }
+
     private static function sameModel(string $a,string $b):bool
     {
         try{if(preg_replace('/^www\./','',HttpClient::url($a))!==preg_replace('/^www\./','',HttpClient::url($b)))return false;}catch(InvalidArgumentException $e){return false;}

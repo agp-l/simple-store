@@ -88,3 +88,9 @@ strukturované nabídky, důvody odmítnutí, časy a stav prodlev obchodů. Neo
 objednávky, hesla ani klíč cronu. Je to diagnostický výstup, nikoliv soubor pro import cen;
 nelze jím obejít identifikaci variant nebo ruční schválení. Starší cache bez sady nabídek
 zůstane použitelná do vypršení, ale nové pravidlo parseru vyžaduje nové stažení.
+
+Platné odpovědi z cache a známá přesměrování se zpracují po malých místních dávkách
+(nejvýše 24 kroků), nikoli s prodlevou mezi každým místním čtením. Jeden tick stále smí
+provést nejvýše jeden HTTP požadavek. Trvalé přesměrování 301/308 na stejném obchodě
+může opravit uložený odkaz, pokud se zároveň přesně shodne celý název produktu nebo
+skupiny variant s katalogem. Neznámý typ historického přesměrování tuto podmínku nesplňuje.

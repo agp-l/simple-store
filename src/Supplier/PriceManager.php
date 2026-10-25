@@ -166,7 +166,8 @@ final class PriceManager
             }
             // Bounded local work, at most ONE remote request in the entire tick.
             $jobs=$this->db->query('SELECT * FROM shop_supplier_price_jobs WHERE status=%s AND next_at<=%i ORDER BY next_at,id LIMIT 12','queued',$now);
-            foreach($jobs as $job){
+            for($cursor=0;$cursor<min(count($jobs),24);$cursor++){
+                $job=$jobs[$cursor];$wait=$job['mode']==='rapid'?0.25:2;
                 $data=json_decode($job['data_json'],true,64,JSON_THROW_ON_ERROR);
                 $snapshot=$this->snapshot($job['product_key']);
                 if($snapshot===null||!hash_equals($data['fingerprint'],hash('sha256',self::json($snapshot)))){
@@ -183,24 +184,36 @@ final class PriceManager
                 $robotsUrl='https://'.HttpClient::url($target).'/robots.txt';
                 $robots=$this->cached($robotsUrl,'robots',$job['mode'],0,0,!empty($data['cache_only']));
                 if(isset($robots['wait'])){$this->defer($job,$robots['wait']);continue;}
-                if(isset($robots['error'])){$this->failure($job,$data,$robots['error'],!empty($robots['temporary']));return ['state'=>'working','wait'=>2];}
+                if(isset($robots['error'])){$this->failure($job,$data,$robots['error'],!empty($robots['temporary']));
+                    if(empty($robots['fetched']))continue;return ['state'=>'working','wait'=>$wait];}
                 $policy=Robots::policy($robots['body'],$target);
-                if(!$policy['allowed']){$this->failure($job,$data,'robots.txt nepovoluje čtení této adresy.');return ['state'=>'working','wait'=>2];}
+                if(!$policy['allowed']){$this->failure($job,$data,'robots.txt nepovoluje čtení této adresy.');
+                    if(empty($robots['fetched']))continue;return ['state'=>'working','wait'=>$wait];}
                 if(!empty($robots['fetched'])){$this->defer($job,self::delay($job['mode'],$policy['delay']));return ['state'=>'working','wait'=>1];}
                 $result=$this->cached($target,'product',$job['mode'],$policy['delay'],(int)($data['refresh_after']??0),!empty($data['cache_only']));
                 if(isset($result['wait'])){$this->defer($job,$result['wait']);continue;}
                 if(isset($result['redirect'])){
                     try{if($data['hops']>=3)throw new InvalidArgumentException('Příliš mnoho přesměrování. Oprav odkaz.');
                         $data['redirect']=HttpClient::redirect($target,$result['redirect']);$data['hops']++;
-                        $this->saveData($job,$data,'Přesměrování na aktuální adresu.',2);
+                        $data['permanent_redirects']=($data['permanent_redirects']??($data['hops']===1))&&in_array($result['http_code']??0,[301,308],true);
+                        $this->saveData($job,$data,'Přesměrování na aktuální adresu.',$job['mode']==='rapid'?1:2);
+                        if(empty($result['fetched'])){
+                            // Cached redirects do not consume the request budget. Follow them locally,
+                            // bounded by both the hop limit and the 24 local steps per tick.
+                            $job['data_json']=self::json($data);array_splice($jobs,$cursor+1,0,[$job]);continue;
+                        }
                     }catch(InvalidArgumentException $e){$this->failure($job,$data,$e->getMessage());}
-                    return ['state'=>'working','wait'=>2];
+                    if(empty($result['fetched']))continue;return ['state'=>'working','wait'=>$wait];
                 }
-                if(isset($result['error'])){$this->failure($job,$data,$result['error'],!empty($result['temporary']));return ['state'=>'working','wait'=>1];}
+                if(isset($result['error'])){$this->failure($job,$data,$result['error'],!empty($result['temporary']));
+                    if(empty($result['fetched']))continue;return ['state'=>'working','wait'=>$wait];}
+                $remote=!empty($result['fetched']);
                 if(isset($result['document'])){
                     try{$result=PriceParser::select($result['document'],$target,$snapshot['products'][0]['name'])+['observed_at'=>$result['observed_at']];}
-                    catch(InvalidArgumentException $e){$this->failure($job,$data,$e->getMessage());return ['state'=>'working','wait'=>0.25];}
+                    catch(InvalidArgumentException $e){$this->failure($job,$data,$e->getMessage());if(!$remote)continue;return ['state'=>'working','wait'=>$wait];}
                 }
+                if(!isset($result['corrected_url'])&&$data['hops']>0&&!empty($data['permanent_redirects'])&&!$result['uncertain']&&
+                    PriceParser::sameProductName($result,$snapshot['products'][0]['name']))$result['corrected_url']=$target;
                 $result['partner_id']=$candidate['partner_id'];$result['partner_name']=$candidate['name'];$result['source_url']=$result['corrected_url']??$target;
                 $result['old_price']=$snapshot['sale']['supplier_price_czk']??null;
                 $result['fallback']=!$candidate['selected'];$result['observed_at']=$result['observed_at']??$now;
@@ -212,7 +225,8 @@ final class PriceManager
                         $this->db->update('shop_supplier_price_jobs',['message'=>$e->getMessage()],'id=%i',$job['id']);
                     }
                 }
-                return ['state'=>'working','wait'=>$job['mode']==='rapid'?0.25:2];
+                if(!$remote)continue;
+                return ['state'=>'working','wait'=>$wait];
             }
             $next=$this->db->queryFirstField('SELECT MIN(next_at) FROM shop_supplier_price_jobs WHERE status=%s','queued');
             return ['state'=>$next===null?'idle':'waiting','wait'=>$next===null?30:max(1,min(60,(int)$next-$now))];
@@ -267,7 +281,7 @@ final class PriceManager
         $c=$data['snapshot']['candidates'][$data['index']];
         $data['trace'][]=['seller'=>$c['name'],'url'=>$data['redirect']?:$c['url'],'time'=>$this->now(),'message'=>$message];
         $data['temporary']=!empty($data['temporary'])||$temporary;
-        $data['index']++;$data['redirect']='';$data['hops']=0;
+        $data['index']++;$data['redirect']='';$data['hops']=0;$data['permanent_redirects']=true;
         $this->saveData($job,$data,$message);
         if(!isset($data['snapshot']['candidates'][$data['index']])){
             if(!empty($data['temporary'])&&empty($data['automatic_retry'])&&empty($data['cache_only'])){

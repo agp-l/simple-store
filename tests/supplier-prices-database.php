@@ -121,6 +121,16 @@ try{
  $manager->enqueue('one','rapid',$ownCost);$run(4,200);$manager->apply((int)$job($ownCost)['id'],true);
  $check((int)$sale($ownCost)['supplier_price_czk']===1100&&json_decode($sale($ownCost)['variant_prices_json'],true)[$v]===900,'Explicit variant supplier cost lost.');
  $check((int)$db->queryFirstField('SELECT price_czk FROM shop_product_variants WHERE product_key=%s',$ownCost)===1000,'Explicit variant retail price lost.');
+
+ $moved=$make('old-link',1000);
+ $responses['https://a.test/old-link']=['code'=>301,'headers'=>['location'=>'/new-link'],'body'=>''];
+ $node=['@type'=>'Product','name'=>'Product old-link','offers'=>['@type'=>'Offer','url'=>'https://a.test/new-link','price'=>1100,'priceCurrency'=>'CZK','availability'=>'https://schema.org/InStock']];
+ $responses['https://a.test/new-link']=['code'=>200,'headers'=>[],'body'=>'<script type="application/ld+json">'.json_encode($node).'</script>'];
+ $manager->enqueue('one','rapid',$moved);$run(4,200);
+ $check($job($moved)['status']==='applied'&&$db->queryFirstField('SELECT url FROM shop_product_supplier_links WHERE product_key=%s',$moved)==='https://a.test/new-link','Verified permanent redirect was not repaired.');
+ $cachedMove=$make('cached-old-link',1000);$db->update('shop_product_supplier_links',['url'=>'https://a.test/old-link'],'product_key=%s',$cachedMove);
+ $manager->enqueue('one','rapid',$cachedMove);$before=count($requests);$manager->tick();
+ $check($job($cachedMove)['status']==='applied'&&count($requests)===$before,'Cached redirect and offer were not resolved in one local tick.');
  $report=$manager->diagnostics();$check($report['format']==='dobrodruzi.supplier-price-diagnostics'&&!str_contains(json_encode($report),$token),'Diagnostics leaked cron token.');
  echo "Supplier prices: MySQL durable queue, selected/fallback sellers, daily and URL limits, pauses, locks, stale data, variants and cron passed.\n";
 }finally{$db->disconnect();$admin->query('DROP DATABASE %b',$database);}
