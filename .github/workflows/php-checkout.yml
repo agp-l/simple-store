@@ -120,6 +120,7 @@ jobs:
           php tests/purchase-partner-transfer.php
           php tests/product-partner-assignment.php
           php tests/supplier-prices.php
+          php tests/variant-link-matcher.php
           php tests/inline-editor.php
           php tests/content-cover.php
           php tests/media-catalog.php
