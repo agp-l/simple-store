@@ -44,7 +44,7 @@ final class PriceEvaluation
         if(($report['format']??'')!=='dobrodruzi.supplier-price-diagnostics')throw new \InvalidArgumentException('Neplatný diagnostický export.');
         $items=[];$summary=[];
         foreach($report['items']??[]as$item){
-            if(($item['active']??true)===false||!in_array($item['status'],['review','failed'],true))continue;
+            if(($item['active']??true)===false||!in_array($item['status'],['review','failed','queued'],true))continue;
             $snapshot=$item['snapshot']??['products'=>[['name'=>$item['name']]],'variants'=>$item['local_variants']??[],'variantSettings'=>['enabled'=>$item['variants_enabled']??false]];
             $out=['id'=>$item['id'],'product_key'=>$item['product_key'],'name'=>$item['name'],'previous_issue'=>self::issue($item['status'],$item['message']),'attempts'=>[]];
             foreach($item['sources']as$source){

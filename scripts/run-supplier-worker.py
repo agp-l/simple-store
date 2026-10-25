@@ -83,6 +83,9 @@ def run():
         if state in ("idle", "paused"):
             print(f"Supplier queue: {state}; {ticks} ticks.")
             return
+        if state == "waiting" and int(result.get("next_at", 0)) > time.time() + 300:
+            print(f"Supplier queue: scheduled for later; {ticks} ticks.")
+            return
         delay = max(1, min(60, float(result.get("wait", 30))))
         if time.monotonic() + delay >= deadline:
             break

@@ -32,5 +32,13 @@ class WorkerTests(unittest.TestCase):
         self.assertEqual(calls[0].get_header("X-supplier-worker-key"), "a" * 64)
         sleep.assert_not_called()
 
+    def test_future_queue_returns_without_busy_waiting(self):
+        class Opener:
+            def open(self, request, timeout):
+                return io.BytesIO(json.dumps({"state": "waiting", "wait": 60, "next_at": 86400}).encode())
+        with patch.object(worker, "worker_key", return_value="a" * 64), patch.object(worker.urllib.request, "build_opener", return_value=Opener()), patch.object(worker.time, "time", return_value=1000), patch.object(worker.time, "sleep") as sleep:
+            worker.run()
+        sleep.assert_not_called()
+
 
 unittest.main()
