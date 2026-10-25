@@ -90,7 +90,11 @@ final class ProductFamilyMerge
         usort($variants,static fn(array $a,array $b):int=>strnatcmp($a['choices']['Velikost'],$b['choices']['Velikost'])?:strcmp(ProductVariants::label($a['choices']),ProductVariants::label($b['choices'])));
         foreach($state as$s)if($this->db->queryFirstField('SELECT source_slug FROM shop_product_redirects WHERE target_key=%s OR (language=%s AND source_slug=%s) LIMIT 1',$s['products'][0]['product_key'],$language,$s['products'][0]['slug'])!==null)throw new InvalidArgumentException('Produkt už má historii slučování nebo přesměrování. Vyžaduje samostatné posouzení.');
         $proof=null;$models=[];$resolved=[];
-        $proofLinks=[];foreach($state as$s)foreach($s['links']as$link)$proofLinks[$link['url']]=$link;
+        $proofLinks=[];foreach($state as$s)foreach($s['links']as$link){
+            $proofLinks[$link['url']]=$link;
+            parse_str((string)parse_url($link['url'],PHP_URL_QUERY),$query);
+            if(isset($query['v_id'])&&count($query)===1){$base=explode('?',$link['url'],2)[0];$proofLinks[$base]=['url'=>$base];}
+        }
         foreach($proofLinks as$link){
             $url=$link['url'];
             for($hop=0;$hop<4;$hop++){

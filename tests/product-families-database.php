@@ -33,6 +33,9 @@ try{
  // A previously repaired target link may have no cache of its own; use a proved family source.
  $db->update('shop_product_supplier_links',['url'=>$url.'?v_id=170'],'product_key=%s',$target);
  $check(count($family->candidates('cs'))===1,'Family not detected.');
+ $db->update('shop_product_supplier_links',['url'=>$url.'?v_id=195'],'product_key=%s',$source);
+ $check($family->preview($target,'cs')['managed_prices'],'Both repaired variant URLs lost their shared model cache.');
+ $db->update('shop_product_supplier_links',['url'=>$url],'product_key=%s',$source);
  $plan=$family->preview($target,'cs');$check(count($plan['variants'])===2&&array_sum(array_column($plan['variants'],'quantity'))===20,'Invented or lost combinations.');
  $check(array_column($plan['variants'],'price_czk')===[4800,5300],'Per-size pricing wrong.');
  // Never overwrite changes made after the preview.
