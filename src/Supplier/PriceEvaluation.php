@@ -33,7 +33,8 @@ final class PriceEvaluation
             $snapshot=$item['snapshot']??['products'=>[['name'=>$item['name']]],'variants'=>$item['local_variants']??[],'variantSettings'=>['enabled'=>$item['variants_enabled']??false]];
             $out=['id'=>$item['id'],'product_key'=>$item['product_key'],'name'=>$item['name'],'previous_issue'=>self::issue($item['status'],$item['message']),'attempts'=>[]];
             foreach($item['sources']as$source){
-                $cache=$source['cache']??[];$message=$cache['error']??'Uložená nabídka chybí nebo vypršela.';
+                $cache=$source['cache']??[];$message=$source['robots']['error']??$cache['error']??'Uložená nabídka chybí nebo vypršela.';
+                if(!$cache)foreach($item['trace']??[]as$attempt)if(($attempt['seller']??'')===$source['seller'])$message=$attempt['message'];
                 if(isset($cache['document'])){
                     try{
                         $result=self::select($cache['document'],$source['resolved_url'],$snapshot);

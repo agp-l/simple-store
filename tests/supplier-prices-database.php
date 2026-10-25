@@ -167,5 +167,27 @@ try{
  $report=$manager->diagnostics();$removed=array_values(array_filter($report['items'],static fn(array $item):bool=>$item['product_key']===str_repeat('f',32)))[0];
  $check(!$removed['active']&&$removed['snapshot']===null&&$report['version']===2,'Diagnostic active/history boundary wrong.');
  $check(!str_contains(json_encode($report),'cron_hash')&&!str_contains(json_encode($report),$token),'Diagnostic credential leak.');
+ // Missing attributes in an older cache get ONE fresh attempt at the next legal time.
+ $db->update('shop_supplier_price_jobs',['status'=>'dismissed'],'status=%s','queued');
+ $legacy=$make('legacy-attributes',1000);$legacyUrl='https://gramino.cz/p/legacy-attributes';
+ $db->update('shop_product_sales',['partner_id'=>$gramino],'product_key=%s',$legacy);
+ $db->update('shop_product_supplier_links',['url'=>$legacyUrl],'product_key=%s',$legacy);
+ $db->insert('shop_product_variant_settings',['product_key'=>$legacy,'enabled'=>1]);
+ $db->insert('shop_product_variants',['product_key'=>$legacy,'variant_key'=>bin2hex(random_bytes(16)),'choices_json'=>'{"Barva":"Zelená"}','available_quantity'=>3]);
+ $responses[\SimpleStore\Supplier\PriceParser::requestUrl($legacyUrl)]=$offer($legacyUrl,1100);
+ $manager->enqueue('one','rapid',$legacy);$run(4,100);
+ $check($job($legacy)['status']==='review','Legacy attributes fixture did not require review.');
+ $last=$job($legacy);$db->update('shop_supplier_price_jobs',['retry_of'=>1,'checked_at'=>$now],'id=%i',$last['id']);
+ $cache=$db->queryFirstRow('SELECT * FROM shop_supplier_price_cache WHERE url_hash=%s',hash('sha256','product:'.$legacyUrl));
+ $data=json_decode($cache['data_json'],true);$data['document']['parser_version']=3;
+ $db->update('shop_supplier_price_cache',['data_json'=>json_encode($data)],'url_hash=%s',$cache['url_hash']);
+ $manager->retry('one','rapid',false,(int)$last['id']);$before=count($requests);$manager->tick();
+ $check(count($requests)===$before&&$job($legacy)['status']==='queued'&&(int)$job($legacy)['next_at']>=$now+86400,'Legacy refresh ignored the fresh daily budget.');
+ $check($manager->retry('one','rapid',true,(int)$job($legacy)['id'])['added']===0,'Scheduled refresh was duplicated.');
+ $body=json_decode(substr($responses[\SimpleStore\Supplier\PriceParser::requestUrl($legacyUrl)]['body'],strlen('<script type="application/ld+json">'),-strlen('</script>')),true);
+ $body['color']='Green';
+ $responses[\SimpleStore\Supplier\PriceParser::requestUrl($legacyUrl)]['body']='<script type="application/ld+json">'.json_encode($body).'</script>';
+ $now+=86401;$run(4,100);
+ $check($job($legacy)['status']==='applied','Scheduled legacy refresh did not apply the exact new attributes.');
  echo "Supplier prices: MySQL durable queue, selected/fallback sellers, daily and URL limits, pauses, locks, stale data, variants, current counters and cron passed.\n";
 }finally{$db->disconnect();$admin->query('DROP DATABASE %b',$database);}

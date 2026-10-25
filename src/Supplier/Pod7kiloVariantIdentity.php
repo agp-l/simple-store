@@ -15,7 +15,7 @@ final class Pod7kiloVariantIdentity
         $data=self::data($body);
         if(!$data||!is_string($data['currency']??null)||strtoupper($data['currency'])!=='CZK'||empty($data['variantsInfo'])||!is_array($data['variantsInfo']))return [];
         $selected=$data['variantsInfo'][$data['selectedVariantId']??'']??null;
-        if(!$selected||!isset($selected['price'])||number_format((float)$selected['price'],2,'.','')!==number_format((float)$offer['amount'],2,'.',''))return [];
+        if(!is_array($selected)||PriceParser::amount($selected['price']??null)===null||number_format((float)$selected['price'],2,'.','')!==number_format((float)$offer['amount'],2,'.',''))return [];
         $out=[];
         foreach($data['variantsInfo']as$id=>$v){
             if(!is_array($v)||!self::sameIdentifier($v['id']??null,$id)||!self::sameIdentifier($v['productId']??null,$data['productId']??null)||
@@ -28,8 +28,8 @@ final class Pod7kiloVariantIdentity
             $attributes=StructuredVariantScope::attributes($values);
             if(!$attributes)return [];
             $out[]=['url'=>$source,'price'=>PriceParser::amount($v['price']),'amount'=>(string)$v['price'],
-                'product_name'=>$v['productNameWithVariant']??$offer['product_name'],'group_name'=>$offer['product_name'],'group_url'=>$offer['url'],
-                'attributes'=>$attributes,'availability'=>str_contains($v['availability']??'','availability-in-stock')?'in_stock':'unknown','identity_evidence'=>null];
+                'product_name'=>is_string($v['productNameWithVariant']??null)?$v['productNameWithVariant']:$offer['product_name'],'group_name'=>$offer['product_name'],'group_url'=>$offer['url'],
+                'attributes'=>$attributes,'availability'=>is_string($v['availability']??null)&&str_contains($v['availability'],'availability-in-stock')?'in_stock':'unknown','identity_evidence'=>null];
         }
         return $out;
     }

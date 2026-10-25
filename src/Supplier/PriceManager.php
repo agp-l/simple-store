@@ -10,7 +10,7 @@ use Throwable;
 
 final class PriceManager
 {
-    public const EVALUATOR_VERSION = 4;
+    public const EVALUATOR_VERSION = 5;
     private $transport;
     private $clock;
     private ?bool $variantModesInstalled=null;
@@ -81,7 +81,7 @@ final class PriceManager
                 WHERE j.status IN %ls', $scope==='review'?['review']:($scope==='failed'?['failed']:['review','failed']));
             foreach($rows as$job){
                 if($scope==='one'&&(int)$job['id']!==$id)continue;
-                $lastFresh=(int)$this->db->queryFirstField('SELECT MAX(created_at) FROM shop_supplier_price_jobs WHERE product_key=%s AND retry_of>0',$job['product_key']);
+                $lastFresh=(int)$this->db->queryFirstField('SELECT MAX(GREATEST(created_at,checked_at)) FROM shop_supplier_price_jobs WHERE product_key=%s AND retry_of>0',$job['product_key']);
                 if($fresh&&$lastFresh>$now-86400){$count['daily']++;continue;}
                 $snapshot=$this->snapshot($job['product_key']);
                 if(!$snapshot||$snapshot['candidates']===[]){$count['unconfigured']++;continue;}
@@ -227,9 +227,13 @@ final class PriceManager
                 if(isset($result['error'])){$this->failure($job,$data,$result['error'],!empty($result['temporary']));
                     if(empty($result['fetched']))continue;return ['state'=>'working','wait'=>$wait];}
                 $remote=!empty($result['fetched']);
+                $legacy=!empty($result['document']['offers'])&&(int)($result['document']['parser_version']??0)<PriceParser::VERSION;
                 if(isset($result['document'])){
                     try{$result=PriceEvaluation::select($result['document'],$target,$snapshot)+['observed_at'=>$result['observed_at']];}
-                    catch(InvalidArgumentException $e){$this->failure($job,$data,$e->getMessage());if(!$remote)continue;return ['state'=>'working','wait'=>$wait];}
+                    catch(InvalidArgumentException $e){
+                        if($legacy&&$this->scheduleParserRefresh($job,$data))continue;
+                        $this->failure($job,$data,$e->getMessage());if(!$remote)continue;return ['state'=>'working','wait'=>$wait];
+                    }
                 }
                 if(!isset($result['corrected_url'])&&$data['hops']>0&&!empty($data['permanent_redirects'])&&!$result['uncertain']&&
                     PriceParser::sameProductName($result,$snapshot['products'][0]['name']))$result['corrected_url']=$target;
@@ -237,6 +241,9 @@ final class PriceManager
                 $result['old_price']=$snapshot['sale']['supplier_price_czk']??null;
                 $result['fallback']=!$candidate['selected'];$result['observed_at']=$result['observed_at']??$now;
                 $reason=self::reviewReason($snapshot,$result);
+                if($reason!==''&&$legacy&&($result['uncertain']||
+                    (!empty($snapshot['variantSettings']['enabled'])&&empty($result['uniform_variants'])&&empty($result['variant_offers'])))&&
+                    $this->scheduleParserRefresh($job,$data))continue;
                 $this->db->update('shop_supplier_price_jobs',['status'=>'review','checked_at'=>$now,'result_json'=>self::json($result),
                     'message'=>$reason?:'Jednoznačná nabídka vybraného prodávajícího.'],'id=%i',$job['id']);
                 if($reason===''){
@@ -294,6 +301,19 @@ final class PriceManager
         return $result+['fetched'=>true];
     }
     private function defer(array $job,int $wait):void{$this->db->update('shop_supplier_price_jobs',['next_at'=>$this->now()+max(1,$wait)],'id=%i',$job['id']);}
+    private function scheduleParserRefresh(array $job,array $data):bool
+    {
+        if(empty($data['cache_only'])||!empty($data['parser_refresh']))return false;
+        $previous=$this->db->queryFirstRow('SELECT id,checked_at FROM shop_supplier_price_jobs WHERE id=%i',(int)($data['retry_of']??0));
+        if(!$previous)return false;
+        $lastFresh=(int)$this->db->queryFirstField('SELECT MAX(GREATEST(created_at,checked_at)) FROM shop_supplier_price_jobs WHERE product_key=%s AND retry_of>0',$job['product_key']);
+        $due=max($this->now(),(int)$previous['checked_at']+900,$lastFresh>0?$lastFresh+86400:0);
+        $data['parser_refresh']=1;$data['cache_only']=false;$data['refresh_after']=$due;
+        $data['index']=0;$data['redirect']='';$data['hops']=0;$data['permanent_redirects']=true;
+        $this->db->update('shop_supplier_price_jobs',['data_json'=>self::json($data),'next_at'=>$due,'retry_of'=>(int)$previous['id'],
+            'message'=>'Starší uložená nabídka neobsahuje přesné vlastnosti variant. Nové načtení je naplánované automaticky v povoleném denním limitu.'],'id=%i',$job['id']);
+        return true;
+    }
     private function saveData(array $job,array $data,string $message,int $wait=2):void
     {$this->db->update('shop_supplier_price_jobs',['data_json'=>self::json($data),'message'=>$message,'next_at'=>$this->now()+$wait],'id=%i',$job['id']);}
     private function failure(array $job,array $data,string $message,bool $temporary=false):void
@@ -447,8 +467,12 @@ final class PriceManager
                     $chain[]=['url'=>$resolved,'redirect'=>$cached['redirect'],'http_code'=>$cached['http_code']??null];
                     try{$resolved=HttpClient::redirect($resolved,$cached['redirect']);}catch(InvalidArgumentException $e){break;}
                 }
+                $robotsCache=$this->db->queryFirstRow('SELECT expires_at,data_json FROM shop_supplier_price_cache WHERE url_hash=%s',
+                    hash('sha256','robots:https://'.HttpClient::url($resolved).'/robots.txt'));
+                $robotsData=$robotsCache?json_decode($robotsCache['data_json'],true):[];
                 $sources[]=['url'=>$c['url'],'seller'=>$c['name'],'selected'=>$c['selected'],'priority'=>$c['priority'],
-                    'resolved_url'=>$resolved,'redirects'=>$chain,'cache'=>$cached,'expires_at'=>$cache?(int)$cache['expires_at']:0];
+                    'resolved_url'=>$resolved,'redirects'=>$chain,'cache'=>$cached,'expires_at'=>$cache?(int)$cache['expires_at']:0,
+                    'robots'=>array_intersect_key($robotsData??[],array_flip(['error','http_code','fetched_at']))];
             }
             $items[]=['id'=>(int)$row['id'],'product_key'=>$row['product_key'],'name'=>$row['product_name'],'status'=>$row['status'],
                 'mode'=>$row['mode'],'created_at'=>(int)$row['created_at'],'checked_at'=>(int)$row['checked_at'],

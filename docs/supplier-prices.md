@@ -134,6 +134,9 @@ neukládá ceny a nenahrazuje kontrolu aktuálnosti v transakci. `--retry-cached
 zařadí nevyřešené současné produkty. Po nasazení nové verze vyhodnocování se tento krok
 provede jednou automaticky při nejbližším běhu workeru. Nové stahování nadále dodržuje denní
 limity, robots.txt a prodlevy dodavatelů.
+Pokud stará cache ještě neobsahuje vlastnosti potřebné pro přesné párování, worker sám
+naplánuje jedno nové načtení: nejdříve 15 minut po předchozí kontrole a při vyčerpaném
+dodatečném pokusu až 24 hodin po jeho dokončení. Další běhy fronty tento termín neposouvají.
 
 Gramino má veřejné rozhraní popsané v `https://gramino.cz/openapi.json` a
 `https://gramino.cz/.well-known/ai-catalog.json`. Pro `/p/…` se používá `/api/md/p/…`
