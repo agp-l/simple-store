@@ -2,6 +2,8 @@
 
 Produkty mají dva smluvní režimy: vlastní prodej (výchozí) a asistovaný nákup jménem zákazníka. Způsob expedice „vlastní / externí“ v administraci objednávek zůstává samostatný údaj: přímé odeslání dodavatelem samo o sobě nemění prodávajícího.
 
+Upřesnění provozního záměru 25. 10. 2026: partner/dodavatel v katalogu znamená jiný e-shop výhradně pro asistovaný nákup. Dodavatele vlastního skladu obchod neeviduje; jeden produkt zákazníkovi nabízí právě jeden z uvedených režimů. [Upravený plán variantních odkazů a partnerské dostupnosti](variant-supplier-architecture.md) zachovává toto rozdělení. Pravidla limitu 3 při neurčitém „skladem“ a vyřazení partnerova posledního kusu jsou v plánu, dosavadní implementace níže je zatím automaticky nevynucuje.
+
 ## Nastavení
 
 1. V administraci **Databáze** použij opakovatelnou aktualizaci `database/schema.sql`. Přidává pouze tabulky partnerů a nastavení prodeje; existující produkty zůstávají vlastní prodej.

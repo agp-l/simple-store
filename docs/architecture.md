@@ -1,6 +1,6 @@
 # Návrh jádra Simple Store
 
-Navazující [návrh variant a nabídek dodavatelů z 25. 10. 2026](variant-supplier-architecture.md) obsahuje plán stabilních variantních URL, evidence více dodavatelů po variantě a migrace bez přepisování historických objednávek. Nový model je zatím návrh; níže je současná architektura.
+Navazující [upravený plán partnerských odkazů z 25. 10. 2026](variant-supplier-architecture.md) zachovává současné režimy prodeje a sklad. Partner je jiný e-shop pro asistovaný nákup; první změnou mají být odkazy u existujících variant. Širší přestavba katalogu byla po upřesnění uživatele odložena. Níže je současná architektura.
 
 ## Současný stav
 
