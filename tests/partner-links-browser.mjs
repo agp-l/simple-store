@@ -10,7 +10,7 @@ test('partner links share a visible editor with scoped photos, private URLs and 
   const server=spawn('php',['-S','127.0.0.1:8786','-t',process.cwd()],{stdio:'ignore'});
   let browser;
   try {
-    for(let i=0;i<50;i++){try{await fetch('http://127.0.0.1:8786/tests/fixtures/partner-simple.html');break;}catch{await new Promise(r=>setTimeout(r,100));}}
+    for(let i=0;i<50;i++){try{await (await fetch('http://127.0.0.1:8786/tests/fixtures/partner-simple.html')).arrayBuffer();break;}catch{await new Promise(r=>setTimeout(r,100));}}
     browser=await chromium.launch({headless:true});
     mkdirSync('/tmp/partner-link-screenshots',{recursive:true});
     for(const width of [1440,768,390]) for(const js of [true,false]) {
@@ -81,7 +81,7 @@ test('bulk color photos and independent partner saves preserve variant drafts', 
   let browser;
   try {
     const url = 'http://127.0.0.1:8787/' + path;
-    for (let i=0;i<50;i++) { try { await fetch(url); break; } catch { await new Promise(r=>setTimeout(r,100)); } }
+    for (let i=0;i<50;i++) { try { await (await fetch(url)).arrayBuffer(); break; } catch { await new Promise(r=>setTimeout(r,100)); } }
     browser = await chromium.launch({headless:true});
     const page = await browser.newPage();
     const errors = []; page.on('pageerror',e=>errors.push(e.message));

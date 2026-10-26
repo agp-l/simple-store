@@ -14,7 +14,7 @@ test('sale editor: responsive layout, drafts, fees, selected partner and safe su
   const url = file => 'http://127.0.0.1:8767/' + file;
   try {
     for (let i = 0; i < 50; i++) {
-      try { await fetch(url(files[0])); break; }
+      try { await (await fetch(url(files[0]))).arrayBuffer(); break; }
       catch { await new Promise(resolve => setTimeout(resolve, 100)); }
     }
     browser = await chromium.launch({ headless: true });

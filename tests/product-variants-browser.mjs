@@ -18,7 +18,7 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
   let browser;
   try {
     for (let i = 0; i < 50; i++) {
-      try { await fetch('http://127.0.0.1:8765/' + publicPath); break; }
+      try { await (await fetch('http://127.0.0.1:8765/' + publicPath)).arrayBuffer(); break; }
       catch { await new Promise(resolve => setTimeout(resolve, 100)); }
     }
     browser = await chromium.launch({ headless: true });
@@ -183,7 +183,7 @@ test('first variants: clear validation, editable base price and drafts survive a
   let browser;
   try {
     for (let i = 0; i < 50; i++) {
-      try { await fetch(url(files[0])); break; }
+      try { await (await fetch(url(files[0]))).arrayBuffer(); break; }
       catch { await new Promise(resolve => setTimeout(resolve, 100)); }
     }
     browser = await chromium.launch({ headless: true });
