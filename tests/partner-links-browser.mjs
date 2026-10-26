@@ -23,6 +23,7 @@ test('partner links share a visible editor with scoped photos, private URLs and 
       const live=blue.locator('.variant-partner-links > .variant-partner-entry');
       assert.equal(await live.count(),2,'Exact offer and add form visible without expansion');
       assert.equal(await live.first().locator('input[name=url]').isVisible(),true);
+      const variantFieldStyle=await live.first().locator('input[name=url]').evaluate(el=>{const s=getComputedStyle(el);return [s.paddingTop,s.borderRadius,s.fontSize];});
       assert.match(await blue.locator('[data-partner-image]').getAttribute('src'),/batoh.webp$/);
       assert.match(await groups.first().locator('[data-partner-image-note]').textContent(),/barva zatím není přiřazená/);
       assert.equal(await blue.locator('.partner-older-links').getAttribute('open'),null);
@@ -53,6 +54,9 @@ test('partner links share a visible editor with scoped photos, private URLs and 
       const base=page.locator('#supplier-links');
       assert.equal(await base.locator('form').count(),2);
       assert.equal(await base.locator('input[name=url]').first().isVisible(),true);
+      const simpleFieldStyle=await base.locator('input[name=url]').first().evaluate(el=>{const s=getComputedStyle(el);return [s.paddingTop,s.borderRadius,s.fontSize];});
+      assert.deepEqual(simpleFieldStyle,variantFieldStyle,'Simple and variant offers must share field styling');
+      assert.equal(simpleFieldStyle[0],'8px');
       assert.equal(await base.locator('details').count(),0);
       assert.match(await base.locator('[data-partner-image]').getAttribute('src'),/product-placeholder.png$/);
       assert.match(await base.locator('input[name=expected_link]').first().inputValue(),/^[a-f0-9]{64}$/);
