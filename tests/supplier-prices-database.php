@@ -227,5 +227,29 @@ try{
  $sales=new \SimpleStore\Product\ProductSalesRepository($db);
  foreach(['assisted','own'] as $saleMode){$current=$sale($switched);$sales->save($switched,'cs',['mode'=>$saleMode,'version'=>(string)$current['version'],'supplier_price_czk'=>(string)$current['supplier_price_czk'],'partner_id'=>(string)$current['partner_id']]);}
  $check($db->query('SELECT * FROM shop_product_inventory WHERE product_key=%s',$switched)===$inventory&&$links->forProduct($switched)===$sourceLinks,'Mode switch rewrote inventory or source links.');
+ // Exact variant URL edits must invalidate price approvals; routine verification must not.
+ $variantLinks=new \SimpleStore\Product\ProductVariantSupplierRepository($db);
+ foreach(['proof','url','remove','partner'] as $change){
+  $guarded=$make('link-guard-'.$change);$vk=bin2hex(random_bytes(16));
+  $db->insert('shop_product_variants',['product_key'=>$guarded,'variant_key'=>$vk,'choices_json'=>'{"Barva":"Blue"}','available_quantity'=>4]);
+  $variantLinks->inherit($guarded);$link=$variantLinks->forProduct($guarded)[0];
+  $responses['https://a.test/link-guard-'.$change]=$offer('https://a.test/link-guard-'.$change,2000);
+  $manager->enqueue('one','rapid',$guarded);$run(6,100);
+  $check($job($guarded)['status']==='review','Link guard fixture must require approval.');
+  $data=json_decode($job($guarded)['data_json'],true);
+  $check(count($data['snapshot']['variantLinks'])===1&&$data['snapshot']['variantLinks'][0]['link_key']===$link['link_key'],'Price snapshot omitted variant link identity.');
+  if($change==='proof'){
+   $db->update('shop_product_variant_supplier_links',['checked_at'=>$now,'verification'=>'verified','result_json'=>'{"status":"exact"}','version'=>99,'label'=>'Updated display label'],'link_key=%s',$link['link_key']);
+   $manager->apply((int)$job($guarded)['id'],false);
+   $check((int)$sale($guarded)['supplier_price_czk']===2000,'Refreshing evidence or label invalidated an unchanged source.');
+  }else{
+   if($change==='remove')$variantLinks->remove($guarded,$vk,$link['link_key'],$link['version']);
+   else $variantLinks->save($guarded,$vk,$link['link_key'],$link['version'],$change==='partner'?'':$link['partner_key'],$link['label'],$link['url'].($change==='url'?'?size=L':''));
+   $beforeSale=$sale($guarded);$reject(fn()=>$manager->apply((int)$job($guarded)['id'],false));
+   $check($sale($guarded)===$beforeSale,'Changed variant offer allowed a stale price write.');
+   $before=count($requests);$check($manager->retry('one','rapid',false,(int)$job($guarded)['id'])['added']===1,'Updated offer could not be reevaluated from cache.');
+   $manager->tick();$check(count($requests)===$before,'Reevaluation bypassed the cached-only boundary.');
+  }
+ }
  echo "Supplier prices: MySQL durable queue, selected/fallback sellers, daily and URL limits, pauses, locks, stale data, variants, current counters and cron passed.\n";
 }finally{$db->disconnect();$admin->query('DROP DATABASE %b',$database);}

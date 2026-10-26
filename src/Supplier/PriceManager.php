@@ -6,16 +6,19 @@ use InvalidArgumentException;
 use MeekroDB;
 use SimpleStore\Product\ProductPartnerAssignment;
 use SimpleStore\Product\PurchasePartnerRepository;
+use SimpleStore\Product\ProductVariantSupplierRepository;
 use Throwable;
 
 final class PriceManager
 {
-    public const EVALUATOR_VERSION = 6;
+    public const EVALUATOR_VERSION = 7;
     private $transport;
     private $clock;
     private ?bool $variantModesInstalled=null;
+    private ProductVariantSupplierRepository $variantLinks;
     public function __construct(private MeekroDB $db, ?callable $transport = null, ?callable $clock = null)
     {
+        $this->variantLinks = new ProductVariantSupplierRepository($db);
         $this->transport = $transport ?? [new HttpClient(),'get'];
         $this->clock = $clock ?? static fn():int => time();
     }
@@ -162,6 +165,7 @@ final class PriceManager
         $links=$this->db->query('SELECT id,url FROM shop_product_supplier_links WHERE product_key=%s ORDER BY id'.$suffix,$key);
         $partners=$this->db->query('SELECT id,name,website_url,priority,version FROM shop_purchase_partners ORDER BY id'.$suffix);
         $variants=$this->db->query('SELECT variant_key,price_czk,enabled,choices_json FROM shop_product_variants WHERE product_key=%s ORDER BY variant_key'.$suffix,$key);
+        $variantLinks=$this->variantLinks->identitiesForProduct($key,$lock);
         $variantSettings=$this->db->queryFirstRow('SELECT enabled,version FROM shop_product_variant_settings WHERE product_key=%s'.$suffix,$key);
         // Only relevant merchant profiles participate in the optimistic check.
         $candidates=self::candidates($links,$partners,(int)($sale['partner_id']??0));
@@ -169,7 +173,7 @@ final class PriceManager
         $partners=array_values(array_filter($partners,static fn(array $p):bool=>in_array((int)$p['id'],$ids,true)));
         $this->variantModesInstalled??=(int)$this->db->queryFirstField('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s','shop_product_supplier_variant_modes')===1;
         $variantPriceMode=$this->variantModesInstalled?$this->db->queryFirstRow('SELECT * FROM shop_product_supplier_variant_modes WHERE product_key=%s'.$suffix,$key):null;
-        return compact('products','sale','links','partners','variants','variantSettings','candidates','variantPriceMode');
+        return compact('products','sale','links','partners','variants','variantSettings','candidates','variantPriceMode','variantLinks');
     }
     public function tick(string $origin='browser'): array
     {

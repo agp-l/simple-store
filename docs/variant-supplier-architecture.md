@@ -131,3 +131,12 @@ Editor jednoduchého produktu i variant používá společné šablony, viditeln
 Převzatý duplicitní odkaz je ve vedlejším rozbalení pouze tehdy, když stejná varianta a stejný partner mají čerstvě ověřený přesný cíl. Nejde o mazání. Společné zdroje u variantních produktů zůstávají jednou ve spodním rozbalení pro dosavadní cenový automat. Jednoduchý produkt nadále používá starou tabulku; shodný vzhled není migrace datového jádra. Formulář společných odkazů nově používá kontrolu obsahu a produktový zámek proti přepsání souběžné změny/importu.
 
 Cenový automat zařazuje, zpracovává a přebírá ceny jen pro asistovaný nákup. Rozpracovanou kontrolu po přepnutí na vlastní prodej ukončí bez změny cen. Testy zahrnují i starý výsledek s aktuálním fingerprintem, odmítnutí opakování a zachování skladu a odkazů při přepnutí. Diagnostika HTTP 403 vysvětluje odmítnutí přístupu; přístup k Alze tím není vyřešen.
+
+
+### Dodaný krok 1b a ochrana cenových podkladů (26. 10. 2026)
+
+Zákaznický náhled reaguje již na barvu, velikost zůstává povinná pro vložení konkrétní varianty do košíku. `VariantImages` sdílí fotografii mezi velikostmi stejné barvy; vlastní snímek kombinace má přednost a vypnutá varianta není zdrojem děděného snímku. Stejná pravidla platí v PHP přímém odkazu i v administraci. Řazené galerie barev a přetahování v dialogu fotografií jsou stále otevřené.
+
+Editor má jedno hromadné uložení a označení změněných řádků. „Použít pro tuto barvu“ připraví hromadnou změnu fotografie, která se odešle až společně s ostatními změněnými variantami. Partnerské odkazy mají výslovně samostatné uložení. Rozpracované varianty se při něm uchovají v dané kartě pouze při shodě verze inventáře; souběžná změna skladu nebo cen vyvolá upozornění a starý návrh se automaticky neobnoví. Bez JavaScriptu zůstává výslovně označené uložení jednotlivých řádků.
+
+Cenový snapshot nově obsahuje stabilní identity aktivních variantních odkazů (`link_key`, `variant_key`, `partner_key`, `url`). Přidání, odebrání či změna adresy/partnera zneplatní starý výsledek při atomickém převzetí. Čas, verze a výsledek pravidelného ověření ani popisek cenu nezneplatňují. Evaluátor 7 jednorázově zopakuje nedořešené výsledky z cache. Tato ochrana **ještě nepřevádí výběr cenových zdrojů na variantní odkazy**: fronta nadále načítá společné zdroje a rozsah ceny prokazuje dosavadními adaptéry. Úplný převod nabídek, galerie a dostupnost D zůstávají otevřené.
