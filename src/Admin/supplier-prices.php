@@ -76,6 +76,8 @@ if($method==='POST'&&$pricesReady){
     }
 }
 $pricesFilter=is_string($_GET['status']??null)?$_GET['status']:'';
+// A retried failure becomes queued/review/applied; keep the product visible after the action.
+if($method==='POST'&&$action==='supplier-price-retry'&&$pricesError==='')$pricesFilter='';
 $pricesQuery=is_string($_GET['q']??null)?substr(trim($_GET['q']),0,200):'';
 $pricesPage=max(1,(int)($_GET['page']??1));
 $pricesHistory=($_GET['history']??'')==='1';

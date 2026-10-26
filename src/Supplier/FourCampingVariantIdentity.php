@@ -17,7 +17,8 @@ final class FourCampingVariantIdentity
         if (!self::supported($url)) return [];
         $data = EmbeddedVariantData::read($body);
         if (!$data || !is_array($data['variantsInfo'] ?? null) || $data['variantsInfo'] === [] ||
-            strtoupper((string) ($data['currency'] ?? '')) !== 'CZK' || !is_bool($data['variantsUrlEnabled'] ?? null)) return [];
+            !is_string($data['currency'] ?? null) || strtoupper($data['currency']) !== 'CZK' ||
+            !is_bool($data['variantsUrlEnabled'] ?? null) || self::identifier($data['productId'] ?? null) === null) return [];
         $parent = $offer['url'];
         try {
             if (!self::supported($parent) || !PriceParser::sameModel($parent, $url)) return [];
@@ -27,9 +28,8 @@ final class FourCampingVariantIdentity
         if (!str_starts_with($path, '/p/') || parse_url($parent, PHP_URL_FRAGMENT) !== null || parse_url($parent, PHP_URL_QUERY) !== null) return [];
         $out = []; $seen = [];
         foreach ($data['variantsInfo'] as $id => $variant) {
-            if (!is_array($variant) || (string) ($variant['id'] ?? '') !== (string) $id ||
-                !ctype_digit((string) $id) || (string) ($variant['productId'] ?? '') !== (string) ($data['productId'] ?? '') ||
-                !ctype_digit((string) ($data['productId'] ?? '')) || !is_string($variant['url'] ?? null) ||
+            if (!is_array($variant) || self::identifier($variant['id'] ?? null) !== (string) $id ||
+                self::identifier($variant['productId'] ?? null) !== self::identifier($data['productId']) || !is_string($variant['url'] ?? null) ||
                 !is_string($variant['name'] ?? null) || PriceParser::amount($variant['price'] ?? null) === null) return [];
             $source = $variant['url'];
             if (str_starts_with($source, '/') && !str_starts_with($source, '//')) $source = 'https://' . $host . $source;
@@ -45,9 +45,9 @@ final class FourCampingVariantIdentity
             $attributes = StructuredVariantScope::attributes($values);
             if (!$attributes) return [];
             $exactUrl = $data['variantsUrlEnabled'] ? $source : HttpClient::withoutFragment($parent) . '#' . $selector;
-            $availability = (string) ($variant['availability'] ?? '');
+            $availability = is_string($variant['availability'] ?? null) ? $variant['availability'] : '';
             $out[] = ['url' => $exactUrl, 'price' => PriceParser::amount($variant['price']), 'amount' => (string) $variant['price'],
-                'product_name' => (string) ($variant['productNameWithVariant'] ?? $offer['product_name']),
+                'product_name' => is_string($variant['productNameWithVariant'] ?? null) ? $variant['productNameWithVariant'] : $offer['product_name'],
                 'group_name' => $offer['product_name'], 'group_url' => $parent, 'attributes' => $attributes,
                 'availability' => str_contains($availability, 'stock--available') ? 'in_stock' :
                     (($variant['allowPurchase'] ?? null) === false ? 'out_of_stock' : 'unknown'),
@@ -56,10 +56,15 @@ final class FourCampingVariantIdentity
         }
         // The public schema price must agree with the selected SKU, or the minimum on a model page.
         $selected = $data['selectedVariantId'] ?? null;
-        if ($selected !== null && !isset($data['variantsInfo'][$selected])) return [];
+        if ($selected !== null && (self::identifier($selected) === null || !isset($data['variantsInfo'][$selected]))) return [];
         $reference = $selected === null ? min(array_column($out, 'amount')) : $data['variantsInfo'][$selected]['price'];
         if (number_format((float) $reference, 2, '.', '') !== number_format((float) $offer['amount'], 2, '.', '')) return [];
         return $out;
+    }
+
+    private static function identifier(mixed $value): ?string
+    {
+        return (is_int($value) || is_string($value)) && ctype_digit((string) $value) ? (string) $value : null;
     }
 
     public static function select(array $document, string $url): ?array

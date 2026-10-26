@@ -91,15 +91,15 @@ $checks = [
     'admin_navigation' => str_contains($editor, 'aria-label="Správa webu"') &&
         !str_contains($editor, 'Katalog a organizace produktů') &&
         str_contains($editor, 'href="/shop/cs?homepage_edit=1#homepage-editor"'),
-    'product_settings' => str_contains($editor, '<section class="product-admin-settings"') &&
-        str_contains($editor, 'Nastavení produktu') && str_contains($editor, 'Volné: 12 ks') &&
+    'product_settings' => str_contains($editor, 'class="product-admin-settings editor-basics" id="product-settings"') &&
+        str_contains($editor, 'Základní údaje') && str_contains($editor, 'Volné: 12 ks') &&
         str_contains($editor, 'data-editor-input="slug"') &&
         str_contains($editor, '<details class="inline-delete-product"'),
     'summary_limit' => str_contains($editor, '<textarea class="detail-lead inline-summary-editor" data-editor-input="summary" maxlength="180"') &&
         str_contains($editor, '<output data-summary-counter></output>') &&
         !str_contains($editor, 'data-edit-field="summary"') &&
         str_contains($editor, 'Perex na kartě'),
-    'unified_product_panel' => substr_count($editor, 'class="content-admin-panel"') === 1 &&
+    'unified_product_panel' => substr_count($editor, 'class="content-admin-panel product-editor-workspace"') === 1 &&
         strpos($editor, 'id="supplier-links"') < strpos($editor, 'class="product-detail"'),
     'single_create_product' => substr_count($editor, 'value="create-product"') === 1,
     'compact_edit_body' => $compactEditableBodies,

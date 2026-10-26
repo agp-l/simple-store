@@ -25,7 +25,7 @@ test('supplier manager responsive controls, safe review and single-step runner',
    await page.locator('#price-job-3 summary').click();
    assert.equal(await page.getByRole('link',{name:'Odkaz použitý při tomto historickém pokusu ↗'}).getAttribute('href'),'https://www.alza.cz/old.htm');
 
-   assert.match(await page.getByRole('link',{name:'Obnovit výsledky',exact:true}).getAttribute('href'), /\?refresh=[a-f0-9]{12}#price-history$/,'Refresh must issue a new GET, not just navigate to an anchor');
+   assert.match(await page.getByRole('link',{name:'Obnovit výsledky',exact:true}).getAttribute('href'), /\?refresh=[a-f0-9]{12}&/,'Refresh must issue a new GET, not just navigate to an anchor');
    await page.locator('#supplier-scope').selectOption('problems');
    assert.equal(await page.locator('#supplier-retry-field').isVisible(),true);
    await page.locator('#supplier-scope').selectOption('one');

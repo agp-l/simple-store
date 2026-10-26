@@ -54,6 +54,7 @@ test('partner links share a visible editor with scoped photos, private URLs and 
       await page.goto('http://127.0.0.1:8786/tests/fixtures/partner-simple.html');
       assert.equal(await page.locator('.partner-source-links').count(),0);
       const base=page.locator('#supplier-links');
+      let stockPosts=0;page.on('request',r=>{if(r.method()==='POST')stockPosts++;});
       assert.equal(await base.locator('form').count(),2);
       assert.equal(await page.locator('#product-base-offer .base-offer-row').count(),1,'Simple product must use the same offer section');
       await page.getByRole('spinbutton',{name:'Volné kusy skladem',exact:true}).fill('12');
@@ -71,7 +72,10 @@ test('partner links share a visible editor with scoped photos, private URLs and 
       assert.match(await base.locator('input[name=expected_link]').first().inputValue(),/^[a-f0-9]{64}$/);
       assert.equal(await base.locator('button').first().getAttribute('value'),'save');
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Simple page overflows');
-      await base.screenshot({path:`/tmp/partner-link-screenshots/simple-${width}-${js}.png`});
+      // Keep the surrounding stock row and save boundary in the visual proof, too.
+      await page.screenshot({path:`/tmp/partner-link-screenshots/simple-${width}-${js}.png`,fullPage:true});
+      assert.equal(await base.count(),1);
+      assert.equal(stockPosts,0,'Typing stock must wait for its explicit save button');
       assert.deepEqual(errors,[]);
       await page.goto('http://127.0.0.1:8786/tests/fixtures/partner-public.html');
       assert.equal(await page.locator('.variant-partner-form').count(),0);

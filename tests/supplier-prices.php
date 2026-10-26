@@ -270,10 +270,12 @@ $reject(fn()=>Parser::select($doc4,$f4['url'].'#neznama-barva'));
 $reject(fn()=>Parser::select($doc4,$f4['url']));
 $different=$f4;$different['data']['variantsInfo']['45483']['price']=799;
 $check(Parser::read($html4($different),$orange)['price']===799,'Lowest model price replaced orange SKU price.');
-foreach(['product','currency','url','price','duplicate','script'] as $bad){
+foreach(['product','currency','url','price','duplicate','script','selected-type','id-type'] as $bad){
  $broken=$f4;
  if($bad==='product')$broken['data']['variantsInfo']['45483']['productId']=999;
  if($bad==='currency')$broken['data']['currency']='eur';
+ if($bad==='selected-type')$broken['data']['selectedVariantId']=[];
+ if($bad==='id-type')$broken['data']['variantsInfo']['45483']['productId']=[];
  if($bad==='url')$broken['data']['variantsInfo']['45483']['url']='https://other.test/p/item/oranzova/';
  if($bad==='price')$broken['product']['offers']['price']=1;
  if($bad==='duplicate')$broken['data']['variantsInfo']['45480']['url']=$broken['data']['variantsInfo']['45483']['url'];
