@@ -11,7 +11,7 @@ use Throwable;
 
 final class PriceManager
 {
-    public const EVALUATOR_VERSION = 8;
+    public const EVALUATOR_VERSION = 9;
     private $transport;
     private $clock;
     private ?bool $variantModesInstalled=null;

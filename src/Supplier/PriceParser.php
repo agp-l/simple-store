@@ -7,7 +7,7 @@ use InvalidArgumentException;
 /** Reads explicit offers, never guesses a price from arbitrary visible numbers. */
 final class PriceParser
 {
-    public const VERSION = 5;
+    public const VERSION = 6;
     /** Gramino advertises this public mirror in /.well-known/ai-catalog.json and /openapi.json. */
     public static function requestUrl(string $url):string
     {
@@ -53,9 +53,10 @@ final class PriceParser
                 $source = is_string($offer['url'] ?? null) ? $offer['url'] : (is_string($product['url'] ?? null) ? $product['url'] : '');
                 $availability = basename(str_replace('#', '/', (is_string($offer['availability'] ?? null) ? $offer['availability'] : '')));
                 $evidence = count($products) === 1 && count($raw) === 1 ? Pod7kiloVariantIdentity::verify($body, $url, $product, $offer,
-                    static fn(string $a, string $b): bool => self::identity($a) === self::identity($b)) : null;
+                    static fn(string $a, string $b): bool => self::identity($a) === self::identity($b)) ?? HudyVariantIdentity::verify($body,$url,$product,$offer) : null;
                 $offers[] = ['price' => $price, 'amount' => (string)$offer['price'], 'url' => $source,
                     'attributes'=>StructuredVariantScope::productAttributes($product,$body,$url,count($products)===1),
+                    'model_features'=>preg_match('/\bHyperBead\b/u',(string)($product['description']??''))?['HyperBead']:[],
                     'supplier_uniform' => count($products)===1 && count($raw)===1 && Pod7kiloVariantIdentity::uniform($body,$url,$offer),
                     'identity_evidence' => $evidence, 'product_name' => is_string($product['name']??null)?$product['name']:'',
                     'group_url' => $product['_group_url']??'', 'group_name' => $product['_group_name']??'', 'availability' => match($availability) {

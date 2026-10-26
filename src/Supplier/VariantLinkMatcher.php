@@ -32,7 +32,7 @@ final class VariantLinkMatcher
         if ($result === null) {
             // Structured attributes alone do not prove that a URL belongs to the local model.
             $result = StructuredVariantScope::select($document, $source, $scope);
-            if ($result !== null && !PriceParser::sameProductName($result, SupplierCatalogAliases::name($name, ($result['group_name']??'')?:($result['product_name']??''), $source))) $result = null;
+            if ($result !== null && !PriceParser::sameProductName($result, SupplierCatalogAliases::name($name, ($result['group_name']??'')?:($result['product_name']??''), $source, $result))) $result = null;
         }
         if ($result === null || empty($result['variant_offers'][$id])) return $none;
         $urls = $result['variant_offers'][$id]['urls'];

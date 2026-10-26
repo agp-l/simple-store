@@ -286,3 +286,5 @@ $v4=['variant_key'=>str_repeat('4',32),'enabled'=>1,'choices_json'=>'{"Barva":"O
 $match4=SimpleStore\Supplier\VariantLinkMatcher::match($doc4,$f4['url'],$f4['product']['name'],$v4,$orange);
 $check($match4['status']==='exact'&&$match4['url']===$orange,'4camping exact links do not work with local variants.');
 $check(SimpleStore\Supplier\VariantLinkMatcher::match($doc4,$f4['url'],$f4['product']['name'],$v4,$f4['url'].'#modra')['status']!=='exact','Wrong colour accepted for a local variant.');
+
+require __DIR__."/supplier-identity-regressions.php";

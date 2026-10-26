@@ -15,7 +15,11 @@ final class VariantOfferEvaluation
             $variant = $variants[$link['variant_key']] ?? null;
             if ($variant === null) continue;
             $exact=($link['origin']??'manual')==='inherited'?null:($candidate['resolved_url']??$candidate['url']);
-            $match = VariantLinkMatcher::match($document, $sourceUrl, $snapshot['products'][0]['name'], $variant, $exact);
+            $match = VariantLinkMatcher::match($document, $sourceUrl, $snapshot['products'][0]['name'], $variant, $exact??$sourceUrl);
+            // A copied model link may already select this SKU. Use it only after full
+            // attribute/model validation; other copied combinations must find their own offer.
+            if($exact===null&&$match['status']!=='exact')
+                $match=VariantLinkMatcher::match($document,$sourceUrl,$snapshot['products'][0]['name'],$variant);
             if ($match['status'] === 'exact' && ($link['origin'] ?? 'manual') === 'manual' &&
                 !PriceParser::sameOfferUrl($match['url'], $candidate['url']) &&
                 (empty($candidate['resolved_url']) || !PriceParser::sameOfferUrl($match['url'], $candidate['resolved_url']))) {

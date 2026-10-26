@@ -5,7 +5,7 @@ namespace SimpleStore\Supplier;
 /** Explicit catalog translations, scoped to a verified supplier model. Never a price lookup. */
 final class SupplierCatalogAliases
 {
-    public static function name(string $name,string $group,string $url):string
+    public static function name(string $name,string $group,string $url,array $evidence=[]):string
     {
         $host=preg_replace('/^www\./','',strtolower((string)parse_url($url,PHP_URL_HOST)));
         if(in_array($host,['pod7kilo.cz','hudy.cz'],true)){
@@ -16,6 +16,32 @@ final class SupplierCatalogAliases
             if(($local!==$name||$remote!==$group)&&PriceParser::sameProductName(['product_name'=>$remote],$local))return $group;
         }
         $path=rtrim((string)parse_url($url,PHP_URL_PATH),'/');
+        $models=[
+            '4camping.cz'=>[
+                '/p/filtracni-lahev-katadyn-befree-ac-0-7-l-cyklo'=>['Katadyn BeFree AC Bottle 0,7 l','Filtrační láhev Katadyn BeFree AC 0,7 l cyklo'],
+            ],
+            'hudy.cz'=>[
+                '/wide-mouth-flex-cap-32-oz'=>['Hydro Flask Wide Mouth Flex Cap 946 ml','32 OZ WIDE FLEX CAP'],
+                '/wide-mouth-sustain-1000-ml'=>['Nalgene Wide Mouth Sustain 1 l','Wide Mouth Sustain 1000 ml'],
+                '/boty-altra-timp-6-gtx-men'=>['Altra Timp 6 Gore-Tex','Timp 6 GTX Men'],
+            ],
+            'pod7kilo.cz'=>[
+                '/p/polstar-nemo-fillo-elite'=>['NEMO Fillo Elite Luxury','Polštář NEMO Fillo Elite'],
+                '/p/prikryvka-cumulus-roamer-150'=>['Cumulus Roamer 150 – M','Přikrývka Cumulus Roamer 150'],
+                '/p/prikryvka-nemo-pulse-20-30-endless-promise-ul-quilt'=>['NEMO Pulse 20/30 Endless Promise UL Quilt – L','Přikrývka NEMO Pulse 20/30 Endless Promise UL Quilt'],
+                '/p/detsky-spaci-pytel-cumulus-junior-300'=>['Cumulus Junior 300 – M','Dětský spací pytel Cumulus Junior 300'],
+            ],
+            'gramino.cz'=>[
+                '/p/enlightened-equipment-enigma-quilt-40f-5c'=>['Enlightened Equipment Enigma Quilt 40°F – Long/Wide','Enlightened Equipment Enigma Quilt 40°F (5°C)'],
+                '/p/cumulus-junior-300'=>['Cumulus Junior 300 – M','Cumulus Junior 300'],
+            ],
+        ];
+        foreach($models[$host]??[]as$modelPath=>[$local,$remote]){
+            if(($path===$modelPath||($host==='pod7kilo.cz'&&str_starts_with($path,$modelPath.'/')))&&
+                PriceParser::sameProductName(['product_name'=>$name],$local)&&PriceParser::sameProductName(['product_name'=>$group],$remote))return $group;
+        }
+        if($host==='gramino.cz'&&in_array($path,['/p/big-agnes-tiger-wall-ul2','/p/big-agnes-tiger-wall-ul3'],true)&&
+            in_array('HyperBead',$evidence['model_features']??[],true)&&PriceParser::sameProductName(['product_name'=>$name],$group.' HyperBead'))return $group;
         // Size tables: https://gramino.cz/p/nemo-tensor-elite,
         // /p/nemo-tensor-all-season, /p/therm-a-rest-neoair-xlite-nxt.
         $sizes=[
@@ -51,4 +77,28 @@ final class SupplierCatalogAliases
         }
         return $name;
     }
+    /** Verified supplier naming conventions; scoped aliases never merge arbitrary colours. */
+    public static function variantAttributes(array $attributes,string $url,string $name,bool $local):array
+    {
+        $host=preg_replace('/^www\./','',strtolower((string)parse_url($url,PHP_URL_HOST)));
+        $path=rtrim((string)parse_url($url,PHP_URL_PATH),'/');
+        if($host==='pod7kilo.cz'&&($path==='/p/polstar-nemo-fillo-elite'||str_starts_with($path,'/p/polstar-nemo-fillo-elite/'))&&
+            $local&&PriceParser::sameProductName(['product_name'=>$name],'NEMO Fillo Elite Luxury'))$attributes['version']='rozšířený';
+        if(!$local&&isset($attributes['color'])){
+            $maps=[
+                'hudy.cz'=>[
+                    '/wide-mouth-flex-cap-32-oz'=>['374 agave'=>'agave'],
+                    '/wide-mouth-sustain-1000-ml'=>['slate blue sustain/2020-1732'=>'slate blue'],
+                    '/boty-altra-timp-6-gtx-men'=>['black/black'=>'black','88m iguana/silver/tarmac'=>'green'],
+                ],
+                'gramino.cz'=>[
+                    '/p/big-agnes-tiger-wall-ul2'=>['grey / green'=>'green'],
+                    '/p/big-agnes-tiger-wall-ul3'=>['grey / green'=>'green'],
+                ],
+            ];
+            $attributes['color']=$maps[$host][$path][$attributes['color']]??$attributes['color'];
+        }
+        return $attributes;
+    }
+
 }

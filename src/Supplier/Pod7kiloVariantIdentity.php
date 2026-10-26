@@ -15,7 +15,7 @@ final class Pod7kiloVariantIdentity
         $data=EmbeddedVariantData::read($body);
         if(!$data||!is_string($data['currency']??null)||strtoupper($data['currency'])!=='CZK'||empty($data['variantsInfo'])||!is_array($data['variantsInfo']))return [];
         $selected=$data['variantsInfo'][$data['selectedVariantId']??'']??null;
-        if(!is_array($selected)||PriceParser::amount($selected['price']??null)===null||number_format((float)$selected['price'],2,'.','')!==number_format((float)$offer['amount'],2,'.',''))return [];
+        if(!is_array($selected)||PriceParser::amount($selected['price']??null)===null)return [];
         $out=[];
         foreach($data['variantsInfo']as$id=>$v){
             if(!is_array($v)||!self::sameIdentifier($v['id']??null,$id)||!self::sameIdentifier($v['productId']??null,$data['productId']??null)||
@@ -23,16 +23,35 @@ final class Pod7kiloVariantIdentity
             $source=$v['url'];
             if(str_starts_with($source,'/')&&!str_starts_with($source,'//'))$source='https://'.$host.$source;
             if(!self::localUrl($source,$host)||!str_starts_with((string)parse_url($source,PHP_URL_PATH),$parent.'/'))return [];
-            preg_match_all('/(?:^|,\s+)([^:,]+):\s*(.*?)(?=,\s+[^:,]+:|$)/u',$v['name'],$parts,PREG_SET_ORDER);
+            preg_match_all('/(?:^|,\s+|\s+\/\s+)([^:,\/]+):\s*(.*?)(?=,\s+[^:,]+:|\s+\/\s+[^:]+:|$)/u',$v['name'],$parts,PREG_SET_ORDER);
             $values=[];foreach($parts as$p)$values[trim($p[1])]=trim($p[2]);
             $attributes=StructuredVariantScope::attributes($values);
+            if($attributes!==null)$attributes+=($offer['attributes']??[]);
             if(!$attributes)return [];
             $out[]=['url'=>$source,'price'=>PriceParser::amount($v['price']),'amount'=>(string)$v['price'],
                 'product_name'=>is_string($v['productNameWithVariant']??null)?$v['productNameWithVariant']:$offer['product_name'],'group_name'=>$offer['product_name'],'group_url'=>$offer['url'],
-                'attributes'=>$attributes,'availability'=>is_string($v['availability']??null)&&str_contains($v['availability'],'availability-in-stock')?'in_stock':'unknown','identity_evidence'=>null];
+                'attributes'=>$attributes,'availability'=>is_string($v['availability']??null)&&str_contains($v['availability'],'availability-in-stock')?'in_stock':(is_string($v['availability']??null)&&str_contains($v['availability'],'availability-out-of-stock')?'out_of_stock':'unknown'),'identity_evidence'=>null];
         }
+        // The base page may advertise the minimum, while preselecting a dearer version.
+        // Exact variant pages must still agree with the selected SKU, without exception.
+        $reference=$path===$parent?min(array_column($data['variantsInfo'],'price')):$selected['price'];
+        if(PriceParser::amount($reference)===null||number_format((float)$reference,2,'.','')!==number_format((float)$offer['amount'],2,'.',''))return [];
         return $out;
     }
+    /** Technical parameters only, never related-product descriptions or arbitrary digits. */
+    public static function specifications(string $body,string $url):array
+    {
+        if(!in_array(strtolower((string)parse_url($url,PHP_URL_HOST)),['pod7kilo.cz','www.pod7kilo.cz'],true))return [];
+        preg_match_all('~<tr\b[^>]*>\s*<th\b[^>]*>\s*Kapacita\s*</th>\s*<td\b[^>]*>(.*?)</td>\s*</tr>~isu',$body,$rows);
+        $capacities=[];
+        foreach($rows[1]as$row){
+            $text=trim(html_entity_decode(strip_tags($row),ENT_QUOTES|ENT_HTML5,'UTF-8'));
+            if(!preg_match('/^(\d{1,6})\s*mAh(?:\s|$)/u',$text,$m))return [];
+            $capacities[]=$m[1].'mAh';
+        }
+        return count(array_unique($capacities))===1?['Kapacita'=>$capacities[0]]:[];
+    }
+
     public static function verify(string $body, string $url, array $product, array $offer, callable $sameUrl): ?array
     {
         $host = strtolower((string)parse_url($url, PHP_URL_HOST));

@@ -17,14 +17,15 @@ final class StructuredVariantScope
             $key=self::lower(trim((string)$key));
             $dimension=match($key){
                 'barva','barva (vzor)','color','colour'=>'color',
-                'velikost','velikost produktu','velikost karimatky','size','objem','rozměr'=>'size',
-                'kapacita','kapacita baterie'=>'capacity','zip','strana zipu'=>'zip',default=>null};
+                'velikost','velikost produktu','velikost karimatky','výška postavy','size','objem','rozměr'=>'size',
+                'kapacita','kapacita baterie'=>'capacity','zip','strana zipu','pozice zipu'=>'zip','verze'=>'version',default=>null};
             if($dimension===null)return null;
-            $value=self::lower(preg_replace('/\s+/u',' ',trim((string)$value)));
+            $value=self::lower(preg_replace('/\s+/u',' ',trim(str_replace('\\/','/',(string)$value))));
             if($dimension==='color')$value=strtr($value,['černá'=>'black','bílá'=>'white','červená'=>'red','modrá'=>'blue','zelená'=>'green','žlutá'=>'yellow','oranžová'=>'orange','šedá'=>'grey','gray'=>'grey']);
-            if($dimension==='size')$value=preg_replace('/\s*eu$/','',$value);
+            if($dimension==='color'&&$value==='navy blue')$value='navy';
+            if($dimension==='size')$value=trim(preg_replace('~\s*/\s*~',' ',preg_replace('/\s*eu$/','',$value)));
             if($dimension==='capacity')$value=str_replace(' ','',$value);
-            if($dimension==='zip')$value=match($value){'levá strana','levý','levá','left'=>'left','pravá strana','pravý','pravá','right'=>'right',default=>$value};
+            if($dimension==='zip')$value=match($value){'levá strana','levý','levá','levý (l)','left'=>'left','pravá strana','pravý','pravá','pravý (r)','right'=>'right',default=>$value};
             if($value===''||isset($out[$dimension]))return null;
             $out[$dimension]=$value;
         }
@@ -46,6 +47,7 @@ final class StructuredVariantScope
                 }
             }
         }
+        if($single)$values+=Pod7kiloVariantIdentity::specifications($body,$url);
         return self::attributes($values)??[];
     }
     public static function select(array $document,string $url,array $snapshot):?array
@@ -58,9 +60,10 @@ final class StructuredVariantScope
             if(empty($variant['enabled']))continue;
             $choices=json_decode($variant['choices_json']??'null',true);
             if(!is_array($choices)||!($wanted=self::attributes($choices)))return null;
+            $wanted=SupplierCatalogAliases::variantAttributes($wanted,$url,$snapshot['products'][0]['name']??'',true);
             $found=[];
             foreach($offers as$i=>$offer){
-                $actual=$offer['attributes']??[];
+                $actual=SupplierCatalogAliases::variantAttributes($offer['attributes']??[],$url,$snapshot['products'][0]['name']??'',false);
                 if(!$actual||!self::sameSourceModel($url,$offer['url'],$host))continue;
                 foreach($wanted as$key=>$value)if(($actual[$key]??null)!==$value)continue 2;
                 $found[$i]=$offer;
