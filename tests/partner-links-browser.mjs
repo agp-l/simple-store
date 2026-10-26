@@ -44,10 +44,14 @@ test('partner links share a visible editor with scoped photos, private URLs and 
         await blue.locator('select[name=image_path]').selectOption('');
         assert.match(await blue.locator('[data-partner-image]').getAttribute('src'),/product-placeholder.png$/);
         assert.match(await blue.locator('[data-partner-image-note]').textContent(),/ulož změny/);
+        assert.equal(await blue.locator('[data-variant-photo-save]').isVisible(),true);
+        assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Photo save controls overflow the viewport');
+        await blue.screenshot({path:`/tmp/partner-link-screenshots/photo-draft-${width}.png`});
         assert.notEqual(await groups.first().locator('[data-partner-image]').getAttribute('src'),before, 'Inherited color photo follows the changed source');
         assert.match(await groups.first().locator('[data-partner-image]').getAttribute('src'),/product-placeholder.png$/);
         assert.equal(posts,0,'Photo preview must not write unsaved data');
         await blue.locator('select[name=image_path]').selectOption('images/batoh.webp');
+        assert.equal(await blue.locator('[data-variant-photo-save]').isVisible(),false,'Reverting the photo must clear the pending save notice');
       }
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Variant page overflows');
       await blue.screenshot({path:`/tmp/partner-link-screenshots/variant-${width}-${js}.png`});
@@ -105,7 +109,7 @@ test('bulk color photos and independent partner saves preserve variant drafts', 
     assert.equal(await page.locator('[data-variant-row-save]:visible').count(),0);
     let posts = 0, mode = 'partner';
     page.on('request',r=>{if(r.method()==='POST')posts++;});
-    await rows.nth(2).getByRole('button',{name:'Použít pro tuto barvu (3)',exact:true}).click();
+    await rows.nth(2).getByRole('button',{name:'Přiřadit celé barvě (3)',exact:true}).click();
     await rows.nth(0).locator('[name=quantity]').fill('3');
     assert.equal(posts,0,'Color assignment remains a draft until the single bulk save');
     assert.equal(await rows.nth(0).locator('[name=image_path]').inputValue(),'images/batoh.webp');
@@ -113,11 +117,15 @@ test('bulk color photos and independent partner saves preserve variant drafts', 
     assert.equal(await rows.nth(1).locator('[name=image_path]').inputValue(),'','Other colors must not change');
     assert.equal(await page.locator('.variant-table-group.is-dirty').count(),2);
     assert.match(await page.locator('[data-variant-save-state]').textContent(),/2 variant/);
+    assert.equal(await rows.nth(2).locator('[data-variant-photo-save]').isVisible(),true,'The unchanged source row must show how to save its copied color photos');
+    assert.match(await rows.nth(0).locator('[data-variant-row-state]').textContent(),/Čeká na uložení/);
+    assert.equal(await rows.nth(1).locator('[data-variant-photo-save]').isVisible(),false,'Unchanged colors need no photo save notice');
     const partner = () => page.locator('.variant-table-group').nth(2).locator('.variant-partner-form').first();
     await partner().locator('[name=label]').fill('Modrá M ověřeno');
-    await save.click();
+    await rows.nth(2).getByRole('button',{name:'Uložit všechny varianty',exact:true}).click();
     assert.equal(posts,0,'Bulk save must not silently discard a pending partner edit');
     assert.match(await page.locator('[data-variant-save-state]').textContent(),/Nejprve ulož rozpracovaný partnerský odkaz/);
+    assert.equal(await page.locator('[data-variant-save-state]').evaluate(el=>el===document.activeElement),true,'A blocked save beside a photo must bring the explanation into view');
     await page.route('**/admin/',async route=>{
       const form = new URLSearchParams(route.request().postData());
       if (mode === 'partner') {
@@ -144,7 +152,7 @@ test('bulk color photos and independent partner saves preserve variant drafts', 
     assert.equal(await rows.nth(4).locator('[name=image_path]').inputValue(),'images/batoh.webp','Partner save lost bulk photos');
     assert.equal(await page.locator('.variant-table-group.is-dirty').count(),2);
     mode = 'batch';
-    await save.click(); await page.getByText('Hromadně uloženo',{exact:true}).waitFor();
+    await rows.nth(2).getByRole('button',{name:'Uložit všechny varianty',exact:true}).click(); await page.getByText('Hromadně uloženo',{exact:true}).waitFor();
     assert.equal(posts,2);
     await page.goto(url);
     await rows.nth(0).locator('[name=quantity]').fill('9');

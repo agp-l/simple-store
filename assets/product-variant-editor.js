@@ -110,7 +110,7 @@
   } catch { /* Storage can be unavailable; never block opening the editor. */ }
   root.querySelector('[data-variant-save-bar]').hidden = false;
   rows.forEach(row => { row.querySelector('[data-variant-row-save]').hidden = true; row.querySelector('[data-variant-row-state]').hidden = false; });
-  const showProblem = message => { state.textContent = message; state.classList.add('is-warning'); };
+  const showProblem = message => { state.textContent = message; state.classList.add('is-warning'); state.focus(); };
   partnerForms.forEach(form => {
     const reset = form.querySelector('[data-partner-reset]');
     const updatePartner = () => {
@@ -147,7 +147,7 @@
       const dirty = JSON.stringify(changes[i]) !== initialById.get(row.dataset.variantRow);
       if (dirty) changedCount++;
       row.closest('.variant-table-group').classList.toggle('is-dirty', dirty);
-      row.querySelector('[data-variant-row-state]').textContent = dirty ? 'Neuloženo' : 'Uloženo';
+      row.querySelector('[data-variant-row-state]').textContent = dirty ? 'Čeká na uložení' : 'Uloženo';
       priceInputs[i].placeholder = String(basePrice);
       row.querySelector('[data-variant-price-note]').textContent = own ? 'Vlastní cena' : 'Společná cena';
     });
@@ -159,7 +159,7 @@
     state.hidden = false;
     root.querySelector('[data-variant-save-top]').disabled = root.dataset.dirty !== 'true';
     state.textContent = recoveryWarning || (root.dataset.dirty === 'true'
-      ? `Neuložené změny: ${changedCount || rows.length} variant. Fotografie i ostatní údaje uložíš společně.`
+      ? `Připravené změny: ${changedCount || rows.length} variant. Fotografie i ostatní údaje uložíš společně.`
       : 'Všechny změny variant jsou uložené.');
     undo.hidden = previousPrices === null;
   }
@@ -168,6 +168,9 @@
     rows.forEach(row => {
       const photo = row.querySelector('[name="image_path"]');
       const color = colorOf(row);
+      const colorDraft = rows.some(other => (other === row || (color && colorOf(other) === color))
+        && other.querySelector('[name="image_path"]').value !== initialPhotos.get(other.dataset.variantRow));
+      row.querySelector('[data-variant-photo-save]').hidden = !colorDraft;
       const shared = !photo.value && color ? rows.find(other => colorOf(other) === color && other.querySelector('[name="enabled"]').checked && other.querySelector('[name="image_path"]').value) : null;
       const source = shared?.querySelector('[name="image_path"]') || photo;
       const option = source.selectedOptions[0];
@@ -180,7 +183,7 @@
       const draft = source.value !== initialPhotos.get(sourceRow.dataset.variantRow);
       group.querySelector('[data-partner-image-note]').textContent = (photo.value ? 'Fotografie přiřazená této variantě.'
         : shared ? 'Fotografie stejné barvy.' : 'Společná fotografie — barva zatím není přiřazená.')
-        + (draft ? ' Neuloženo — ulož změny všech variant.' : '');
+        + (draft ? ' Připraveno — ulož změny všech variant.' : '');
     });
   }
   rows.forEach(row => {
@@ -188,7 +191,7 @@
     const sameColor = rows.filter(other => colorOf(row) && colorOf(other) === colorOf(row));
     const copy = row.querySelector('[data-variant-photo-copy]');
     copy.hidden = sameColor.length < 2;
-    copy.textContent = `Použít pro tuto barvu (${sameColor.length})`;
+    copy.textContent = `Přiřadit celé barvě (${sameColor.length})`;
     copy.addEventListener('click', () => {
       sameColor.forEach(other => { other.querySelector('[name="image_path"]').value = photo.value; });
       refreshPhotos(); update();
@@ -235,8 +238,7 @@
       submitted = true;
       HTMLFormElement.prototype.submit.call(batch);
     } catch (error) {
-      state.hidden = false;
-      state.textContent = 'Varianty nebyly uloženy: ' + error.message;
+      showProblem('Varianty nebyly uloženy: ' + error.message);
       sending = false;
     }
   });

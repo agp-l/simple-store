@@ -132,6 +132,9 @@
 .variant-row-state { font-size: 11px; color: var(--muted); }
 .is-dirty .variant-row-state { font-weight: 700; color: #92400e; }
 .variant-table .variant-photo-copy { margin-top: 7px; white-space: normal; font-size: 11px; max-width: 170px; }
+.variant-photo-save { margin-top: 8px; padding: 8px; border: 1px solid #a5bd98; border-radius: 6px; background: #f4f8f1; }
+.variant-photo-save small { display: block; margin-bottom: 7px; line-height: 1.4; }
+.variant-table .variant-photo-save button { white-space: normal; background: var(--pine); color: #fff; border-color: var(--pine); }
 .partner-save-scope { margin: 4px 0 12px; padding: 7px 10px; border-left: 3px solid #c4d8bd; }
 .variant-partner-form.is-dirty { outline: 2px solid #d6a53b; outline-offset: 4px; border-radius: 4px; }
 @media (max-width: 700px) {
