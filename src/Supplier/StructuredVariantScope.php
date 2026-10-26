@@ -51,7 +51,7 @@ final class StructuredVariantScope
     public static function select(array $document,string $url,array $snapshot):?array
     {
         $host=preg_replace('/^www\./','',strtolower((string)parse_url($url,PHP_URL_HOST)));
-        if(!in_array($host,['gramino.cz','hudy.cz','pod7kilo.cz'],true)||empty($document['single_offers']))return null;
+        if(!in_array($host,['gramino.cz','hudy.cz','pod7kilo.cz','4camping.cz'],true)||empty($document['single_offers']))return null;
         if(empty($snapshot['variantSettings']['enabled']))return null;
         $offers=$document['scoped_offers']??$document['offers']??[];$matched=[];$perVariant=[];
         foreach($snapshot['variants']??[]as$variant){

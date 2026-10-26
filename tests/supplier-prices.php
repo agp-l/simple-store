@@ -24,7 +24,7 @@ $p=$offer($url);$p['offers']['validForMemberTier']='club';$reject(fn()=>Parser::
 $p=$offer($url);$p['offers']['priceValidUntil']='2000-01-01';$reject(fn()=>Parser::read($wrap($p),$url));
 $reject(fn()=>Parser::read($wrap([$offer($url,100),$offer($url,200)]),$url));
 $p=$offer($url);$p['offers']['availability']='https://schema.org/OutOfStock';$check(Parser::read($wrap($p),$url)['availability']==='out_of_stock','Availability failed.');
-foreach(['http://a.test/p','https://127.0.0.1/x','https://localhost/x','https://a.test:444/p','https://u:p@a.test/p','https://[::1]/','https://a.test/p#fragment','https://a.test\\@b.test/']as$bad)$reject(fn()=>Http::url($bad));
+foreach(['http://a.test/p','https://127.0.0.1/x','https://localhost/x','https://a.test:444/p','https://u:p@a.test/p','https://[::1]/','https://a.test\\@b.test/']as$bad)$reject(fn()=>Http::url($bad));
 foreach(['127.0.0.1','10.0.0.1','169.254.169.254','192.168.1.1','172.16.0.1','100.64.0.1','198.18.0.1','224.0.0.1','::1','::ffff:127.0.0.1','fc00::1','fe80::1','2001:db8::1','2002:7f00:1::1']as$ip)$check(!Http::publicIp($ip),'Private/reserved address allowed: '.$ip);
 $check(Http::publicIp('8.8.8.8')&&Http::publicIp('2606:4700:4700::1111'),'Public DNS address rejected.');
 $check(Http::redirect($url,'/new')==='https://a.test/new','Relative redirect failed.');
@@ -252,3 +252,35 @@ $check($keyedCopy['summary']==='Shared'&&$keyedCopy['description']==='Common.'&&
 foreach([403,404,410] as $code)$check(!isset(SimpleStore\Supplier\Robots::cachedResponse(['http_code'=>$code,'error'=>'old parser denial'])['error']),'Unavailable robots cache not reinterpreted.');
 foreach([401,407,408,429,500,503,0] as $code)$check(isset(SimpleStore\Supplier\Robots::cachedResponse(['http_code'=>$code,'error'=>'keep'])['error']),'Robots authentication, network or rate denial bypassed.');
 $check(SimpleStore\Admin\AdminActionPolicy::allows('supplier-price-probe'),'Diagnostic action not covered by admin policy.');
+
+// Fragment selectors remain part of offer identity, never the transport/cache identity.
+$check(Http::url('https://a.test/p#orange')==='a.test','A valid colour fragment was silently rejected.');
+$check(Parser::requestUrl('https://a.test/p#orange')==='https://a.test/p','Fragment sent to HTTP.');
+$check(Http::cacheKey('product','https://a.test/p#orange')===Http::cacheKey('product','https://a.test/p#blue'),'Colours bypassed shared document cache.');
+$check(!Parser::sameOfferUrl('https://a.test/p#orange','https://a.test/p#blue'),'Different colour selectors matched.');
+$check(Http::redirect('https://a.test/old#orange','/new')==='https://a.test/new#orange','Redirect discarded selected colour.');
+$check(Parser::read($wrap($offer('https://a.test/p')),'https://a.test/p#unknown')['uncertain'],'Unproven fragment accepted as base price.');
+$f4=json_decode(file_get_contents(__DIR__.'/fixtures/4camping-opinel.json'),true,32,JSON_THROW_ON_ERROR);
+$html4=static fn(array $f):string=>'<script>var data = '.json_encode($f['data']).';</script>'.$wrap($f['product']);
+$doc4=Parser::document($html4($f4),$f4['url']);$orange=$f4['url'].'#oranzova';
+$r4=Parser::select($doc4,$orange);
+$check($r4['price']===689&&$r4['attributes']['color']==='orange'&&$r4['identity_evidence']['variant_id']==='45483'&&!$r4['uncertain'],'Opinel orange was not identified exactly.');
+$check($r4['availability']==='in_stock','4camping stock label not read.');
+$reject(fn()=>Parser::select($doc4,$f4['url'].'#neznama-barva'));
+$reject(fn()=>Parser::select($doc4,$f4['url']));
+$different=$f4;$different['data']['variantsInfo']['45483']['price']=799;
+$check(Parser::read($html4($different),$orange)['price']===799,'Lowest model price replaced orange SKU price.');
+foreach(['product','currency','url','price','duplicate','script'] as $bad){
+ $broken=$f4;
+ if($bad==='product')$broken['data']['variantsInfo']['45483']['productId']=999;
+ if($bad==='currency')$broken['data']['currency']='eur';
+ if($bad==='url')$broken['data']['variantsInfo']['45483']['url']='https://other.test/p/item/oranzova/';
+ if($bad==='price')$broken['product']['offers']['price']=1;
+ if($bad==='duplicate')$broken['data']['variantsInfo']['45480']['url']=$broken['data']['variantsInfo']['45483']['url'];
+ $body=$html4($broken);if($bad==='script')$body.='<script>var data = '.json_encode($broken['data']).';</script>';
+ $reject(fn()=>Parser::read($body,$orange));
+}
+$v4=['variant_key'=>str_repeat('4',32),'enabled'=>1,'choices_json'=>'{"Barva":"Oranžová"}'];
+$match4=SimpleStore\Supplier\VariantLinkMatcher::match($doc4,$f4['url'],$f4['product']['name'],$v4,$orange);
+$check($match4['status']==='exact'&&$match4['url']===$orange,'4camping exact links do not work with local variants.');
+$check(SimpleStore\Supplier\VariantLinkMatcher::match($doc4,$f4['url'],$f4['product']['name'],$v4,$f4['url'].'#modra')['status']!=='exact','Wrong colour accepted for a local variant.');

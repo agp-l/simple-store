@@ -20,7 +20,7 @@ final class VariantLinkDiscovery
         $original = $url; $expires = PHP_INT_MAX;
         for ($hop = 0; $hop < 4; $hop++) {
             try { HttpClient::url($url); } catch (InvalidArgumentException $e) { return $this->cache[$original] = self::issue('invalid_url', 'Adresa není bezpečným odkazem dodavatele.'); }
-            $row = $this->db->queryFirstRow('SELECT expires_at,data_json FROM shop_supplier_price_cache WHERE url_hash=%s', hash('sha256', 'product:' . $url));
+            $row = $this->db->queryFirstRow('SELECT expires_at,data_json FROM shop_supplier_price_cache WHERE url_hash=%s', HttpClient::cacheKey('product', $url));
             if ($row === null) return $this->cache[$original] = self::issue('missing_cache', 'Nabídka zatím není načtená. Párování počká na běžnou kontrolu cen.');
             $expires = min($expires, (int) $row['expires_at']);
             if ($expires <= $this->now) return $this->cache[$original] = self::issue('expired', 'Uložená nabídka je starší než povolená platnost. Je potřeba nová kontrola cen.');

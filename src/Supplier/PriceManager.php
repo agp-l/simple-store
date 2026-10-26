@@ -90,24 +90,50 @@ final class PriceManager
             $now=$this->now();$count=['added'=>0,'daily'=>0,'unconfigured'=>0];
             $rows=$this->db->query('SELECT j.* FROM shop_supplier_price_jobs j INNER JOIN
                 (SELECT product_key,MAX(id) AS id FROM shop_supplier_price_jobs GROUP BY product_key) latest ON latest.id=j.id
-                WHERE j.status IN %ls', $scope==='review'?['review']:($scope==='failed'?['failed']:['review','failed']));
+                WHERE '.($scope==='one'?'j.product_key=(SELECT product_key FROM shop_supplier_price_jobs WHERE id=%i)':'j.status IN %ls'),
+                $scope==='one'?$id:($scope==='review'?['review']:($scope==='failed'?['failed']:['review','failed'])));
             foreach($rows as$job){
-                if($scope==='one'&&(int)$job['id']!==$id)continue;
-                $lastFresh=(int)$this->db->queryFirstField('SELECT MAX(GREATEST(created_at,checked_at)) FROM shop_supplier_price_jobs WHERE product_key=%s AND retry_of>0',$job['product_key']);
-                if($fresh&&$lastFresh>$now-86400){$count['daily']++;continue;}
+                if($scope==='one'&&(int)$job['id']!==$id)throw new InvalidArgumentException('Tento historický pokus už má novější kontrolu. Obnov výsledky produktu.');
+                if($job['status']==='queued'){$count['daily']++;continue;}
                 $snapshot=$this->snapshot($job['product_key']);
-                if(!$snapshot||($snapshot['sale']['mode']??'own')!=='assisted'||$snapshot['candidates']===[]){$count['unconfigured']++;continue;}
+                $problem=self::configurationIssue($snapshot);
+                if($problem!==''){
+                    if($scope==='one')throw new InvalidArgumentException($problem);
+                    $count['unconfigured']++;continue;
+                }
+                $previous=json_decode($job['data_json'],true);
+                $changed=self::sourceIdentity($snapshot)!==self::sourceIdentity($previous['snapshot']??[]);
+                if(!in_array($job['status'],['review','failed'],true)&&!$changed)throw new InvalidArgumentException('Výsledek je již dokončený. Pro běžnou kontrolu použij zařazení produktu do fronty.');
+                $lastFresh=(int)$this->db->queryFirstField('SELECT MAX(GREATEST(created_at,checked_at)) FROM shop_supplier_price_jobs WHERE product_key=%s AND retry_of>0',$job['product_key']);
+                if($fresh&&!$changed&&$lastFresh>$now-86400){$count['daily']++;continue;}
+                // A new source is a normal cache-respecting check, not a forced re-fetch of the old seller.
+                $force=$fresh&&!$changed;
                 $data=['snapshot'=>$snapshot,'fingerprint'=>hash('sha256',self::json($snapshot)),'index'=>0,'trace'=>[],'redirect'=>'','hops'=>0,
-                    'retry_of'=>(int)$job['id'],'refresh_after'=>$fresh?$now:0,'cache_only'=>!$fresh,'evaluator_version'=>self::EVALUATOR_VERSION];
-                $next=$fresh?max($now,(int)$job['checked_at']+900):$now;
+                    'retry_of'=>(int)$job['id'],'refresh_after'=>$force?$now:0,'cache_only'=>!$fresh&&!$changed,'evaluator_version'=>self::EVALUATOR_VERSION];
+                $next=$force?max($now,(int)$job['checked_at']+900):$now;
                 $this->db->insert('shop_supplier_price_jobs',['product_key'=>$job['product_key'],'product_name'=>$snapshot['products'][0]['name'],
-                    'mode'=>$mode,'created_at'=>$now,'next_at'=>$next,'retry_of'=>$fresh?(int)$job['id']:0,
-                    'message'=>$fresh?'Opakování vyžádáno. Respektuje prodlevy obchodu a nejméně 15 minut od poslední kontroly.':'Nové vyhodnocení uložené nabídky bez dotazu na dodavatele.',
+                    'mode'=>$mode,'created_at'=>$now,'next_at'=>$next,'retry_of'=>$force?(int)$job['id']:0,
+                    'message'=>$changed?'Partner nebo odkazy se změnily. Ověříme aktuální nabídku s běžnými limity načítání.':($fresh?'Opakování vyžádáno. Respektuje prodlevy obchodu a nejméně 15 minut od poslední kontroly.':'Nové vyhodnocení uložené nabídky bez dotazu na dodavatele.'),
                     'data_json'=>self::json($data)]);
                 $this->db->update('shop_supplier_price_jobs',['status'=>'retried','message'=>$job['message'].' · Zařazeno k novému ověření.'],'id=%i',$job['id']);
                 $count['added']++;
             }
             return $count;
+    }
+
+    private static function sourceIdentity(array $snapshot): string
+    {
+        $sources=[];
+        foreach($snapshot['candidates']??[]as$c)$sources[]=array_intersect_key($c,array_flip(['kind','url','partner_id','selected','links']));
+        return self::json(['mode'=>$snapshot['sale']['mode']??'own','partner_id'=>(int)($snapshot['sale']['partner_id']??0),'sources'=>$sources]);
+    }
+
+    private static function configurationIssue(?array $snapshot): string
+    {
+        if($snapshot===null)return 'Produkt už neexistuje nebo byl sloučen. Otevři jeho aktuální kartu.';
+        if(($snapshot['sale']['mode']??'own')!=='assisted')return 'Produkt je v režimu Prodáváme my. Partnerské ceny se ověřují pouze u asistovaného nákupu.';
+        if($snapshot['candidates']!==[])return '';
+        return 'Chybí použitelný partnerský odkaz. V editoru produktu ověř HTTPS adresu a web v profilu prodávajícího; u variant zkontroluj jejich aktivní odkazy.';
     }
     public function queueMode(string $mode):int
     {
@@ -222,6 +248,7 @@ final class PriceManager
                 }
                 if($snapshot===null||!hash_equals($data['fingerprint'],hash('sha256',self::json($snapshot)))){
                     if($snapshot!==null&&$snapshot['candidates']!==[]&&($data['rebases']??0)<2){
+                        if(self::sourceIdentity($snapshot)!==self::sourceIdentity($data['snapshot'])){$data['cache_only']=false;$data['refresh_after']=0;}
                         $data['snapshot']=$snapshot;$data['fingerprint']=hash('sha256',self::json($snapshot));
                         $data['variant_observations']=[];$data['variant_issues']=[];
                         $data['index']=0;$data['redirect']='';$data['hops']=0;$data['rebases']=($data['rebases']??0)+1;
@@ -308,12 +335,12 @@ final class PriceManager
      */
     private function reusableVariantDocument(array $snapshot,array $candidate,string $target,int $refreshAfter=0):?array
     {
-        if($this->db->queryFirstField('SELECT url_hash FROM shop_supplier_price_cache WHERE url_hash=%s AND expires_at>%i',hash('sha256','product:'.$target),$this->now())!==null)return null;
+        if($this->db->queryFirstField('SELECT url_hash FROM shop_supplier_price_cache WHERE url_hash=%s AND expires_at>%i',HttpClient::cacheKey('product',$target),$this->now())!==null)return null;
         $urls=array_unique(array_merge(array_column($snapshot['links'],'url'),array_column($snapshot['candidates'],'url')));
         foreach($urls as $url){
             if(ProductPartnerAssignment::host($url)!==ProductPartnerAssignment::host($target))continue;
             for($hop=0;$hop<4;$hop++){
-                $row=$this->db->queryFirstRow('SELECT data_json FROM shop_supplier_price_cache WHERE url_hash=%s AND expires_at>%i',hash('sha256','product:'.$url),$this->now());
+                $row=$this->db->queryFirstRow('SELECT data_json FROM shop_supplier_price_cache WHERE url_hash=%s AND expires_at>%i',HttpClient::cacheKey('product',$url),$this->now());
                 if(!$row)break;$cached=json_decode($row['data_json'],true,48,JSON_THROW_ON_ERROR);
                 if(!empty($cached['redirect'])){
                     try{$url=HttpClient::redirect($url,$cached['redirect']);}catch(InvalidArgumentException $e){break;}
@@ -330,7 +357,7 @@ final class PriceManager
     }
     private function cached(string $url,string $kind,string $mode,int $crawlDelay,int $refreshAfter=0,bool $cacheOnly=false): array
     {
-        $now=$this->now();$hash=hash('sha256',$kind.':'.$url);
+        $now=$this->now();$hash=HttpClient::cacheKey($kind,$url);
         $cache=$this->db->queryFirstRow('SELECT * FROM shop_supplier_price_cache WHERE url_hash=%s AND expires_at>%i',$hash,$now);
         if($cache){
             $cached=json_decode($cache['data_json'],true,48,JSON_THROW_ON_ERROR);
@@ -362,7 +389,7 @@ final class PriceManager
             elseif($kind==='robots'){
                 if(strlen($response['body'])>262144||preg_match('/<\s*(?:html|!doctype)/i',$response['body']))throw new InvalidArgumentException('robots.txt nelze spolehlivě přečíst.');
                 $result=['body'=>$response['body']];
-            }else{$result=['document'=>PriceParser::document($response['body'],$url),'observed_at'=>$now];}
+            }else{$result=['document'=>PriceParser::document($response['body'],HttpClient::withoutFragment($url)),'observed_at'=>$now];}
         }catch(\Exception $error){$result=['error'=>$error instanceof InvalidArgumentException?$error->getMessage():'Načtení selhalo (spojení, DNS nebo limit stránky). Cena zůstala.',
             'temporary'=>!isset($code)||in_array($code,[408,429,500,502,503,504],true)];}
         $result['fetched_at']=$now;$result['http_code']=$code??0;$result['request_url']=$requestUrl??$url;
@@ -461,7 +488,7 @@ final class PriceManager
             if(!empty($this->settings()['paused']))throw new InvalidArgumentException('Zpracování je pozastavené.');
             $key=$this->db->queryFirstField('SELECT product_key FROM shop_supplier_price_jobs WHERE id=%i',$id);
             $snapshot=$key?$this->snapshot($key):null;$candidate=$snapshot['candidates'][0]??null;
-            if(!$snapshot||($snapshot['sale']['mode']??'own')!=='assisted'||!$candidate)throw new InvalidArgumentException('Produkt nemá aktivní partnerskou nabídku pro asistovaný nákup.');
+            $problem=self::configurationIssue($snapshot);if($problem!=='')throw new InvalidArgumentException($problem);
             $url=$candidate['url'];$label=$candidate['name'].': ';
             $reply=static fn(?bool $ok,string $message):array=>['ok'=>$ok,'partner'=>$candidate['name'],'url'=>$url,'message'=>$label.$message.' Ceny produktu se při diagnostice nemění.'];
             for($hop=0;$hop<4;$hop++){
@@ -479,8 +506,20 @@ final class PriceManager
                     if(!empty($result['fetched']))return $reply(null,'Stránka se přesměrovala. Zopakuj diagnostiku po prodlevě obchodu (nejméně 60 s).');
                     continue;
                 }
-                $count=count($result['document']['scoped_offers']??$result['document']['offers']??[]);
-                return $reply($count>0,'Stránka dostupná, nalezeno nabídek s cenou: '.$count.'.'.(!empty($robots['unavailable'])?' Soubor robots.txt není dostupný (HTTP '.$robots['http_code'].').':''));
+                try{
+                    if(($candidate['kind']??'')==='variant'){
+                        $proof=VariantOfferEvaluation::observe($result['document'],$url,$snapshot,$candidate,(int)$result['observed_at']);
+                        if($proof['issues']!==[])return $reply(false,$proof['issues'][0]['message']);
+                        $prices=array_column($proof['observations'],'price');
+                        if($prices===[])return $reply(false,'Stránka nepotvrdila přesnou nabídku varianty.');
+                        return $reply(true,'Přesně ověřených variant na této adrese: '.count($prices).'. Cena '.min($prices).(min($prices)!==max($prices)?'–'.max($prices):'').' Kč.')+['prices'=>$prices];
+                    }
+                    $offer=PriceEvaluation::select($result['document'],$url,$snapshot,$this->settings());
+                    $offer['fallback']=!$candidate['selected'];
+                    $reason=self::reviewReason($snapshot,$offer);
+                    return $reply(!$offer['uncertain'],'Načtená cena '.$offer['price'].' Kč. '.($reason!==''?'Před převzetím: '.$reason:'Nabídka je jednoznačná.'))+
+                        ['price'=>$offer['price'],'availability'=>$offer['availability'],'identity_evidence'=>$offer['identity_evidence'],'review_reason'=>$reason];
+                }catch(InvalidArgumentException $e){return $reply(false,$e->getMessage());}
             }
             return $reply(false,'Příliš mnoho přesměrování. Oprav partnerský odkaz.');
         });
@@ -592,6 +631,16 @@ final class PriceManager
         $total=(int)$this->db->queryFirstField('SELECT COUNT(*) FROM shop_supplier_price_jobs WHERE '.$where,...$args);
         $page=max(1,min($page,max(1,(int)ceil($total/30))));
         $rows=$this->db->query('SELECT * FROM shop_supplier_price_jobs WHERE '.$where.' ORDER BY id DESC LIMIT 30 OFFSET %i',...array_merge($args,[($page-1)*30]));
+        $snapshots=[];
+        foreach($rows as&$row){
+            if(!array_key_exists($row['product_key'],$snapshots))$snapshots[$row['product_key']]=$this->snapshot($row['product_key']);
+            $snapshot=$snapshots[$row['product_key']];$old=json_decode($row['data_json'],true);
+            $row['current_sources']=$snapshot['candidates']??[];
+            $row['current_product']=$snapshot['products'][0]??null;
+            $row['configuration_issue']=self::configurationIssue($snapshot);
+            $row['sources_changed']=$snapshot!==null&&self::sourceIdentity($snapshot)!==self::sourceIdentity($old['snapshot']??[]);
+            $row['stale_result']=$snapshot===null||!hash_equals($old['fingerprint']??'',hash('sha256',self::json($snapshot)));
+        }unset($row);
         $counts=['queued'=>0,'review'=>0,'failed'=>0,'applied'=>0,'checked'=>0];
         foreach($this->db->query('SELECT status,COUNT(*) AS n FROM shop_supplier_price_jobs WHERE '.self::currentJobs().' GROUP BY status')as$row)$counts[$row['status']]=(int)$row['n'];
         $counts['applied']+=$counts['checked'];
@@ -610,7 +659,7 @@ final class PriceManager
             foreach(($snapshot??$data['snapshot'])['candidates']??[]as$c){
                 $resolved=$c['url'];$chain=[];
                 for($hop=0;$hop<4;$hop++){
-                    $cache=$this->db->queryFirstRow('SELECT expires_at,data_json FROM shop_supplier_price_cache WHERE url_hash=%s',hash('sha256','product:'.$resolved));
+                    $cache=$this->db->queryFirstRow('SELECT expires_at,data_json FROM shop_supplier_price_cache WHERE url_hash=%s',HttpClient::cacheKey('product',$resolved));
                     $cached=$cache?json_decode($cache['data_json'],true):null;
                     if(empty($cached['redirect']))break;
                     $chain[]=['url'=>$resolved,'redirect'=>$cached['redirect'],'http_code'=>$cached['http_code']??null];

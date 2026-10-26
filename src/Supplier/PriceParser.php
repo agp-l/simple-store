@@ -7,7 +7,7 @@ use InvalidArgumentException;
 /** Reads explicit offers, never guesses a price from arbitrary visible numbers. */
 final class PriceParser
 {
-    public const VERSION = 4;
+    public const VERSION = 5;
     /** Gramino advertises this public mirror in /.well-known/ai-catalog.json and /openapi.json. */
     public static function requestUrl(string $url):string
     {
@@ -16,7 +16,7 @@ final class PriceParser
             $query=parse_url($url,PHP_URL_QUERY);
             return 'https://'.$host.'/api/md'.$path.($query!==null?'?'.$query:'');
         }
-        return $url;
+        return HttpClient::withoutFragment($url);
     }
 
     public static function read(string $body, string $url, string $expectedName = ''): array
@@ -68,6 +68,7 @@ final class PriceParser
         $document=['offers'=>$offers, 'product_count'=>count($products), 'single_offers'=>$singleOffers, 'parser_version'=>self::VERSION];
         if(count($products)===1&&count($offers)===1&&$singleOffers){
             $scoped=Pod7kiloVariantIdentity::offers($body,$url,$offers[0]);
+            if($scoped===[])$scoped=FourCampingVariantIdentity::offers($body,$url,$offers[0]);
             if($scoped!==[])$document['scoped_offers']=$scoped;
         }
         return $document;
@@ -75,6 +76,8 @@ final class PriceParser
 
     public static function select(array $document, string $url, string $expectedName = ''): array
     {
+        $fourCamping=FourCampingVariantIdentity::select($document,$url);
+        if($fourCamping!==null)return $fourCamping;
         $offers=$document['offers']??[];
         if ($offers === []) throw new InvalidArgumentException('Stránka neposkytla jednoznačnou strukturovanou cenu v CZK. Cena zůstala.');
         $all=$offers;
@@ -102,7 +105,7 @@ final class PriceParser
         $groupExact=$uniform && self::identity($all[0]['group_url'])===self::identity($url);
         if($groupExact){$result['url']=$url;$result['identity_evidence']=['method'=>'uniform_product_group','verified_url'=>$url,'variants'=>count($all)];}
         $result['uniform_variants']=$uniform || !empty($result['supplier_uniform']);
-        $result['uncertain'] = $exact === [] && !$groupExact && (parse_url($url, PHP_URL_QUERY) !== null ||
+        $result['uncertain'] = $exact === [] && !$groupExact && (parse_url($url, PHP_URL_QUERY) !== null || parse_url($url, PHP_URL_FRAGMENT) !== null ||
             ($result['url'] !== '' && self::identity($result['url']) !== self::identity($url)));
         return $result;
     }
@@ -173,6 +176,6 @@ final class PriceParser
         parse_str($p['query'] ?? '', $query);
         foreach (array_keys($query) as $key) if (str_starts_with($key, 'utm_') || in_array($key, ['gclid','fbclid'], true)) unset($query[$key]);
         ksort($query);
-        return $host . rtrim($p['path'] ?? '/', '/') . '?' . http_build_query($query);
+        return $host . rtrim($p['path'] ?? '/', '/') . '?' . http_build_query($query) . (isset($p['fragment']) ? '#' . $p['fragment'] : '');
     }
 }

@@ -12,7 +12,7 @@ final class Pod7kiloVariantIdentity
         $parent=rtrim((string)parse_url($offer['url'],PHP_URL_PATH),'/');
         $path=rtrim((string)parse_url($url,PHP_URL_PATH),'/');
         if(!str_starts_with($parent,'/p/')||($path!==$parent&&!str_starts_with($path,$parent.'/')))return [];
-        $data=self::data($body);
+        $data=EmbeddedVariantData::read($body);
         if(!$data||!is_string($data['currency']??null)||strtoupper($data['currency'])!=='CZK'||empty($data['variantsInfo'])||!is_array($data['variantsInfo']))return [];
         $selected=$data['variantsInfo'][$data['selectedVariantId']??'']??null;
         if(!is_array($selected)||PriceParser::amount($selected['price']??null)===null||number_format((float)$selected['price'],2,'.','')!==number_format((float)$offer['amount'],2,'.',''))return [];
@@ -53,7 +53,7 @@ final class Pod7kiloVariantIdentity
         }
         if (count($canonical) !== 1 || !self::localUrl($canonical[0], $host) || !$sameUrl($canonical[0], $url)) return null;
 
-        $data = self::data($body);
+        $data = EmbeddedVariantData::read($body);
         if ($data === null) return null;
         if (($data['variantsUrlEnabled'] ?? null) !== true || !is_string($data['currency'] ?? null) ||
             strtoupper($data['currency']) !== 'CZK' || !is_array($data['variantsInfo'] ?? null)) return null;
@@ -85,7 +85,7 @@ final class Pod7kiloVariantIdentity
     {
         $host=strtolower((string)parse_url($url,PHP_URL_HOST));
         if(!in_array($host,['pod7kilo.cz','www.pod7kilo.cz'],true))return false;
-        $data=self::data($body);
+        $data=EmbeddedVariantData::read($body);
         if($data===null||!is_string($data['currency']??null)||strtoupper($data['currency'])!=='CZK'||($offer['priceCurrency']??'')!=='CZK'||
             !is_array($data['variantsInfo']??null)||count($data['variantsInfo'])<2)return false;
         foreach($data['variantsInfo']as$id=>$variant){
@@ -95,19 +95,6 @@ final class Pod7kiloVariantIdentity
                 number_format((float)$variant['price'],2,'.','')!==number_format((float)$offer['price'],2,'.',''))return false;
         }
         return true;
-    }
-
-    private static function data(string $body):?array
-    {
-        // Decode the server-rendered JSON literal. No supplier JavaScript is executed.
-        preg_match_all('~<script\b[^>]*>(.*?)</script\s*>~is', $body, $scripts);
-        $definitions = [];
-        foreach ($scripts[1] as $script) {
-            if (!preg_match('~^\s*(?://<!--\s*)?var\s+data\s*=\s*(\{.*\})\s*;\s*(?://-->\s*)?$~sD', $script, $match)) continue;
-            $definitions[] = json_decode($match[1], true, 40);
-        }
-        if (count($definitions) !== 1 || !is_array($definitions[0])) return null;
-        return $definitions[0];
     }
 
     private static function sameIdentifier(mixed $a, mixed $b): bool

@@ -251,5 +251,33 @@ try{
    $manager->tick();$check(count($requests)===$before,'Reevaluation bypassed the cached-only boundary.');
   }
  }
+
+ // A simple product changes sellers: retry and probe must use the new colour-specific source.
+ $opinel=$make('old-opinel',650);$manager->enqueue('one','rapid',$opinel);$run(6,100);
+ $oldJob=$job($opinel);$check($oldJob['status']==='failed','Old seller fixture did not fail.');
+ $camping=$partners->save(0,['name'=>'4camping','website_url'=>'https://www.4camping.cz/','priority'=>'20']);
+ $f4=json_decode(file_get_contents(__DIR__.'/fixtures/4camping-opinel.json'),true,32,JSON_THROW_ON_ERROR);
+ $orange=$f4['url'].'#oranzova';
+ $db->update('shop_product_sales',['partner_id'=>$camping,'version'=>2],'product_key=%s',$opinel);
+ $db->update('shop_product_supplier_links',['url'=>$orange,'label'=>'4camping'],'product_key=%s',$opinel);
+ $responses[$f4['url']]=['code'=>200,'headers'=>[],'body'=>'<script>var data = '.json_encode($f4['data']).';</script><script type="application/ld+json">'.json_encode($f4['product']).'</script>'];
+ $card=$manager->dashboard('failed','Product old-opinel')['rows'][0];
+ $check($card['sources_changed']&&$card['stale_result']&&$card['current_sources'][0]['url']===$orange,'History hid current source or offered stale approval.');
+ $before=count($requests);
+ $check($manager->retry('one','rapid',false,(int)$oldJob['id'])['added']===1,'Changed seller cannot be retried without a forced download.');
+ $check($manager->retry('one','rapid',false,(int)$job($opinel)['id'])['daily']===1,'Changed seller duplicated pending job.');
+ $run(8,100);
+ $check($job($opinel)['status']==='applied'&&(int)$sale($opinel)['supplier_price_czk']===689,'New simple-product partner did not update its exact colour price.');
+ $newRequests=array_column(array_slice($requests,$before),0);
+ $check(in_array($f4['url'],$newRequests,true)&&!in_array('https://a.test/old-opinel',$newRequests,true)&&!in_array($orange,$newRequests,true),'Retry fetched old seller or sent URL fragment.');
+ $beforeSale=$sale($opinel);$beforeJob=$job($opinel);$before=count($requests);
+ $probe=$manager->probe((int)$oldJob['id']);
+ $check($probe['ok']===true&&$probe['price']===689&&$probe['url']===$orange,'Historical diagnostic did not read current exact source.');
+ $check($sale($opinel)===$beforeSale&&$job($opinel)===$beforeJob&&count($requests)===$before,'Probe mutated data or bypassed cache.');
+ $db->update('shop_product_supplier_links',['url'=>$f4['url'].'#modra'],'product_key=%s',$opinel);
+ $check($manager->retry('one','rapid',false,(int)$beforeJob['id'])['added']===1,'Changing source after a successful check could not be checked.');
+ $run(2,5);$check(count($requests)===$before,'Another colour bypassed shared URL cache.');
+ $check((int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$opinel)===7,'Partner check changed stock.');
+ $reject(fn()=>$manager->retry('one','rapid',false,(int)$oldJob['id']));
  echo "Supplier prices: MySQL durable queue, selected/fallback sellers, daily and URL limits, pauses, locks, stale data, variants, current counters and cron passed.\n";
 }finally{$db->disconnect();$admin->query('DROP DATABASE %b',$database);}

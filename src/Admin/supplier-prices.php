@@ -49,7 +49,7 @@ if($method==='POST'&&$pricesReady){
         }elseif($action==='supplier-price-retry'){
             $id=filter_var($_POST['job_id']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);if(!$id)throw new InvalidArgumentException('Neplatná kontrola.');
             $result=$priceManager->retry('one','rapid',($_POST['fresh']??'')==='1',$id);$pricesAutoStart=$result['added']>0;
-            $pricesNotice='K opakování přidáno: '.$result['added'].'. Vyčerpaný limit dodatečných načtení: '.$result['daily'].'.';
+            $pricesNotice='K opakování přidáno: '.$result['added'].'. Již ve frontě nebo vyčerpaný limit: '.$result['daily'].'. Bez použitelné nabídky: '.$result['unconfigured'].'.';
         }elseif($action==='supplier-price-pricing'){
             $priceManager->configurePricing($_POST);$pricesNotice='Cenotvorba uložena. Použije se při příštím převzetí nebo ověření dodavatelské ceny.';
         }elseif($action==='supplier-price-tempo'){

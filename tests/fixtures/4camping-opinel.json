@@ -1,0 +1,65 @@
+{
+  "url": "https://www.4camping.cz/p/nuz-opinel-vri-n-08-inox-outdoor/",
+  "product": {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    "name": "Zavírací nůž Opinel VRI N°08 Inox Outdoor",
+    "offers": {
+      "@type": "Offer",
+      "availability": "https://schema.org/InStock",
+      "itemCondition": "https://schema.org/NewCondition",
+      "price": 689,
+      "priceCurrency": "CZK",
+      "url": "https://www.4camping.cz/p/nuz-opinel-vri-n-08-inox-outdoor/"
+    },
+    "mpn": "76006518"
+  },
+  "data": {
+    "productId": "18410",
+    "variantsUrlEnabled": false,
+    "selectedVariantId": null,
+    "currency": "czk",
+    "variantsInfo": {
+      "45480": {
+        "id": 45480,
+        "productId": 18410,
+        "name": "Barva: blue",
+        "price": 689,
+        "url": "/p/nuz-opinel-vri-n-08-inox-outdoor/modra/",
+        "productNameWithVariant": "Zavírací nůž Opinel VRI N°08 Inox Outdoor Barva: blue",
+        "allowPurchase": true,
+        "availability": "<span class=\"product-availability stock--available\">Skladem</span>"
+      },
+      "45483": {
+        "id": 45483,
+        "productId": 18410,
+        "name": "Barva: orange",
+        "price": 689,
+        "url": "/p/nuz-opinel-vri-n-08-inox-outdoor/oranzova/",
+        "productNameWithVariant": "Zavírací nůž Opinel VRI N°08 Inox Outdoor Barva: orange",
+        "allowPurchase": true,
+        "availability": "<span class=\"product-availability stock--available\">Skladem</span>"
+      },
+      "77317": {
+        "id": 77317,
+        "productId": 18410,
+        "name": "Barva: červená",
+        "price": 689,
+        "url": "/p/nuz-opinel-vri-n-08-inox-outdoor/cervena/",
+        "productNameWithVariant": "Zavírací nůž Opinel VRI N°08 Inox Outdoor Barva: červená",
+        "allowPurchase": true,
+        "availability": "<span class=\"product-availability stock--available\">Skladem</span>"
+      },
+      "45481": {
+        "id": 45481,
+        "productId": 18410,
+        "name": "Barva: green",
+        "price": 689,
+        "url": "/p/nuz-opinel-vri-n-08-inox-outdoor/zelena/",
+        "productNameWithVariant": "Zavírací nůž Opinel VRI N°08 Inox Outdoor Barva: green",
+        "allowPurchase": true,
+        "availability": "<span class=\"product-availability stock--available\">Skladem</span>"
+      }
+    }
+  }
+}

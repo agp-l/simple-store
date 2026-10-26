@@ -13,12 +13,23 @@ final class HttpClient
     {
         $p = parse_url($url);
         if (!filter_var($url,FILTER_VALIDATE_URL) || strlen($url)>1000 || !is_array($p) ||
-            ($p['scheme']??'') !== 'https' || isset($p['user']) || isset($p['pass']) || isset($p['fragment']) ||
+            ($p['scheme']??'') !== 'https' || isset($p['user']) || isset($p['pass']) ||
             (isset($p['port']) && $p['port'] !== 443) || preg_match('/[\x00-\x20\x7f\\\\]/',$url) ||
             !preg_match('/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/Di',$p['host']??'')) {
             throw new InvalidArgumentException('Použij veřejný odkaz HTTPS bez přihlašovacích údajů a nestandardního portu.');
         }
         return strtolower($p['host']);
+    }
+
+    /** A fragment selects an offer locally; it is never sent in an HTTP request. */
+    public static function withoutFragment(string $url): string
+    {
+        return explode('#', $url, 2)[0];
+    }
+
+    public static function cacheKey(string $kind, string $url): string
+    {
+        return hash('sha256', $kind . ':' . self::withoutFragment($url));
     }
 
     public static function publicIp(string $ip): bool
@@ -39,6 +50,7 @@ final class HttpClient
         if (str_starts_with($location,'/') && !str_starts_with($location,'//')) $location = 'https://' . self::url($from) . $location;
         self::url($location);
         if (ProductPartnerAssignment::host($from) !== ProductPartnerAssignment::host($location)) throw new InvalidArgumentException('Přesměrování vede na jiného prodejce. Oprav dodavatelský odkaz.');
+        if (parse_url($location, PHP_URL_FRAGMENT) === null && parse_url($from, PHP_URL_FRAGMENT) !== null) $location .= '#' . parse_url($from, PHP_URL_FRAGMENT);
         return $location;
     }
 
@@ -57,7 +69,7 @@ final class HttpClient
         usort($ips,static fn(string $a,string $b): int => (int)str_contains($a,':') <=> (int)str_contains($b,':'));
         $ip = str_contains($ips[0],':') ? '['.$ips[0].']' : $ips[0];
         $body = ''; $headers = []; $tooLarge = false;
-        $curl = curl_init($url);
+        $curl = curl_init(self::withoutFragment($url));
         curl_setopt_array($curl,[CURLOPT_RETURNTRANSFER=>false,CURLOPT_FOLLOWLOCATION=>false,
             CURLOPT_PROTOCOLS=>CURLPROTO_HTTPS,CURLOPT_CONNECTTIMEOUT=>4,CURLOPT_TIMEOUT=>12,
             CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2,CURLOPT_PROXY=>'',
