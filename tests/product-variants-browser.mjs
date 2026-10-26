@@ -30,6 +30,18 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
       await page.goto('http://127.0.0.1:8765/' + publicPath);
       await page.locator('#variant-choice-0').waitFor();
       await page.locator('#variant-choice-0').selectOption('Modrá');
+      assert.equal(await page.locator('#detail-image').getAttribute('src'), '/images/batoh.webp', 'Color preview must not wait for size');
+      assert.equal(await page.locator('#variant-choice-1').inputValue(), '');
+      assert.equal(await page.locator('#product-variant').inputValue(), '');
+      assert.equal(await page.locator('.product-purchase').evaluate(form => form.checkValidity()), false);
+      await page.locator('#detail-image-open').click();
+      assert.match(await page.locator('#detail-lightbox-image').getAttribute('src'), /images\/batoh.webp$/);
+      await page.locator('#detail-lightbox-close').click();
+      await page.locator('#variant-choice-0').selectOption('Červená');
+      assert.equal(await page.locator('#detail-image').getAttribute('src'), '/images/product-placeholder.png');
+      await page.locator('#variant-choice-0').selectOption('');
+      assert.equal(await page.locator('#detail-image').getAttribute('src'), '/images/product-placeholder.png');
+      await page.locator('#variant-choice-0').selectOption('Modrá');
       await page.locator('.product-purchase').screenshot({ path: `/tmp/variant-screenshots/selection-${width}.png` });
       assert.equal(await page.locator('#variant-choice-1 option[value="S"]').evaluate(option => option.disabled), true,
         await page.locator('.variant-pickers').evaluate(root => JSON.stringify(Array.from(root.querySelectorAll('select')).map(select => ({value: select.value, options: Array.from(select.options).map(option => ({value: option.value, disabled: option.disabled}))})))));
@@ -41,6 +53,7 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
       assert.match(await page.locator('[data-variant-price]').textContent(), /2\s*490/);
       await page.locator('#variant-choice-1').selectOption('L');
       const large = await page.locator('#product-variant').inputValue();
+      assert.equal(await page.locator('#detail-image').getAttribute('src'), '/images/batoh.webp', 'Another size inherits its color photo');
       await page.goBack();
       assert.equal(await page.locator('#product-variant').inputValue(), selected);
       await page.goForward();
@@ -126,7 +139,7 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
       assert.ok(overflow <= 1, `Entire page overflows by ${overflow}px at ${width}px`);
       await page.locator('#product-variants').screenshot({ path: `/tmp/variant-screenshots/admin-${width}.png` });
       await common.focus(); await common.press('ControlOrMeta+A'); await page.keyboard.insertText('3200');
-      await page.getByRole('button', { name: 'Uložit změny variant', exact: true }).click();
+      await page.getByRole('button', { name: 'Uložit změny všech variant', exact: true }).click();
       await page.getByText('Saved fixture').waitFor();
       assert.deepEqual(errors, []);
       await page.close();
@@ -143,6 +156,7 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
     assert.match(await noJs.locator('[data-variant-price]').textContent(), /^2\s*490$/);
     await noJs.goto('http://127.0.0.1:8765/' + unavailablePath);
     assert.equal(await noJs.locator('#detail-add').isDisabled(), true);
+    assert.equal(await noJs.locator('#detail-image').getAttribute('src'), '/images/batoh.webp', 'PHP deep links share the color fallback');
     await noJs.goto('http://127.0.0.1:8765/' + adminPath);
     await noJs.route('**/admin/', async route => {
       const form = new URLSearchParams(route.request().postData());

@@ -83,8 +83,51 @@
     }
     return change;
   });
-  const initial = JSON.stringify(collect());
-  batch.hidden = false;
+  const initialRows = collect();
+  const initial = JSON.stringify(initialRows);
+  const initialById = new Map(initialRows.map(row => [row.variant_id, JSON.stringify(row)]));
+  const initialPhotos = new Map(rows.map(row => [row.dataset.variantRow, row.querySelector('[name="image_path"]').value]));
+  const partnerForms = Array.from(root.querySelectorAll('.variant-partner-form'));
+  const partnerValues = form => JSON.stringify(['label', 'url', 'partner_key'].map(name => form.elements.namedItem(name)?.value || ''));
+  const partnerInitial = new Map(partnerForms.map(form => [form, partnerValues(form)]));
+  const draftKey = 'variant-draft:' + root.dataset.productKey;
+  let recoveryWarning = '';
+  // Partner links submit independently. Keep the untouched variant draft across that navigation.
+  try {
+    const stored = JSON.parse(sessionStorage.getItem(draftKey) || 'null');
+    if (stored && stored.expected === root.dataset.expected) {
+      for (const draft of stored.rows) {
+        const row = rows.find(row => row.dataset.variantRow === draft.variant_id);
+        if (!row) continue;
+        for (const input of row.querySelectorAll('input[form],select[form]')) {
+          if (typeof draft[input.name] !== 'string') continue;
+          if (input.type === 'checkbox') input.checked = draft[input.name] === '1';
+          else input.value = draft[input.name];
+        }
+      }
+      sessionStorage.removeItem(draftKey);
+    } else if (stored) recoveryWarning = 'Sklad nebo ceny se mezitím změnily. Rozpracované varianty nelze bezpečně obnovit; zkontroluj aktuální údaje.';
+  } catch { /* Storage can be unavailable; never block opening the editor. */ }
+  root.querySelector('[data-variant-save-bar]').hidden = false;
+  rows.forEach(row => { row.querySelector('[data-variant-row-save]').hidden = true; row.querySelector('[data-variant-row-state]').hidden = false; });
+  const showProblem = message => { state.textContent = message; state.classList.add('is-warning'); };
+  partnerForms.forEach(form => {
+    const reset = form.querySelector('[data-partner-reset]');
+    const updatePartner = () => {
+      const dirty = partnerValues(form) !== partnerInitial.get(form);
+      form.classList.toggle('is-dirty', dirty); reset.hidden = !dirty;
+    };
+    form.addEventListener('input', updatePartner); form.addEventListener('change', updatePartner);
+    form.addEventListener('reset', () => setTimeout(() => { updatePartner(); update(); }, 0));
+    form.addEventListener('submit', event => {
+      if (root.dataset.dirty !== 'true') return;
+      try { sessionStorage.setItem(draftKey, JSON.stringify({ expected: root.dataset.expected, rows: collect() })); submitted = true; }
+      catch {
+        event.preventDefault();
+        showProblem('Prohlížeč nemůže uchovat rozpracované varianty. Vrať změny odkazu a nejprve ulož varianty.');
+      }
+    });
+  });
   document.querySelector('#variant-stock-mode form')?.addEventListener('submit', event => {
     if (root.dataset.dirty !== 'true') return;
     event.preventDefault();
@@ -95,9 +138,16 @@
 
   function update() {
     let ownPrices = 0;
+    const changes = collect();
+    let changedCount = 0;
+    state.classList.remove('is-warning');
     rows.forEach((row, i) => {
       const own = priceInputs[i].value !== '';
       if (own) ownPrices++;
+      const dirty = JSON.stringify(changes[i]) !== initialById.get(row.dataset.variantRow);
+      if (dirty) changedCount++;
+      row.closest('.variant-table-group').classList.toggle('is-dirty', dirty);
+      row.querySelector('[data-variant-row-state]').textContent = dirty ? 'Neuloženo' : 'Uloženo';
       priceInputs[i].placeholder = String(basePrice);
       row.querySelector('[data-variant-price-note]').textContent = own ? 'Vlastní cena' : 'Společná cena';
     });
@@ -106,32 +156,52 @@
       ? 'Všechny varianty přebírají společnou cenu produktu.'
       : `Vlastní cenu má ${ownPrices} z ${rows.length} variant. Ostatní přebírají cenu produktu.`;
     root.dataset.dirty = recovered || JSON.stringify(collect()) !== initial ? 'true' : 'false';
-    state.hidden = root.dataset.dirty !== 'true';
-    root.querySelector('[data-variant-save-top]').hidden = state.hidden;
-    state.textContent = 'Neuložené změny variant — potvrď tlačítkem Uložit změny variant.';
+    state.hidden = false;
+    root.querySelector('[data-variant-save-top]').disabled = root.dataset.dirty !== 'true';
+    state.textContent = recoveryWarning || (root.dataset.dirty === 'true'
+      ? `Neuložené změny: ${changedCount || rows.length} variant. Fotografie i ostatní údaje uložíš společně.`
+      : 'Všechny změny variant jsou uložené.');
     undo.hidden = previousPrices === null;
+  }
+  const colorOf = row => row.dataset.variantColor !== 'null' ? row.dataset.variantColor : '';
+  function refreshPhotos() {
+    rows.forEach(row => {
+      const photo = row.querySelector('[name="image_path"]');
+      const color = colorOf(row);
+      const shared = !photo.value && color ? rows.find(other => colorOf(other) === color && other.querySelector('[name="enabled"]').checked && other.querySelector('[name="image_path"]').value) : null;
+      const source = shared?.querySelector('[name="image_path"]') || photo;
+      const option = source.selectedOptions[0];
+      const group = row.closest('.variant-table-group');
+      const image = group.querySelector('[data-partner-image]');
+      if (!image || !option) return;
+      image.src = option.dataset.photoPreview;
+      group.querySelector('[data-partner-image-link]').href = option.dataset.photoFull;
+      const sourceRow = shared || row;
+      const draft = source.value !== initialPhotos.get(sourceRow.dataset.variantRow);
+      group.querySelector('[data-partner-image-note]').textContent = (photo.value ? 'Fotografie přiřazená této variantě.'
+        : shared ? 'Fotografie stejné barvy.' : 'Společná fotografie — barva zatím není přiřazená.')
+        + (draft ? ' Neuloženo — ulož změny všech variant.' : '');
+    });
   }
   rows.forEach(row => {
     const photo = row.querySelector('[name="image_path"]');
-    const initialPhoto = photo.value;
-    const group = row.closest('.variant-table-group');
-    const image = group.querySelector('[data-partner-image]');
-    const photoNote = group.querySelector('[data-partner-image-note]');
-    const initialPhotoNote = photoNote?.textContent;
+    const sameColor = rows.filter(other => colorOf(row) && colorOf(other) === colorOf(row));
+    const copy = row.querySelector('[data-variant-photo-copy]');
+    copy.hidden = sameColor.length < 2;
+    copy.textContent = `Použít pro tuto barvu (${sameColor.length})`;
+    copy.addEventListener('click', () => {
+      sameColor.forEach(other => { other.querySelector('[name="image_path"]').value = photo.value; });
+      refreshPhotos(); update();
+    });
     const changed = event => {
       if (event.target.name === 'price_czk') previousPrices = null;
-      if (event.target === photo && image) {
-        const option = photo.selectedOptions[0];
-        image.src = option.dataset.photoPreview;
-        group.querySelector('[data-partner-image-link]').href = option.dataset.photoFull;
-        photoNote.textContent = photo.value === initialPhoto ? initialPhotoNote
-          : 'Vybraná fotografie — ulož změny variant.';
-      }
+      if (event.target.name === 'image_path' || event.target.name === 'enabled') refreshPhotos();
       update();
     };
     row.addEventListener('input', changed);
     row.addEventListener('change', changed);
   });
+  refreshPhotos();
   inherit.addEventListener('submit', event => {
     event.preventDefault();
     previousPrices = priceInputs.map(input => input.value);
@@ -146,7 +216,11 @@
   });
   batch.addEventListener('submit', async event => {
     event.preventDefault();
-    if (sending) return;
+    if (sending || root.dataset.dirty !== 'true') return;
+    if (partnerForms.some(form => partnerValues(form) !== partnerInitial.get(form))) {
+      showProblem('Nejprve ulož rozpracovaný partnerský odkaz tlačítkem „Uložit pouze odkaz“, nebo vrať jeho změny. Rozpracované varianty se při uložení odkazu zachovají.');
+      return;
+    }
     for (const row of rows) {
       for (const input of row.querySelectorAll('input[form],select[form]')) {
         if (!input.reportValidity()) return;
@@ -156,7 +230,8 @@
     try {
       // Finish a simultaneous edit of the shared price before saving its inheriting rows.
       await window.SimpleStoreMediaContext?.getRevision();
-      batch.elements.rows_json.value = JSON.stringify(collect());
+      batch.elements.rows_json.value = JSON.stringify(collect().filter(row => recovered || JSON.stringify(row) !== initialById.get(row.variant_id)));
+      try { sessionStorage.removeItem(draftKey); } catch { /* No stored draft. */ }
       submitted = true;
       HTMLFormElement.prototype.submit.call(batch);
     } catch (error) {

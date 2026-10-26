@@ -117,6 +117,7 @@ jobs:
           php tests/password-reset-url.php
           php tests/product-import.php
           php tests/product-variants.php
+          php tests/variant-images.php
           php tests/purchase-partner-transfer.php
           php tests/product-partner-assignment.php
           php tests/supplier-prices.php

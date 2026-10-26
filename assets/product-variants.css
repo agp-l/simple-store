@@ -116,3 +116,26 @@
   .variant-table .variant-partner-row > td .variant-partner-actions .inline-small { width: auto; }
   .variant-partner-form { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* One visible save boundary for variant fields; each external offer has its own form. */
+.variant-save-bar { position: sticky; top: 8px; z-index: 5; display: flex; align-items: center; gap: 18px; padding: 14px 16px; margin: 16px 0; border: 2px solid #a5bd98; border-radius: 8px; background: #f4f8f1; box-shadow: 0 3px 12px #193b1920; }
+.variant-save-bar > div { flex: 1; min-width: 0; }
+.variant-save-bar strong { color: var(--pine); }
+.variant-save-bar p { margin: 5px 0 0; font-size: 12px; }
+.variant-save-bar .variant-save-primary { background: var(--pine); color: #fff; border-color: var(--pine); white-space: normal; min-width: 180px; padding: 12px; }
+.variant-save-primary:disabled { opacity: .55; cursor: default; }
+.variant-manager .variant-save-bar [data-variant-save-state] { margin: 6px 0 0; padding: 0; border: 0; background: none; font-weight: 600; }
+.variant-manager .variant-save-bar .is-warning { color: #92400e; }
+.variant-table-group > tr:last-child > td { border-bottom: 8px solid #fff; }
+.variant-table-group.is-dirty > tr[data-variant-row] { background: #fff6d9; }
+.variant-table-group.is-dirty > tr[data-variant-row] > th { box-shadow: inset 4px 0 #b7791f; }
+.variant-row-state { font-size: 11px; color: var(--muted); }
+.is-dirty .variant-row-state { font-weight: 700; color: #92400e; }
+.variant-table .variant-photo-copy { margin-top: 7px; white-space: normal; font-size: 11px; max-width: 170px; }
+.partner-save-scope { margin: 4px 0 12px; padding: 7px 10px; border-left: 3px solid #c4d8bd; }
+.variant-partner-form.is-dirty { outline: 2px solid #d6a53b; outline-offset: 4px; border-radius: 4px; }
+@media (max-width: 700px) {
+  .variant-save-bar { position: static; flex-direction: column; align-items: stretch; }
+  .variant-table .variant-photo-copy { max-width: none; }
+  .variant-table-group.is-dirty { border-color: #b7791f; }
+}

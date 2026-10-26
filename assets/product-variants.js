@@ -60,6 +60,15 @@
     const selected = variants.find(variant => (preserveUnavailable || !variant.option.disabled) && names.every((name, index) => variant.choices[name] === selectors[index].value));
     picker.value = selected?.option.value || '';
     picker.dispatchEvent(new Event('change', { bubbles: true }));
+    if (!selected) {
+      // A photo previews a colour; it does not select a size, price or cart variant.
+      const matching = variants.filter(variant => names.every((name, index) => !selectors[index].value || variant.choices[name] === selectors[index].value));
+      const colorIndex = names.indexOf(picker.dataset.colorName);
+      const hasChoice = selectors.some(select => select.value !== '');
+      const images = [...new Set(matching.map(variant => variant.option.dataset.image))];
+      const colorChosen = colorIndex >= 0 && selectors[colorIndex].value !== '';
+      selectImage(hasChoice && (colorChosen || images.length === 1) ? (images[0] || initialImage) : initialImage);
+    }
   };
   const setAddress = () => {
     const url = new URL(location.href);

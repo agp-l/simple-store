@@ -10,7 +10,7 @@ $editing = (bool) ($editMode ?? false);
 $canEdit = (bool) ($canEditProduct ?? false);
 $imageUrl = static fn (string $path): string => str_starts_with($path, 'images/') ? $basePath . $path : $path;
 $selectedVariant = $editing ? null : ($selectedVariant ?? null);
-$displayImagePath = !empty($selectedVariant['image_path']) ? $selectedVariant['image_path'] : $product['image_path'];
+$displayImagePath = $selectedVariant !== null ? \SimpleStore\Product\VariantImages::resolve($selectedVariant, $product['variant_inventory']['items'] ?? [], $product['image_path']) : $product['image_path'];
 $image = $imageUrl($displayImagePath);
 $mediaLibraryUrl = $basePath . 'admin/?' . http_build_query([
     'section' => 'media', 'type' => 'product', 'key' => $product['product_key'], 'language' => $language,

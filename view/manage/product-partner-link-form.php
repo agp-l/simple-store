@@ -32,8 +32,9 @@ if ($partnerLink !== null && $partnerIsVariant) {
   <?php endif; ?>
     <label>Popisek <input name="label" maxlength="120" required value="<?= $escape($partnerLink['label'] ?? '') ?>" placeholder="Např. Gramino"></label>
     <label class="variant-partner-url">Adresa nabídky u partnera <input type="url" name="url" maxlength="1000" required value="<?= $escape($partnerLink['url'] ?? '') ?>" placeholder="https://…"></label>
-    <div class="variant-partner-actions"><button class="inline-small" name="operation" value="<?= $partnerIsVariant ? 'variant-save' : 'save' ?>"><?= $partnerLink === null ? 'Přidat odkaz' : 'Uložit odkaz' ?></button>
+    <div class="variant-partner-actions"><button class="inline-small" name="operation" value="<?= $partnerIsVariant ? 'variant-save' : 'save' ?>"><?= $partnerLink === null ? 'Přidat odkaz' : 'Uložit pouze odkaz' ?></button>
       <?php if ($partnerLink !== null): ?><button class="inline-small" name="operation" value="<?= $partnerIsVariant ? 'variant-remove' : 'remove' ?>" formnovalidate>Odebrat</button><?php endif; ?>
+      <button class="inline-small" type="reset" data-partner-reset hidden>Vrátit změny odkazu</button>
     </div>
   </form>
 </div>
