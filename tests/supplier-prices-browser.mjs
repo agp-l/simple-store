@@ -18,6 +18,9 @@ test('supplier manager responsive controls, safe review and single-step runner',
    await page.locator('#supplier-scope').selectOption('one');assert.equal(await page.locator('#supplier-product-field').isVisible(),true);
    assert.ok(await page.locator('[name=product_key]').evaluate(el=>el.required));
    assert.match(await page.locator('.supplier-result-title a').first().getAttribute('href'),/\/cs\/produkt\/spacak\?edit=1/);
+   await page.locator('#price-job-1 .supplier-result-photo img').scrollIntoViewIfNeeded();
+   await page.locator('#price-job-1 .supplier-result-photo img').evaluate(img=>img.decode());
+   assert.ok(await page.locator('#price-job-1 .supplier-result-photo img').evaluate(img=>img.naturalWidth>0));
    assert.equal(await page.locator('#price-job-1 .supplier-result-photo img').getAttribute('alt'),'Péřový spacák – velmi dlouhý název <bezpečný>');
    assert.equal(await page.getByRole('button',{name:'Použít cenu i prodávajícího',exact:true}).count(),1);
    assert.match(await page.locator('#price-job-3 .supplier-current-note').innerText(),/Partner nebo odkazy/);

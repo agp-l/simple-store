@@ -346,6 +346,8 @@ jobs:
             /tmp/variant-screenshots/
             /tmp/partner-link-screenshots/
             /tmp/sale-screenshots/
+            /tmp/supplier-screenshots/
+            /tmp/assignment-screenshots/
             /tmp/sales-mass-screenshots/
             /tmp/checkout-presentation/
             /tmp/tax-evidence-screenshots/

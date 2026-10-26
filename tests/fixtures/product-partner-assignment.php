@@ -22,8 +22,8 @@ if($case==='settings'){
     $data=['basePath'=>'/','language'=>'cs','products'=>[$product],'categoryLabels'=>['spani'=>'Spaní'],
         'managingCatalog'=>$case==='catalog','canManageCatalog'=>$case==='catalog','privatePage'=>$case==='catalog',
         'catalogPartnerId'=>7,'catalogPartners'=>[['id'=>7,'name'=>'Alza <test>'],['id'=>8,'name'=>'HUDY']],
-        'catalogVisibility'=>'draft','catalogSupplierState'=>'no_partner','searchTerm'=>'spacák','searchAction'=>'/cs',
+        'catalogVisibility'=>'draft','catalogAvailability'=>'out_of_stock','catalogSupplierState'=>'no_partner','searchTerm'=>'spacák','searchAction'=>'/cs',
         'managementCategories'=>[['path'=>'spani','title'=>'Spaní']],
-        'nextUrl'=>'/cs?manage=1&visibility=draft&supplier_state=no_partner&partner_id=7&search=spacak&offset=12'];
+        'nextUrl'=>'/cs?manage=1&visibility=draft&supplier_state=no_partner&availability=out_of_stock&partner_id=7&search=spacak&offset=12'];
     (new \SimpleStore\Rendering\PageRenderer(dirname(__DIR__,2).'/view'))->render('catalog',$data);
 }

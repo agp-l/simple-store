@@ -8,6 +8,8 @@ final class PartnerStockPolicy
     public static function quantity(mixed $value): ?int
     {
         if (is_array($value)) $value = $value['value'] ?? null;
+        if(is_float($value)&&is_finite($value)&&floor($value)===$value&&$value>=0&&$value<=1000000)$value=(int)$value;
+        if(is_string($value)&&preg_match('/^\d{1,7}\.0+$/D',$value))$value=(int)$value;
         if (!is_int($value) && !(is_string($value) && preg_match('/^\d{1,7}$/D', $value))) return null;
         $number = (int)$value;
         return $number >= 0 && $number <= 1000000 ? $number : null;

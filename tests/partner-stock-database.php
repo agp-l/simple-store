@@ -50,6 +50,7 @@ try{
  $check(count($calls)===$before,'Post-order refresh bypassed 15 minute URL cooldown.');
  $responses['https://stock.test/plain']=$response('plain','OutOfStock');$now=$lastFetch+901;$run(3);
  $check($quantity($keys['plain'])===0,'Post-order refresh did not discover sold-out partner.');
+ $db->insert('shop_orders',['id'=>1001,'order_number'=>'STOCK-1001','total_czk'=>6000,'items_json'=>'[]','shipping_json'=>'{}','status'=>'pending','payment_method'=>'bank_transfer','payment_status'=>'pending','variable_symbol'=>'1001']);
  $own=$make('own','own');$db->update('shop_product_inventory',['available_quantity'=>3],'product_key=%s',$own);$db->update('shop_product_revisions',['stock_status'=>'in_stock'],'product_key=%s',$own);
  $stock->reserve(1001,[['product_key'=>$own,'language'=>'cs','quantity'=>2]]);$check($quantity($own)===1,'Own stock stopped decrementing.');$stock->release(1001);$check($quantity($own)===3,'Own cancellation did not release stock.');$stock->reopen(1001);$check($quantity($own)===1,'Own reopening did not reserve stock.');
  $check($manager->enqueue('one','rapid',$own)['unconfigured']===1,'Own stock entered partner automation.');
