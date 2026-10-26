@@ -31,6 +31,9 @@ $doc=['parser_version'=>PriceParser::VERSION,'single_offers'=>true,'scoped_offer
 $v=$f['variants'][0];$v['variant_key']=str_repeat('b',32);
 $m=Matcher::match($doc,$f['url'],$f['offer']['product_name'],$v);
 $check($m['status']==='exact' && str_starts_with($m['url'],'https://www.pod7kilo.cz/p/'),'Explicit Pod7kilo variant failed.');
+$check(Matcher::match($doc,$f['url'],'Gossamer Gear Vagabond Jet',$v)['status']==='exact','Supplier category prefix prevented an otherwise exact model match.');
+$check(Matcher::match($doc,$f['url'],'Vagabond Jet',$v)['status']==='no_match','Category normalization removed a manufacturer.');
+$check(Matcher::match($doc,$f['url'],'Gossamer Gear Vagabond Jet 2026',$v)['status']==='no_match','Category normalization removed the model year.');
 $check(Matcher::match($doc,$f['url'],'Unrelated model',$v)['status']==='no_match','Structured attributes bypassed model check.');
 $doc['parser_version']=0;
 $check(Matcher::match($doc,$f['url'],$f['offer']['product_name'],$v)['status']==='old_parser','Legacy document treated as current evidence.');

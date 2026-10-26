@@ -7,6 +7,14 @@ final class SupplierCatalogAliases
 {
     public static function name(string $name,string $group,string $url):string
     {
+        $host=preg_replace('/^www\./','',strtolower((string)parse_url($url,PHP_URL_HOST)));
+        if(in_array($host,['pod7kilo.cz','hudy.cz'],true)){
+            // A category prefix is not part of the manufacturer's model name. Do not remove
+            // brands, years, gender, capacities or any other suffix/word from the model.
+            $prefix='/^(?:batoh|spacák|ponožky|boty|přikrývka|karimatka|polštář)\s+/ui';
+            $local=preg_replace($prefix,'',$name);$remote=preg_replace($prefix,'',$group);
+            if(($local!==$name||$remote!==$group)&&PriceParser::sameProductName(['product_name'=>$remote],$local))return $group;
+        }
         $path=rtrim((string)parse_url($url,PHP_URL_PATH),'/');
         // Size tables: https://gramino.cz/p/nemo-tensor-elite,
         // /p/nemo-tensor-all-season, /p/therm-a-rest-neoair-xlite-nxt.
