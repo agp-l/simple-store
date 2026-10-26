@@ -210,7 +210,7 @@ final class PriceManager
             $options=json_decode($settings['options_json']??'null',true)??[];
             $options['last_'.$origin.'_tick']=$now;
             // Once per evaluator release, retry unresolved current products from cache only.
-            // This never bypasses supplier backoffs or creates fresh HTTP requests.
+            // Incomplete obsolete documents may schedule one guarded maintenance refresh.
             if(!(int)$settings['paused']&&(int)($options['rechecked_version']??0)<self::EVALUATOR_VERSION){
                 // Revisit parser migrations deferred by an older evaluator. This only
                 // wakes local work; normal URL cache, robots and host reservations still apply.
@@ -299,19 +299,20 @@ final class PriceManager
                     if(empty($result['fetched']))continue;return ['state'=>'working','wait'=>$wait];}
                 $remote=!empty($result['fetched']);
                 $legacy=!empty($result['document']['offers'])&&(int)($result['document']['parser_version']??0)<PriceParser::VERSION;
+                $cachedResult=$result;
                 if(($candidate['kind']??'')==='variant'){
                     $resolved=$candidate; if($data['hops']>0)$resolved['resolved_url']=$target;
                     $observed=VariantOfferEvaluation::observe($result['document'],$result['document_source']??$target,$snapshot,$resolved,(int)$result['observed_at']);
+                    if($legacy&&$observed['issues']!==[]&&$this->scheduleParserRefresh($job,$data,$cachedResult,$target))continue;
                     $data['variant_observations']=array_replace($data['variant_observations']??[],$observed['observations']);
                     $data['variant_issues']=array_merge($data['variant_issues']??[],$observed['issues']);
-                    if($legacy&&$observed['issues']!==[]&&$this->scheduleParserRefresh($job,$data,$result,$target))continue;
                     $this->advanceVariant($job,$data,$observed['issues'][0]['message']??'Přesné nabídky variant načteny.');
                     if(!$remote)continue;return ['state'=>'working','wait'=>$wait];
                 }
                 if(isset($result['document'])){
                     try{$result=PriceEvaluation::select($result['document'],$target,$snapshot,$this->variantModesInstalled?$settings:[])+['observed_at'=>$result['observed_at']];}
                     catch(InvalidArgumentException $e){
-                        if($legacy&&$this->scheduleParserRefresh($job,$data,$result,$target))continue;
+                        if($legacy&&$this->scheduleParserRefresh($job,$data,$cachedResult,$target))continue;
                         $this->failure($job,$data,$e->getMessage());if(!$remote)continue;return ['state'=>'working','wait'=>$wait];
                     }
                 }
@@ -323,7 +324,7 @@ final class PriceManager
                 $reason=self::reviewReason($snapshot,$result);
                 if($reason!==''&&$legacy&&($result['uncertain']||
                     (!empty($snapshot['variantSettings']['enabled'])&&empty($result['uniform_variants'])&&empty($result['variant_offers'])))&&
-                    $this->scheduleParserRefresh($job,$data,$result,$target))continue;
+                    $this->scheduleParserRefresh($job,$data,$cachedResult,$target))continue;
                 $this->db->update('shop_supplier_price_jobs',['status'=>'review','checked_at'=>$now,'result_json'=>self::json($result),
                     'message'=>$reason?:'Jednoznačná nabídka vybraného prodávajícího.'],'id=%i',$job['id']);
                 if($reason===''){
