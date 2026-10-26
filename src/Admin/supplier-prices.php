@@ -38,6 +38,14 @@ if($method==='POST'&&$pricesReady){
                 $priceManager->enqueue($scope,$speed,is_string($_POST['product_key']??null)?$_POST['product_key']:'');
             $pricesAutoStart=$result['added']>0;
             $pricesNotice='Do fronty přidáno: '.$result['added'].'. Již ve frontě nebo vyčerpaný denní limit: '.$result['daily'].'. Bez použitelného odkazu/prodávajícího: '.$result['unconfigured'].'.';
+        }elseif($action==='supplier-price-probe'){
+            $id=filter_var($_POST['job_id']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);if(!$id)throw new InvalidArgumentException('Neplatná kontrola.');
+            $result=$priceManager->probe($id);
+            if(($_POST['format']??'')==='json'){
+                header('Content-Type: application/json; charset=utf-8');header('Cache-Control: no-store');
+                echo json_encode($result,JSON_THROW_ON_ERROR|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES);exit;
+            }
+            if($result['ok']===false)$pricesError=$result['message'];else $pricesNotice=$result['message'];
         }elseif($action==='supplier-price-retry'){
             $id=filter_var($_POST['job_id']??null,FILTER_VALIDATE_INT,['options'=>['min_range'=>1]]);if(!$id)throw new InvalidArgumentException('Neplatná kontrola.');
             $result=$priceManager->retry('one','rapid',($_POST['fresh']??'')==='1',$id);$pricesAutoStart=$result['added']>0;

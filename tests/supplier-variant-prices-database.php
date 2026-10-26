@@ -94,6 +94,18 @@ try{
   $check($job($ak)['status']===($code===200?'applied':'failed'),'Product denial was not distinguished from robots unavailability.');
  }
  $check((int)$db->queryFirstField('SELECT next_at FROM shop_supplier_price_hosts WHERE host=%s','alza.cz')>$now+3000,'Actual product 403 did not back off.');
+ // Diagnostics use the shared response but cannot modify products or queue decisions.
+ $beforeSale=$sale($ak);$beforeJob=$job($ak);$before=count($requests);
+ $probe=$manager->probe((int)$beforeJob['id']);
+ $check($probe['ok']===false&&str_contains($probe['message'],'HTTP 403'),'Diagnostic hid the actual product denial.');
+ $check(count($requests)===$before&&$sale($ak)===$beforeSale&&$job($ak)===$beforeJob,'Diagnostic repeated a denied request or changed business data.');
+ $beforeSale=$sale($key);$beforeJob=$job($key);$before=count($requests);
+ $probe=$manager->probe((int)$beforeJob['id']);
+ $check($probe['ok']===true&&count($requests)===$before,'Diagnostic did not share the successful URL cache.');
+ $check($sale($key)===$beforeSale&&$job($key)===$beforeJob,'Successful diagnostic changed prices or history.');
+ $reject(fn()=>$manager->probe((int)$job($own)['id']));
+ $manager->configure(false,true);$reject(fn()=>$manager->probe((int)$beforeJob['id']));$manager->configure(false,false);
+
  $report=$manager->diagnostics();$check($report['version']===3,'Canonical diagnostic version missing.');
  $replay=PriceEvaluation::replay($report);$check(count($replay['items'])>0,'Read-only replay lost unresolved canonical offers.');
  echo "Exact supplier prices: durable variant collection, atomic apply, cache proof, stale/manual URL guards, own mode and robots/product denial passed.\n";

@@ -200,3 +200,42 @@ Soukromé nástroje (vyžadují přihlášení administrátora):
 - `php tools/supplier-price-worker.php --variant-link-plan` — náhled přes CLI. Zápisy provádí běžný `--tick` jen při zapnutém párování.
 
 Párování zapisuje pouze partnerské odkazy a jejich důkazy. Nemění vybraného prodávajícího, režim prodeje, ceny, vlastní zásoby, rezervace ani objednávky. Pravidla dostupnosti 3 / skutečný počet / poslední kus patří do samostatné etapy D.
+
+## Cenové jádro nad přesnými nabídkami variant (26. 10. 2026)
+
+Fronta sestavuje zdroje z `shop_product_variant_supplier_links`. Stabilní `link_key`,
+`variant_key` a `partner_key` propojují důkaz s konkrétní kombinací a obchodem. Odstraněné
+odkazy jsou tombstones: nesmí obnovit starý společný zdroj. Ruční/discovered odkaz má přednost
+před původním inherited odkazem stejné varianty a partnera. Produkty bez aktivních variant
+nebo dosud bez variantních odkazů zachovávají společné zdroje.
+
+Každá načtená stránka přidá do trvalého záznamu úlohy ověřené nabídky (`variant_observations`).
+Až po zpracování všech odkazů jednoho partnera se ověří úplnost aktivních variant, rozpory
+mezi odkazy a stáří každého důkazu. Ceny různých partnerů se neskládají dohromady. Neúplný
+nebo rozporný soubor nelze ručně schválit jako jednu společnou cenu. Výsledné přesné URL,
+částky, dostupnost a časy jsou v `canonical_variant_offers`, v JSON diagnostice verze 3
+ i v rozbalitelném přehledu u výsledku kontroly. Změny se uloží v jedné transakci po opětovné
+kontrole odkazů a produktu. Skok přes 30 % se kontroluje také pro každou jednotlivou variantu.
+
+Čerstvá společná modelová stránka může posloužit jako důkaz pro několik variant, pokud obsahuje
+jejich konkrétní nabídky. Nepřepíše existující odpověď přesného URL ani nesprávný ruční odkaz.
+Časy zůstávají původní, opakované čtení cache jejich platnost neprodlužuje. Offline replay
+používá stejnou variantovou agregaci jako worker.
+
+### Diagnostika načítání a Alza
+
+U výsledku je tlačítko **Ověřit načítání bez změny cen**. Soukromý POST
+`/admin/supplier-prices/` s `action=supplier-price-probe`, `job_id`, platným CSRF a volitelným
+`format=json` vrací stav přístupu k první aktuální nabídce produktu. Nezapisuje ceny, sklad
+ani stav úloh. Sdílí 24hodinovou URL cache, zámek, prodlevy a blokace s workerem. Jedno volání
+provede nejvýše jeden HTTP požadavek; při prvním ověření robots nebo přesměrování vrátí pokyn
+k pokračování po prodlevě. Pozastavená fronta zastaví i diagnostické HTTP požadavky.
+
+Podle RFC 9309 §2.3.1.3 samotný nedostupný robots.txt (403/404/410) nezakazuje veřejnou
+produktovou stránku. Tyto odpovědi proto umožní běžný požadavek na produkt. Explicitní
+Disallow, autentizace, 429, 5xx a síťové chyby zůstávají blokující. Odpověď 403 samotného
+produktu dál ukončí načítání a nastaví prodlevu. User-Agent zůstává pravdivý, nepoužívají
+se přihlášení, proxy ani neveřejná API. Dostupnost Alzy je nutné ověřit ze skutečného hostingu;
+změna interpretace robots sama nezaručuje, že Alza povolí produktové požadavky.
+
+Zdroj: https://www.rfc-editor.org/rfc/rfc9309.html#section-2.3.1.3

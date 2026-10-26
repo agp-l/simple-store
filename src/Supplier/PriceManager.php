@@ -452,6 +452,39 @@ final class PriceManager
         return '';
     }
     public function apply(int $id,bool $variants):void{$this->locked(fn()=>$this->applyInternal($id,true,$variants));}
+    /** Read-only price diagnostic: shared 24h URL cache/host reservations, at most one HTTP request.
+     * Does not enqueue, approve, or modify any product, price, stock or existing job.
+     */
+    public function probe(int $id):array
+    {
+        return $this->locked(function()use($id):array{
+            if(!empty($this->settings()['paused']))throw new InvalidArgumentException('Zpracování je pozastavené.');
+            $key=$this->db->queryFirstField('SELECT product_key FROM shop_supplier_price_jobs WHERE id=%i',$id);
+            $snapshot=$key?$this->snapshot($key):null;$candidate=$snapshot['candidates'][0]??null;
+            if(!$snapshot||($snapshot['sale']['mode']??'own')!=='assisted'||!$candidate)throw new InvalidArgumentException('Produkt nemá aktivní partnerskou nabídku pro asistovaný nákup.');
+            $url=$candidate['url'];$label=$candidate['name'].': ';
+            $reply=static fn(?bool $ok,string $message):array=>['ok'=>$ok,'partner'=>$candidate['name'],'url'=>$url,'message'=>$label.$message.' Ceny produktu se při diagnostice nemění.'];
+            for($hop=0;$hop<4;$hop++){
+                $robots=$this->cached('https://'.HttpClient::url($url).'/robots.txt','robots','normal',0);
+                if(isset($robots['wait']))return $reply(null,'Další požadavek je povolený za '.$robots['wait'].' s.');
+                if(isset($robots['error']))return $reply(false,$robots['error']);
+                $policy=Robots::policy($robots['body'],$url);$requestPolicy=Robots::policy($robots['body'],PriceParser::requestUrl($url));
+                if(!$policy['allowed']||!$requestPolicy['allowed'])return $reply(false,'robots.txt nepovoluje čtení této adresy.');
+                if(!empty($robots['fetched']))return $reply(null,'Pravidla načítání ověřena. Zopakuj diagnostiku po prodlevě obchodu (nejméně 60 s).');
+                $result=$this->cached($url,'product','normal',max($policy['delay'],$requestPolicy['delay']));
+                if(isset($result['wait']))return $reply(null,'Další požadavek je povolený za '.$result['wait'].' s.');
+                if(isset($result['error']))return $reply(false,$result['error']);
+                if(!empty($result['redirect'])){
+                    $url=HttpClient::redirect($url,$result['redirect']);
+                    if(!empty($result['fetched']))return $reply(null,'Stránka se přesměrovala. Zopakuj diagnostiku po prodlevě obchodu (nejméně 60 s).');
+                    continue;
+                }
+                $count=count($result['document']['scoped_offers']??$result['document']['offers']??[]);
+                return $reply($count>0,'Stránka dostupná, nalezeno nabídek s cenou: '.$count.'.'.(!empty($robots['unavailable'])?' Soubor robots.txt není dostupný (HTTP '.$robots['http_code'].').':''));
+            }
+            return $reply(false,'Příliš mnoho přesměrování. Oprav partnerský odkaz.');
+        });
+    }
     private function applyInternal(int $id,bool $manual,bool $variants):void
     {
         $this->db->startTransaction();

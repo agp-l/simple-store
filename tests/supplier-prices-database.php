@@ -165,7 +165,7 @@ try{
  $manager->configurePricing(['pricing_enabled'=>'1','pricing_small_limit'=>'1000','pricing_small_margin'=>'50','pricing_margin'=>'100','pricing_step'=>'100']);
  $check((int)$manager->settings()['last_cron_tick']===$now&&(int)$manager->settings()['rechecked_version']===PriceManager::EVALUATOR_VERSION,'Pricing settings erased scheduler metadata.');
  $report=$manager->diagnostics();$removed=array_values(array_filter($report['items'],static fn(array $item):bool=>$item['product_key']===str_repeat('f',32)))[0];
- $check(!$removed['active']&&$removed['snapshot']===null&&$report['version']===2,'Diagnostic active/history boundary wrong.');
+ $check(!$removed['active']&&$removed['snapshot']===null&&$report['version']===3,'Diagnostic active/history boundary wrong.');
  $check(!str_contains(json_encode($report),'cron_hash')&&!str_contains(json_encode($report),$token),'Diagnostic credential leak.');
  // Missing attributes in an older cache get ONE fresh attempt at the next legal time.
  $db->update('shop_supplier_price_jobs',['status'=>'dismissed'],'status=%s','queued');

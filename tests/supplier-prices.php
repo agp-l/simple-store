@@ -247,3 +247,8 @@ $local['variants'][0]['price_czk']=null;$local['sale']=['variant_prices_json'=>'
 $check(!SimpleStore\Supplier\PriceEvaluation::mayEnableVariantPricing($local,['pricing_enabled'=>1]),'Manual supplier overrides were claimed by automation.');
 $keyedCopy=SimpleStore\Product\ProductFamilyMerge::combinedCopy(['key-a'=>['name'=>'Mat — Regular','summary'=>'Shared','description'=>'Common. Width 51 cm.'],'key-b'=>['name'=>'Mat — Long Wide','summary'=>'Shared','description'=>'Common. Width 64 cm.']]);
 $check($keyedCopy['summary']==='Shared'&&$keyedCopy['description']==='Common.'&&$keyedCopy['sections'][1]['heading']==='Provedení Long Wide','Product-keyed snapshots changed copy extraction.');
+
+// Unavailable robots is distinct from an actual product denial. Authentication and backoffs stay closed.
+foreach([403,404,410] as $code)$check(!isset(SimpleStore\Supplier\Robots::cachedResponse(['http_code'=>$code,'error'=>'old parser denial'])['error']),'Unavailable robots cache not reinterpreted.');
+foreach([401,407,408,429,500,503,0] as $code)$check(isset(SimpleStore\Supplier\Robots::cachedResponse(['http_code'=>$code,'error'=>'keep'])['error']),'Robots authentication, network or rate denial bypassed.');
+$check(SimpleStore\Admin\AdminActionPolicy::allows('supplier-price-probe'),'Diagnostic action not covered by admin policy.');

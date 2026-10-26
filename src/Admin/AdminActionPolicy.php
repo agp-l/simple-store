@@ -30,7 +30,7 @@ final class AdminActionPolicy
 
     public const SUPPLIER_PRICES = [
         'supplier-price-start', 'supplier-price-tick', 'supplier-price-settings', 'supplier-price-key', 'supplier-price-apply', 'supplier-price-dismiss',
-        'supplier-price-pricing', 'supplier-price-retry', 'supplier-price-tempo', 'supplier-price-export',
+        'supplier-price-pricing', 'supplier-price-retry', 'supplier-price-tempo', 'supplier-price-export', 'supplier-price-probe',
         'supplier-variant-links-settings', 'supplier-variant-links-export',
     ];
 
