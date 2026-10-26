@@ -247,3 +247,25 @@ Zdroj: https://www.rfc-editor.org/rfc/rfc9309.html#section-2.3.1.3
 - Opakování kontroly porovnává aktuální zdroje s tehdejším nastavením. Při novém partnerovi/adrese kontroluje novou nabídku s běžnou cache a prodlevami, bez nutnosti vynutit opakované stažení starého obchodu. Stejné zdroje se bez zaškrtnutí znovu pouze vyhodnotí z cache. Totéž platí při změně zdrojů již čekající úlohy.
 - Historie jasně odděluje aktuální partnerské odkazy od odkazů použitých při starých pokusech. Starý důkaz se nemaže, ale změněný produkt nelze přecenit starým návrhem. Opakování historického řádku s novějším výsledkem vysvětlí, že je potřeba otevřít aktuální kontrolu.
 - Diagnostika používá aktuální nabídku i při spuštění ze starého výsledku. Zobrazuje konkrétní načtenou cenu a případný důvod ruční kontroly. Nemění cenová rozhodnutí, sklad ani produkt; využívá společnou cache a nejvýše jeden HTTP požadavek. Cena uložená například jako 5 Kč proto při načtení reálné ceny stále správně vyžaduje kontrolu změny nad 30 %.
+
+### Exact identities and catalog conventions (parser 6)
+
+Partner attributes accept explicit height/size, battery capacity, zipper side and
+product version fields. Pod 7 kilo's slash-separated attribute labels preserve
+slashes inside colour names. A model page may publish the minimum price while
+preselecting a more expensive SKU; every variant still keeps its own table price.
+A precise variant page must agree with that SKU's price. Contradictory prices fail
+closed. Capacity comes only from the technical parameter table.
+
+HUDY single-SKU model URLs are accepted only when the selected size ID, detail
+barcode and product name, page URL, and purchase link all agree. No purchase is
+made. Explicit copied SKU links can disambiguate identical labels; other copied
+combinations must independently match their own SKU.
+
+Catalog translations are supplier/model scoped in `SupplierCatalogAliases`.
+Luxury Fillo requires the expanded version; HyperBead requires explicit model
+technology evidence. Generic colour similarity is not identity evidence. The
+sanitized fixtures in `supplier-identity-regressions.json` exercise the observed
+failures and rejection of unrelated models, colours and SKU selectors. Parser and
+evaluator versions cause unresolved old documents to be refreshed within existing
+request limits; no stock counts or reservations are changed by these checks.

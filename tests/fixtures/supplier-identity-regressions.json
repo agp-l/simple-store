@@ -197,6 +197,21 @@
     "expected": 13180
   },
   {
+    "id": 1125,
+    "name": "Cumulus Junior 300 – M",
+    "url": "https://gramino.cz/p/cumulus-junior-300",
+    "body": "<script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Product\", \"name\": \"Cumulus Junior 300\", \"description\": \"Promyšlený dětský péřový spacák, který si tvoje děti zamilují. Spacák je konstruován ze špičkových materiálů stejně jako Lite Line 400. Spacák je vhodný do výšky 145 cm. Díky stahování můžeš spacák ještě o 30 cm zkrátit s tím, že do něj dítě postupně doroste.\", \"url\": \"https://gramino.cz/p/cumulus-junior-300\", \"offers\": {\"@type\": \"Offer\", \"price\": \"6190\", \"priceCurrency\": \"CZK\", \"availability\": \"https://schema.org/InStock\", \"url\": \"https://gramino.cz/p/cumulus-junior-300\"}}</script>\n## Specifikace\n\n- Velikost spacáku: M\n- Pozice zipu: Levá strana\n- Konstrukce komor: H-komory\n- Poměr prachového peří a malých pírek: 95/5 (peří/prachové peří)\n- Plnění komor: 55:45\n- Počet komor: 27\n- Extrémní teplota: -11 °C\n- Sezóna: Třísezónní\n- Komfortní teplota: 5 °C\n- Limitní teplota: 3 °C\n- Hmotnost peří: 300 g\n- Plnivost peří: 850 cuin\n- Typ peří: Husí\n- Hydrofobní peří: Ne\n- Typ izolace: Péřová\n- Materiál: Pertex Quantum DWR (29 g/m², 15D ripstop nylon), Zip YKK 5 mm\n- Rozměry ve sbaleném stavu: 22 × 16 cm\n- Maximální délka uživatele: 145 cm\n- Objem transportního vaku: 4 l\n- Šířka v oblasti kotníků: 50 cm\n- Šířka v úrovni ramenou: 65 cm\n- Hmotnost: 550 g\n- Woocommerce product id: 77026\n- Značka: Cumulus\n\n",
+    "variants": [
+      {
+        "variant_key": "d7f92957e57a81b2c450ebb4bc0abea7",
+        "price_czk": null,
+        "enabled": "1",
+        "choices_json": "{\"Zip\":\"Levá strana\"}"
+      }
+    ],
+    "expected": 6190
+  },
+  {
     "id": 1131,
     "name": "Lifesystems Stormproof Matches",
     "url": "https://www.hudy.cz/stormproof-matches-25-matches?size=498510",

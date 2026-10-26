@@ -40,7 +40,7 @@ final class StructuredVariantScope
             PriceParser::sameModel($product['url']??'',$url)){
             preg_match_all('/^## Specifikace\s*\n(.*?)(?=^## |\z)/ms',$body,$sections);
             foreach($sections[1]as$section){
-                preg_match_all('/^- (Barva|Kapacita baterie|Velikost produktu|Strana zipu|Rozměr): ([^\r\n]+)$/mu',$section,$matches,PREG_SET_ORDER);
+                preg_match_all('/^- (Barva|Kapacita baterie|Velikost produktu|Strana zipu|Pozice zipu|Rozměr): ([^\r\n]+)$/mu',$section,$matches,PREG_SET_ORDER);
                 foreach($matches as$m){
                     if(isset($values[$m[1]])&&$values[$m[1]]!==$m[2])return [];
                     $values[$m[1]]=$m[2];
