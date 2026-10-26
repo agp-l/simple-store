@@ -14,6 +14,7 @@ use Throwable;
 /** Store each product edit as a new complete snapshot. */
 final class ProductRepository
 {
+    public const AVAILABILITY_FILTERS = ['all' => 'Všechny dostupnosti', 'in_stock' => 'Skladem', 'out_of_stock' => 'Není skladem', 'on_order' => 'Na objednávku'];
     public const SUPPLIER_FILTERS = ['all' => 'Všechny produkty', 'no_partner' => 'Bez prodávajícího',
         'no_links' => 'Bez dodavatelských odkazů', 'either' => 'Chybí prodávající nebo odkaz', 'both' => 'Chybí prodávající i odkazy'];
     private const STOCK = ['in_stock', 'on_order', 'out_of_stock'];
@@ -101,12 +102,13 @@ final class ProductRepository
         int $offset = 0,
         int $limit = 12,
         string $supplierState = 'all',
-        int $partnerId = 0
+        int $partnerId = 0,
+        string $availability = 'all'
     ): array
     {
         if (!in_array($language, $this->languages, true) ||
             !in_array($visibility, ['all', 'draft', 'published'], true) || !isset(self::SUPPLIER_FILTERS[$supplierState]) ||
-            $offset < 0 || $offset > 100000 || $limit < 1 || $limit > 48 || strlen($search) > 200 || $partnerId < 0) {
+            $offset < 0 || $offset > 100000 || $limit < 1 || $limit > 48 || strlen($search) > 200 || $partnerId < 0 || !isset(self::AVAILABILITY_FILTERS[$availability])) {
             throw new InvalidArgumentException('Invalid product management page.');
         }
         $where = 'language=%s AND active_product_key IS NOT NULL';
@@ -123,6 +125,17 @@ final class ProductRepository
         if ($search !== '') {
             $where .= ' AND (LOCATE(%s, name)>0 OR LOCATE(%s, brand)>0 OR LOCATE(%s, summary)>0)';
             array_push($values, $search, $search, $search);
+        }
+        if ($availability !== 'all') {
+            // Same effective state as ProductStockRepository::decorate, before pagination.
+            $simple = "CASE WHEN r.stock_status='in_stock' AND COALESCE((SELECT available_quantity FROM shop_product_inventory i WHERE i.product_key=r.product_key),0)<1 THEN 'out_of_stock' ELSE r.stock_status END";
+            $effective = $simple;
+            if ((new ProductVariantRepository($this->db))->installed()) {
+                $active = 'SELECT 1 FROM shop_product_variants v WHERE v.product_key=r.product_key AND v.enabled=1';
+                $effective = "CASE WHEN EXISTS (SELECT 1 FROM shop_product_variant_settings vs WHERE vs.product_key=r.product_key AND vs.enabled=1) THEN CASE WHEN EXISTS (" . $active . " AND v.stock_status='in_stock' AND v.available_quantity>0) THEN 'in_stock' WHEN EXISTS (" . $active . " AND v.stock_status='on_order') THEN 'on_order' ELSE 'out_of_stock' END ELSE " . $simple . ' END';
+            }
+            $where .= ' AND (' . $effective . ')=%s';
+            $values[] = $availability;
         }
         $supplierTablesReady = (int) $this->db->queryFirstField('SELECT COUNT(*) FROM information_schema.TABLES
             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN (%s,%s,%s)',

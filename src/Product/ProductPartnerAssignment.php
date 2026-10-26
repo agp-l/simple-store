@@ -105,6 +105,7 @@ final class ProductPartnerAssignment
             foreach ($plan['items'] as $item) {
                 if ($item['state'] !== 'change') continue;
                 $sale = $item['sale'];
+                (new PartnerStockState($this->db))->changeSeller($item['key'],$sale,$sale['mode']??'own',(int)$item['partner']['id']);
                 $values = ['partner_id' => (int) $item['partner']['id'], 'version' => (int) ($sale['version'] ?? 0) + 1,
                     'supplier_price_czk' => null, 'variant_prices_json' => '{}'];
                 if ($sale === null) {
@@ -153,6 +154,7 @@ final class ProductPartnerAssignment
     private function rows(bool $lock = false): array
     {
         if (!$this->installed()) throw new InvalidArgumentException('Nejprve aktualizuj databázi v administraci.');
+        if($lock)$this->db->query('SELECT product_key FROM shop_product_inventory ORDER BY product_key FOR UPDATE');
         $suffix = $lock ? ' FOR UPDATE' : '';
         $products = [];
         foreach ($this->db->query('SELECT product_key, id, name, language, slug FROM shop_product_revisions

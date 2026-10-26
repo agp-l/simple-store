@@ -36,6 +36,8 @@ test('one-click seller assignment, mobile layout and private catalog filters',as
       await page.goto(url('catalog'));
       assert.equal(await page.getByLabel('Partner / dodavatel',{exact:true}).inputValue(),'7');
       assert.equal(await page.locator('#search-form [name="partner_id"]').inputValue(),'7');
+      await page.getByRole('combobox',{name:'Dostupnost',exact:true}).selectOption('out_of_stock');
+      assert.equal(await page.getByRole('combobox',{name:'Dostupnost',exact:true}).inputValue(),'out_of_stock');
       for (const name of ['Zveřejněné','Načíst další produkty']) assert.match(await page.getByRole('link',{name,exact:true}).getAttribute('href'),/partner_id=7/);
       assert.equal(await page.getByLabel('Prodávající a dodavatelé',{exact:true}).inputValue(),'no_partner');
       assert.equal(await page.locator('#search-form [name="supplier_state"]').inputValue(),'no_partner');
@@ -50,7 +52,7 @@ test('one-click seller assignment, mobile layout and private catalog filters',as
       await page.screenshot({path:`/tmp/assignment-screenshots/catalog-${width}.png`});
       await page.getByLabel('Prodávající a dodavatelé',{exact:true}).selectOption('both');
       await page.getByLabel('Partner / dodavatel',{exact:true}).selectOption('8');
-      await page.route('**/cs?**',async r=>{const u=new URL(r.request().url());assert.equal(u.searchParams.get('supplier_state'),'both');assert.equal(u.searchParams.get('partner_id'),'8');assert.equal(u.searchParams.get('visibility'),'draft');assert.equal(u.searchParams.get('search'),'spacák');assert.equal(u.searchParams.has('offset'),false);await r.fulfill({body:'<p>Filter fixture</p>'});});
+      await page.route('**/cs?**',async r=>{const u=new URL(r.request().url());assert.equal(u.searchParams.get('supplier_state'),'both');assert.equal(u.searchParams.get('availability'),'out_of_stock');assert.equal(u.searchParams.get('partner_id'),'8');assert.equal(u.searchParams.get('visibility'),'draft');assert.equal(u.searchParams.get('search'),'spacák');assert.equal(u.searchParams.has('offset'),false);await r.fulfill({body:'<p>Filter fixture</p>'});});
       await page.getByRole('button',{name:'Filtrovat produkty'}).click();await page.getByText('Filter fixture').waitFor();
       await page.goto(url('public'));
       assert.equal(await page.locator('.catalog-supplier-filter,.manage-supplier-status').count(),0,'Admin data appeared in public UI.');

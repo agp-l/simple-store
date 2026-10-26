@@ -64,6 +64,17 @@ try {
     $orders=new OrderRepository($db,new BankTransferPayment('','1004823033/3030','Test'),7,$stock);
     $requestKey=bin2hex(random_bytes(32));
     $order=$orders->create(null,'buyer@example.test',$summary['items'],$shipping,79,$requestKey);$orderIds[]=(int)$order['id'];
+    $check((int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$key)===10,'Assisted order permanently drained the partner limit.');
+    $check((int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$ownKey)===9,'Mixed order did not reserve own stock.');
+    $check((int)$db->queryFirstField('SELECT COUNT(*) FROM shop_partner_refresh_requests WHERE product_key=%s',$key)===1,'Assisted order did not queue partner refresh.');
+    // A reservation created by the old assisted-stock logic must not inflate a fresh partner limit.
+    $db->startTransaction();
+    $db->insert('shop_order_stock_reservations',['order_id'=>$order['id'],'product_key'=>$key,'quantity'=>2,'state'=>'reserved']);
+    $stock->release((int)$order['id']);$stock->release((int)$order['id']);
+    $check((int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$key)===10,'Legacy assisted cancellation inflated partner limit.');
+    $stock->reopen((int)$order['id']);
+    $check((int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$key)===10,'Legacy assisted reopening drained partner limit.');
+    $db->rollback();
     $check($order['items'][0]['delivery_note']===A::DELIVERY_POLICY, 'Common delivery mandate was not frozen in the order.');
     $check((int)$order['total_czk']===3879&&$order['items'][0]['assistance_fee_czk']===122,'Order snapshot differs from approval.');
     $check($orders->create(null,'buyer@example.test',$summary['items'],$shipping,79,$requestKey)['id']===$order['id'],'Duplicate contract created.');
@@ -84,11 +95,13 @@ try {
     $partners->save($partnerId, array_replace($profile,['confirmed'=>'1','version'=>'2']));
     // A failed confirmation must roll back the entire order and its stock reservation.
     $before=(int)$db->queryFirstField('SELECT COUNT(*) FROM shop_orders');
+    $refreshBefore=$db->queryFirstRow('SELECT * FROM shop_partner_refresh_requests WHERE product_key=%s',$key);
     $stockBefore=(int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$key);
     $mail->save(array_replace($mailInput,['automatic_enabled'=>'0']));
     $reject(static fn()=> $orders->create(null,'buyer@example.test',$summary['items'],$shipping,79,bin2hex(random_bytes(32))));
     $check((int)$db->queryFirstField('SELECT COUNT(*) FROM shop_orders')===$before&&
         (int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$key)===$stockBefore,'Nested mail transaction committed a failed order.');
+    $check($refreshBefore===$db->queryFirstRow('SELECT * FROM shop_partner_refresh_requests WHERE product_key=%s',$key),'Rolled-back order changed the refresh outbox.');
     $mail->save($mailInput);
     $bad=$shipping;$bad['assisted_purchase']['terms_hash']=str_repeat('0',64);
     $reject(static fn()=> $orders->create(null,'buyer@example.test',$summary['items'],$bad,79,bin2hex(random_bytes(32))));

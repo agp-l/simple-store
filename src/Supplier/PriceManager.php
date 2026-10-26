@@ -11,7 +11,7 @@ use Throwable;
 
 final class PriceManager
 {
-    public const EVALUATOR_VERSION = 10;
+    public const EVALUATOR_VERSION = 11;
     private $transport;
     private $clock;
     private ?bool $variantModesInstalled=null;
@@ -245,6 +245,7 @@ final class PriceManager
                 $this->enqueueInternal('all','normal');
                 $this->db->update('shop_supplier_price_settings',['next_weekly'=>$now+604800],'id=1');
             }
+            $this->queuePartnerRefreshes($origin, $options);
             // Bounded local work, at most ONE remote request in the entire tick.
             $jobs=$this->db->query('SELECT * FROM shop_supplier_price_jobs WHERE status=%s AND next_at<=%i ORDER BY next_at,id LIMIT 12','queued',$now);
             for($cursor=0;$cursor<min(count($jobs),24);$cursor++){
@@ -300,6 +301,7 @@ final class PriceManager
                 $remote=!empty($result['fetched']);
                 $legacy=!empty($result['document']['offers'])&&(int)($result['document']['parser_version']??0)<PriceParser::VERSION;
                 $cachedResult=$result;
+                if($legacy&&$this->scheduleParserRefresh($job,$data,$cachedResult,$target))continue;
                 if(($candidate['kind']??'')==='variant'){
                     $resolved=$candidate; if($data['hops']>0)$resolved['resolved_url']=$target;
                     $observed=VariantOfferEvaluation::observe($result['document'],$result['document_source']??$target,$snapshot,$resolved,(int)$result['observed_at']);
@@ -327,6 +329,7 @@ final class PriceManager
                     $this->scheduleParserRefresh($job,$data,$cachedResult,$target))continue;
                 $this->db->update('shop_supplier_price_jobs',['status'=>'review','checked_at'=>$now,'result_json'=>self::json($result),
                     'message'=>$reason?:'Jednoznačná nabídka vybraného prodávajícího.'],'id=%i',$job['id']);
+                $this->synchronizeStock((int)$job['id']);
                 if($reason===''){
                     try{$this->applyInternal((int)$job['id'],false,false);}catch(InvalidArgumentException $e){
                         $this->db->update('shop_supplier_price_jobs',['message'=>$e->getMessage()],'id=%i',$job['id']);
@@ -343,6 +346,57 @@ final class PriceManager
     /** Reuse a fresh model document only when it proves every requested variant URL.
      * Never replace a response already cached for the exact target (including a denial).
      */
+    /** Coalesce checkout requests; scheduled daily maintenance uses the normal 24h cache. */
+    private function queuePartnerRefreshes(string $origin, array $options): void
+    {
+        $queue=new \SimpleStore\Product\PartnerRefreshQueue($this->db);
+        if(!$queue->installed())return;
+        $now=$this->now();
+        if(in_array($origin,['cron','cli'],true)&&(int)($options['availability_next_scan']??0)<=$now){
+            $initial=empty($options['availability_initialized']);
+            foreach($this->db->query('SELECT s.product_key FROM shop_product_sales s WHERE s.mode=%s AND EXISTS (SELECT 1 FROM shop_product_revisions p WHERE p.product_key=s.product_key AND p.active_product_key IS NOT NULL)','assisted')as$row){
+                $last=(int)$this->db->queryFirstField('SELECT MAX(GREATEST(created_at,checked_at)) FROM shop_supplier_price_jobs WHERE product_key=%s',$row['product_key']);
+                if($initial||$last<=$now-86400)$queue->request($row['product_key'],0);
+            }
+            $options['availability_initialized']=true;$options['availability_next_scan']=$now+300;
+            $this->db->update('shop_supplier_price_settings',['options_json'=>self::json($options)],'id=1');
+        }
+        $requests=$this->db->query('SELECT * FROM shop_partner_refresh_requests q WHERE NOT EXISTS (SELECT 1 FROM shop_supplier_price_jobs j WHERE j.product_key=q.product_key AND j.status=%s) ORDER BY requested_after,product_key LIMIT 12','queued');
+        foreach($requests as$request){
+            $this->db->startTransaction();
+            try{
+                $snapshot=$this->snapshot($request['product_key']);
+                if($snapshot!==null&&($snapshot['sale']['mode']??'own')==='assisted'&&$snapshot['candidates']!==[]){
+                    $data=['snapshot'=>$snapshot,'fingerprint'=>hash('sha256',self::json($snapshot)),'index'=>0,'trace'=>[],'redirect'=>'','hops'=>0,'evaluator_version'=>self::EVALUATOR_VERSION,'refresh_after'=>(int)$request['requested_after'],'availability_refresh'=>true];
+                    $this->db->insert('shop_supplier_price_jobs',['product_key'=>$request['product_key'],'product_name'=>$snapshot['products'][0]['name'],'mode'=>'fast','created_at'=>$now,'next_at'=>max($now,(int)$request['requested_after']),'data_json'=>self::json($data)]);
+                }
+                // A concurrent newer order keeps its request; it cannot disappear with this batch.
+                $this->db->query('DELETE FROM shop_partner_refresh_requests WHERE product_key=%s AND generation=%i',$request['product_key'],$request['generation']);
+                $this->db->commit();
+            }catch(Throwable $e){$this->db->rollback();throw $e;}
+        }
+    }
+
+    private function synchronizeStock(int $id): void
+    {
+        $this->db->startTransaction();
+        try{
+            $job=$this->db->queryFirstRow('SELECT * FROM shop_supplier_price_jobs WHERE id=%i FOR UPDATE',$id);
+            $data=json_decode($job['data_json'],true);$result=json_decode($job['result_json'],true);
+            (new \SimpleStore\Product\ProductStockRepository($this->db))->ensure($job['product_key']);
+            $this->db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s FOR UPDATE',$job['product_key']);
+            $snapshot=$this->snapshot($job['product_key'],true);
+            if($snapshot!==null&&hash_equals($data['fingerprint'],hash('sha256',self::json($snapshot)))&&(int)($result['observed_at']??0)>$this->now()-86400&&(int)$result['observed_at']<=$this->now()){
+                $changes=(new PartnerStockSynchronizer($this->db))->apply($job['product_key'],$snapshot,$result);
+                $result['stock_changes']=$changes;
+                // Stock revisions invalidate open editors, but not this same verified price decision.
+                $data['snapshot']=$this->snapshot($job['product_key']);$data['fingerprint']=hash('sha256',self::json($data['snapshot']));
+                $this->db->update('shop_supplier_price_jobs',['data_json'=>self::json($data),'result_json'=>self::json($result)],'id=%i',$id);
+            }
+            $this->db->commit();
+        }catch(Throwable $e){$this->db->rollback();throw $e;}
+    }
+
     private function reusableVariantDocument(array $snapshot,array $candidate,string $target,int $refreshAfter=0):?array
     {
         if($this->db->queryFirstField('SELECT url_hash FROM shop_supplier_price_cache WHERE url_hash=%s AND expires_at>%i',HttpClient::cacheKey('product',$target),$this->now())!==null)return null;
@@ -374,6 +428,7 @@ final class PriceManager
             if($kind==='robots')$cached=Robots::cachedResponse($cached);
             $fetched=(int)($cached['fetched_at']??((int)$cache['expires_at']-86400));
             if($cacheOnly||$refreshAfter===0||$fetched>=$refreshAfter||in_array($cached['http_code']??0,[403,429,503],true))return $cached;
+            if($fetched+900>$now)return ['wait'=>$fetched+900-$now];
         }
         if($cacheOnly)return ['error'=>'Uložená nabídka chybí nebo vypršela. Vyžádej nové načtení stránky.'];
         $host=ProductPartnerAssignment::host($url);
@@ -444,6 +499,7 @@ final class PriceManager
                 $this->db->update('shop_supplier_price_jobs',['status'=>'review','checked_at'=>$this->now(),
                     'data_json'=>self::json($data),'result_json'=>self::json($result),
                     'message'=>$reason?:'Přesná nabídka ověřena pro každou aktivní variantu.'],'id=%i',$job['id']);
+                $this->synchronizeStock((int)$job['id']);
                 if($reason==='')try{$this->applyInternal((int)$job['id'],false,false);}catch(InvalidArgumentException $e){
                     $this->db->update('shop_supplier_price_jobs',['message'=>$e->getMessage()],'id=%i',$job['id']);
                 }
@@ -487,7 +543,7 @@ final class PriceManager
         if(!empty($snapshot['variantSettings']['enabled'])&&empty($result['uniform_variants'])&&empty($result['variant_offers']))return 'Produkt používá varianty. Ověř, zda cena platí pro varianty se základní dodavatelskou cenou.';
         $old=(int)($snapshot['sale']['supplier_price_czk']??0);
         if($old>0&&abs($result['price']-$old)/$old>0.30)return 'Změna přesahuje 30 %. Před převzetím ověř cenu.';
-        // Availability is independent of a valid public price; it never changes local inventory.
+        // Availability is synchronized separately; a price review must not leave sold-out goods offered.
         return '';
     }
     public function apply(int $id,bool $variants):void{$this->locked(fn()=>$this->applyInternal($id,true,$variants));}
@@ -543,6 +599,8 @@ final class PriceManager
             $job=$this->db->queryFirstRow('SELECT * FROM shop_supplier_price_jobs WHERE id=%i FOR UPDATE',$id);
             if(!$job||$job['status']!=='review')throw new InvalidArgumentException('Nabídka už není připravena k převzetí.');
             $data=json_decode($job['data_json'],true,64,JSON_THROW_ON_ERROR);$result=json_decode($job['result_json'],true,32,JSON_THROW_ON_ERROR);
+            (new \SimpleStore\Product\ProductStockRepository($this->db))->ensure($job['product_key']);
+            $this->db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s FOR UPDATE',$job['product_key']);
             $snapshot=$this->snapshot($job['product_key'],true);
             if($snapshot!==null&&($snapshot['sale']['mode']??'own')!=='assisted')throw new InvalidArgumentException('Partnerskou cenu lze převzít pouze v režimu Asistovaný nákup.');
             if(!$snapshot||!hash_equals($data['fingerprint'],hash('sha256',self::json($snapshot))))throw new InvalidArgumentException('Produkt se mezitím změnil. Nabídku už nelze bezpečně převzít.');
@@ -616,6 +674,10 @@ final class PriceManager
             $same=$same&&$overrides===$oldOverrides&&$variantChanges===[];
             if(!$same||$retailChanges!==[])$this->db->update('shop_product_sales',['supplier_price_czk'=>$result['price'],'partner_id'=>$result['partner_id'],'variant_prices_json'=>self::json((array)$overrides),'version'=>(int)$sale['version']+1],
                 'product_key=%s AND version=%i',$job['product_key'],$sale['version']);
+            if($result['fallback']){
+                (new \SimpleStore\Product\PartnerStockState($this->db))->changeSeller($job['product_key'],$sale,'assisted',(int)$result['partner_id']);
+                $result['availability_refresh_requested']=true;
+            }
             $result['variant_price_changes']=$variantChanges;
             $result['retail_changes']=$retailChanges;$result['pricing_policy']=$newRetail===null?null:array_intersect_key($pricing,PricingPolicy::DEFAULTS);
             $same=$same&&$retailChanges===[];
@@ -643,12 +705,16 @@ final class PriceManager
         $total=(int)$this->db->queryFirstField('SELECT COUNT(*) FROM shop_supplier_price_jobs WHERE '.$where,...$args);
         $page=max(1,min($page,max(1,(int)ceil($total/30))));
         $rows=$this->db->query('SELECT * FROM shop_supplier_price_jobs WHERE '.$where.' ORDER BY id DESC LIMIT 30 OFFSET %i',...array_merge($args,[($page-1)*30]));
+        $images=[];
+        $keys=array_values(array_unique(array_column($rows,'product_key')));
+        if($keys!==[])foreach($this->db->query('SELECT product_key,language,image_path FROM shop_product_revisions WHERE active_product_key IS NOT NULL AND product_key IN %ls',$keys)as$image)$images[$image['product_key']][$image['language']]=$image['image_path'];
         $snapshots=[];
         foreach($rows as&$row){
             if(!array_key_exists($row['product_key'],$snapshots))$snapshots[$row['product_key']]=$this->snapshot($row['product_key']);
             $snapshot=$snapshots[$row['product_key']];$old=json_decode($row['data_json'],true);
             $row['current_sources']=$snapshot['candidates']??[];
             $row['current_product']=$snapshot['products'][0]??null;
+            $row['image_path']=$images[$row['product_key']][$row['current_product']['language']??'cs']??'';
             $row['configuration_issue']=self::configurationIssue($snapshot);
             $row['sources_changed']=$snapshot!==null&&self::sourceIdentity($snapshot)!==self::sourceIdentity($old['snapshot']??[]);
             $row['stale_result']=$snapshot===null||!hash_equals($old['fingerprint']??'',hash('sha256',self::json($snapshot)));

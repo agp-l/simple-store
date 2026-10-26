@@ -10,7 +10,7 @@ final class ProductVariantStock
 {
     public function __construct(private MeekroDB $db) {}
 
-    public function reserve(int $orderId, string $key, array $items): bool
+    public function reserve(int $orderId, string $key, array $items, bool $assisted = false): bool
     {
         $repository = new ProductVariantRepository($this->db);
         $snapshot = $repository->snapshot($key, true);
@@ -37,20 +37,23 @@ final class ProductVariantStock
         foreach ($requested as $id => $quantity) {
             $available = (int) $this->db->queryFirstField('SELECT available_quantity FROM shop_product_variants WHERE product_key=%s AND variant_key=%s FOR UPDATE', $key, $id);
             if ($quantity < 1 || $available < $quantity) throw new InvalidArgumentException('Vybraná varianta už není v požadovaném množství skladem.');
+            if ($assisted) continue;
             $this->db->query('UPDATE shop_product_variants SET available_quantity=available_quantity-%i WHERE product_key=%s AND variant_key=%s', $quantity, $key, $id);
             $this->db->insert('shop_order_variant_reservations', ['order_id' => $orderId, 'product_key' => $key, 'variant_key' => $id, 'quantity' => $quantity, 'state' => 'reserved']);
         }
         return true;
     }
 
-    public function transition(int $orderId, string $from, string $to, int $direction): void
+    public function transition(int $orderId, string $from, string $to, int $direction, array $assisted = []): void
     {
         if (!(new ProductVariantRepository($this->db))->installed()) return;
         $rows = $this->db->query('SELECT product_key,variant_key,quantity FROM shop_order_variant_reservations
             WHERE order_id=%i AND state=%s ORDER BY product_key,variant_key FOR UPDATE', $orderId, $from);
         foreach ($rows as $row) {
             $this->db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s FOR UPDATE', $row['product_key']);
-            if ($direction !== 0) {
+            $currentMode=$this->db->queryFirstField('SELECT mode FROM shop_product_sales WHERE product_key=%s',$row['product_key'])??'own';
+            if($direction<0&&!isset($assisted[$row['product_key']])&&$currentMode!=='own')throw new InvalidArgumentException('Objednávku nelze obnovit po změně způsobu prodeje.');
+            if ($direction !== 0 && !isset($assisted[$row['product_key']]) && $currentMode==='own') {
                 $available = $this->db->queryFirstField('SELECT available_quantity FROM shop_product_variants WHERE product_key=%s AND variant_key=%s FOR UPDATE', $row['product_key'], $row['variant_key']);
                 if ($available === null || ($direction < 0 && (int) $available < (int) $row['quantity'])) throw new InvalidArgumentException('Objednávku nelze obnovit: vybraná varianta nemá dost kusů.');
                 $this->db->query('UPDATE shop_product_variants SET available_quantity=available_quantity+%i WHERE product_key=%s AND variant_key=%s', $direction * (int) $row['quantity'], $row['product_key'], $row['variant_key']);

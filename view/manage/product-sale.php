@@ -37,8 +37,8 @@ $partnerAdminUrl = $siteRoot . 'admin/?section=purchase-partners';
       <input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
       <input type="hidden" name="version" value="<?= (int) ($saleValues['version'] ?? 0) ?>">
       <fieldset class="sale-modes"><legend class="sale-sr-only">Kdo prodává zboží</legend>
-        <label class="sale-mode"><input type="radio" name="mode" value="own" <?= ($saleValues['mode'] ?? 'own') === 'own' ? 'checked' : '' ?>><span><strong>Prodáváme my</strong><small>Vlastní prodej zboží</small></span></label>
-        <label class="sale-mode"><input type="radio" name="mode" value="assisted" <?= ($saleValues['mode'] ?? '') === 'assisted' ? 'checked' : '' ?>><span><strong>Asistovaný nákup</strong><small>Nákup u vybraného partnera</small></span></label>
+        <label class="sale-mode"><input type="radio" name="mode" value="own" <?= ($saleValues['mode'] ?? 'own') === 'own' ? 'checked' : '' ?>><span><strong>Prodáváme my</strong><small>Vlastní sklad · po přepnutí nastav počet</small></span></label>
+        <label class="sale-mode"><input type="radio" name="mode" value="assisted" <?= ($saleValues['mode'] ?? '') === 'assisted' ? 'checked' : '' ?>><span><strong>Asistovaný nákup</strong><small>Limit partnera · nákup ho neodečítá</small></span></label>
       </fieldset>
       <div class="sale-assistance" data-sale-assistance>
         <div class="sale-main-grid">

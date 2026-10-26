@@ -27,7 +27,7 @@ final class GraminoVariantScope
         }
         $variants=!empty($snapshot['variantSettings']['enabled'])?array_values(array_filter($snapshot['variants']??[],static fn(array $v):bool=>!empty($v['enabled']))):[['choices_json'=>'{}']];
         if(!$variants)return null;
-        $matched=[];$variantOffers=[];
+        $matched=[];$variantOffers=[];$stockOffers=[];
         foreach($variants as$variant){
             $constraints=$base;$choices=json_decode($variant['choices_json']??'null',true);
             if(!is_array($choices))return null;
@@ -50,6 +50,7 @@ final class GraminoVariantScope
                 $matched[$i]=$offers[$i];$variantMatches[$i]=$offers[$i];$found=true;
             }
             if(!$found)return null; // Every enabled local combination must be represented.
+            if(isset($variant['variant_key']))$stockOffers[$variant['variant_key']]=PartnerStockPolicy::evidence($variantMatches);
             if(!empty($snapshot['variantPriceMode']['enabled'])){
                 if(count(array_unique(array_map(static fn(array $o):string=>number_format((float)$o['amount'],2,'.',''),$variantMatches)))!==1)return null;
                 $choice=reset($variantMatches);$states=array_unique(array_column($variantMatches,'availability'));
@@ -66,6 +67,8 @@ final class GraminoVariantScope
         // A single exact choice has a stable variant link. For a shared price keep the model URL.
         $result['corrected_url']=count($matched)===1?$result['identity_evidence']['matched_offers'][0]['url']:$offers[0]['group_url'];
         if($variantOffers!==[]){$result['variant_offers']=$variantOffers;$result['price']=min(array_column($variantOffers,'price'));$result['uniform_variants']=$uniform;}
+        $result=array_replace($result,PartnerStockPolicy::evidence($matched));
+        if(!empty($stockOffers))$result['canonical_variant_offers']=$stockOffers;
         return $result;
     }
     private static function normalize(string $value):string

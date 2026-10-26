@@ -7,3 +7,7 @@
 .supplier-current-sources { padding: 14px 16px; margin: 12px 0; border: 1px solid #b9cdb2; background: #f5f9f2; border-radius: 6px; }
 .supplier-current-sources ul { margin: 8px 0 0; padding-left: 20px; }
 .supplier-current-sources small { display: block; overflow-wrap: anywhere; color: #5e6b59; margin: 3px 0 8px; }
+
+.supplier-result-title{display:grid;grid-template-columns:64px minmax(0,1fr) auto;align-items:center;gap:12px}.supplier-result-photo{width:64px;height:64px;display:grid;place-items:center;background:#fff;border:1px solid #d8e2da;border-radius:9px;overflow:hidden;color:#68776d}.supplier-result-photo img{width:100%;height:100%;object-fit:contain}.supplier-result-title>a:not(.supplier-result-photo){overflow-wrap:anywhere}@media(max-width:600px){.supplier-result-title{grid-template-columns:52px minmax(0,1fr)}.supplier-result-photo{width:52px;height:52px;grid-row:span 2}.supplier-result-title>.supplier-badge{grid-column:2;justify-self:start}}
+
+.supplier-stock-update{padding:10px 12px;border-left:3px solid #459263;background:#f0f8f2;border-radius:5px;color:#224e32}

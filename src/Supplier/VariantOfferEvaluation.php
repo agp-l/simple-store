@@ -34,7 +34,7 @@ final class VariantOfferEvaluation
                 'link_key'=>$link['link_key'], 'variant_key'=>$link['variant_key'], 'partner_id'=>$candidate['partner_id'],
                 'partner_key'=>$candidate['partner_key'], 'url'=>$match['url'], 'source_url'=>$sourceUrl, 'requested_url'=>$candidate['url'],
                 'price'=>(int) $offer['price'], 'amount'=>number_format((float) $offer['amount'], 2, '.', ''),
-                'currency'=>'CZK', 'availability'=>$offer['availability'] ?? 'unknown', 'observed_at'=>$observedAt,
+                'stock_evidence_version'=>$offer['stock_evidence_version']??0, 'reported_quantity'=>$offer['reported_quantity']??null, 'currency'=>'CZK', 'availability'=>$offer['availability'] ?? 'unknown', 'observed_at'=>$observedAt,
                 'identity_evidence'=>$match['evidence'],
             ];
         }
@@ -63,6 +63,8 @@ final class VariantOfferEvaluation
             $states = array_unique(array_column($found, 'availability'));
             $offers[$key] = $first + ['urls'=>[$first['url']]];
             $offers[$key]['availability'] = count($states) === 1 ? reset($states) : 'unknown';
+            $counts=array_unique(array_map(static fn(array $o):string=>json_encode($o['reported_quantity']??null),$found));
+            if(count($counts)>1){$offers[$key]['availability']='unknown';$offers[$key]['reported_quantity']=null;}
             $offers[$key]['link_keys'] = array_column($found, 'link_key');
         }
         $first = reset($offers);

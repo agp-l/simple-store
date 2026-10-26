@@ -217,6 +217,10 @@ try {
             exit;
         }
         $visibility = $_GET['visibility'] ?? 'all';
+        $catalogAvailability = $managingCatalog ? ($_GET['availability'] ?? 'all') : 'all';
+        if (!is_string($catalogAvailability) || !isset(ProductRepository::AVAILABILITY_FILTERS[$catalogAvailability])) {
+            $renderer->render('not-found', $shared, 400); exit;
+        }
         $supplierState = $managingCatalog ? ($_GET['supplier_state'] ?? 'all') : 'all';
         $catalogPartnerId = $managingCatalog ? filter_var($_GET['partner_id'] ?? 0, FILTER_VALIDATE_INT,
             ['options' => ['min_range' => 0]]) : 0;
@@ -287,7 +291,7 @@ try {
             ($homepageSelectionActive
                 ? ['items' => $homepage->products($url->getLanguage(), $homepageKeys, $productStock), 'nextOffset' => null]
                 : ($managingCatalog
-                    ? $repository->managementPage($url->getLanguage(), $path, $search, $visibility, $offset, 12, $supplierState, $catalogPartnerId)
+                    ? $repository->managementPage($url->getLanguage(), $path, $search, $visibility, $offset, 12, $supplierState, $catalogPartnerId, $catalogAvailability)
                     : (new \SimpleStore\Product\CatalogSelection($repository))->page($url->getLanguage(), $path, $search, $sort, $offset, $seed, $tipKeys, $maxWeight)));
         if ($homepageEditing) {
             $pick = $_GET['pick'] ?? '';
@@ -331,6 +335,7 @@ try {
         $shared['products'] = $batch['items'];
         $shared['managingCatalog'] = $managingCatalog;
         $shared['catalogVisibility'] = $visibility;
+        $shared['catalogAvailability'] = $catalogAvailability;
         $shared['catalogSupplierState'] = $supplierState;
         $shared['catalogPartnerId'] = $catalogPartnerId;
         $shared['catalogPartners'] = $managingCatalog ? (new \SimpleStore\Product\PurchasePartnerRepository($db))->all() : [];
@@ -342,6 +347,7 @@ try {
         $shared['searchAction'] = $path === null ? $url->path() : $url->category($path);
         $nextUrl = $batch['nextOffset'] === null ? '' : $shared['searchAction'] . '?' . http_build_query(
             array_filter(['manage' => $managingCatalog ? '1' : '', 'visibility' => $managingCatalog && $visibility !== 'all' ? $visibility : '',
+                'availability' => $managingCatalog && $catalogAvailability !== 'all' ? $catalogAvailability : '',
                 'supplier_state' => $managingCatalog && $supplierState !== 'all' ? $supplierState : '',
                 'partner_id' => $managingCatalog && $catalogPartnerId > 0 ? $catalogPartnerId : '',
                 'search' => $search, 'sort' => !$managingCatalog ? $sort : '', 'seed' => $seed, 'max_weight' => $maxWeight ?? '', 'all' => ($_GET['all'] ?? '') === '1' ? '1' : '',

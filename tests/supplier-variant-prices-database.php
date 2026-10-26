@@ -52,7 +52,7 @@ try{
  $costs=json_decode($sale($key)['variant_prices_json'],true);
  $check($costs[$v['Blue']]===1000&&$costs[$v['Red']]===1200,'Different costs collapsed or mapped to wrong sizes.');
  $check(count($result['canonical_variant_offers'])===2&&$result['identity_evidence']['method']==='variant_partner_links','Per-link evidence absent.');
- $check((int)$db->queryFirstField('SELECT MIN(available_quantity) FROM shop_product_variants WHERE product_key=%s',$key)===7,'Remote availability rewrote physical quantity.');
+ $check((int)$db->queryFirstField('SELECT MIN(available_quantity) FROM shop_product_variants WHERE product_key=%s',$key)===3,'Exact variant partner limits were not synchronized.');
  // Missing evidence is never manually approvable, nor filled from another variant.
  [$missing,$mu]=$make('missing');$responses[PriceParser::requestUrl($mu.'?v_id=blue')]=$response($mu,['blue'=>1100]);
  $before=$sale($missing);$manager->enqueue('one','rapid',$missing);$run();

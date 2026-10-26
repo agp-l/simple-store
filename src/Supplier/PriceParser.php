@@ -7,7 +7,7 @@ use InvalidArgumentException;
 /** Reads explicit offers, never guesses a price from arbitrary visible numbers. */
 final class PriceParser
 {
-    public const VERSION = 6;
+    public const VERSION = 7;
     /** Gramino advertises this public mirror in /.well-known/ai-catalog.json and /openapi.json. */
     public static function requestUrl(string $url):string
     {
@@ -54,13 +54,13 @@ final class PriceParser
                 $availability = basename(str_replace('#', '/', (is_string($offer['availability'] ?? null) ? $offer['availability'] : '')));
                 $evidence = count($products) === 1 && count($raw) === 1 ? Pod7kiloVariantIdentity::verify($body, $url, $product, $offer,
                     static fn(string $a, string $b): bool => self::identity($a) === self::identity($b)) ?? HudyVariantIdentity::verify($body,$url,$product,$offer) : null;
-                $offers[] = ['price' => $price, 'amount' => (string)$offer['price'], 'url' => $source,
+                $offers[] = ['stock_evidence_version'=>1, 'reported_quantity'=>PartnerStockPolicy::quantity($offer['inventoryLevel']??null), 'price' => $price, 'amount' => (string)$offer['price'], 'url' => $source,
                     'attributes'=>StructuredVariantScope::productAttributes($product,$body,$url,count($products)===1),
                     'model_features'=>preg_match('/\bHyperBead\b/u',(string)($product['description']??''))?['HyperBead']:[],
                     'supplier_uniform' => count($products)===1 && count($raw)===1 && Pod7kiloVariantIdentity::uniform($body,$url,$offer),
                     'identity_evidence' => $evidence, 'product_name' => is_string($product['name']??null)?$product['name']:'',
                     'group_url' => $product['_group_url']??'', 'group_name' => $product['_group_name']??'', 'availability' => match($availability) {
-                        'InStock', 'LimitedAvailability' => 'in_stock',
+                        'InStock' => 'in_stock', 'LimitedAvailability' => 'limited',
                         'OutOfStock', 'SoldOut', 'Discontinued' => 'out_of_stock',
                         'PreOrder', 'PreSale', 'BackOrder' => 'on_order', default => 'unknown',
                     }];
@@ -101,6 +101,7 @@ final class PriceParser
         elseif (($document['product_count']??0) !== 1 || count($offers) !== 1) throw new InvalidArgumentException('Nabídka není jednoznačná. Doplň odkaz na konkrétní variantu; původní cena zůstala.');
         if (count(array_unique(array_column($offers,'amount'))) !== 1) throw new InvalidArgumentException('Nabídky uvádějí různé ceny. Vyžaduje kontrolu konkrétní varianty.');
         $result = $offers[0];
+        if (count(array_unique(array_map(static fn(array $o): string => json_encode($o['reported_quantity']??null),$offers))) > 1) { $result['availability']='unknown'; $result['reported_quantity']=null; }
         if (count(array_unique(array_column($offers, 'availability'))) > 1) $result['availability'] = 'unknown';
         if($repair!==null){$result['identity_evidence']=$repair;$result['corrected_url']=$repair['verified_url'];}
         $groupExact=$uniform && self::identity($all[0]['group_url'])===self::identity($url);

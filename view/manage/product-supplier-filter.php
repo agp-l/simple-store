@@ -1,4 +1,4 @@
-<?php $catalogSupplierState ??= 'all'; $catalogPartnerId ??= 0; $catalogPartners ??= []; ?>
+<?php $catalogAvailability ??= 'all'; $catalogSupplierState ??= 'all'; $catalogPartnerId ??= 0; $catalogPartners ??= []; ?>
 <form class="catalog-supplier-filter" method="get" action="<?= $escape($searchAction) ?>#produkty">
   <input type="hidden" name="manage" value="1"><input type="hidden" name="visibility" value="<?= $escape($catalogVisibility) ?>"><input type="hidden" name="search" value="<?= $escape($searchTerm) ?>">
   <label><span id="catalog-partner-label">Partner / dodavatel</span><select name="partner_id" aria-labelledby="catalog-partner-label">
@@ -12,7 +12,12 @@
       <option value="<?= $filterValue ?>" <?= $catalogSupplierState === $filterValue ? 'selected' : '' ?>><?= $filterLabel ?></option>
     <?php endforeach; ?>
   </select></label>
+  <label><span id="catalog-availability-label">Dostupnost</span><select name="availability" aria-labelledby="catalog-availability-label">
+    <?php foreach (\SimpleStore\Product\ProductRepository::AVAILABILITY_FILTERS as $value => $label): ?>
+      <option value="<?= $value ?>" <?= $catalogAvailability === $value ? 'selected' : '' ?>><?= $label ?></option>
+    <?php endforeach; ?>
+  </select></label>
   <button type="submit">Filtrovat produkty</button>
-  <?php if ($catalogSupplierState !== 'all' || $catalogPartnerId > 0): ?><a href="<?= $escape($searchAction . '?' . http_build_query(['manage' => '1', 'visibility' => $catalogVisibility, 'search' => $searchTerm])) ?>#produkty">Zrušit filtr dodavatelů</a><?php endif; ?>
+  <?php if ($catalogSupplierState !== 'all' || $catalogPartnerId > 0 || $catalogAvailability !== 'all'): ?><a href="<?= $escape($searchAction . '?' . http_build_query(['manage' => '1', 'visibility' => $catalogVisibility, 'search' => $searchTerm])) ?>#produkty">Zrušit filtry</a><?php endif; ?>
   <p>Partner se hledá podle vybraného prodávajícího i uložených odkazů u produktu a jeho variant, včetně alternativních partnerů. „Bez prodávajícího“ znamená prázdný výběr; rozpracovaný profil se počítá jako přiřazený.</p>
 </form>

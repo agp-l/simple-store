@@ -103,13 +103,23 @@ final class ProductStockRepository
             $requested[$key]['quantity'] = ($requested[$key]['quantity'] ?? 0) + (int) $item['quantity'];
             $requested[$key]['languages'][(string) $item['language']] = true;
         }
+        $refresh = new PartnerRefreshQueue($this->db);
+        $partnerLimits = $refresh->installed();
         ksort($requested, SORT_STRING);
         foreach ($requested as $key => $line) {
             $stock = $this->db->queryFirstRow('SELECT available_quantity FROM shop_product_inventory
                 WHERE product_key=%s FOR UPDATE', $key);
             if ($stock === null) throw new InvalidArgumentException('Produkt ještě nemá nastavený sklad.');
             $variantItems = array_values(array_filter($items, static fn (array $item): bool => $item['product_key'] === $key));
-            if ((new ProductVariantStock($this->db))->reserve($orderId, $key, $variantItems)) continue;
+            $mode = $this->db->queryFirstField('SELECT mode FROM shop_product_sales WHERE product_key=%s FOR UPDATE', $key) ?? 'own';
+            foreach ($variantItems as $item) if (($item['sale_mode'] ?? 'own') !== $mode) {
+                throw new InvalidArgumentException('Způsob prodeje se mezitím změnil. Obnov košík.');
+            }
+            $assisted = $partnerLimits && $mode === 'assisted';
+            if ((new ProductVariantStock($this->db))->reserve($orderId, $key, $variantItems, $assisted)) {
+                if ($assisted) $refresh->request($key, time() + 1);
+                continue;
+            }
             $needsStock = false;
             foreach (array_keys($line['languages']) as $language) {
                 $product = $this->db->queryFirstRow('SELECT stock_status FROM shop_product_revisions
@@ -120,10 +130,14 @@ final class ProductStockRepository
                 }
                 if ($product['stock_status'] === 'in_stock') $needsStock = true;
             }
-            if (!$needsStock) continue;
+            if (!$needsStock) {
+                if ($assisted) $refresh->request($key, time() + 1);
+                continue;
+            }
             if ((int) $stock['available_quantity'] < $line['quantity']) {
                 throw new InvalidArgumentException('Produkt už není v požadovaném množství skladem. Obnov košík.');
             }
+            if ($assisted) { $refresh->request($key, time() + 1); continue; }
             $this->db->query('UPDATE shop_product_inventory SET available_quantity=available_quantity-%i
                 WHERE product_key=%s', $line['quantity'], $key);
             $this->db->insert('shop_order_stock_reservations', [
@@ -137,10 +151,12 @@ final class ProductStockRepository
     public function release(int $orderId): void
     {
         $this->lockOrderInventory($orderId);
-        (new ProductVariantStock($this->db))->transition($orderId, 'reserved', 'released', 1);
+        $assisted = (new PartnerRefreshQueue($this->db))->assistedKeys($orderId);
+        (new ProductVariantStock($this->db))->transition($orderId, 'reserved', 'released', 1, $assisted);
         foreach ($this->db->query('SELECT product_key, quantity FROM shop_order_stock_reservations
             WHERE order_id=%i AND state=%s ORDER BY product_key FOR UPDATE', $orderId, 'reserved') as $row) {
-            $this->db->query('UPDATE shop_product_inventory
+            $currentMode=$this->db->queryFirstField('SELECT mode FROM shop_product_sales WHERE product_key=%s',$row['product_key'])??'own';
+            if (!isset($assisted[$row['product_key']]) && $currentMode==='own') $this->db->query('UPDATE shop_product_inventory
                 SET available_quantity=available_quantity+%i WHERE product_key=%s',
                 (int) $row['quantity'], $row['product_key']);
             $this->db->query('UPDATE shop_order_stock_reservations SET state=%s
@@ -161,9 +177,14 @@ final class ProductStockRepository
     public function reopen(int $orderId): void
     {
         $this->lockOrderInventory($orderId);
-        (new ProductVariantStock($this->db))->transition($orderId, 'released', 'reserved', -1);
+        $refresh = new PartnerRefreshQueue($this->db);
+        $assisted = $refresh->assistedKeys($orderId);
+        if ($refresh->installed()) foreach (array_keys($assisted) as $key) $refresh->request($key, time() + 1);
+        (new ProductVariantStock($this->db))->transition($orderId, 'released', 'reserved', -1, $assisted);
         foreach ($this->db->query('SELECT product_key, quantity FROM shop_order_stock_reservations
             WHERE order_id=%i AND state=%s ORDER BY product_key FOR UPDATE', $orderId, 'released') as $row) {
+            if (!isset($assisted[$row['product_key']])) {
+            if(($this->db->queryFirstField('SELECT mode FROM shop_product_sales WHERE product_key=%s',$row['product_key'])??'own')!=='own')throw new InvalidArgumentException('Objednávku nelze obnovit po změně způsobu prodeje.');
             $stock = $this->db->queryFirstRow('SELECT available_quantity FROM shop_product_inventory
                 WHERE product_key=%s FOR UPDATE', $row['product_key']);
             if ($stock === null || (int) $stock['available_quantity'] < (int) $row['quantity']) {
@@ -171,6 +192,7 @@ final class ProductStockRepository
             }
             $this->db->query('UPDATE shop_product_inventory SET available_quantity=available_quantity-%i
                 WHERE product_key=%s', (int) $row['quantity'], $row['product_key']);
+            }
             $this->db->query('UPDATE shop_order_stock_reservations SET state=%s
                 WHERE order_id=%i AND product_key=%s AND state=%s',
                 'reserved', $orderId, $row['product_key'], 'released');
