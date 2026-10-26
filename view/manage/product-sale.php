@@ -32,14 +32,13 @@ $partnerAdminUrl = $siteRoot . 'admin/?section=purchase-partners';
     <?php if (($_GET['sale_saved'] ?? '') === '1' && ($productSaleError ?? '') === ''): ?><p class="sale-notice" role="status">Nastavení prodeje bylo uloženo.</p><?php endif; ?>
     <?php if (($productSaleError ?? '') !== ''): ?><div class="sale-notice sale-notice--error" role="alert"><?= $escape($productSaleError) ?> Zadané údaje zůstaly ve formuláři.
       <a target="_blank" rel="noopener" href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1#product-sale') ?>">Porovnat s uloženým nastavením ↗</a></div><?php endif; ?>
-    <p class="panel-help">U asistovaného nákupu jsou kusy limitem podle poslední kontroly partnera. Objednávka je trvale neodečítá. Po přepnutí automaticky spravovaného produktu na „Prodáváme my“ nastav skutečný vlastní počet; partnerský limit se vynuluje.</p>
     <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>" class="sale-form" data-product-sale-form data-base-price="<?= $basePrice ?>" data-recovered="<?= ($productSaleError ?? '') !== '' ? '1' : '0' ?>" novalidate>
       <input type="hidden" name="action" value="product-sale"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>">
       <input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
       <input type="hidden" name="version" value="<?= (int) ($saleValues['version'] ?? 0) ?>">
       <fieldset class="sale-modes"><legend class="sale-sr-only">Kdo prodává zboží</legend>
-        <label class="sale-mode"><input type="radio" name="mode" value="own" <?= ($saleValues['mode'] ?? 'own') === 'own' ? 'checked' : '' ?>><span><strong>Prodáváme my</strong><small>Vlastní prodej zboží</small></span></label>
-        <label class="sale-mode"><input type="radio" name="mode" value="assisted" <?= ($saleValues['mode'] ?? '') === 'assisted' ? 'checked' : '' ?>><span><strong>Asistovaný nákup</strong><small>Nákup u vybraného partnera</small></span></label>
+        <label class="sale-mode"><input type="radio" name="mode" value="own" <?= ($saleValues['mode'] ?? 'own') === 'own' ? 'checked' : '' ?>><span><strong>Prodáváme my</strong><small>Vlastní sklad · po přepnutí nastav počet</small></span></label>
+        <label class="sale-mode"><input type="radio" name="mode" value="assisted" <?= ($saleValues['mode'] ?? '') === 'assisted' ? 'checked' : '' ?>><span><strong>Asistovaný nákup</strong><small>Limit partnera · nákup ho neodečítá</small></span></label>
       </fieldset>
       <div class="sale-assistance" data-sale-assistance>
         <div class="sale-main-grid">

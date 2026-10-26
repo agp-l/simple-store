@@ -42,7 +42,9 @@ try{
  $generation=$db->queryFirstField('SELECT generation FROM shop_partner_refresh_requests WHERE product_key=%s',$keys['plain']);
  $db->startTransaction();$stock->reserve(1000,[$item]);$db->rollback();
  $check($generation===$db->queryFirstField('SELECT generation FROM shop_partner_refresh_requests WHERE product_key=%s',$keys['plain']),'Rolled-back order leaked refresh.');
- // Request a newer observation; the cached URL cannot be re-fetched inside 15 minutes.
+ // Complete one refresh without moving the test clock behind another host request.
+ $queue->request($keys['plain'],$now);$run(3);
+ // A second purchase must wait at least 15 minutes after that observation.
  $lastFetch=0;foreach($calls as[$url,$at])if($url==='https://stock.test/plain')$lastFetch=$at;
  $now=$lastFetch+100;$queue->request($keys['plain'],$now);$before=count($calls);$manager->tick();
  $check(count($calls)===$before,'Post-order refresh bypassed 15 minute URL cooldown.');
@@ -51,6 +53,15 @@ try{
  $own=$make('own','own');$db->update('shop_product_inventory',['available_quantity'=>3],'product_key=%s',$own);$db->update('shop_product_revisions',['stock_status'=>'in_stock'],'product_key=%s',$own);
  $stock->reserve(1001,[['product_key'=>$own,'language'=>'cs','quantity'=>2]]);$check($quantity($own)===1,'Own stock stopped decrementing.');$stock->release(1001);$check($quantity($own)===3,'Own cancellation did not release stock.');$stock->reopen(1001);$check($quantity($own)===1,'Own reopening did not reserve stock.');
  $check($manager->enqueue('one','rapid',$own)['unconfigured']===1,'Own stock entered partner automation.');
+ $variantProduct=$make('variants');$blue=bin2hex(random_bytes(16));$red=bin2hex(random_bytes(16));
+ $db->insert('shop_product_variant_settings',['product_key'=>$variantProduct,'enabled'=>1]);
+ foreach([[$blue,'Blue',3],[$red,'Red',0]]as[$vk,$color,$count])$db->insert('shop_product_variants',['product_key'=>$variantProduct,'variant_key'=>$vk,'choices_json'=>json_encode(['Barva'=>$color]),'enabled'=>1,'available_quantity'=>$count,'stock_status'=>'in_stock']);
+ $variantItem=['product_key'=>$variantProduct,'language'=>'cs','quantity'=>2,'sale_mode'=>'assisted','variant_key'=>$blue,'unit_price_czk'=>3000,'options'=>['Barva'=>'Blue']];
+ $stock->reserve(1002,[$variantItem]);
+ $check((int)$db->queryFirstField('SELECT available_quantity FROM shop_product_variants WHERE variant_key=%s',$blue)===3,'Assisted variant order drained partner limit.');
+ $db->startTransaction();$rejected=false;try{$stock->reserve(1003,[$variantItem,$variantItem]);}catch(InvalidArgumentException $e){$rejected=true;}$db->rollback();
+ $check($rejected,'Duplicate cart lines bypassed the per-variant order limit.');
+ $db->update('shop_product_variants',['available_quantity'=>0],'variant_key=%s',$blue);
  // Filter zero quantity even when a legacy availability flag says in_stock, before pagination.
  $db->update('shop_product_revisions',['stock_status'=>'in_stock'],'product_key=%s',$keys['none']);
  $catalog=new ProductRepository($db,['cs'],null,50,$stock);$found=[];$offset=0;
