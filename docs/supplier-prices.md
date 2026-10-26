@@ -60,7 +60,8 @@ celou změnu zastaví ke kontrole. Historie kontroly obsahuje původní a novou 
 
 Běžná kontrola zůstává nejvýše jednou za 24 hodin. U posledního výsledku „Ke kontrole“ nebo
 „Nepodařilo se“ lze hromadně i jednotlivě požádat o nové vyhodnocení. Bez zaškrtnutí nového
-stažení pracuje výhradně s platnou uloženou nabídkou a nikdy nevytvoří HTTP požadavek.
+stažení se nejprve vyhodnotí platná uložená nabídka. Neúplný dokument ze starší verze
+parseru může spustit níže popsanou jednorázovou údržbovou obnovu po aktualizaci parseru.
 Výslovné nové stažení je ruční výjimka: nejvýše **jeden dodatečný pokus na produkt za 24 hodin**,
 nejdříve 15 minut po předchozí kontrole. Jeden produkt má vždy nejvýše jednu čekající kontrolu.
 Stejná URL se v tomto opakování sdílí mezi produkty pomocí času obnovení; HTTP 403/429/503
@@ -134,11 +135,13 @@ php tools/supplier-price-worker.php --tick
 `--replay` funguje místně bez připojení k databázi i bez sítě. Ukáže, co nová pravidla rozpoznají;
 neukládá ceny a nenahrazuje kontrolu aktuálnosti v transakci. `--retry-cached` pouze znovu
 zařadí nevyřešené současné produkty. Po nasazení nové verze vyhodnocování se tento krok
-provede jednou automaticky při nejbližším běhu workeru. Nové stahování nadále dodržuje denní
-limity, robots.txt a prodlevy dodavatelů.
+provede jednou automaticky při nejbližším běhu workeru. Běžné kontroly dodržují denní
+limity; každé stahování dodržuje robots.txt a prodlevy dodavatelů.
 Pokud stará cache ještě neobsahuje vlastnosti potřebné pro přesné párování, worker sám
-naplánuje jedno nové načtení: nejdříve 15 minut po předchozí kontrole a při vyčerpaném
-dodatečném pokusu až 24 hodin po jeho dokončení. Další běhy fronty tento termín neposouvají.
+naplánuje jedno údržbové načtení dotčené URL mimo běžný denní limit: nejdříve 15 minut
+po skutečném předchozím požadavku. Další běhy fronty tento termín neposouvají. Úspěšná
+i neúspěšná odpověď nahradí starý dokument, takže aktualizace parseru nevytvoří smyčku.
+Uložené HTTP 403/429/503, pravidla robots.txt a prodlevy partnera se neobcházejí.
 
 Gramino má veřejné rozhraní popsané v `https://gramino.cz/openapi.json` a
 `https://gramino.cz/.well-known/ai-catalog.json`. Pro `/p/…` se používá `/api/md/p/…`
