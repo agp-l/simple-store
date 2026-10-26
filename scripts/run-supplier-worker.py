@@ -11,7 +11,9 @@ import json
 import re
 import secrets
 import time
+import urllib.error
 import urllib.request
+from email.utils import parsedate_to_datetime
 from pathlib import Path
 
 spec = importlib.util.spec_from_file_location("shop_deploy", Path(__file__).with_name("deploy-ftp.py"))
@@ -65,21 +67,64 @@ class NoRedirect(urllib.request.HTTPRedirectHandler):
         return None  # Never forward the credential elsewhere.
 
 
+def http_diagnostic(error):
+    """Only print bounded machine fields from our authenticated error response."""
+    fields = []
+    try:
+        result = json.loads(error.read(4096))
+        for name in ("phase", "kind", "code"):
+            value = str(result.get(name, ""))
+            if re.fullmatch(r"[A-Za-z0-9_\\-]{1,80}", value):
+                fields.append(f"{name}={value}")
+    except (ValueError, AttributeError, OSError):
+        pass
+    return f"HTTP {error.code}" + ("; " + "; ".join(fields) if fields else "")
+
+
+def retry_delay(error, failures):
+    delay = 15 * failures
+    if isinstance(error, urllib.error.HTTPError):
+        header = error.headers.get("Retry-After", "") if error.headers else ""
+        try:
+            requested = float(header) if header.isdigit() else parsedate_to_datetime(header).timestamp() - time.time()
+            delay = max(delay, requested)
+        except (ValueError, TypeError, OverflowError):
+            pass
+    return delay
+
+
 def run():
+    print("Supplier worker: loading private configuration.", flush=True)
     key = worker_key()
+    print("Supplier worker: configuration loaded; processing queue.", flush=True)
     opener = urllib.request.build_opener(NoRedirect)
     deadline = time.monotonic() + 240
     ticks = 0
+    failures = 0
     while time.monotonic() < deadline:
         request = urllib.request.Request(ENDPOINT, data=b"", method="POST",
             headers={"X-Supplier-Worker-Key": key, "Accept": "application/json",
                      "User-Agent": "DobrodruziSupplierWorker/1.0"})
-        with opener.open(request, timeout=25) as response:
-            result = json.loads(response.read(4096))
+        try:
+            with opener.open(request, timeout=min(25, max(1, deadline-time.monotonic()))) as response:
+                result = json.loads(response.read(4096))
+        except (urllib.error.URLError, TimeoutError, ConnectionError) as error:
+            failures += 1
+            transient = not isinstance(error, urllib.error.HTTPError) or error.code in (408, 429, 502, 503, 504)
+            diagnostic = http_diagnostic(error) if isinstance(error, urllib.error.HTTPError) else type(error).__name__
+            print(f"Supplier worker request failed: {diagnostic}; consecutive failures={failures}.", flush=True)
+            delay = retry_delay(error, failures)
+            if not transient or failures > 2 or time.monotonic() + delay + 1 >= deadline:
+                raise
+            print(f"Supplier worker: retry in {delay:g}s.", flush=True)
+            time.sleep(delay)
+            continue
+        failures = 0
         ticks += 1
         state = result.get("state")
         if state not in ("idle", "paused", "working", "waiting"):
             raise ValueError("Invalid worker response.")
+        print(f"Supplier queue tick {ticks}: {state}.", flush=True)
         if state in ("idle", "paused"):
             print(f"Supplier queue: {state}; {ticks} ticks.")
             return
