@@ -206,6 +206,7 @@ jobs:
           php tests/purchase-partners-database.php
           php tests/purchase-partner-transfer-database.php
           php tests/product-partner-assignment-database.php
+          php tests/partner-catalog-database.php
           php tests/supplier-prices-database.php
           php tests/supplier-variant-prices-database.php
           php tests/product-families-database.php
@@ -270,6 +271,7 @@ jobs:
           php tests/purchase-partners-database.php
           php tests/purchase-partner-transfer-database.php
           php tests/product-partner-assignment-database.php
+          php tests/partner-catalog-database.php
           php tests/supplier-prices-database.php
           php tests/supplier-variant-prices-database.php
           php tests/product-families-database.php

@@ -109,7 +109,7 @@ final class ProductSalesRepository
                         throw new InvalidArgumentException('Vybral jsi uloženého prodávajícího a vyplnil také nového. Pro vytvoření nového zvol ve výběru „Zatím nevybrán / nový prodávající níže“, jinak vyprázdni údaje nového.');
                     }
                 }
-                if ((new PurchasePartnerRepository($this->db))->find($partnerId) === null) {
+                if ((new PurchasePartnerRepository($this->db))->find($partnerId, true) === null) {
                     throw new InvalidArgumentException('Vybraný prodávající už neexistuje.');
                 }
             }

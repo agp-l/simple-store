@@ -100,12 +100,13 @@ final class ProductRepository
         string $visibility = 'all',
         int $offset = 0,
         int $limit = 12,
-        string $supplierState = 'all'
+        string $supplierState = 'all',
+        int $partnerId = 0
     ): array
     {
         if (!in_array($language, $this->languages, true) ||
             !in_array($visibility, ['all', 'draft', 'published'], true) || !isset(self::SUPPLIER_FILTERS[$supplierState]) ||
-            $offset < 0 || $offset > 100000 || $limit < 1 || $limit > 48 || strlen($search) > 200) {
+            $offset < 0 || $offset > 100000 || $limit < 1 || $limit > 48 || strlen($search) > 200 || $partnerId < 0) {
             throw new InvalidArgumentException('Invalid product management page.');
         }
         $where = 'language=%s AND active_product_key IS NOT NULL';
@@ -128,15 +129,27 @@ final class ProductRepository
             'shop_product_sales', 'shop_purchase_partners', 'shop_product_supplier_links') === 3;
         $sellerQuery = 'SELECT p.id FROM shop_product_sales s JOIN shop_purchase_partners p ON p.id=s.partner_id WHERE s.product_key=r.product_key';
         $linksQuery = 'SELECT 1 FROM shop_product_supplier_links l WHERE l.product_key=r.product_key';
+        $variantLinksReady = (new ProductVariantSupplierRepository($this->db))->installed();
+        $variantLinksQuery = 'SELECT 1 FROM shop_product_variant_supplier_links l WHERE l.product_key=r.product_key AND l.removed=0';
+        if ($partnerId > 0) {
+            $partner = (new PurchasePartnerRepository($this->db))->find($partnerId);
+            if ($partner === null) throw new InvalidArgumentException('Vybraný partner již neexistuje.');
+            $keys = array_keys((new PurchasePartnerUsage($this->db))->products([$partner])[$partnerId]);
+            // Apply before LIMIT/OFFSET, including sources attached only to one variant.
+            $where .= $keys === [] ? ' AND 1=0' : ' AND r.product_key IN (' . implode(',', array_fill(0, count($keys), '%s')) . ')';
+            array_push($values, ...$keys);
+        }
         if ($supplierTablesReady && $supplierState !== 'all') {
             $withoutSeller = 'NOT EXISTS (' . $sellerQuery . ')';
             $withoutLinks = 'NOT EXISTS (' . $linksQuery . ')';
+            if ($variantLinksReady) $withoutLinks .= ' AND NOT EXISTS (' . $variantLinksQuery . ')';
             $where .= ' AND (' . ['no_partner' => $withoutSeller, 'no_links' => $withoutLinks,
                 'either' => $withoutSeller . ' OR ' . $withoutLinks, 'both' => $withoutSeller . ' AND ' . $withoutLinks][$supplierState] . ')';
         }
         $supplierColumns = $supplierTablesReady
             ? ', (' . $sellerQuery . ') AS admin_partner_id, (' . str_replace('SELECT p.id', 'SELECT p.name', $sellerQuery) . ') AS admin_partner_name,
-                (SELECT COUNT(*) FROM shop_product_supplier_links l WHERE l.product_key=r.product_key) AS admin_supplier_count'
+                ((SELECT COUNT(*) FROM shop_product_supplier_links l WHERE l.product_key=r.product_key)' .
+                ($variantLinksReady ? ' + (SELECT COUNT(*) FROM shop_product_variant_supplier_links l WHERE l.product_key=r.product_key AND l.removed=0)' : '') . ') AS admin_supplier_count'
             : ', NULL AS admin_partner_id, NULL AS admin_partner_name, 0 AS admin_supplier_count';
         array_push($values, $limit + 1, $offset);
         $rows = $this->db->query(

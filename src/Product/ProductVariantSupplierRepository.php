@@ -52,7 +52,7 @@ final class ProductVariantSupplierRepository
         if (!$this->installed()) return 0;
         $links = $this->db->query('SELECT id,label,url FROM shop_product_supplier_links WHERE product_key=%s ORDER BY id FOR UPDATE', $key);
         $variants = $this->db->queryFirstColumn('SELECT variant_key FROM shop_product_variants WHERE product_key=%s ORDER BY variant_key', $key);
-        $partners = (new PurchasePartnerRepository($this->db))->all();
+        $partners = (new PurchasePartnerRepository($this->db))->all(true);
         $existing = $this->forProduct($key, true, true); $seen = [];
         foreach ($existing as $row) {
             $seen[$row['variant_key'] . ':' . hash('sha256', $row['url'])] = true;
@@ -85,7 +85,7 @@ final class ProductVariantSupplierRepository
         if ($this->db->queryFirstField('SELECT variant_key FROM shop_product_variants WHERE product_key=%s AND variant_key=%s', $key, $variant) === null) throw new InvalidArgumentException('Varianta nepatří k produktu.');
         if ($partner !== '') {
             self::key($partner);
-            $p = $this->db->queryFirstRow('SELECT website_url FROM shop_purchase_partners WHERE partner_key=%s', $partner);
+            $p = $this->db->queryFirstRow('SELECT website_url FROM shop_purchase_partners WHERE partner_key=%s FOR UPDATE', $partner);
             if ($p === null || ProductPartnerAssignment::host($p['website_url']) !== ProductPartnerAssignment::host($url)) throw new InvalidArgumentException('Odkaz nepatří k webu zvoleného partnera.');
         }
         $old = $id === '' ? null : $this->db->queryFirstRow('SELECT * FROM shop_product_variant_supplier_links WHERE product_key=%s AND variant_key=%s AND link_key=%s AND removed=0 FOR UPDATE', $key, $variant, $id);

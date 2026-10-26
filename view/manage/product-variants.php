@@ -100,7 +100,7 @@ foreach ($details['options'] as $group) $variantGroups[] = $group['name'] . ': '
   </form>
   <details class="partner-source-links" <?= (isset($_GET['supplier_error']) || isset($_GET['supplier_saved'])) && !isset($_GET['supplier_variant']) ? 'open' : '' ?>>
     <summary>Společné zdroje pro kontrolu cen (<?= count($supplierLinks) ?>)</summary>
-    <p>Tyto původní stránky ještě používá cenový automat pro načítání nabídek. Přesné adresy barev a velikostí upravuj v tabulce výše.</p>
+    <p>Společné stránky slouží jako výchozí zdroje a pro načtení nabídek modelu. Ceny variant se ověřují podle partnerských odkazů v tabulce výše. Při odebírání partnera odstraň také jeho společné odkazy.</p>
     <?php $partnerSourceOnly = true; require __DIR__.'/product-suppliers.php'; ?>
   </details>
   <?php endif; ?>

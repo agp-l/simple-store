@@ -38,7 +38,7 @@ final class AdminActionPolicy
         'content-import-preview', 'content-import-save',
         'product-prompt-save', 'product-bulk-export', 'product-bulk-prepare', 'product-bulk-step', 'product-bulk-clear', 'product-zip-upload', 'product-zip-step', 'product-zip-clear', 'product-import-preview', 'product-import-save', 'create-content', 'create-translation', 'inline-content', 'create-product',
         'inline-product', 'product-variants', 'product-family-preview', 'product-family-apply', 'product-family-undo', 'product-family-delete-preview', 'product-family-delete-sources', 'set-product-stock', 'category-create', 'category-update', 'category-order',
-        'configuration-preview', 'configuration-apply', 'purchase-partner-preview', 'purchase-partner-import',
+        'configuration-preview', 'configuration-apply', 'purchase-partner-preview', 'purchase-partner-import', 'purchase-partner-delete',
         'menu-slot', 'menu-item-save', 'menu-item-remove', 'page-menu',
         'media-library-folder', 'media-library-upload', 'media-library-move', 'media-library-export', 'media-library-import',
         'media-upload', 'media-attach', 'media-delete', 'delete-product',

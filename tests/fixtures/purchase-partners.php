@@ -10,7 +10,8 @@ $data=Transfer::decode(file_get_contents(dirname(__DIR__,2).'/docs/examples/prod
 $partnerRows=[];
 foreach($data['partners'] as $i=>$partner)$partnerRows[]=$partner+['id'=>$i+1,'version'=>1,'product_count'=>$i===0?3:0];
 $partnerRows[0]['name'].=' <safe>';
-$partnerForm=$partnerRows[0];$partnerMissing=Partners::missing($partnerForm);
+$partnerUsage=[1=>['a'=>true,'b'=>true,'c'=>true],2=>[],3=>[]];
+$partnerForm=$partnerRows[$mode==='delete'?1:0];$partnerMissing=Partners::missing($partnerForm);
 $partnerBackupPlan=$mode==='preview'?Transfer::compare($data,[]):null;
 $partnerBackupJson=$mode==='error'?'{broken <script>':Transfer::json($data);
 $partnerBackupToken='preview-token';$partnerBackupError=$mode==='error'?'Soubor neobsahuje platný JSON.':'';

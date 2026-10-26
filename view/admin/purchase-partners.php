@@ -1,7 +1,11 @@
-<?php use SimpleStore\Product\PurchasePartnerRepository as Partners; ?>
+<?php use SimpleStore\Product\PurchasePartnerRepository as Partners;
+$partnerUsage ??= [];
+$partnerCatalogUrl = ($basePath ?? '/') . ($site['default_language'] ?? 'cs') . '?manage=1&partner_id=';
+?>
 <link rel="stylesheet" href="<?= $escape(($basePath ?? '/') . 'assets/purchase-partners.css?v=' . filemtime(__DIR__ . '/../../assets/purchase-partners.css')) ?>">
 <section class="panel-panel partner-directory">
   <h1>Prodávající pro asistovaný nákup</h1>
+  <?php if (($_GET['deleted'] ?? '') === '1'): ?><p role="status" class="panel-notice">Prodávající byl smazán. Dřívější objednávky a historie cen zůstaly zachované.</p><?php endif; ?>
   <p>Společný seznam pro výběr ve „Způsobu prodeje“ u produktů. Rozpracované profily můžeš uložit a dokončit později.</p>
   <?php if (!$partnersReady): ?>
     <p><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=database') ?>">Nejprve aktualizuj databázi.</a></p>
@@ -17,8 +21,8 @@
   <div class="panel-table-wrap"><table class="panel-table"><thead><tr><th>Prodávající</th><th>IČO / kontakt</th><th>Priorita</th><th>Stav</th><th>Produkty</th><th></th></tr></thead><tbody>
   <?php foreach ($partnerRows as $row): $missing = Partners::missing($row); ?>
     <tr><td data-label="Prodávající"><strong><?= $escape(Partners::label($row)) ?></strong><?php if (Partners::validWebsite($row['website_url'] ?? '')): ?><a class="partner-website" href="<?= $escape($row['website_url']) ?>" target="_blank" rel="noopener noreferrer"><?= \SimpleStore\Rendering\Icon::render('external') ?> <?= $escape(parse_url($row['website_url'], PHP_URL_HOST)) ?></a><?php else: ?><small>Web zatím není vyplněný</small><?php endif; ?></td><td data-label="IČO / kontakt"><?= $escape($row['ico']) ?><br><?= $escape($row['email']) ?></td>
-      <td data-label="Priorita"><strong><?= (int) ($row['priority'] ?? 100) ?></strong></td><td data-label="Stav"><span class="partner-state <?= $missing === [] ? 'is-ready' : 'is-draft' ?>"><?= $missing === [] ? 'Připravený' : 'Rozpracovaný' ?></span></td><td data-label="Produkty"><?= (int) $row['product_count'] ?></td>
-      <td data-label="Úprava"><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=purchase-partners&id=' . (int) $row['id'] . '#partner-form') ?>">Zobrazit / upravit</a></td></tr>
+      <td data-label="Priorita"><strong><?= (int) ($row['priority'] ?? 100) ?></strong></td><td data-label="Stav"><span class="partner-state <?= $missing === [] ? 'is-ready' : 'is-draft' ?>"><?= $missing === [] ? 'Připravený' : 'Rozpracovaný' ?></span></td><td data-label="Produkty"><a href="<?= $escape($partnerCatalogUrl . (int) $row['id'] . '#produkty') ?>">Zobrazit (<?= count($partnerUsage[(int) $row['id']] ?? []) ?>)</a><small>Výběr prodávajícího i partnerské odkazy</small></td>
+      <td data-label="Úprava" class="partner-row-actions"><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=purchase-partners&id=' . (int) $row['id'] . '#partner-form') ?>">Zobrazit / upravit</a><a class="partner-delete-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=purchase-partners&id=' . (int) $row['id'] . '#partner-delete') ?>">Smazat</a></td></tr>
   <?php endforeach; ?>
   <?php if ($partnerRows === []): ?><tr><td colspan="6">Žádní prodávající<?= $partnerQuery !== '' ? ' neodpovídají hledání' : ' zatím nejsou uloženi' ?>.</td></tr><?php endif; ?>
   </tbody></table></div>
@@ -41,6 +45,23 @@
     <button class="panel-button panel-action" type="submit">Uložit prodávajícího</button>
     <p class="panel-help">Uložit můžeš i neúplné kontakty. Stav „Připravený“ se nastaví automaticky po doplnění všech údajů a potvrzení spolupráce.</p>
   </form>
+  <?php if ((int) $partnerForm['id'] > 0): $partnerUsageCount = count($partnerUsage[(int) $partnerForm['id']] ?? []); ?>
+  <div class="partner-delete" id="partner-delete">
+    <h3>Smazat prodávajícího: <?= $escape(Partners::label($partnerForm)) ?></h3>
+    <?php if ($partnerUsageCount > 0): ?>
+      <p>Tento partner je stále použitý u <?= $partnerUsageCount ?> produktů. Nejprve změň jejich prodávajícího a odeber jeho odkazy, včetně odkazů u variant. Platí to i pro koncepty a produkty v režimu „Prodáváme my“.</p>
+      <p><a href="<?= $escape($partnerCatalogUrl . (int) $partnerForm['id'] . '#produkty') ?>">Zobrazit produkty tohoto partnera (<?= $partnerUsageCount ?>) →</a></p>
+    <?php else: ?>
+      <p>Profil není použitý u žádného produktu a lze jej smazat. Dřívější objednávky i historie cen zůstanou zachované. Smazání profilu nelze vrátit; předem si můžeš uložit <a href="#partner-backup">export JSON</a>.</p>
+    <?php endif; ?>
+    <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=purchase-partners#partner-form') ?>" class="partner-delete-form">
+      <input type="hidden" name="action" value="purchase-partner-delete"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
+      <input type="hidden" name="id" value="<?= (int) $partnerForm['id'] ?>"><input type="hidden" name="version" value="<?= $escape($partnerForm['version']) ?>">
+      <?php if ($partnerUsageCount === 0): ?><label><input type="checkbox" name="confirm_delete" value="1" required> Potvrzuji smazání tohoto profilu prodávajícího.</label><?php endif; ?>
+      <button class="panel-button" type="submit" <?= $partnerUsageCount > 0 ? 'disabled' : '' ?>>Smazat prodávajícího</button>
+    </form>
+  </div>
+  <?php endif; ?>
 </section>
 <?php require __DIR__ . '/purchase-partner-transfer.php'; ?>
 <?php endif; ?>

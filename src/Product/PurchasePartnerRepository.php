@@ -22,11 +22,11 @@ final class PurchasePartnerRepository
              AND TABLE_NAME=%s AND COLUMN_NAME IN (%s,%s)', 'shop_purchase_partners', 'confirmed', 'version') === 2;
     }
 
-    public function all(): array
+    public function all(bool $lock = false): array
     {
         if (!$this->installed()) return [];
         return $this->db->query('SELECT p.*, (SELECT COUNT(*) FROM shop_product_sales s
-            WHERE s.partner_id=p.id) AS product_count FROM shop_purchase_partners p ORDER BY p.name, p.id');
+            WHERE s.partner_id=p.id) AS product_count FROM shop_purchase_partners p ORDER BY p.name, p.id' . ($lock ? ' FOR UPDATE' : ''));
     }
 
     public function transferReady(): bool
@@ -36,9 +36,32 @@ final class PurchasePartnerRepository
              AND TABLE_NAME=%s AND COLUMN_NAME IN (%s,%s)', 'shop_purchase_partners', 'website_url', 'partner_key') === 2;
     }
 
-    public function find(int $id): ?array
+    public function find(int $id, bool $lock = false): ?array
     {
-        return $this->installed() ? $this->db->queryFirstRow('SELECT * FROM shop_purchase_partners WHERE id=%i', $id) : null;
+        return $this->installed() ? $this->db->queryFirstRow('SELECT * FROM shop_purchase_partners WHERE id=%i' . ($lock ? ' FOR UPDATE' : ''), $id) : null;
+    }
+
+    /** Delete only an unused current identity. Historical orders and price evidence stay untouched. */
+    public function delete(int $id, int $version, bool $confirmed): void
+    {
+        if (!$this->assignmentReady()) throw new InvalidArgumentException('Nejprve aktualizuj databázi v administraci.');
+        if ($id < 1 || $version < 1 || !$confirmed) throw new InvalidArgumentException('Potvrď smazání prodávajícího.');
+        $this->db->startTransaction();
+        try {
+            // Product writers acquire this lock before attaching a seller or a variant source.
+            $this->db->queryFirstColumn('SELECT product_key FROM shop_product_revisions
+                WHERE active_product_key IS NOT NULL ORDER BY product_key, language FOR UPDATE');
+            $partner = $this->find($id, true);
+            if ($partner === null || (int) $partner['version'] !== $version) {
+                throw new InvalidArgumentException('Prodávající se mezitím změnil nebo byl smazán. Obnov stránku a zkontroluj aktuální profil.');
+            }
+            $usage = (new PurchasePartnerUsage($this->db))->products([$partner], true);
+            if ($usage[$id] !== []) {
+                throw new InvalidArgumentException('Prodávající je stále použitý u ' . count($usage[$id]) . ' produktů. Nejprve změň jejich prodávajícího a odeber jeho partnerské odkazy.');
+            }
+            $this->db->query('DELETE FROM shop_purchase_partners WHERE id=%i AND version=%i', $id, $version);
+            $this->db->commit();
+        } catch (\Throwable $error) { $this->db->rollback(); throw $error; }
     }
 
     public function assignmentReady(): bool

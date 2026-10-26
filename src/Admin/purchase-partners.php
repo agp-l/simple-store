@@ -17,6 +17,20 @@ if ($partnerId > 0 && $selectedPartner === null && $partnersReady) {
     $partnerError = 'Prodávající nebyl nalezen.';
 }
 $partnerForm = $selectedPartner ?? ['id' => 0, 'version' => 0, 'confirmed' => 0];
+if ($method === 'POST' && $action === 'purchase-partner-delete') {
+    try {
+        $deleteVersion = filter_var($_POST['version'] ?? null, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+        if ($deleteVersion === false) throw new InvalidArgumentException('Obnov stránku prodávajícího.');
+        $partnersRepository->delete($partnerId, $deleteVersion, ($_POST['confirm_delete'] ?? '') === '1');
+        header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=purchase-partners&deleted=1'), true, 303);
+        exit;
+    } catch (InvalidArgumentException $exception) {
+        $partnerError = $exception->getMessage();
+    } catch (Throwable $exception) {
+        error_log((string) $exception);
+        $partnerError = 'Smazání se nezdařilo. Obnov stránku a zkus to znovu.';
+    }
+}
 if ($method === 'POST' && $action === 'purchase-partner-save') {
     // Keep every submitted value when validation or an optimistic lock fails.
     foreach (array_keys(PurchasePartnerRepository::FIELDS) as $field) {
@@ -38,6 +52,7 @@ if ($method === 'POST' && $action === 'purchase-partner-save') {
     }
 }
 $partnerRows = $partnersRepository->all();
+$partnerUsage = $partnersReady ? (new \SimpleStore\Product\PurchasePartnerUsage($db))->products($partnerRows) : [];
 usort($partnerRows, static fn (array $a, array $b): int => [(int) ($a['priority'] ?? 100), $a['name'], $a['id']] <=> [(int) ($b['priority'] ?? 100), $b['name'], $b['id']]);
 $partnerMissing = PurchasePartnerRepository::missing($partnerForm);
 $partnerQuery = is_string($_GET['q'] ?? null) ? trim($_GET['q']) : '';

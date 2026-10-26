@@ -294,7 +294,7 @@ try {
         require __DIR__ . '/view/admin/layout.php';
         exit;
     }
-    if (in_array($action, ['purchase-partner-save', 'purchase-partner-preview', 'purchase-partner-import'], true) || ($method !== 'POST' && $section === 'purchase-partners')) {
+    if (in_array($action, ['purchase-partner-save', 'purchase-partner-delete', 'purchase-partner-preview', 'purchase-partner-import'], true) || ($method !== 'POST' && $section === 'purchase-partners')) {
         require __DIR__ . '/src/Admin/purchase-partners.php';
         require __DIR__ . '/view/admin/layout.php';
         exit;
