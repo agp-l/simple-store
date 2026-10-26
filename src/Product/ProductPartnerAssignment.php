@@ -5,9 +5,10 @@ namespace SimpleStore\Product;
 
 use InvalidArgumentException;
 use MeekroDB;
+use SimpleStore\Supplier\VariantOfferPlan;
 use Throwable;
 
-/** Matches stored URLs only. Never requests supplier pages or changes prices. */
+/** Matches stored sources only; changing seller invalidates that seller's old purchase costs. */
 final class ProductPartnerAssignment
 {
     public function __construct(private MeekroDB $db, private string $language = 'cs') {}
@@ -42,6 +43,11 @@ final class ProductPartnerAssignment
             $host = self::host((string) ($partner['website_url'] ?? ''));
             if ($host !== null && isset($hosts[$host])) $matches[] = ['partner' => $partner, 'link' => $hosts[$host]];
         }
+        return self::winner($matches);
+    }
+
+    private static function winner(array $matches): array
+    {
         if ($matches === []) return ['state' => 'no_match'];
         usort($matches, static fn (array $a, array $b): int => (int) $a['partner']['priority'] <=> (int) $b['partner']['priority']);
         $best = (int) $matches[0]['partner']['priority'];
@@ -49,6 +55,31 @@ final class ProductPartnerAssignment
         if (count($winners) !== 1) return ['state' => 'conflict', 'names' => array_map(
             static fn (array $row): string => PurchasePartnerRepository::label($row['partner']), $winners)];
         return ['state' => 'matched'] + $winners[0];
+    }
+
+    /** Use exactly the price engine's source selection, then require coverage of every active variant. */
+    public static function matchVariantSources(array $snapshot): ?array
+    {
+        $candidates = VariantOfferPlan::candidates($snapshot);
+        if ($candidates === null) return null;
+        if ($candidates === []) {
+            $active = VariantOfferPlan::activeVariants($snapshot);
+            $hasLinks = array_filter($snapshot['variantLinks'], static fn(array $link): bool =>
+                empty($link['removed']) && isset($active[$link['variant_key']]));
+            return ['state' => $hasLinks === [] ? 'no_links' : 'no_match'];
+        }
+        $partners = array_column($snapshot['partners'], null, 'id');
+        $coverage = []; $sources = [];
+        foreach ($candidates as $candidate) {
+            $id = $candidate['partner_id'];
+            $sources[$id] ??= $candidate;
+            foreach ($candidate['links'] as $link) $coverage[$id][$link['variant_key']] = true;
+        }
+        $required = count(VariantOfferPlan::activeVariants($snapshot)); $matches = [];
+        foreach ($coverage as $id => $variants) {
+            if (count($variants) === $required) $matches[] = ['partner' => $partners[$id], 'link' => $sources[$id]];
+        }
+        return $matches === [] ? ['state' => 'incomplete'] : self::winner($matches);
     }
 
     public function previews(): array
@@ -74,7 +105,8 @@ final class ProductPartnerAssignment
             foreach ($plan['items'] as $item) {
                 if ($item['state'] !== 'change') continue;
                 $sale = $item['sale'];
-                $values = ['partner_id' => (int) $item['partner']['id'], 'version' => (int) ($sale['version'] ?? 0) + 1];
+                $values = ['partner_id' => (int) $item['partner']['id'], 'version' => (int) ($sale['version'] ?? 0) + 1,
+                    'supplier_price_czk' => null, 'variant_prices_json' => '{}'];
                 if ($sale === null) {
                     $this->db->insert('shop_product_sales', $values + ['product_key' => $item['key'],
                         'mode' => 'own', 'variant_prices_json' => '{}']);
@@ -96,14 +128,17 @@ final class ProductPartnerAssignment
     private static function plan(array $snapshot, string $scope): array
     {
         self::scope($scope);
-        $counts = ['change' => 0, 'kept' => 0, 'same' => 0, 'no_links' => 0, 'no_match' => 0, 'conflict' => 0];
+        $counts = ['change' => 0, 'kept' => 0, 'same' => 0, 'no_links' => 0, 'no_match' => 0, 'conflict' => 0, 'incomplete' => 0];
         $items = [];
         $byId = [];
         foreach ($snapshot['partners'] as $partner) $byId[$partner['id']] = $partner;
         foreach ($snapshot['products'] as $key => $product) {
             $sale = $snapshot['sales'][$key] ?? null;
             $current = $byId[$sale['partner_id'] ?? 0] ?? null;
-            $match = self::match($snapshot['links'][$key] ?? [], $snapshot['partners']);
+            $match = self::matchVariantSources([
+                'variantSettings' => $snapshot['variantSettings'][$key] ?? [], 'variants' => $snapshot['variants'][$key] ?? [],
+                'variantLinks' => $snapshot['variantLinks'][$key] ?? [], 'partners' => $snapshot['partners'], 'sale' => $sale,
+            ]) ?? self::match($snapshot['links'][$key] ?? [], $snapshot['partners']);
             if ($scope === 'missing' && $current !== null) $match = ['state' => 'kept'];
             elseif ($match['state'] === 'matched') {
                 $match['state'] = (int) ($current['id'] ?? 0) === (int) $match['partner']['id'] ? 'same' : 'change';
@@ -124,13 +159,20 @@ final class ProductPartnerAssignment
             WHERE active_product_key IS NOT NULL ORDER BY product_key, (language=%s) DESC, language' . $suffix, $this->language) as $row) {
             if (!isset($products[$row['product_key']])) $products[$row['product_key']] = $row;
         }
-        $sales = []; $links = [];
+        $sales = []; $links = []; $variantSettings = []; $variants = []; $variantLinks = [];
         if ($products !== []) {
             $in = implode(',', array_fill(0, count($products), '%s'));
             foreach ($this->db->query('SELECT * FROM shop_product_sales WHERE product_key IN (' . $in . ') ORDER BY product_key' . $suffix, ...array_keys($products)) as $row) $sales[$row['product_key']] = $row;
             foreach ($this->db->query('SELECT id, product_key, label, url FROM shop_product_supplier_links WHERE product_key IN (' . $in . ') ORDER BY product_key, id' . $suffix, ...array_keys($products)) as $row) $links[$row['product_key']][] = $row;
+            if ((new ProductVariantRepository($this->db))->installed()) {
+                foreach ($this->db->query('SELECT product_key,enabled FROM shop_product_variant_settings WHERE product_key IN (' . $in . ') ORDER BY product_key' . $suffix, ...array_keys($products)) as $row) $variantSettings[$row['product_key']] = $row;
+                foreach ($this->db->query('SELECT product_key,variant_key,enabled FROM shop_product_variants WHERE product_key IN (' . $in . ') ORDER BY product_key,variant_key' . $suffix, ...array_keys($products)) as $row) $variants[$row['product_key']][] = $row;
+            }
+            if ((new ProductVariantSupplierRepository($this->db))->installed()) {
+                foreach ($this->db->query('SELECT product_key,link_key,variant_key,partner_key,url,origin,removed FROM shop_product_variant_supplier_links WHERE product_key IN (' . $in . ') ORDER BY product_key,link_key' . $suffix, ...array_keys($products)) as $row) $variantLinks[$row['product_key']][] = $row;
+            }
         }
         $partners = $this->db->query('SELECT * FROM shop_purchase_partners ORDER BY id' . $suffix);
-        return compact('products', 'sales', 'links', 'partners');
+        return compact('products', 'sales', 'links', 'partners', 'variantSettings', 'variants', 'variantLinks');
     }
 }

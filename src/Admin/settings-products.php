@@ -20,6 +20,13 @@ $saleBulkMode = is_string($_POST['sale_mode'] ?? null) ? $_POST['sale_mode'] : '
 $saleBulkPreview = null;
 $massNotice = $_SESSION['product_mass_notice'] ?? null;
 unset($_SESSION['product_mass_notice']);
+if ($method === 'GET') {
+    $cancel = $_GET['cancel_preview'] ?? '';
+    if (in_array($cancel, ['mass', 'sale', 'variants'], true)) {
+        unset($_SESSION[['mass' => 'product_mass_preview', 'sale' => 'product_sale_bulk_preview',
+            'variants' => 'product_variant_bulk_preview'][$cancel]]);
+    }
+}
 if ($method === 'POST') {
     foreach ($massValues as $key => $value) {
         if (is_string($_POST[$key] ?? null)) $massValues[$key] = $_POST[$key];
@@ -33,7 +40,8 @@ if ($method === 'POST') {
             $_SESSION['product_mass_notice'] = 'Přiřazení dokončeno. Změněno: ' . $result['change'] .
                 ', ponecháno: ' . ($result['same'] + $result['kept']) . ', bez odkazu: ' . $result['no_links'] .
                 ', bez shody webu: ' . $result['no_match'] . ', shodná priorita: ' . $result['conflict'] .
-                '. Ceny a způsob prodeje se nezměnily.';
+                ', neúplné pokrytí variant: ' . $result['incomplete'] .
+                '. Prodejní ceny a způsob prodeje se nezměnily. Nákupní ceny u změněných prodávajících je potřeba znovu načíst nebo doplnit.';
             header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl . '?section=settings&tab=products#product-partner-assignment'), true, 303);
             exit;
         } elseif (in_array($_POST['action'] ?? '', ['products-sale-preview', 'products-sale-apply'], true)) {
@@ -71,7 +79,9 @@ if ($method === 'POST') {
                     throw new InvalidArgumentException('Nejdřív zobraz nový náhled vytvoření variant.');
                 }
                 $variantBulkQuantity = (string) $pending['quantity'];
+                $variantBulkPreview = $pending;
                 if (($_POST['confirm_variants'] ?? '') !== '1') throw new InvalidArgumentException('Potvrď vytvoření variant a nahrazení společného skladu.');
+                $variantBulkPreview = null;
                 unset($_SESSION['product_variant_bulk_preview']);
                 $created = $variantBulkStore->apply($pending);
                 $_SESSION['product_mass_notice'] = 'Hotovo. Vytvořeno ' . $created['variants'] . ' variant u ' . $created['products'] . ' produktů, každá s ' . $pending['quantity'] . ' volnými kusy.';

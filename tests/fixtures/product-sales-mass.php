@@ -10,6 +10,13 @@ $screen = 'settings'; $settingsTab = $case === 'overview' ? 'overview' : 'produc
 $massNotice = null; $massCount = $case === 'empty' ? 0 : 100;
 $massValues = ['quantity' => '', 'stock_status' => '', 'visibility' => '']; $massPreview = null;
 $variantBulkQuantity = '10'; $variantBulkPreview = null;
+if (in_array($case,['stock','stock-same'],true)) {
+    $massValues=['quantity'=>'8','stock_status'=>'in_stock','visibility'=>''];
+    $massPreview=['choices'=>$massValues,'count'=>100,'changed'=>$case==='stock'?7:0,'token'=>'stock-token'];
+}
+if ($case==='variants') $variantBulkPreview=['quantity'=>10,'variant_count'=>4,'token'=>'variant-token',
+    'products'=>[['key'=>str_repeat('a',32),'name'=>'Bunda <test>','variants'=>4,'previous_quantity'=>7]],
+    'skipped'=>[['name'=>'Hotové varianty','language'=>'cs','slug'=>'hotove-varianty','reason'=>'Varianty už existují.']]];
 $saleBulkReady = $case !== 'uninstalled'; $saleBulkCounts = ['own' => 80, 'assisted' => 20];
 $saleBulkMode = in_array($case, ['assisted', 'own', 'same'], true) ? ($case === 'same' ? 'own' : $case) : '';
 $saleBulkPreview = $saleBulkMode === '' ? null : ['mode' => $saleBulkMode, 'total' => 100,

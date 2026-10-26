@@ -14,6 +14,7 @@
         <option value="own" <?= $saleBulkMode === 'own' ? 'selected' : '' ?>>Prodáváme my</option>
       </select></label>
       <p class="panel-help">Ceny pro zákazníky, sklad, viditelnost a existující objednávky se nezmění. Nově vytvořené produkty mají vlastní nastavení způsobu prodeje.</p>
+      <p class="panel-help">Před přepnutím na „Prodáváme my“ ověř skutečné vlastní počty. Přepnutí zachová dosavadní čísla, ale nepotvrzuje, že je máš fyzicky skladem. Cenové kontroly partnerů se v tomto režimu nepoužijí.</p>
       <button class="panel-action panel-button" type="submit" <?= $massCount === 0 ? 'disabled' : '' ?>><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit náhled přepnutí</button>
     </form>
     <?php if ($saleBulkPreview !== null): ?>
@@ -31,7 +32,7 @@
         <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=products#bulk-product-sales') ?>">
           <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="products"><input type="hidden" name="action" value="products-sale-apply"><input type="hidden" name="preview_token" value="<?= $escape($saleBulkPreview['token']) ?>">
           <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Přepnout všechny produkty: <?= $saleBulkPreview['mode'] === 'assisted' ? 'Asistovaný nákup' : 'Prodáváme my' ?></button>
-          <a class="panel-action" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=products#bulk-product-sales') ?>">Zrušit</a>
+          <a class="panel-action" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=products&cancel_preview=sale#bulk-product-sales') ?>">Zrušit náhled přepnutí</a>
         </form>
       <?php else: ?><p role="status">Všechny produkty už používají vybraný způsob prodeje.</p><?php endif; ?>
     <?php endif; ?>

@@ -7,4 +7,5 @@
 .partner-assignment .partner-assignment-replace { padding:12px 18px; border:1px solid #cbd5e1; border-radius:8px; background:#f8fafc; }
 .partner-assignment td { vertical-align:top; overflow-wrap:anywhere; }
 .partner-assignment-links { display:flex; gap:10px 24px; flex-wrap:wrap; }
+#bulk-product-stock, #bulk-product-sales, #bulk-product-variants { scroll-margin-top:100px; }
 @media(max-width:600px) { .partner-assignment-counts { display:grid; grid-template-columns:minmax(0,1fr); } .partner-assignment .panel-table { min-width:0; } .partner-assignment th, .partner-assignment td { padding:10px 6px; } }

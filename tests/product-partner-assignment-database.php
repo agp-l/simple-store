@@ -44,7 +44,7 @@ try {
     foreach($catalog->publishedPage('cs')['items']as$row)$check(!array_key_exists('admin_partner_id',$row)&&!array_key_exists('admin_supplier_count',$row),'Private metadata leaked into public query.');
     $protected=[];foreach(['shop_product_revisions','shop_product_inventory','shop_orders','shop_order_stock_reservations','shop_product_supplier_links','shop_purchase_partners']as$table)$protected[$table]=$db->query('SELECT * FROM '.$table);
     $plans=$assign->previews();$plan=$plans['missing'];
-    $check(count($plan['items'])===7 && $plan['counts']===['change'=>2,'kept'=>2,'same'=>0,'no_links'=>1,'no_match'=>1,'conflict'=>1],'Preview counts or translation deduplication failed.');
+    $check(count($plan['items'])===7 && $plan['counts']===['change'=>2,'kept'=>2,'same'=>0,'no_links'=>1,'no_match'=>1,'conflict'=>1,'incomplete'=>0],'Preview counts or translation deduplication failed.');
     $check($plans['all']['counts']['change']===3,'Reassign option ignored existing seller.');
     $token=Assignment::token($plan,$csrf);$reject(static fn()=> $assign->apply('all',$token,$csrf));$reject(static fn()=> $assign->apply('missing','bad',$csrf));
     $before=$db->query('SELECT * FROM shop_product_sales ORDER BY product_key');
@@ -62,9 +62,42 @@ try {
     $repeat=$assign->previews()['missing'];$before=$db->query('SELECT * FROM shop_product_sales ORDER BY product_key');
     $check($assign->apply('missing',Assignment::token($repeat,$csrf),$csrf)['change']===0 && $db->query('SELECT * FROM shop_product_sales ORDER BY product_key')===$before,'Repeat changed versions.');
     $all=$assign->previews()['all'];$assign->apply('all',Assignment::token($all,$csrf),$csrf);
-    $check((int)$sales->forProduct($existing)['partner_id']===$b && $sales->forProduct($existing)['supplier_price_czk']===1234 && $sales->forProduct($existing)['mode']==='assisted','Reassign altered unrelated settings.');
+    $check((int)$sales->forProduct($existing)['partner_id']===$b && $sales->forProduct($existing)['supplier_price_czk']===null && $sales->forProduct($existing)['variant_prices']===[] && $sales->forProduct($existing)['mode']==='assisted','New seller inherited previous purchase costs or changed sale mode.');
     foreach($protected as$table=>$rows)$check($db->query('SELECT * FROM '.$table)===$rows,'Assignment touched '.$table);
     $check($partners->find($b)['confirmed']==0,'Assignment falsely confirmed a seller.');
     $export=(new Transfer($db))->snapshot();$check($export['partners'][0]['priority']===20,'Priority missing from export.');
+    // Precise variant sources, not the legacy model URLs, determine the usable seller.
+    $variantKey=$make('Variant sources');
+    $variantRepo=new \SimpleStore\Product\ProductVariantRepository($db);
+    $variantLinks=new \SimpleStore\Product\ProductVariantSupplierRepository($db);
+    $items=\SimpleStore\Product\ProductVariants::generate('Velikost: S | M');
+    $variantRepo->save($variantKey,['enabled'=>true,'items'=>$items,'expected'=>$variantRepo->snapshot($variantKey)['expected']]);
+    $items=$variantRepo->snapshot($variantKey)['items'];
+    $links->save($variantKey,0,'Legacy B','https://b.test/model');
+    $partnerA=$partners->find($a)['partner_key'];$partnerB=$partners->find($b)['partner_key'];
+    $v1=$variantLinks->save($variantKey,$items[0]['id'],'',0,$partnerA,'A S','https://a.test/model?size=S');
+    $findPlan=static function(string $key)use($assign):array{
+        foreach($assign->previews()['all']['items']as$item)if($item['key']===$key)return$item;
+        throw new RuntimeException('Missing product in assignment plan.');
+    };
+    $check($findPlan($variantKey)['state']==='incomplete','Partial sources resurrected a common model source.');
+    $v2=$variantLinks->save($variantKey,$items[1]['id'],'',0,$partnerA,'A M','https://a.test/model?size=M');
+    $variantLinks->save($variantKey,$items[0]['id'],'',0,$partnerB,'B S','https://b.test/model?size=S');
+    $check($findPlan($variantKey)['partner']['id']==$a,'Higher-priority seller with incomplete coverage won.');
+    $sales->save($variantKey,'cs',['mode'=>'assisted','version'=>'0','partner_id'=>(string)$b,
+        'supplier_price_czk'=>'1234','variant_price'=>[$items[0]['id']=>'1300']]);
+    $plan=$assign->previews()['all'];
+    $variantLinks->save($variantKey,$items[1]['id'],$v2,1,$partnerA,'A M','https://a.test/model?size=M2');
+    $reject(static fn()=> $assign->apply('all',Assignment::token($plan,$csrf),$csrf));
+    $plan=$assign->previews()['all'];
+    $db->update('shop_product_variants',['available_quantity'=>2],'product_key=%s',$variantKey);
+    $assign->apply('all',Assignment::token($plan,$csrf),$csrf);
+    $check((int)$sales->forProduct($variantKey)['partner_id']===$a && $sales->forProduct($variantKey)['supplier_price_czk']===null &&
+        $sales->forProduct($variantKey)['variant_prices']===[], 'Variant partner change retained another seller costs.');
+    $variantLinks->remove($variantKey,$items[0]['id'],$v1,1);
+    $variantLinks->remove($variantKey,$items[1]['id'],$v2,2);
+    $check($findPlan($variantKey)['state']==='incomplete','Removed variant links or common fallback were reused.');
+    $db->update('shop_product_variants',['enabled'=>0],'product_key=%s AND variant_key=%s',$variantKey,$items[1]['id']);
+    $check($findPlan($variantKey)['partner']['id']==$b,'Disabled variant blocked complete active coverage.');
     echo "Product partner assignment: MySQL matching, preview binding, idempotency, filters, pagination and protected data passed.\n";
 } finally {$db->disconnect();$admin->query('DROP DATABASE %b',$database);}

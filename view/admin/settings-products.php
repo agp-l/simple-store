@@ -2,15 +2,20 @@
 <link rel="stylesheet" href="<?= $escape($basePath . 'assets/product-partner-assignment.css?v=' . filemtime(__DIR__ . '/../../assets/product-partner-assignment.css')) ?>">
 <section class="panel-panel panel-settings-block"><h2>Prodávající pro asistovaný nákup</h2>
 <p>Spravuj společné profily prodávajících a rozpracované kontakty pro výběr u produktů.</p>
-<a class="panel-icon-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=purchase-partners') ?>">Seznam prodávajících a nový prodávající</a></section>
+<div class="partner-assignment-links"><a class="panel-icon-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=purchase-partners') ?>">Seznam prodávajících a nový prodávající</a>
+<a href="<?= $escape($basePath . $site['default_language'] . '?manage=1#produkty') ?>">Produkty a filtr podle partnera →</a>
+<a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=supplier-prices') ?>">Ceny a dostupnost u partnerů →</a></div>
+<p class="panel-help">Zde měníš nastavení současných produktů. Automatické kontroly partnerských cen a odkazy variant spravuj v sekci Ceny dodavatelů. Každý nástroj níže má vlastní potvrzení a nemění nastavení ostatních nástrojů.</p>
+<nav class="partner-assignment-links" aria-label="Nástroje produktů"><a href="#product-partner-assignment">Přiřazení partnerů</a><a href="#bulk-product-sales">Způsob prodeje</a><a href="#bulk-product-stock">Počty a viditelnost</a><a href="#bulk-product-variants">Vytvoření variant</a></nav></section>
 <?php if (is_string($massNotice)): ?><p class="panel-notice" role="status"><?= $escape($massNotice) ?></p><?php endif; ?>
 <?php require __DIR__ . '/settings-product-partners.php'; ?>
 <?php require __DIR__ . '/settings-product-sales.php'; ?>
-<section class="panel-panel panel-settings-block">
+<section class="panel-panel panel-settings-block" id="bulk-product-stock">
   <h2><?= \SimpleStore\Rendering\Icon::render('package') ?> Hromadná úprava produktů</h2>
   <p>Změna platí pro všechny produkty včetně konceptů a všech jazyků. Počet produktů: <strong><?= (int) $massCount ?></strong>.</p>
   <p class="panel-help">Počet znamená volné kusy k prodeji. U produktu se skladem variant se zadaný počet i dostupnost nastaví každé nabízené variantě zvlášť. Překlady sdílejí stejný sklad. Po inventuře zadej počet bez kusů rezervovaných pro objednávky. Rezervace se nemění; při stornu objednávky se její rezervované kusy vrátí na sklad.</p>
-  <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=products') ?>">
+  <p class="panel-help">V režimu „Prodáváme my“ jde o vlastní sklad. U asistovaného nákupu jde o ručně nastavený limit nabídky; tento nástroj neověřuje, kolik kusů skutečně má partner. Stav „Skladem“ zákazník u asistovaného nákupu uvidí jako „Skladem u partnera“.</p>
+  <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=products#bulk-product-stock') ?>">
     <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
     <input type="hidden" name="tab" value="products">
     <input type="hidden" name="action" value="products-mass-preview">
@@ -31,9 +36,10 @@
 </section>
 <?php if ($massPreview !== null): ?>
 <section class="panel-panel panel-settings-block">
-  <h2>Potvrzení pro <?= (int) $massPreview['count'] ?> produktů</h2>
+  <h2>Náhled hromadné změny</h2>
+  <p>Celkem <?= (int) $massPreview['count'] ?> produktů. Skutečně se změní <strong><?= (int) $massPreview['changed'] ?></strong>; shodné hodnoty se znovu nezapisují.</p>
   <ul>
-    <?php if ($massPreview['choices']['quantity'] !== ''): ?><li>Každému produktu nastavit <strong><?= (int) $massPreview['choices']['quantity'] ?> volných kusů</strong>.</li><?php endif; ?>
+    <?php if ($massPreview['choices']['quantity'] !== ''): ?><li>Každému jednoduchému produktu a každé nabízené variantě nastavit <strong><?= (int) $massPreview['choices']['quantity'] ?> volných kusů</strong>.</li><?php endif; ?>
     <?php if ($massPreview['choices']['stock_status'] !== ''): ?><li>Dostupnost: <strong><?= $escape(['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_stock' => 'Není skladem'][$massPreview['choices']['stock_status']]) ?></strong>.</li><?php endif; ?>
     <?php if ($massPreview['choices']['visibility'] !== ''): ?><li><strong><?= $massPreview['choices']['visibility'] === 'public' ? 'Zveřejnit všechny produkty včetně konceptů.' : 'Skrýt všechny produkty.' ?></strong></li><?php endif; ?>
   </ul>
@@ -43,17 +49,17 @@
     <input type="hidden" name="tab" value="products">
     <input type="hidden" name="action" value="products-mass-apply">
     <input type="hidden" name="preview_token" value="<?= $escape($massPreview['token']) ?>">
-    <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Potvrdit hromadnou změnu</button>
-    <a class="panel-action" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=products') ?>">Zrušit</a>
+    <?php if ($massPreview['changed'] > 0): ?><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Potvrdit hromadnou změnu</button><?php else: ?><p role="status">Není co měnit.</p><?php endif; ?>
+    <a class="panel-action" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=products&cancel_preview=mass#bulk-product-stock') ?>">Zrušit náhled</a>
   </form>
 </section>
 <?php endif; ?>
 
 <section class="panel-panel panel-settings-block" id="bulk-product-variants">
   <h2><?= \SimpleStore\Rendering\Icon::render('package') ?> Hromadné vytvoření variant</h2>
-  <?php if (($settingsError ?? '') !== '' && in_array($_POST['action'] ?? '', ['products-variants-preview', 'products-variants-apply'], true)): ?><p class="panel-error" role="alert"><?= $escape($settingsError) ?></p><?php endif; ?>
   <p>Pro začátek obchodu: vytvoří všechny kombinace uložených voleb, například velikostí a barev, u produktů, které zatím nemají varianty. Každá nová varianta dostane zadaný počet volných kusů.</p>
   <p class="panel-help">Existující varianty se přeskočí. Produkty bez voleb a produkty s rezervovanými kusy se také přeskočí. Zahrnou se i koncepty; zůstanou skryté. Volby se čtou z výchozího jazyka obchodu, případně z prvního dostupného překladu. Cena i fotografie se převezmou z hlavního produktu; konkrétní obrázky můžeš přiřadit později.</p>
+  <p class="panel-help">Nové varianty převezmou společné partnerské odkazy jako neověřené výchozí adresy. Přesnou barvu a velikost potom přiřaď v editoru produktu nebo ověř v Cenách dodavatelů. Zadané počty u asistovaného nákupu jsou ruční limit nabídky, nikoli ověřený sklad partnera.</p>
   <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=products#bulk-product-variants') ?>">
     <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="products"><input type="hidden" name="action" value="products-variants-preview">
     <label>Volné kusy každé nové varianty<input name="variant_quantity" type="number" min="0" max="1000000" step="1" required value="<?= $escape($variantBulkQuantity) ?>"></label>
@@ -71,6 +77,7 @@
     <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Vytvořit varianty hromadně</button>
   </form>
   <?php else: ?><p role="status">Není co vytvářet. Důvody přeskočení jsou uvedené níže.</p><?php endif; ?>
-  <?php if ($variantBulkPreview['skipped'] !== []): ?><details><summary>Přeskočené produkty (<?= count($variantBulkPreview['skipped']) ?>)</summary><ul><?php foreach ($variantBulkPreview['skipped'] as $bulkProduct): ?><li><strong><?= $escape($bulkProduct['name']) ?></strong>: <?= $escape($bulkProduct['reason']) ?></li><?php endforeach; ?></ul></details><?php endif; ?>
+  <?php if ($variantBulkPreview['skipped'] !== []): ?><details><summary>Přeskočené produkty (<?= count($variantBulkPreview['skipped']) ?>)</summary><ul><?php foreach ($variantBulkPreview['skipped'] as $bulkProduct): ?><li><a target="_blank" rel="noopener" href="<?= $escape($basePath . $bulkProduct['language'] . '/produkt/' . rawurlencode($bulkProduct['slug']) . '?edit=1#product-variants') ?>"><?= $escape($bulkProduct['name']) ?></a>: <?= $escape($bulkProduct['reason']) ?></li><?php endforeach; ?></ul></details><?php endif; ?>
+  <p><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=products&cancel_preview=variants#bulk-product-variants') ?>">Zrušit náhled vytvoření variant</a></p>
   <?php endif; ?>
 </section>

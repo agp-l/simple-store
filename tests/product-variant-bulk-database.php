@@ -56,12 +56,20 @@ try {
     $reject(static fn () => $service->apply($preview));
     $db->query('DELETE FROM shop_order_stock_reservations WHERE order_id=1000');
     $preview = $service->preview('10');
+    $partnerRepo = new \SimpleStore\Product\PurchasePartnerRepository($db);
+    $partnerId = $partnerRepo->save(0, ['name'=>'Bulk partner','website_url'=>'https://partner.test']);
+    (new \SimpleStore\Product\ProductSupplierLinkRepository($db))->save($normal,0,'Model','https://partner.test/model');
     $result = $service->apply($preview);
     $check($result === ['products' => 3, 'variants' => 9], 'Bulk result counts are incorrect.');
     $state = $variants->snapshot($normal);
     $check(count($state['items']) === 4 && array_column($state['items'], 'quantity') === [10, 10, 10, 10], 'Each combination needs its own initial quantity.');
     $check($state['items'][0]['choices'] === ['Barva' => 'Modrá', 'Velikost' => 'S'], 'The default language was ignored.');
     $check($state['items'][0]['price_czk'] === null && $state['items'][0]['image_path'] === '' && $state['items'][0]['sku'] === '', 'New variants should inherit price/photo and leave SKU optional.');
+    $inherited = (new \SimpleStore\Product\ProductVariantSupplierRepository($db))->forProduct($normal);
+    $check(count($inherited) === 4 && array_unique(array_column($inherited,'origin')) === ['inherited'] &&
+        array_unique(array_column($inherited,'verification')) === ['unverified'] &&
+        array_unique(array_column($inherited,'partner_key')) === [$partnerRepo->find($partnerId)['partner_key']],
+        'Bulk-created variants did not inherit unverified partner links.');
     $check([$variants->snapshot($existing), $variants->snapshot($disabled)] === $before, 'Existing or retired variants were overwritten.');
     $check((int) $db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s', $normal) === 0, 'Old shared stock was duplicated.');
     $check((int) $db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s', $plain) === 7, 'Unrelated stock was changed.');
@@ -72,6 +80,42 @@ try {
     $zero = $make('Zero stock', $options);
     $service->apply($service->preview('0'));
     $check(ProductVariants::availability($variants->snapshot($zero)['items'][0]) === 'out_of_stock', 'Zero stock became purchasable.');
+    // Repeating stock changes must not regenerate links, rewrite retired variants or bump versions.
+    $db->update('shop_product_variants',['enabled'=>0,'available_quantity'=>29,'sku'=>'RETIRED'],
+        'product_key=%s AND variant_key=%s',$normal,$state['items'][0]['id']);
+    $db->insert('shop_product_supplier_variant_modes',['product_key'=>$normal,'enabled'=>1]);
+    (new \SimpleStore\Product\ProductSupplierLinkRepository($db))->save($normal,0,'Late source','https://partner.test/late');
+    $sourcesBefore=$db->query('SELECT * FROM shop_product_variant_supplier_links ORDER BY link_key');
+    $mass = new \SimpleStore\Product\ProductMassUpdate($db);
+    $massPlan=$mass->preview(['quantity'=>'8','stock_status'=>'in_stock']);
+    $check($mass->apply($massPlan)===$massPlan['changed'], 'Preview count differs from actual changed products.');
+    $stateAfter=$variants->snapshot($normal);
+    $check($stateAfter['items'][0]['quantity']===29 && !$stateAfter['items'][0]['enabled'] && $stateAfter['items'][0]['sku']==='RETIRED',
+        'Mass stock edit rewrote retired inventory.');
+    $check($db->query('SELECT * FROM shop_product_variant_supplier_links ORDER BY link_key')===$sourcesBefore &&
+        $db->queryFirstField('SELECT enabled FROM shop_product_supplier_variant_modes WHERE product_key=%s',$normal)==1,
+        'Mass stock edit inherited new links or disabled managed pricing.');
+    $same=$mass->preview(['quantity'=>'8','stock_status'=>'in_stock']);
+    $check($same['changed']===0 && $mass->apply($same)===0 && $variants->snapshot($normal)===$stateAfter,
+        'Repeated mass update rewrote unchanged variant settings.');
+    // A cancelled preview really expires only that tool's plan, even without JavaScript.
+    $controller = static function(array $get, array $post, array $session) use ($db): array {
+        $_GET=$get;$_POST=$post;$_SESSION=$session;$method=$post===[]?'GET':'POST';
+        $site=['default_language'=>'cs'];$adminUrl='/admin.php';$csrf='test-csrf';$settingsError='';
+        require dirname(__DIR__).'/src/Admin/settings-products.php';
+        return ['session'=>$_SESSION,'error'=>$settingsError,'variants'=>$variantBulkPreview];
+    };
+    $sessions=['mass'=>'product_mass_preview','sale'=>'product_sale_bulk_preview','variants'=>'product_variant_bulk_preview'];
+    foreach ($sessions as $kind=>$sessionKey) {
+        $pending=array_fill_keys(array_values($sessions),['token'=>'old-plan']);
+        $response=$controller(['cancel_preview'=>$kind],[],$pending);
+        unset($pending[$sessionKey]);
+        $check($response['session']===$pending, 'Cancellation retained its plan or discarded another tool preview.');
+    }
+    $plan=$service->preview('10')+['token'=>'confirmation-test'];
+    $response=$controller([],['action'=>'products-variants-apply','preview_token'=>'confirmation-test'],['product_variant_bulk_preview'=>$plan]);
+    $check($response['error']!=='' && $response['variants']===$plan && isset($response['session']['product_variant_bulk_preview']),
+        'Missing checkbox discarded the variant preview instead of allowing confirmation.');
     echo "Bulk variant preview, stale writes, reservations, translations and idempotency passed.\n";
 } finally {
     $db->disconnect();

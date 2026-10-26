@@ -5,7 +5,7 @@ import { mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 import { chromium } from 'playwright';
 
 test('bulk sale modes: responsive admin preview and explicit no-JS confirmation', async () => {
-  const cases = ['start', 'assisted', 'own', 'same', 'empty', 'uninstalled'];
+  const cases = ['start', 'assisted', 'own', 'same', 'empty', 'uninstalled', 'stock', 'stock-same', 'variants'];
   const files = cases.map(mode => `tests/fixtures/sales-mass-${mode}.html`);
   cases.forEach((mode, i) => writeFileSync(files[i], execFileSync('php', ['tests/fixtures/product-sales-mass.php', mode])));
   const server = spawn('php', ['-S', '127.0.0.1:8781', '-t', process.cwd()], { stdio: 'ignore' });
@@ -60,6 +60,24 @@ test('bulk sale modes: responsive admin preview and explicit no-JS confirmation'
       assert.equal(await page.locator('#bulk-product-sales button').isDisabled(), true);
       await page.goto(url('uninstalled'));
       assert.equal(await page.locator('#bulk-product-sales form').count(), 0);
+      await page.goto(url('stock'));
+      assert.match(await page.getByRole('link',{name:'Zrušit náhled',exact:true}).getAttribute('href'),/cancel_preview=mass/);
+      await page.getByRole('button',{name:'Potvrdit hromadnou změnu',exact:true}).click();
+      await page.getByText('Odesláno ve fixture').waitFor();
+      assert.equal(submitted.get('action'),'products-mass-apply');assert.equal(submitted.get('preview_token'),'stock-token');
+      await page.goto(url('stock-same'));
+      assert.equal(await page.getByRole('button',{name:'Potvrdit hromadnou změnu',exact:true}).count(),0);
+      await page.getByText('Není co měnit.',{exact:true}).waitFor();
+      await page.goto(url('variants'));
+      const variantRoot=page.locator('#bulk-product-variants');
+      await variantRoot.getByLabel('Ověřil jsem kombinace i počet kusů.',{exact:false}).check();
+      assert.match(await variantRoot.getByRole('link',{name:'Zrušit náhled vytvoření variant'}).getAttribute('href'),/cancel_preview=variants/);
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Variant preview overflows.');
+      await variantRoot.screenshot({path:`/tmp/sales-mass-screenshots/variants-${width}.png`});
+      await variantRoot.getByRole('button',{name:'Vytvořit varianty hromadně',exact:true}).click();
+      await page.getByText('Odesláno ve fixture').waitFor();
+      assert.equal(submitted.get('action'),'products-variants-apply');assert.equal(submitted.get('preview_token'),'variant-token');
+      assert.equal(submitted.get('confirm_variants'),'1');assert.equal(submitted.get('csrf'),'test-token');
       await page.close();
     }
   } finally {
