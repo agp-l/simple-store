@@ -1,6 +1,6 @@
 # Odkazy partnerů u variant a dostupnost asistovaného nákupu
 
-Stav: **etapy A/B/C implementované; D navazující**, 25. 10. 2026. Upřesnění uživatele zde nahrazuje širší návrh z commitů `dd14f4f` a `2e26198`. Současný provoz popisují [varianty](product-variants.md), [asistovaný nákup](assisted-purchase.md) a [cenový automat](supplier-prices.md). Etapy A/B přidávají evidenci odkazů, editor, JSON a přímé URL. Etapa C doplňuje volitelné automatické ověřování přesných URL z čerstvých uložených nabídek; zapíná se v administraci cen. Změny dostupnosti D zatím nejsou implementované.
+Stav: **etapy A/B/C a synchronizace limitů D implementované**, 26. 10. 2026. Upřesnění uživatele zde nahrazuje širší návrh z commitů `dd14f4f` a `2e26198`. Současný provoz popisují [varianty](product-variants.md), [asistovaný nákup](assisted-purchase.md) a [cenový automat](supplier-prices.md). Etapy A/B přidávají evidenci odkazů, editor, JSON a přímé URL. Etapa C doplňuje volitelné automatické ověřování přesných URL z čerstvých uložených nabídek; zapíná se v administraci cen. Změny dostupnosti D zatím nejsou implementované.
 
 ## Význam partnera a režimů prodeje
 
@@ -67,17 +67,19 @@ Metadata rozliší `reported_quantity` (číslo nebo `null`), původ `reported` 
 
 ### Limit, rezervace a opakované kontroly
 
-Limit 3 není jen maximum jednoho košíku, které lze obejít více souběžnými objednávkami. Využije se nynější transakční omezení množství a rezervací. U asistence jde o rezervaci **našeho prodejního limitu**, nikoli o rezervaci u partnera.
+Podle upřesnění zadání z 26. 10. je partnerské množství **limit jedné objednávky** z posledního ověřeného údaje. Objednávky ho trvale neodečítají. Kontrola v transakci stále ověřuje množství celé varianty a aktuální režim prodeje. Vlastní prodej používá skutečné rezervace beze změny.
 
-Kontrola nesmí slepě nastavit volný limit zpět na 3 nebo `N`, pokud z něj již čerpají rozpracované asistované objednávky. Opakované vyhodnocení téhož načtení nic nenavyšuje. Čerstvé načtení a naše nevyřízené závazky se vyhodnotí společně, konzervativně vůči nejasnému výsledku nákupu u partnera. Samotné označení externí expedice nesmí před vyřešením závazku znovu uvolnit celý partnerský limit.
+Objednávka zapíše do transakční fronty požadavek na nové ověření. Více objednávek se sloučí; HTTP neběží během objednávky. Worker vyžádá pozorování po objednávce, nejdříve 15 minut od předchozího stažení URL. Platí robots.txt, prodlevy hostitele i HTTP blokace. Běžná automatická kontrola běží nejvýše jednou za 24 hodin; objednávka je výslovná výjimka s limitem pro URL.
 
-Před aktivací otestovat dokončení, storno, obnovení objednávky, externí expedici, opakovanou kontrolu a souběh. Současné `release()` a `reopen()` mění kusy bez rozlišení původu limitu; doplnit kontroly respektující režim objednávky a novější stav partnera. Vrácení staré rezervace nesmí přičíst kusy do jiného režimu nebo překročit nový limit po zjištění vyprodání. Zachová se dosavadní historie a mechanismus, nikoli nekontrolované přičítání po změně dostupnosti.
+Staré asistované rezervace se při stornu/obnovení označí, ale jejich kusy se nepřičítají ani neodečítají od partnerského limitu. Režim se čte z neměnného snímku objednávky. Starou vlastní objednávku po přepnutí na asistenci nelze obnovit do partnerského limitu.
+
+Nejde o rezervaci zboží u partnera ani garanci okamžité dostupnosti: mezi ověřením a skutečným nákupem se cizí sklad může změnit. Nejasná kontrola zachová poslední známý údaj a viditelnou chybu kontroly; nevytváří odhadované kusy.
 
 ## Přepnutí režimu produktu
 
 Přepnutí nikdy nepromění partnerský limit 3 ve tři fyzické kusy a vlastní počet nevydává za počet partnera. Správce uvidí, který režim a množství se použijí. Návrat na vlastní prodej vyžaduje ověření skutečného počtu; přechod na asistenci platný partnerský údaj nebo výslovně nastavený počáteční limit.
 
-S nevyřešenými rezervacemi se přepnutí zablokuje do bezpečného vypořádání. Staré objednávky zachovají původní režim a ceny; jejich pozdější storno či obnovení musí respektovat přechod režimu, nikoli přičíst staré kusy do nové interpretace zásoby.
+Automaticky spravovaný limit je označen v `shop_partner_stock_state` (partner a čas pozorování, žádný další sklad). Při změně partnera nebo návratu na vlastní prodej se tento limit vynuluje a starý údaj zneplatní. Správce nastaví skutečné vlastní kusy; u asistence je zařazena nová kontrola. Původní ručně zadané počáteční stavy bez automatického pozorování se touto migrací nepřepisují.
 
 ## Přesné odkazy a nepovinné identifikátory
 

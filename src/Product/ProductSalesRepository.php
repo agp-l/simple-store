@@ -82,10 +82,12 @@ final class ProductSalesRepository
         $cost = null; $partnerId = null; $variantPrices = [];
         $this->db->startTransaction();
         try {
+            (new ProductStockRepository($this->db))->ensure($key);
+            $this->db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s FOR UPDATE',$key);
             $product = $this->db->queryFirstRow('SELECT * FROM shop_product_revisions WHERE product_key=%s
                 AND language=%s AND active_product_key IS NOT NULL LIMIT 1 FOR UPDATE', $key, $language);
             if ($product === null) throw new InvalidArgumentException('Produkt už neexistuje.');
-            $stored = $this->db->queryFirstRow('SELECT version FROM shop_product_sales WHERE product_key=%s FOR UPDATE', $key);
+            $stored = $this->db->queryFirstRow('SELECT version,mode,partner_id FROM shop_product_sales WHERE product_key=%s FOR UPDATE', $key);
             if ((int) ($stored['version'] ?? 0) !== $expected) throw new InvalidArgumentException('Nastavení mezitím někdo změnil. Otevři uložené nastavení v nové kartě a porovnej změny.');
             $cost = ($input['supplier_price_czk'] ?? '') === '' ? null : self::price($input['supplier_price_czk']);
             $partnerId = filter_var($input['partner_id'] ?? '0', FILTER_VALIDATE_INT, ['options' => ['min_range' => 0]]);
@@ -129,6 +131,7 @@ final class ProductSalesRepository
             } elseif ($mode === 'assisted' && $cost > (int) $product['price_czk']) {
                 throw new InvalidArgumentException('Cena dodavatele nesmí převýšit konečnou cenu produktu.');
             }
+            (new PartnerStockState($this->db))->changeSeller($key,$stored,$mode,$partnerId);
             $values = ['mode' => $mode, 'partner_id' => $partnerId, 'supplier_price_czk' => $cost,
                 'variant_prices_json' => json_encode($variantPrices, JSON_THROW_ON_ERROR),
                 'version' => $expected + 1];

@@ -69,7 +69,7 @@ try{
  $other=ConnectionFactory::create(array_replace($config,['database'=>$database]));$lock='supplier-prices:'.sha1($database);$other->query('SELECT GET_LOCK(%s,0)',$lock);$reject(fn()=>$manager->tick());$other->query('SELECT RELEASE_LOCK(%s)',$lock);$other->disconnect();
  $token=$manager->rotateKey();$check(strlen($token)===64&&$manager->settings()['cron_hash']===hash('sha256',$token),'Cron key not hashed.');
  $manager->configure(true,false);$manager->tick();$next=(int)$manager->settings()['next_weekly'];$check($next===$now+604800,'Weekly enqueue not scheduled.');$manager->tick();$check((int)$manager->settings()['next_weekly']===$next,'Weekly cadence moved on each tick.');
- $check((int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$key)===7,'Supplier availability changed inventory.');
+ $check((int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$key)===3,'Partner in-stock limit was not synchronized.');
  $check((int)$db->queryFirstField('SELECT price_czk FROM shop_product_revisions WHERE product_key=%s',$key)===3000,'Retail price changed.');
  $check($manager->dashboard('failed','Product private/item',1)['total']===1,'History search/filter failed.');
 
@@ -81,7 +81,7 @@ try{
  $rounded=$make('rounded',1210);$responses['https://a.test/rounded']=$offer('https://a.test/rounded',1210);
  $manager->enqueue('one','rapid',$rounded);$run(4,10000);
  $current=$db->queryFirstRow('SELECT * FROM shop_product_revisions WHERE product_key=%s AND active_product_key IS NOT NULL',$rounded);
- $check((int)$current['price_czk']===1400&&(int)$current['revision_number']===2&&$current['description']==='Keep','Common retail price/revision was not updated atomically.');
+ $check((int)$current['price_czk']===1400&&(int)$current['revision_number']===3&&$current['description']==='Keep','Common retail price/revision was not updated atomically.');
  $check((int)$db->queryFirstField('SELECT price_czk FROM shop_product_revisions WHERE product_key=%s AND active_product_key IS NULL',$rounded)===3000,'Previous price missing from revision history.');
  $check($job($rounded)['status']==='applied'&&(int)$sale($rounded)['supplier_price_czk']===1210,'Same cost did not trigger retail pricing.');
  $audit=json_decode($job($rounded)['result_json'],true);$check($audit['retail_changes'][0]['new']===1400,'Retail audit missing.');
@@ -147,7 +147,7 @@ try{
  $manager->enqueue('one','rapid',$scoped);$run(4,100);
  $check($job($scoped)['status']==='checked'&&(int)$sale($scoped)['supplier_price_czk']===11990,'Scoped local variants did not auto-verify their shared price.');
  $audit=json_decode($job($scoped)['result_json'],true);$check($audit['identity_evidence']['method']==='exact_local_variant_scope','Local variant proof missing.');
- $check((int)$db->queryFirstField('SELECT SUM(available_quantity) FROM shop_product_variants WHERE product_key=%s',$scoped)===14,'Scoped check changed physical stock.');
+ $check((int)$db->queryFirstField('SELECT SUM(available_quantity) FROM shop_product_variants WHERE product_key=%s',$scoped)===6,'Exact variant partner limits were not synchronized.');
  // Current counters must ignore obsolete runs and removed cards, while history remains available.
  $oldCount=$manager->dashboard()['counts'];
  $db->insert('shop_supplier_price_jobs',['product_key'=>str_repeat('f',32),'product_name'=>'Removed product','mode'=>'normal','created_at'=>$now,'next_at'=>$now,'status'=>'failed','message'=>'Gone','data_json'=>'{"snapshot":{"candidates":[]}}']);
@@ -282,7 +282,7 @@ try{
  $db->update('shop_product_supplier_links',['url'=>$f4['url'].'#modra'],'product_key=%s',$opinel);
  $check($manager->retry('one','rapid',false,(int)$beforeJob['id'])['added']===1,'Changing source after a successful check could not be checked.');
  $run(2,5);$check(count($requests)===$before,'Another colour bypassed shared URL cache.');
- $check((int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$opinel)===7,'Partner check changed stock.');
+ $check((int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$opinel)===3,'Simple-product partner limit not synchronized.');
  $reject(fn()=>$manager->retry('one','rapid',false,(int)$oldJob['id']));
  echo "Supplier prices: MySQL durable queue, selected/fallback sellers, daily and URL limits, pauses, locks, stale data, variants, current counters and cron passed.\n";
 }finally{$db->disconnect();$admin->query('DROP DATABASE %b',$database);}

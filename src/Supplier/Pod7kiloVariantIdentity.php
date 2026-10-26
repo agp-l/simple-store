@@ -30,7 +30,7 @@ final class Pod7kiloVariantIdentity
             if(!$attributes)return [];
             $out[]=['url'=>$source,'price'=>PriceParser::amount($v['price']),'amount'=>(string)$v['price'],
                 'product_name'=>is_string($v['productNameWithVariant']??null)?$v['productNameWithVariant']:$offer['product_name'],'group_name'=>$offer['product_name'],'group_url'=>$offer['url'],
-                'attributes'=>$attributes,'availability'=>is_string($v['availability']??null)&&str_contains($v['availability'],'availability-in-stock')?'in_stock':(is_string($v['availability']??null)&&str_contains($v['availability'],'availability-out-of-stock')?'out_of_stock':'unknown'),'identity_evidence'=>null];
+                'stock_evidence_version'=>1, 'reported_quantity'=>PartnerStockPolicy::textQuantity(is_string($v['availability']??null)?$v['availability']:''),'attributes'=>$attributes,'availability'=>PartnerStockPolicy::textAvailability(is_string($v['availability']??null)?$v['availability']:'',is_string($v['availability']??null)&&str_contains($v['availability'],'availability-in-stock'),is_string($v['availability']??null)&&str_contains($v['availability'],'availability-out-of-stock')),'identity_evidence'=>null];
         }
         // The base page may advertise the minimum, while preselecting a dearer version.
         // Exact variant pages must still agree with the selected SKU, without exception.

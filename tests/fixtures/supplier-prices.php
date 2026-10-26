@@ -10,6 +10,7 @@ $products=[['name'=>'Péřový spacák – velmi dlouhý název <bezpečný>','p
 $snapshot=['products'=>[['language'=>'cs','slug'=>'spacak']], 'variantSettings'=>['enabled'=>1]];
 $result=['source_url'=>'https://example.test/p','partner_name'=>'Záložní prodávající','price'=>1200,'old_price'=>1000,'observed_at'=>1792920000,'availability'=>'in_stock','fallback'=>true];
 $rows=[];foreach(['review','applied','failed','queued']as$i=>$state)$rows[]=['id'=>$i+1,'product_name'=>$products[0]['name'],'status'=>$state,'created_at'=>1792910000,'checked_at'=>$state==='queued'?0:1792920000,'applied_at'=>$state==='applied'?1792920000:0,'next_at'=>1792920000,'mode'=>'normal','message'=>'Cena vyžaduje ověření konkrétní varianty.','data_json'=>json_encode(['snapshot'=>$snapshot,'trace'=>[['seller'=>'Původní obchod','time'=>1792920000,'message'=>'HTTP 404. Cena zůstala.']]]),'result_json'=>in_array($state,['review','applied'])?json_encode($result):null];
+$rows[0]['image_path']='images/test.webp';
 $rows[2]['current_product']=['language'=>'cs','slug'=>'spacak'];
 $rows[2]['sources_changed']=true;$rows[2]['stale_result']=true;
 $rows[2]['current_sources']=[['name'=>'Nový partner 4camping','url'=>'https://www.4camping.cz/p/test/#oranzova','selected'=>true]];

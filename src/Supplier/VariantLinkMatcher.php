@@ -48,7 +48,7 @@ final class VariantLinkMatcher
         if ($host === 'hudy.cz' && (empty($query['variant']) || (isset(StructuredVariantScope::attributes($choices)['size']) && empty($query['size'])))) return ['status' => 'missing_selector', 'message' => 'Odkaz HUDY neobsahuje konkrétní barvu a velikost.'];
         $offer = $sameUrl[0];
         return ['status' => 'exact', 'message' => 'Jedna nabídka odpovídá modelu i vlastnostem této varianty.', 'url' => $target,
-            'offer' => array_intersect_key($offer, array_flip(['url', 'product_name', 'group_name', 'attributes', 'amount', 'price', 'availability'])),
+            'offer' => array_intersect_key($offer, array_flip(['url', 'product_name', 'group_name', 'attributes', 'amount', 'price', 'availability', 'reported_quantity', 'stock_evidence_version'])),
             'evidence' => $result['identity_evidence'], 'choices' => $choices];
     }
 }

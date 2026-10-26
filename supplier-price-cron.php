@@ -19,6 +19,7 @@ try{
     }elseif($method!=='POST')$valid=strlen($settings['cron_hash'])===64&&hash_equals($settings['cron_hash'],hash('sha256',$key));
     if(!$valid){http_response_code(403);exit;}
     if($method==='HEAD')exit;
+    \SimpleStore\Database\OperationalSchema::install($db);
     $result=$manager->tick('cron');
     if($method==='POST'){header('Content-Type: application/json; charset=utf-8');echo json_encode($result,JSON_THROW_ON_ERROR);}
     else echo 'Supplier queue: '.$result['state']."\n";

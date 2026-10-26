@@ -55,7 +55,7 @@ final class StructuredVariantScope
         $host=preg_replace('/^www\./','',strtolower((string)parse_url($url,PHP_URL_HOST)));
         if(!in_array($host,['gramino.cz','hudy.cz','pod7kilo.cz','4camping.cz'],true)||empty($document['single_offers']))return null;
         if(empty($snapshot['variantSettings']['enabled']))return null;
-        $offers=$document['scoped_offers']??$document['offers']??[];$matched=[];$perVariant=[];
+        $offers=$document['scoped_offers']??$document['offers']??[];$matched=[];$perVariant=[];$stockOffers=[];
         foreach($snapshot['variants']??[]as$variant){
             if(empty($variant['enabled']))continue;
             $choices=json_decode($variant['choices_json']??'null',true);
@@ -70,6 +70,7 @@ final class StructuredVariantScope
             }
             if(!$found||count(array_unique(array_column($found,'amount')))!==1)return null;
             $matched+=$found;
+            if(isset($variant['variant_key']))$stockOffers[$variant['variant_key']]=PartnerStockPolicy::evidence($found);
             if(!empty($snapshot['variantPriceMode']['enabled'])){
                 $offer=reset($found);$states=array_unique(array_column($found,'availability'));
                 $perVariant[$variant['variant_key']]=['price'=>$offer['price'],'availability'=>count($states)===1?reset($states):'unknown','urls'=>array_column($found,'url')];
@@ -83,6 +84,8 @@ final class StructuredVariantScope
         $result['identity_evidence']=['method'=>'exact_structured_attributes','verified_url'=>$url,'matched_offers'=>array_values(array_map(static fn(array $o):array=>array_intersect_key($o,array_flip(['url','amount','attributes'])),$matched))];
         if(count($matched)===1)$result['corrected_url']=$result['url'];
         if($perVariant){$result['variant_offers']=$perVariant;$result['price']=min(array_column($perVariant,'price'));}
+        $result=array_replace($result,PartnerStockPolicy::evidence($matched));
+        if(!empty($stockOffers))$result['canonical_variant_offers']=$stockOffers;
         return $result;
     }
     private static function sameSourceModel(string $model,string $variant,string $host):bool

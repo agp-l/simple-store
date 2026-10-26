@@ -63,6 +63,7 @@ final class ProductSalesMassUpdate
             foreach ($rows as $key => $row) {
                 $sale = $row['sale'];
                 if (($sale['mode'] ?? 'own') === $mode) continue;
+                (new PartnerStockState($this->db))->changeSeller($key,$sale,$mode,isset($sale['partner_id'])?(int)$sale['partner_id']:null);
                 if ($sale === null) {
                     $this->db->insert('shop_product_sales', ['product_key' => $key, 'mode' => $mode,
                         'variant_prices_json' => '{}', 'version' => 1]);

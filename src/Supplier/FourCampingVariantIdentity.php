@@ -49,8 +49,8 @@ final class FourCampingVariantIdentity
             $out[] = ['url' => $exactUrl, 'price' => PriceParser::amount($variant['price']), 'amount' => (string) $variant['price'],
                 'product_name' => is_string($variant['productNameWithVariant'] ?? null) ? $variant['productNameWithVariant'] : $offer['product_name'],
                 'group_name' => $offer['product_name'], 'group_url' => $parent, 'attributes' => $attributes,
-                'availability' => str_contains($availability, 'stock--available') ? 'in_stock' :
-                    (($variant['allowPurchase'] ?? null) === false ? 'out_of_stock' : 'unknown'),
+                'stock_evidence_version'=>1, 'reported_quantity' => PartnerStockPolicy::textQuantity($availability),
+                'availability' => PartnerStockPolicy::textAvailability($availability,str_contains($availability,'stock--available'),($variant['allowPurchase']??null)===false),
                 'identity_evidence' => ['method' => '4camping_variant_table', 'verified_url' => $exactUrl,
                     'product_id' => (string) $data['productId'], 'variant_id' => (string) $id]];
         }

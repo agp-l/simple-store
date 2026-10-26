@@ -196,6 +196,8 @@ jobs:
           php tests/gopay-database.php
           php tests/btcpay-database.php
           php tests/fio-database.php
+          php tests/bitcoin-rate-database.php
+          php tests/partner-stock-database.php
           php tests/stock-database.php
           php tests/shipping-database.php
           php tests/homepage-database.php
@@ -272,6 +274,8 @@ jobs:
           php tests/purchase-partner-transfer-database.php
           php tests/product-partner-assignment-database.php
           php tests/partner-catalog-database.php
+          php tests/bitcoin-rate-database.php
+          php tests/partner-stock-database.php
           php tests/supplier-prices-database.php
           php tests/supplier-variant-prices-database.php
           php tests/product-families-database.php

@@ -16,6 +16,7 @@ try{
     }else{
         if(!in_array($command,['--tick','--diagnostics','--variant-link-plan','--retry-cached'],true)||count($argv)>2)throw new InvalidArgumentException('Unknown command. Use --help.');
         $db=ConnectionFactory::create(require dirname(__DIR__).'/config/database.php');$manager=new PriceManager($db);
+        if($command==='--tick')\SimpleStore\Database\OperationalSchema::install($db);
         $result=match($command){'--diagnostics'=>$manager->diagnostics(),'--variant-link-plan'=>(new VariantLinkDiscovery($db,time()))->report(),'--retry-cached'=>$manager->retry('problems','rapid',false),default=>$manager->tick('cli')};
     }
     echo json_encode($result,JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES)."\n";

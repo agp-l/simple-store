@@ -10,7 +10,7 @@ Administrace: `/admin/supplier-prices/`. PHP 8.1+, cURL a stávající MySQL/Mar
 2. V manageru vybrat chybějící ceny, všechny produkty nebo jeden produkt. Zařazení zároveň spustí zpracování v otevřeném okně. Při chybě připojení lze pokračovat tlačítkem. Fronta je v databázi.
 3. Šetrně: rozestupy 60–90 s na obchod. Zrychleně: 15–23 s. Diagnosticky: 1–2 s. Větší prodleva z robots.txt nebo Retry-After má přednost. Robots a každý krok přesměrování také spotřebují tento limit. Každý worker provede nejvýše jeden vzdálený požadavek; nečeká se pomocí sleep.
 4. Běžná nová kontrola produktu nejdříve 24 hodin od zařazení i dokončení. Pro nevyřešené výsledky existuje níže popsané ruční opakování. Rozpracovaná kontrola se neduplikuje. Tentýž URL se po dobu 24 h sdílí z cache mezi produkty. Limity platí společně pro všechna okna i cron.
-5. Jednoznačná CZK cena vybraného prodávajícího se automaticky uloží do **Cena dodavatele**. Haléře se zaokrouhlí nahoru na celé Kč. Změna přes 30 %, nejasný URL varianty a varianty bez důkazu společné ceny vyžadují kontrolu. Vlastní dodavatelské ceny variant zůstávají zachované. Společná prodejní cena se může přepočítat podle zapnuté cenotvorby; sklad se nemění.
+5. Jednoznačná CZK cena vybraného prodávajícího se automaticky uloží do **Cena dodavatele**. Haléře se zaokrouhlí nahoru na celé Kč. Změna přes 30 %, nejasný URL varianty a varianty bez důkazu společné ceny vyžadují kontrolu. Vlastní dodavatelské ceny variant zůstávají zachované. Společná prodejní cena se může přepočítat podle zapnuté cenotvorby; vlastní sklad se nemění. U asistovaného nákupu se samostatně synchronizuje partnerský limit.
 6. Záložní odkaz podle priority se použije až při chybě předchozího. Zjištěná záložní cena je návrh: tlačítko převezme cenu a prodávajícího společně. Vyžaduje dokončený profil nového prodávajícího. U vlastních dodavatelských cen variant je nutná společná úprava v produktu, protože ceny jiného obchodu by nebyly platné.
 7. Při převzetí se ověřuje stáří nabídky, nezměněná data produktu, odkazů, prodávajících a variant. Cena vyšší než nejnižší relevantní prodejní cena je zablokovaná. Historické objednávky se nikdy nepřepisují.
 
@@ -31,7 +31,7 @@ V manageru zapnout **Jednou týdně zařadit všechny produkty**. První zařaze
 - Čte se schema.org Product/Offer z JSON-LD v HTML nebo JSON bloku v Markdownu (např. Gramino). U ProductGroup se vybere nabídka přesného URL varianty. Doporučené zboží, ItemList, cenové intervaly AggregateOffer, cizí měny a podmíněné klubové nabídky se nezaměňují za běžnou cenu.
 - U Pod 7 kilo může Offer odkazovat na společný model. Konkrétní variantu uznáme pouze při shodě kanonické adresy, vybraného ID varianty a produktu, EANu, kódu výrobce, přesné ceny a měny v serverovém JSON. Jde o ověření dodatečných dat, nikoli o odstranění kontroly variant. Starší návrhy „Ke kontrole“ zůstanou v historii. Lze je ověřit a převzít běžným tlačítkem nebo zařadit k opakování podle pravidel níže.
 - Není to univerzální čtečka libovolného webu. Chybějící strukturovaná nabídka, cena pouze v JavaScriptu, přihlášení nebo ochrana proti robotům znamenají zaznamenaný neúspěch. Žádné obcházení CAPTCHA, rotace proxy nebo předstírání jiného robota. Pro takový obchod je další cestou domluvený XML/CSV feed nebo API; nový formát musí mít vlastní ověřený parser.
-- Jedna veřejná cena neznamená všechny velikosti/barvy. Odkaz má ukazovat na konkrétní odpovídající produkt/variantu. Dostupnost dodavatele je informativní, nemění sklad e-shopu ani automaticky nezakazuje prodej.
+- Jedna veřejná cena neznamená všechny velikosti/barvy. Odkaz má ukazovat na konkrétní odpovídající produkt/variantu. Dostupnost přesně ověřené nabídky vybraného partnera řídí limit asistovaného nákupu: skladem bez počtu = 3, doložený počet >= 2 = tento počet, poslední kus nebo vyprodáno = 0.
 - Přesměrování pouze v rámci stejné domény obchodu, nejvýše 3, každý krok kontroluje robots. Přechod jinam musí správce opravit v odkazu.
 - Pouze veřejné HTTPS URL bez přihlašovacích údajů a jiných portů. DNS adresy jsou ověřeny a spojení připnuto na ověřenou IP. TLS kontrola zůstává aktivní, bez cookies. Limit těla 2 MB, spojení 4 s, HTTP požadavek 12 s. Privátní sítě/metadata serverů nejsou dostupné.
 - Databázový advisory lock vylučuje souběh workerů. Rezervace hostu i URL se uloží před HTTP požadavkem; přerušené načtení se znovu nezkouší v krátké smyčce. Cache neukládá HTML produktů, jen výsledek; expirovaná cache se průběžně uklízí. Historie zůstává.
@@ -52,7 +52,7 @@ K nákupní ceně se přičte minimum a výsledek se zaokrouhlí **nahoru** na n
 30 → 100, 99 → 200, 1 130 → 1 300, 1 210 → 1 400. Všechny čtyři částky lze změnit.
 Uložení nastavení samo nepřeceňuje katalog; pravidlo se použije při dalším převzetí nabídky,
 i když je dodavatelská cena stejná. Přepočet a převzetí nákupní ceny jsou jedna transakce.
-Každý změněný jazyk dostane novou produktovou revizi. Přijaté objednávky, sklad ani vlastní
+Každý změněný jazyk dostane novou produktovou revizi. Přijaté objednávky, vlastní sklad ani vlastní
 prodejní/dodavatelské ceny variant se nepřepisují. Cena varianty pod jejím nákupním nákladem
 celou změnu zastaví ke kontrole. Historie kontroly obsahuje původní a novou společnou cenu.
 
@@ -202,7 +202,7 @@ Soukromé nástroje (vyžadují přihlášení administrátora):
 - `GET /admin/supplier-prices/?format=variant-links` — skutečně uložené odkazy a výsledky; dřívější export/import zůstává zachovaný.
 - `php tools/supplier-price-worker.php --variant-link-plan` — náhled přes CLI. Zápisy provádí běžný `--tick` jen při zapnutém párování.
 
-Párování zapisuje pouze partnerské odkazy a jejich důkazy. Nemění vybraného prodávajícího, režim prodeje, ceny, vlastní zásoby, rezervace ani objednávky. Pravidla dostupnosti 3 / skutečný počet / poslední kus patří do samostatné etapy D.
+Párování zapisuje pouze partnerské odkazy a jejich důkazy. Nemění vybraného prodávajícího, režim prodeje, ceny, vlastní zásoby, rezervace ani objednávky. Pravidla dostupnosti 3 / skutečný počet / poslední kus provádí oddělený `PartnerStockSynchronizer`.
 
 ## Cenové jádro nad přesnými nabídkami variant (26. 10. 2026)
 
@@ -274,4 +274,17 @@ evaluator versions trigger one maintenance refresh for obsolete, incomplete
 documents, including changed links that reuse an old cached model. This explicit
 release-time exception to daily freshness waits at least 15 minutes from the
 actual HTTP fetch and preserves robots rules, host cooldowns and denied responses.
-Successful or failed fetches replace the legacy document, preventing refresh loops; no stock counts or reservations are changed by these checks.
+Successful or failed fetches replace the legacy document, preventing refresh loops; own-stock counts and reservations are unchanged; assisted order limits are now synchronized separately.
+
+## Dostupnost partnerů a bezpečné aktualizace (26. 10. 2026)
+
+- `PartnerStockPolicy` čte počet pouze ze strukturovaného `inventoryLevel.value` nebo z dostupnosti přesného SKU. Nečte počty z celé stránky. `LimitedAvailability` bez přesného počtu se nenabízí. Neznámý či rozporný údaj nemění poslední známý limit.
+- `PartnerStockSynchronizer` synchronizuje počet a dostupnost ve stejné transakci, odděleně od schvalování ceny. Změna ceny přes 30 % proto neblokuje vyprodání. Záložní partner, nesprávná varianta, zastaralý snímek a režim Prodáváme my jsou vyloučeny. Každá aktivní varianta vyžaduje svůj důkaz; shodná cena není důkazem shodného skladu.
+- Objednávka asistence limit neodečítá; `shop_partner_refresh_requests` je slučovací transakční fronta. Chyba/rollback objednávky nezanechá nový požadavek. Worker respektuje 15minutovou prodlevu URL, robots a blokace. Pravidelná dostupnost se ověřuje denně, také při vypnuté starší týdenní cenové volbě; globální pozastavení platí pro vše.
+- `shop_partner_stock_state` chrání automatický limit před převodem na fyzické kusy při změně režimu/partnera. Historické asistované rezervace se při stornu nevracejí do nového limitu.
+- Nové provozní tabulky vytvoří autentizovaný worker před prvním krokem (stejné definice jsou ve `schema.sql`). Není potřeba DDL z veřejné stránky. První spuštění zařadí existující asistované produkty k ověření. Nový parser si staré odpovědi obnoví se zachováním limitů.
+- Historie kontrol obsahuje aktuální fotografii produktu a audit změněných limitů. Obrázek není součástí cenového fingerprintu. Správa produktů filtruje efektivní dostupnost před stránkováním, včetně nulového počtu a variant.
+
+## Kurz BTC
+
+`BitcoinRateRepository` sdílí kurz v databázi a zamyká aktualizaci napříč procesy. Za běžného provozu provede nejvýše jeden dotaz za 15 minut za instalaci (96/24 h). Termín dalšího pokusu uloží **před HTTP**. Chyby mají exponenciální prodlevu od 15 minut do dne; HTTP 429 alespoň hodinu, 401/403 alespoň den, delší `Retry-After` má přednost. Časová prodleva funguje i bez dosud uloženého kurzu. Platný starší kurz lze zobrazit nejvýše 2 hodiny od času zdroje, potom zůstane pouze Kč. Testy používají falešný transport, poskytovatele nezatěžují.
