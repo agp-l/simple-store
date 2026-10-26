@@ -4,6 +4,21 @@ namespace SimpleStore\Supplier;
 
 final class Robots
 {
+    /** RFC 9309 §2.3.1.3: an unavailable rules file is not a product access denial.
+     * Authentication, rate limits, network failures and 5xx still fail closed.
+     */
+    public static function unavailable(int $code):bool
+    {
+        return in_array($code,[403,404,410],true);
+    }
+    public static function cachedResponse(array $response):array
+    {
+        if(self::unavailable((int)($response['http_code']??0))){
+            unset($response['error'],$response['temporary']);
+            $response['body']='';$response['unavailable']=true;
+        }
+        return $response;
+    }
     public static function policy(string $body, string $url): array
     {
         $groups = []; $agents = []; $rules = []; $started = false;

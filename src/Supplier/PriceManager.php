@@ -11,7 +11,7 @@ use Throwable;
 
 final class PriceManager
 {
-    public const EVALUATOR_VERSION = 7;
+    public const EVALUATOR_VERSION = 8;
     private $transport;
     private $clock;
     private ?bool $variantModesInstalled=null;
@@ -163,12 +163,13 @@ final class PriceManager
         if($this->db->queryFirstField('SELECT target_key FROM shop_product_redirects WHERE language=%s AND source_slug=%s AND target_key<>%s LIMIT 1',$products[0]['language'],$products[0]['slug'],$key)!==null)return null;
         $sale=$this->db->queryFirstRow('SELECT * FROM shop_product_sales WHERE product_key=%s'.$suffix,$key);
         $links=$this->db->query('SELECT id,url FROM shop_product_supplier_links WHERE product_key=%s ORDER BY id'.$suffix,$key);
-        $partners=$this->db->query('SELECT id,name,website_url,priority,version FROM shop_purchase_partners ORDER BY id'.$suffix);
+        $partners=$this->db->query('SELECT id,partner_key,name,website_url,priority,version FROM shop_purchase_partners ORDER BY id'.$suffix);
         $variants=$this->db->query('SELECT variant_key,price_czk,enabled,choices_json FROM shop_product_variants WHERE product_key=%s ORDER BY variant_key'.$suffix,$key);
         $variantLinks=$this->variantLinks->identitiesForProduct($key,$lock);
         $variantSettings=$this->db->queryFirstRow('SELECT enabled,version FROM shop_product_variant_settings WHERE product_key=%s'.$suffix,$key);
         // Only relevant merchant profiles participate in the optimistic check.
-        $candidates=self::candidates($links,$partners,(int)($sale['partner_id']??0));
+        $candidates=VariantOfferPlan::candidates(compact('variants','variantSettings','variantLinks','partners','sale'))??
+            self::candidates($links,$partners,(int)($sale['partner_id']??0));
         $ids=array_column($candidates,'partner_id');$ids[]=(int)($sale['partner_id']??0);
         $partners=array_values(array_filter($partners,static fn(array $p):bool=>in_array((int)$p['id'],$ids,true)));
         $this->variantModesInstalled??=(int)$this->db->queryFirstField('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s','shop_product_supplier_variant_modes')===1;
@@ -222,6 +223,7 @@ final class PriceManager
                 if($snapshot===null||!hash_equals($data['fingerprint'],hash('sha256',self::json($snapshot)))){
                     if($snapshot!==null&&$snapshot['candidates']!==[]&&($data['rebases']??0)<2){
                         $data['snapshot']=$snapshot;$data['fingerprint']=hash('sha256',self::json($snapshot));
+                        $data['variant_observations']=[];$data['variant_issues']=[];
                         $data['index']=0;$data['redirect']='';$data['hops']=0;$data['rebases']=($data['rebases']??0)+1;
                         $this->saveData($job,$data,'Produkt se změnil; kontrola automaticky pokračuje s aktuálními údaji.');continue;
                     }
@@ -241,7 +243,8 @@ final class PriceManager
                 if(!$policy['allowed']){$this->failure($job,$data,'robots.txt nepovoluje čtení této adresy.');
                     if(empty($robots['fetched']))continue;return ['state'=>'working','wait'=>$wait];}
                 if(!empty($robots['fetched'])){$this->defer($job,self::delay($job['mode'],$policy['delay']));return ['state'=>'working','wait'=>1];}
-                $result=$this->cached($target,'product',$job['mode'],$policy['delay'],(int)($data['refresh_after']??0),!empty($data['cache_only']));
+                $result=(($candidate['kind']??'')==='variant'?$this->reusableVariantDocument($snapshot,$candidate,$target,(int)($data['refresh_after']??0)):null)??
+                    $this->cached($target,'product',$job['mode'],$policy['delay'],(int)($data['refresh_after']??0),!empty($data['cache_only']));
                 if(isset($result['wait'])){$this->defer($job,$result['wait']);continue;}
                 if(isset($result['redirect'])){
                     try{if($data['hops']>=3)throw new InvalidArgumentException('Příliš mnoho přesměrování. Oprav odkaz.');
@@ -260,6 +263,15 @@ final class PriceManager
                     if(empty($result['fetched']))continue;return ['state'=>'working','wait'=>$wait];}
                 $remote=!empty($result['fetched']);
                 $legacy=!empty($result['document']['offers'])&&(int)($result['document']['parser_version']??0)<PriceParser::VERSION;
+                if(($candidate['kind']??'')==='variant'){
+                    $resolved=$candidate; if($data['hops']>0)$resolved['resolved_url']=$target;
+                    $observed=VariantOfferEvaluation::observe($result['document'],$result['document_source']??$target,$snapshot,$resolved,(int)$result['observed_at']);
+                    $data['variant_observations']=array_replace($data['variant_observations']??[],$observed['observations']);
+                    $data['variant_issues']=array_merge($data['variant_issues']??[],$observed['issues']);
+                    if($legacy&&$observed['issues']!==[]&&$this->scheduleParserRefresh($job,$data))continue;
+                    $this->advanceVariant($job,$data,$observed['issues'][0]['message']??'Přesné nabídky variant načteny.');
+                    if(!$remote)continue;return ['state'=>'working','wait'=>$wait];
+                }
                 if(isset($result['document'])){
                     try{$result=PriceEvaluation::select($result['document'],$target,$snapshot,$this->variantModesInstalled?$settings:[])+['observed_at'=>$result['observed_at']];}
                     catch(InvalidArgumentException $e){
@@ -291,12 +303,38 @@ final class PriceManager
             return ['state'=>$next===null?'idle':'waiting','wait'=>$next===null?30:max(1,min(60,(int)$next-$now)),'next_at'=>$next===null?0:(int)$next];
         });
     }
+    /** Reuse a fresh model document only when it proves every requested variant URL.
+     * Never replace a response already cached for the exact target (including a denial).
+     */
+    private function reusableVariantDocument(array $snapshot,array $candidate,string $target,int $refreshAfter=0):?array
+    {
+        if($this->db->queryFirstField('SELECT url_hash FROM shop_supplier_price_cache WHERE url_hash=%s AND expires_at>%i',hash('sha256','product:'.$target),$this->now())!==null)return null;
+        $urls=array_unique(array_merge(array_column($snapshot['links'],'url'),array_column($snapshot['candidates'],'url')));
+        foreach($urls as $url){
+            if(ProductPartnerAssignment::host($url)!==ProductPartnerAssignment::host($target))continue;
+            for($hop=0;$hop<4;$hop++){
+                $row=$this->db->queryFirstRow('SELECT data_json FROM shop_supplier_price_cache WHERE url_hash=%s AND expires_at>%i',hash('sha256','product:'.$url),$this->now());
+                if(!$row)break;$cached=json_decode($row['data_json'],true,48,JSON_THROW_ON_ERROR);
+                if(!empty($cached['redirect'])){
+                    try{$url=HttpClient::redirect($url,$cached['redirect']);}catch(InvalidArgumentException $e){break;}
+                    continue;
+                }
+                $observed=(int)($cached['observed_at']??0);
+                if(empty($cached['document'])||$observed<=$this->now()-86400||$observed>$this->now()||$observed<$refreshAfter)break;
+                $proof=VariantOfferEvaluation::observe($cached['document'],$url,$snapshot,$candidate,$observed);
+                if($proof['issues']===[]&&count($proof['observations'])===count($candidate['links']))return $cached+['document_source'=>$url];
+                break;
+            }
+        }
+        return null;
+    }
     private function cached(string $url,string $kind,string $mode,int $crawlDelay,int $refreshAfter=0,bool $cacheOnly=false): array
     {
         $now=$this->now();$hash=hash('sha256',$kind.':'.$url);
         $cache=$this->db->queryFirstRow('SELECT * FROM shop_supplier_price_cache WHERE url_hash=%s AND expires_at>%i',$hash,$now);
         if($cache){
             $cached=json_decode($cache['data_json'],true,48,JSON_THROW_ON_ERROR);
+            if($kind==='robots')$cached=Robots::cachedResponse($cached);
             $fetched=(int)($cached['fetched_at']??((int)$cache['expires_at']-86400));
             if($cacheOnly||$refreshAfter===0||$fetched>=$refreshAfter||in_array($cached['http_code']??0,[403,429,503],true))return $cached;
         }
@@ -313,12 +351,12 @@ final class PriceManager
         try{
             $requestUrl=$kind==='product'?PriceParser::requestUrl($url):$url;
             $response=($this->transport)($requestUrl);$code=(int)$response['code'];$headers=$response['headers']??[];
-            if(in_array($code,[403,429,503],true)){
+            if(in_array($code,[403,429,503],true)&&!($kind==='robots'&&Robots::unavailable($code)&&empty($headers['retry-after']))){
                 $retry=$headers['retry-after']??'';
                 $seconds=ctype_digit((string)$retry)?(int)$retry:max(0,(int)strtotime((string)$retry)-$now);
                 $this->db->update('shop_supplier_price_hosts',['next_at'=>$now+max(3600,min(86400,$seconds))],'host=%s',$host);
             }
-            if($kind==='robots' && in_array($code,[404,410],true))$result=['body'=>''];
+            if($kind==='robots' && Robots::unavailable($code))$result=['body'=>'','unavailable'=>true];
             elseif($code>=300&&$code<400&&$kind==='product'&&isset($headers['location']))$result=['redirect'=>$headers['location']];
             elseif($code!==200)throw new InvalidArgumentException('Dodavatel odpověděl HTTP '.$code.($kind==='robots'?' při ověření robots.txt.':'. Původní cena zůstala.'));
             elseif($kind==='robots'){
@@ -342,6 +380,7 @@ final class PriceManager
         $lastFresh=(int)$this->db->queryFirstField('SELECT MAX(GREATEST(created_at,checked_at)) FROM shop_supplier_price_jobs WHERE product_key=%s AND retry_of>0',$job['product_key']);
         $due=max($this->now(),(int)$previous['checked_at']+900,$lastFresh>0?$lastFresh+86400:0);
         $data['parser_refresh']=1;$data['cache_only']=false;$data['refresh_after']=$due;
+        $data['variant_observations']=[];$data['variant_issues']=[];
         $data['index']=0;$data['redirect']='';$data['hops']=0;$data['permanent_redirects']=true;
         $this->db->update('shop_supplier_price_jobs',['data_json'=>self::json($data),'next_at'=>$due,'retry_of'=>(int)$previous['id'],
             'message'=>'Starší uložená nabídka neobsahuje přesné vlastnosti variant. Nové načtení je naplánované automaticky v povoleném denním limitu.'],'id=%i',$job['id']);
@@ -349,16 +388,52 @@ final class PriceManager
     }
     private function saveData(array $job,array $data,string $message,int $wait=2):void
     {$this->db->update('shop_supplier_price_jobs',['data_json'=>self::json($data),'message'=>$message,'next_at'=>$this->now()+$wait],'id=%i',$job['id']);}
+    /** Persist each fetched source; commit prices only after the whole merchant has been evaluated. */
+    private function advanceVariant(array $job,array $data,string $message,bool $temporary=false):void
+    {
+        $snapshot=$data['snapshot'];$candidate=$snapshot['candidates'][$data['index']];
+        $data['trace'][]=['seller'=>$candidate['name'],'url'=>$data['redirect']?:$candidate['url'],'time'=>$this->now(),'message'=>$message];
+        $data['temporary']=!empty($data['temporary'])||$temporary;
+        $next=$snapshot['candidates'][$data['index']+1]??null;
+        if($next===null||(int)$next['partner_id']!==(int)$candidate['partner_id']){
+            try{
+                $result=VariantOfferEvaluation::assemble($snapshot,$data['variant_observations']??[],(int)$candidate['partner_id'],$this->now(),$this->variantModesInstalled?$this->settings():[]);
+                $result['partner_id']=$candidate['partner_id'];$result['partner_name']=$candidate['name'];
+                $result['source_url']=$result['url'];$result['fallback']=!$candidate['selected'];
+                $result['old_price']=$snapshot['sale']['supplier_price_czk']??null;
+                $reason=self::reviewReason($snapshot,$result);
+                $this->db->update('shop_supplier_price_jobs',['status'=>'review','checked_at'=>$this->now(),
+                    'data_json'=>self::json($data),'result_json'=>self::json($result),
+                    'message'=>$reason?:'Přesná nabídka ověřena pro každou aktivní variantu.'],'id=%i',$job['id']);
+                if($reason==='')try{$this->applyInternal((int)$job['id'],false,false);}catch(InvalidArgumentException $e){
+                    $this->db->update('shop_supplier_price_jobs',['message'=>$e->getMessage()],'id=%i',$job['id']);
+                }
+                return;
+            }catch(InvalidArgumentException $e){
+                $message=$e->getMessage();
+                $data['trace'][]=['seller'=>$candidate['name'],'url'=>$candidate['url'],'time'=>$this->now(),'message'=>$message];
+            }
+        }
+        $data['index']++;$data['redirect']='';$data['hops']=0;$data['permanent_redirects']=true;
+        $this->saveData($job,$data,$message);
+        if($next!==null)return;
+        if(!empty($data['temporary'])&&empty($data['automatic_retry'])&&empty($data['cache_only'])){
+            $data['automatic_retry']=1;$data['index']=0;$data['temporary']=false;$data['variant_observations']=[];$data['variant_issues']=[];
+            $this->saveData($job,$data,'Dočasné selhání. Jeden automatický pokus je naplánovaný za 24 hodin.',86400);
+            $this->db->update('shop_supplier_price_jobs',['checked_at'=>$this->now()],'id=%i',$job['id']);
+        }else $this->finish($job,'failed',$message);
+    }
     private function failure(array $job,array $data,string $message,bool $temporary=false):void
     {
         $c=$data['snapshot']['candidates'][$data['index']];
+        if(($c['kind']??'')==='variant'){$this->advanceVariant($job,$data,$message,$temporary);return;}
         $data['trace'][]=['seller'=>$c['name'],'url'=>$data['redirect']?:$c['url'],'time'=>$this->now(),'message'=>$message];
         $data['temporary']=!empty($data['temporary'])||$temporary;
         $data['index']++;$data['redirect']='';$data['hops']=0;$data['permanent_redirects']=true;
         $this->saveData($job,$data,$message);
         if(!isset($data['snapshot']['candidates'][$data['index']])){
             if(!empty($data['temporary'])&&empty($data['automatic_retry'])&&empty($data['cache_only'])){
-                $data['automatic_retry']=1;$data['index']=0;$data['temporary']=false;
+                $data['automatic_retry']=1;$data['index']=0;$data['temporary']=false;$data['variant_observations']=[];$data['variant_issues']=[];
                 $this->saveData($job,$data,'Dočasné selhání. Jeden automatický pokus je naplánovaný za 24 hodin.',86400);
                 $this->db->update('shop_supplier_price_jobs',['checked_at'=>$this->now()],'id=%i',$job['id']);
             }else $this->finish($job,'failed',$message);
@@ -396,6 +471,11 @@ final class PriceManager
                 if(!$partner||PurchasePartnerRepository::missing($partner)!==[])throw new InvalidArgumentException('Záložní prodávající nemá dokončený a potvrzený profil. Nejprve jej doplň.');
             }
             $pricing=$this->settings();
+            if(($snapshot['candidates'][0]['kind']??'')==='variant'){
+                $verified=VariantOfferEvaluation::assemble($snapshot,$data['variant_observations']??[],(int)$result['partner_id'],$this->now(),$pricing);
+                if(($result['canonical_variant_offers']??null)!==$verified['canonical_variant_offers'] || $result['price']!==$verified['price'])
+                    throw new InvalidArgumentException('Chybí úplný důkaz přesných nabídek variant. Spusť novou kontrolu.');
+            }
             $enableVariantPricing=!empty($result['enable_variant_pricing'])&&!$result['fallback']&&$this->variantModesInstalled&&PriceEvaluation::mayEnableVariantPricing($snapshot,$pricing);
             $newRetail=(int)$pricing['pricing_enabled'] ? PricingPolicy::price($result['price'],$pricing) : null;
             $retail=$newRetail===null?array_map('intval',array_column($snapshot['products'],'price_czk')):[$newRetail];
@@ -410,7 +490,7 @@ final class PriceManager
                     if(!(int)$v['enabled'])continue;
                     $offer=$result['variant_offers'][$v['variant_key']]??null;
                     if(!$offer)throw new InvalidArgumentException('Chybí přesná cena některé aktivní varianty.');
-                    $old=(int)($overrides[$v['variant_key']]??0);
+                    $old=(int)($overrides[$v['variant_key']]??$sale['supplier_price_czk']??0);
                     if(!$manual&&$old>0&&abs($offer['price']-$old)/$old>0.30)throw new InvalidArgumentException('Cena některé varianty se změnila o více než 30 %. Ověř nabídku.');
                     $overrides[$v['variant_key']]=(int)$offer['price'];
                     if($newRetail!==null)$variantPrices[$v['variant_key']]=PricingPolicy::price((int)$offer['price'],$pricing);
@@ -435,7 +515,7 @@ final class PriceManager
                 }
             }
             $same=(int)$sale['supplier_price_czk']===$result['price']&&(int)$sale['partner_id']===$result['partner_id'];
-            if(!empty($result['corrected_url'])){
+            if(!empty($result['corrected_url'])&&($data['snapshot']['candidates'][$data['index']]['kind']??'')!=='variant'){
                 $candidate=$data['snapshot']['candidates'][$data['index']];
                 $corrected=HttpClient::redirect($candidate['url'],$result['corrected_url']);
                 $this->db->update('shop_product_supplier_links',['url'=>$corrected],
@@ -503,12 +583,16 @@ final class PriceManager
                     $chain[]=['url'=>$resolved,'redirect'=>$cached['redirect'],'http_code'=>$cached['http_code']??null];
                     try{$resolved=HttpClient::redirect($resolved,$cached['redirect']);}catch(InvalidArgumentException $e){break;}
                 }
+                if(($c['kind']??'')==='variant'&&($cached===null||($cache&&$cache['expires_at']<=$this->now()))){
+                    $reused=$this->reusableVariantDocument($snapshot??$data['snapshot'],$c,$resolved);
+                    if($reused){$cached=$reused;$resolved=$reused['document_source'];$cache=['expires_at'=>(int)$reused['observed_at']+86400];}
+                }
                 $robotsCache=$this->db->queryFirstRow('SELECT expires_at,data_json FROM shop_supplier_price_cache WHERE url_hash=%s',
                     hash('sha256','robots:https://'.HttpClient::url($resolved).'/robots.txt'));
-                $robotsData=$robotsCache?json_decode($robotsCache['data_json'],true):[];
-                $sources[]=['url'=>$c['url'],'seller'=>$c['name'],'selected'=>$c['selected'],'priority'=>$c['priority'],
+                $robotsData=Robots::cachedResponse($robotsCache?json_decode($robotsCache['data_json'],true):[]);
+                $sources[]=['candidate'=>$c,'url'=>$c['url'],'seller'=>$c['name'],'selected'=>$c['selected'],'priority'=>$c['priority'],
                     'resolved_url'=>$resolved,'redirects'=>$chain,'cache'=>$cached,'expires_at'=>$cache?(int)$cache['expires_at']:0,
-                    'robots'=>array_intersect_key($robotsData??[],array_flip(['error','http_code','fetched_at']))];
+                    'robots'=>array_intersect_key($robotsData??[],array_flip(['error','http_code','fetched_at','unavailable']))];
             }
             $items[]=['id'=>(int)$row['id'],'product_key'=>$row['product_key'],'name'=>$row['product_name'],'status'=>$row['status'],
                 'mode'=>$row['mode'],'created_at'=>(int)$row['created_at'],'checked_at'=>(int)$row['checked_at'],
@@ -516,11 +600,11 @@ final class PriceManager
                 'active'=>$snapshot!==null,'snapshot'=>$snapshot,
                 'local_variants'=>($snapshot??$data['snapshot'])['variants']??[],'variants_enabled'=>!empty(($snapshot??$data['snapshot'])['variantSettings']['enabled']),
                 'issue'=>PriceEvaluation::issue($row['status'],$row['message']),
-                'sources'=>$sources,'result'=>json_decode($row['result_json']??'null',true),'trace'=>$data['trace']??[]];
+                'sources'=>$sources,'result'=>json_decode($row['result_json']??'null',true),'trace'=>$data['trace']??[],'variant_issues'=>$data['variant_issues']??[],'variant_observations'=>array_values($data['variant_observations']??[])];
         }
         $settings=$this->settings();$summary=[];
         foreach($items as$item)if($item['active']){$code=$item['issue'];$summary[$code]=($summary[$code]??0)+1;}
-        return ['format'=>'dobrodruzi.supplier-price-diagnostics','version'=>2,'parser_version'=>PriceParser::VERSION,'evaluator_version'=>self::EVALUATOR_VERSION,'exported_at'=>gmdate('c',$this->now()),
+        return ['format'=>'dobrodruzi.supplier-price-diagnostics','version'=>3,'parser_version'=>PriceParser::VERSION,'evaluator_version'=>self::EVALUATOR_VERSION,'exported_at'=>gmdate('c',$this->now()),
             'summary'=>$summary,'worker'=>array_intersect_key($settings,array_flip(['paused','weekly_enabled','next_weekly','last_tick','last_browser_tick','last_cron_tick','last_cli_tick'])),
             'pricing'=>array_intersect_key($settings,PricingPolicy::DEFAULTS),
             'hosts'=>$this->db->query('SELECT host,next_at FROM shop_supplier_price_hosts ORDER BY host'),'items'=>$items];

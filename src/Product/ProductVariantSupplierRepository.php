@@ -32,7 +32,7 @@ final class ProductVariantSupplierRepository
     {
         self::key($key);
         if (!$this->installed()) return [];
-        return $this->db->query('SELECT link_key,variant_key,partner_key,url FROM shop_product_variant_supplier_links WHERE product_key=%s AND removed=0 ORDER BY variant_key,link_key' . ($lock ? ' FOR UPDATE' : ''), $key);
+        return $this->db->query('SELECT link_key,variant_key,partner_key,url,origin,removed FROM shop_product_variant_supplier_links WHERE product_key=%s ORDER BY variant_key,link_key' . ($lock ? ' FOR UPDATE' : ''), $key);
     }
     /** Each product commits separately. Retrying an interrupted migration is safe. */
     public function inheritAll(): int
