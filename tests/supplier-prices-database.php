@@ -205,5 +205,27 @@ try{
  $check($job($inherited)['status']==='applied'&&json_decode($sale($inherited)['variant_prices_json'],true)==$expected,'Distinct inherited costs were not applied atomically.');
  $check((int)$db->queryFirstField('SELECT enabled FROM shop_product_supplier_variant_modes WHERE product_key=%s',$inherited)===1,'Automatic variant pricing preference not recorded.');
  $check((int)$db->queryFirstField('SELECT SUM(available_quantity) FROM shop_product_variants WHERE product_key=%s',$inherited)===8,'Enabling inherited variant prices changed stock.');
+ // Partner automation must not touch own-stock products, including work queued before a mode switch.
+ $db->update('shop_supplier_price_jobs',['status'=>'dismissed'],'status=%s','queued');
+ $own=$make('own-stock');$db->update('shop_product_sales',['mode'=>'own'],'product_key=%s',$own);
+ $check($manager->enqueue('one','rapid',$own)['unconfigured']===1,'Own stock entered the partner price queue.');
+ $switched=$make('mode-switched');$manager->enqueue('one','rapid',$switched);
+ $db->update('shop_product_sales',['mode'=>'own'],'product_key=%s',$switched);
+ $oldSale=$sale($switched);$oldProduct=$db->query('SELECT * FROM shop_product_revisions WHERE product_key=%s',$switched);
+ $before=count($requests);$manager->tick();
+ $check($job($switched)['status']==='dismissed'&&count($requests)===$before,'Mode switch did not stop queued network work.');
+ $check($sale($switched)===$oldSale&&$db->query('SELECT * FROM shop_product_revisions WHERE product_key=%s',$switched)===$oldProduct,'Own prices changed after switching mode.');
+ // An old installation could have produced an own-mode review with a matching snapshot.
+ $ownJob=$job($switched);$ownData=json_decode($ownJob['data_json'],true);$ownData['snapshot']['sale']['mode']='own';
+ $ownData['fingerprint']=hash('sha256',json_encode($ownData['snapshot'],JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES));
+ $db->update('shop_supplier_price_jobs',['status'=>'review','data_json'=>json_encode($ownData),'result_json'=>'{}'],'id=%i',$ownJob['id']);
+ $reject(fn()=>$manager->apply((int)$ownJob['id'],false));
+ $check($manager->retry('one','rapid',false,(int)$ownJob['id'])['unconfigured']===1,'Own review was requeued.');
+ $check($sale($switched)===$oldSale,'Manual apply changed own-stock pricing.');
+ // Changing sale mode preserves links and physical inventory; order snapshots use their original mode.
+ $inventory=$db->query('SELECT * FROM shop_product_inventory WHERE product_key=%s',$switched);$sourceLinks=$links->forProduct($switched);
+ $sales=new \SimpleStore\Product\ProductSalesRepository($db);
+ foreach(['assisted','own'] as $saleMode){$current=$sale($switched);$sales->save($switched,'cs',['mode'=>$saleMode,'version'=>(string)$current['version'],'supplier_price_czk'=>(string)$current['supplier_price_czk'],'partner_id'=>(string)$current['partner_id']]);}
+ $check($db->query('SELECT * FROM shop_product_inventory WHERE product_key=%s',$switched)===$inventory&&$links->forProduct($switched)===$sourceLinks,'Mode switch rewrote inventory or source links.');
  echo "Supplier prices: MySQL durable queue, selected/fallback sellers, daily and URL limits, pauses, locks, stale data, variants, current counters and cron passed.\n";
 }finally{$db->disconnect();$admin->query('DROP DATABASE %b',$database);}

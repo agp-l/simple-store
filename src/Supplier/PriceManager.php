@@ -93,7 +93,7 @@ final class PriceManager
                 $lastFresh=(int)$this->db->queryFirstField('SELECT MAX(GREATEST(created_at,checked_at)) FROM shop_supplier_price_jobs WHERE product_key=%s AND retry_of>0',$job['product_key']);
                 if($fresh&&$lastFresh>$now-86400){$count['daily']++;continue;}
                 $snapshot=$this->snapshot($job['product_key']);
-                if(!$snapshot||$snapshot['candidates']===[]){$count['unconfigured']++;continue;}
+                if(!$snapshot||($snapshot['sale']['mode']??'own')!=='assisted'||$snapshot['candidates']===[]){$count['unconfigured']++;continue;}
                 $data=['snapshot'=>$snapshot,'fingerprint'=>hash('sha256',self::json($snapshot)),'index'=>0,'trace'=>[],'redirect'=>'','hops'=>0,
                     'retry_of'=>(int)$job['id'],'refresh_after'=>$fresh?$now:0,'cache_only'=>!$fresh,'evaluator_version'=>self::EVALUATOR_VERSION];
                 $next=$fresh?max($now,(int)$job['checked_at']+900):$now;
@@ -124,12 +124,12 @@ final class PriceManager
     {
         $count=['added'=>0,'daily'=>0,'unconfigured'=>0];$now=$this->now();
         $keys=$scope==='one'?[$key]:$this->db->queryFirstColumn('SELECT DISTINCT p.product_key FROM shop_product_revisions p
-            LEFT JOIN shop_product_sales s ON s.product_key=p.product_key WHERE p.active_product_key IS NOT NULL'.
+            INNER JOIN shop_product_sales s ON s.product_key=p.product_key AND s.mode=\'assisted\' WHERE p.active_product_key IS NOT NULL'.
             ($scope==='missing'?' AND (s.supplier_price_czk IS NULL OR s.supplier_price_czk=0)':''));
         foreach($keys as $key){
             if($this->db->queryFirstField('SELECT id FROM shop_supplier_price_jobs WHERE product_key=%s AND (created_at>%i OR checked_at>%i OR status=%s) LIMIT 1',$key,$now-86400,$now-86400,'queued')){$count['daily']++;continue;}
             $snapshot=$this->snapshot($key);
-            if($snapshot===null||$snapshot['candidates']===[]){$count['unconfigured']++;continue;}
+            if($snapshot===null||($snapshot['sale']['mode']??'own')!=='assisted'||$snapshot['candidates']===[]){$count['unconfigured']++;continue;}
             $data=['snapshot'=>$snapshot,'fingerprint'=>hash('sha256',self::json($snapshot)),'index'=>0,'trace'=>[],'redirect'=>'','hops'=>0,'evaluator_version'=>self::EVALUATOR_VERSION];
             $this->db->insert('shop_supplier_price_jobs',['product_key'=>$key,'product_name'=>$snapshot['products'][0]['name'],
                 'mode'=>$mode,'created_at'=>$now,'next_at'=>$now,'data_json'=>self::json($data)]);$count['added']++;
@@ -212,6 +212,9 @@ final class PriceManager
                 $job=$jobs[$cursor];$wait=$job['mode']==='rapid'?0.25:2;
                 $data=json_decode($job['data_json'],true,64,JSON_THROW_ON_ERROR);
                 $snapshot=$this->snapshot($job['product_key']);
+                if($snapshot!==null&&($snapshot['sale']['mode']??'own')!=='assisted'){
+                    $this->finish($job,'dismissed','Produkt je v režimu Prodáváme my. Partnerská kontrola byla ukončena bez změny cen.');continue;
+                }
                 if($snapshot===null||!hash_equals($data['fingerprint'],hash('sha256',self::json($snapshot)))){
                     if($snapshot!==null&&$snapshot['candidates']!==[]&&($data['rebases']??0)<2){
                         $data['snapshot']=$snapshot;$data['fingerprint']=hash('sha256',self::json($snapshot));
@@ -378,6 +381,7 @@ final class PriceManager
             if(!$job||$job['status']!=='review')throw new InvalidArgumentException('Nabídka už není připravena k převzetí.');
             $data=json_decode($job['data_json'],true,64,JSON_THROW_ON_ERROR);$result=json_decode($job['result_json'],true,32,JSON_THROW_ON_ERROR);
             $snapshot=$this->snapshot($job['product_key'],true);
+            if($snapshot!==null&&($snapshot['sale']['mode']??'own')!=='assisted')throw new InvalidArgumentException('Partnerskou cenu lze převzít pouze v režimu Asistovaný nákup.');
             if(!$snapshot||!hash_equals($data['fingerprint'],hash('sha256',self::json($snapshot))))throw new InvalidArgumentException('Produkt se mezitím změnil. Nabídku už nelze bezpečně převzít.');
             if((int)$result['observed_at']<=$this->now()-86400)throw new InvalidArgumentException('Nabídka je starší než 24 hodin. Spusť novou kontrolu.');
             if(!$manual&&self::reviewReason($snapshot,$result)!=='')throw new InvalidArgumentException('Nabídka vyžaduje ruční kontrolu.');
