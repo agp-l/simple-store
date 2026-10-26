@@ -308,7 +308,10 @@ jobs:
         timeout-minutes: 5
         run: |
           npm install --no-save --package-lock=false playwright@1.56.1
-          npx playwright install --with-deps chromium
+          # Hosted Ubuntu includes Chrome/Chromium runtime libraries. Avoid upgrading
+          # the OS and downloading optional fonts from apt mirrors on every test run.
+          # The complete browser suite below still verifies the pinned binary works.
+          npx playwright install chromium
       - name: Verify variant and sale UI on desktop and mobile
         run: |
           node --test tests/product-variants-browser.mjs
