@@ -22,6 +22,7 @@ test('supplier manager responsive controls, safe review and single-step runner',
    assert.match(await page.locator('#price-job-3 .supplier-current-note').innerText(),/Partner nebo odkazy/);
    assert.equal(await page.locator('#price-job-3 .supplier-current-sources a').getAttribute('href'),'https://www.4camping.cz/p/test/#oranzova');
    assert.equal(await page.locator('#price-job-3 [name=fresh]').count(),0,'New source offered a forced re-fetch of the old seller');
+   await page.locator('#price-job-3 summary').click();
    assert.equal(await page.getByRole('link',{name:'Odkaz použitý při tomto historickém pokusu ↗'}).getAttribute('href'),'https://www.alza.cz/old.htm');
 
    assert.match(await page.getByRole('link',{name:'Obnovit výsledky',exact:true}).getAttribute('href'), /\?refresh=[a-f0-9]{12}#price-history$/,'Refresh must issue a new GET, not just navigate to an anchor');

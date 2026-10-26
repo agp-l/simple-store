@@ -157,3 +157,44 @@
 .content-admin-panel .inline-settings > label,
 .content-admin-panel .inline-stock-form > label { gap: 6px; font-weight: 600; }
 .content-admin-panel .inline-settings :is(input:not([type="checkbox"]), select) { background: #fff; }
+
+/* Product editor: explicit sections with stable save locations. */
+.product-editor-workspace { background: #f2f5f7; border-color: #cdd6dc; }
+.product-editor-workspace > .product-edit-toolbar { background: #fff; border-bottom-color: #cdd6dc; }
+.product-editor-nav { display: flex; flex-wrap: wrap; gap: 8px; padding: 16px 20px 0; }
+.product-editor-nav a { display: inline-flex; align-items: center; gap: 7px; padding: 9px 12px; border: 1px solid #c7d2dc; border-radius: 5px; color: #354f63; background: #fff; font-weight: 650; text-decoration: none; }
+.product-editor-nav a:hover { background: #eaf1f6; border-color: #6c8da5; }
+.product-editor-workspace .editor-save-guide { display: flex; align-items: flex-start; gap: 8px; margin: 12px 20px 0; color: #566572; font-size: 12px; }
+.editor-save-guide .panel-icon { flex-shrink: 0; }
+.product-editor-workspace .editor-panel-sections { grid-template-columns: minmax(0, 1fr); gap: 18px; padding: 18px; }
+.product-editor-workspace .editor-panel-sections > :is(.product-admin-settings, .product-sale) { padding: 20px; border: 1px solid #cdd6dc; border-left: 4px solid #6588a2; border-radius: 6px; background: #fff; }
+.product-editor-workspace .editor-panel-sections > .product-sale { border-left-color: #5b8755; }
+.product-editor-workspace .editor-panel-sections > .variant-manager { border-left-color: #83719b; }
+.product-editor-workspace .editor-panel-sections > .product-admin-recommendations { border-left-color: #a78c5a; }
+.product-editor-workspace :is(#product-settings, #product-sale, #product-variants, #variant-save) { scroll-margin-top: 18px; }
+.product-editor-workspace :is(.product-admin-settings-heading, .sale-heading) { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid #dce3e8; }
+.product-editor-workspace .product-admin-settings-heading > strong { flex-basis: auto; }
+.product-editor-workspace :is(.product-admin-settings-heading > strong, .sale-heading h2) { display: flex; align-items: center; gap: 8px; font-size: 17px; }
+.product-editor-workspace .editor-basics .inline-settings { padding-top: 0; }
+.product-editor-workspace .editor-save-hint { margin: 14px 0 0; padding: 10px 12px; background: #eff4f8; border-left: 3px solid #9db4c5; color: #425d70; font-size: 12px; }
+.product-editor-workspace .sale-footer { padding: 14px; border: 1px solid #c5d7bf; border-radius: 5px; background: #f1f7ed; }
+.product-editor-workspace .variant-save-bar { border-width: 1px; border-left-width: 4px; background: #f1f7ed; }
+.product-editor-workspace .variant-create { margin-top: 14px; padding: 14px; border: 1px solid #d6d0df; border-radius: 5px; background: #faf9fc; }
+.product-editor-workspace .variant-create summary { color: #58456d; }
+.product-editor-workspace .variant-partner-entry { padding: 12px; border: 1px solid #d4dfcd; border-radius: 5px; background: #fff; }
+.product-editor-workspace .variant-partner-entry + .variant-partner-entry { margin-top: 12px; }
+.product-editor-workspace .variant-partner-actions .inline-small:first-child { background: #edf4e8; border-color: #9eb694; }
+.product-editor-workspace .variant-partner-row .product-partner-base { padding: 0; border: 0; background: transparent; }
+.product-editor-workspace .base-offer-row { background: #edf4e8; }
+.product-editor-workspace .base-offer-table small { display: block; margin-top: 6px; font-size: 11px; font-weight: 400; color: #5d6b5d; }
+.product-editor-workspace .base-offer-table .variant-partner-row small { margin-top: 0; }
+.product-editor-workspace > .inline-delete-product { margin: 0 18px 18px; border: 1px solid #e1c8be; border-radius: 5px; background: #fff8f5; }
+@media (max-width: 700px) {
+  .product-editor-workspace .editor-panel-sections { padding: 10px; gap: 12px; }
+  .product-editor-workspace .editor-panel-sections > :is(.product-admin-settings, .product-sale) { padding: 14px 12px; }
+  .product-editor-nav { padding: 12px 10px 0; gap: 6px; }
+  .product-editor-nav a { flex: 1 1 150px; font-size: 12px; }
+  .product-editor-workspace .editor-save-guide { margin: 12px 10px 0; }
+  .product-editor-workspace .variant-partner-entry { padding: 10px; }
+  .product-editor-workspace > .inline-delete-product { margin: 0 10px 12px; }
+}

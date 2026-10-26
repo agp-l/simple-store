@@ -100,3 +100,9 @@ Po aktualizaci schématu lze v **Import a export → Export → Partnerské odka
 Soukromý export **Partnerské odkazy variant — soukromý JSON** používá `simple-store.variant-suppliers.v1`. Read-only přístup pro přihlášeného správce: `/admin/supplier-prices/?format=variant-links`. Zápis probíhá přes stávající Hromadný JSON s přihlášením, CSRF, náhledem a kontrolou verzí. Import upravuje pouze odkazy: `product_key`, `language`, `variants[].variant_key`, `links[].link_key`, `version`, `partner_key`, `label`, `url`. Nový odkaz má prázdný/vynechaný `link_key` a verzi 0; partner může být `null`. Vynechané odkazy zůstávají. Exportovaný původ, ověření a výsledky kontroly jsou informativní, import je nepřebírá. Současný úplný produktový JSON tato soukromá data neobsahuje; zálohuj je tímto samostatným exportem nebo databází.
 
 Etapy A/B nemění sklad, rezervace, ceny, režimy ani objednávky. Automatická tvorba přesných URL a řízení partnerského limitu 3 / skutečný počet / poslední kus zůstávají navazující etapou C/D; převzatá URL tento limit nespouští.
+
+### Uspořádání editoru (26. 10. 2026)
+
+Editor má samostatné rámečky Základní údaje, Způsob prodeje a Nabídka, sklad a partnerské odkazy. Horní navigace obsahuje i filtrovanou historii cen produktu. Produkt bez variant má řádek Základní provedení se skladovými poli a stejným editorem partnerských odkazů přímo pod ním; nejde o založení umělé databázové varianty. Společný sklad zůstává editovatelný i při připravených, dosud nezapnutých variantách.
+
+Hromadné uložení variant zůstává na pevném místě, nepřekrývá řádky při posouvání. Pod tabulkou je návrat k tomuto tlačítku. Jednotlivé formuláře vysvětlují rozsah uložení: sklad ukládá počet, prodej partnera a nákupní ceny, každý partnerský odkaz vlastní adresu a tabulka variant všechny změněné řádky. Obnova rozpracovaných variant při samostatném uložení odkazu a kontrola souběžných změn zůstávají zachované.

@@ -98,7 +98,7 @@ final class PriceManager
                 $snapshot=$this->snapshot($job['product_key']);
                 $problem=self::configurationIssue($snapshot);
                 if($problem!==''){
-                    if($scope==='one')throw new InvalidArgumentException($problem);
+                    if($scope==='one')$count['reason']=$problem;
                     $count['unconfigured']++;continue;
                 }
                 $previous=json_decode($job['data_json'],true);

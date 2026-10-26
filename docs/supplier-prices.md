@@ -239,3 +239,11 @@ se přihlášení, proxy ani neveřejná API. Dostupnost Alzy je nutné ověřit
 změna interpretace robots sama nezaručuje, že Alza povolí produktové požadavky.
 
 Zdroj: https://www.rfc-editor.org/rfc/rfc9309.html#section-2.3.1.3
+
+## Změna partnera a barevné odkazy 4camping (26. 10. 2026)
+
+- Cenový transport přijímá veřejné HTTPS adresy s fragmentem (`#oranzova`). Fragment je součást identity nabídky, ale není součást HTTP požadavku ani klíče cache. Všechny barvy jedné stránky sdílejí odpověď i blokaci; změna fragmentu neobchází denní limity. Přesměrování v rámci partnera zachovává fragment, pokud jej nová adresa neurčuje.
+- Parser 5 načítá tabulku `variantsInfo` 4camping z jediného serverového JSON, bez spouštění JavaScriptu. Kontroluje produkt a ID varianty, doménu a cestu nabídky, měnu CZK a shodu veřejné schema.org ceny s vybranou variantou nebo minimem modelu. Při vypnutých samostatných URL páruje fragment s přesnou cestou SKU z tabulky. Neznámá barva, nejednoznačná adresa, jiný produkt či měna cenu neaktualizují. Sklad zůstává beze změny.
+- Opakování kontroly porovnává aktuální zdroje s tehdejším nastavením. Při novém partnerovi/adrese kontroluje novou nabídku s běžnou cache a prodlevami, bez nutnosti vynutit opakované stažení starého obchodu. Stejné zdroje se bez zaškrtnutí znovu pouze vyhodnotí z cache. Totéž platí při změně zdrojů již čekající úlohy.
+- Historie jasně odděluje aktuální partnerské odkazy od odkazů použitých při starých pokusech. Starý důkaz se nemaže, ale změněný produkt nelze přecenit starým návrhem. Opakování historického řádku s novějším výsledkem vysvětlí, že je potřeba otevřít aktuální kontrolu.
+- Diagnostika používá aktuální nabídku i při spuštění ze starého výsledku. Zobrazuje konkrétní načtenou cenu a případný důvod ruční kontroly. Nemění cenová rozhodnutí, sklad ani produkt; využívá společnou cache a nejvýše jeden HTTP požadavek. Cena uložená například jako 5 Kč proto při načtení reálné ceny stále správně vyžaduje kontrolu změny nad 30 %.

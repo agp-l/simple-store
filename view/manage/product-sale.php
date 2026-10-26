@@ -25,7 +25,7 @@ $money = static fn (int $value): string => number_format($value, 0, ',', ' ') . 
 $partnerAdminUrl = $siteRoot . 'admin/?section=purchase-partners';
 ?>
 <section class="product-sale" id="product-sale" aria-labelledby="product-sale-title">
-  <div class="sale-heading"><h2 id="product-sale-title">Způsob prodeje</h2><span>Jen pro správce</span></div>
+  <div class="sale-heading"><h2 id="product-sale-title"><?= \SimpleStore\Rendering\Icon::render('users') ?> Způsob prodeje</h2><span>Samostatné uložení</span></div>
   <?php if (!($productSalesReady ?? false)): ?>
     <p><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/?section=database') ?>">Nejprve aktualizuj databázi.</a></p>
   <?php else: ?>
@@ -82,8 +82,8 @@ $partnerAdminUrl = $siteRoot . 'admin/?section=purchase-partners';
         </div>
         <p class="sale-hint sale-explanation">Odměna je již v konečné ceně. Zákazník uvidí rozpis a prodávajícího v souhrnu objednávky; cena se nezvýší.</p>
       </div>
-      <footer class="sale-footer"><div><p class="sale-save-state" data-sale-save-state role="status"><?= ($productSaleError ?? '') !== '' ? 'Změny nejsou uložené' : 'Nastavení odpovídá uloženým údajům' ?></p><p class="sale-hint">Lze uložit i rozpracované. Přepnutí prodeje zachová partnerské údaje.</p></div>
-        <button type="submit" class="sale-button">Uložit způsob prodeje</button></footer>
+      <footer class="sale-footer"><div><p class="sale-save-state" data-sale-save-state role="status"><?= ($productSaleError ?? '') !== '' ? 'Změny nejsou uložené' : 'Nastavení odpovídá uloženým údajům' ?></p><p class="sale-hint">Uloží režim prodeje, vybraného partnera a nákupní ceny. Partnerské odkazy a tabulka variant se ukládají ve své části.</p></div>
+        <button type="submit" class="sale-button"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit způsob prodeje</button></footer>
     </form>
     <script defer src="<?= $escape($siteRoot . 'assets/product-sale.js?v=' . filemtime(__DIR__ . '/../../assets/product-sale.js')) ?>"></script>
   <?php endif; ?>

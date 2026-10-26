@@ -19,6 +19,7 @@ test('partner links share a visible editor with scoped photos, private URLs and 
       await page.route('https://**/*',r=>r.abort());
       await page.goto('http://127.0.0.1:8786/tests/fixtures/partner-variants.html');
       const groups=page.locator('.variant-table-group');
+      if(js) assert.equal(await page.locator('[data-variant-save-bar]').evaluate(el=>getComputedStyle(el).position),'static','Save control must not float over edited rows');
       const blue=groups.nth(2);
       const live=blue.locator('.variant-partner-links > .variant-partner-entry');
       assert.equal(await live.count(),2,'Exact offer and add form visible without expansion');
@@ -54,6 +55,13 @@ test('partner links share a visible editor with scoped photos, private URLs and 
       assert.equal(await page.locator('.partner-source-links').count(),0);
       const base=page.locator('#supplier-links');
       assert.equal(await base.locator('form').count(),2);
+      assert.equal(await page.locator('#product-base-offer .base-offer-row').count(),1,'Simple product must use the same offer section');
+      await page.getByRole('spinbutton',{name:'Volné kusy skladem',exact:true}).fill('12');
+      const stock=await page.locator('#product-base-stock').evaluate(form=>Object.fromEntries(new FormData(form)));
+      assert.equal(stock.quantity,'12','The table stock input must belong to its save form');
+      assert.equal(stock.action,'set-product-stock');assert.equal(stock.csrf,'test-token');
+      assert.equal(await page.getByRole('navigation',{name:'Části editoru produktu'}).count(),1);
+
       assert.equal(await base.locator('input[name=url]').first().isVisible(),true);
       const simpleFieldStyle=await base.locator('input[name=url]').first().evaluate(el=>{const s=getComputedStyle(el);return [s.paddingTop,s.borderRadius,s.fontSize];});
       assert.deepEqual(simpleFieldStyle,variantFieldStyle,'Simple and variant offers must share field styling');

@@ -8,7 +8,7 @@ $partnerOwnPhoto = $partnerVariantKey !== '' && $variant['image_path'] !== '';
 <?php if (empty($partnerSourceOnly)): ?>
   <div class="partner-context">
     <a class="partner-photo" data-partner-image-link href="<?= $escape($imageUrl($partnerPhoto)) ?>" target="_blank" rel="noopener noreferrer" aria-label="Zvětšit fotografii: <?= $escape($partnerLabel) ?>"><img data-partner-image src="<?= $escape($imageUrl(\SimpleStore\Media\MediaPath::variant($partnerPhoto, 'thumb'))) ?>" alt="<?= $escape($product['name'].' · '.$partnerLabel) ?>" width="80" height="80" loading="lazy"></a>
-    <div><strong class="variant-partner-title">Partnerské odkazy <span>· <?= count($partnerGroups['active']) ?> · Jen pro správce</span></strong>
+    <div><strong class="variant-partner-title"><?= \SimpleStore\Rendering\Icon::render('external') ?> Partnerské odkazy <span>· <?= count($partnerGroups['active']) ?> · Jen pro správce</span></strong>
       <span><?= $escape($partnerLabel) ?></span>
       <p class="partner-photo-note" data-partner-image-note><?= $partnerVariantKey === '' ? 'Fotografie produktu.' : ($partnerOwnPhoto ? 'Fotografie přiřazená této variantě.' : ($partnerPhoto !== $product['image_path'] ? 'Fotografie stejné barvy.' : 'Společná fotografie — barva zatím není přiřazená.')) ?></p>
     </div>
