@@ -1,7 +1,7 @@
 <?php $catalogSupplierState ??= 'all'; $catalogPartnerId ??= 0; $catalogPartners ??= []; ?>
 <form class="catalog-supplier-filter" method="get" action="<?= $escape($searchAction) ?>#produkty">
   <input type="hidden" name="manage" value="1"><input type="hidden" name="visibility" value="<?= $escape($catalogVisibility) ?>"><input type="hidden" name="search" value="<?= $escape($searchTerm) ?>">
-  <label>Partner / dodavatel<select name="partner_id">
+  <label><span id="catalog-partner-label">Partner / dodavatel</span><select name="partner_id" aria-labelledby="catalog-partner-label">
     <option value="0" <?= $catalogPartnerId === 0 ? 'selected' : '' ?>>Všichni partneři</option>
     <?php foreach ($catalogPartners as $catalogPartner): ?>
       <option value="<?= (int) $catalogPartner['id'] ?>" <?= $catalogPartnerId === (int) $catalogPartner['id'] ? 'selected' : '' ?>><?= $escape(\SimpleStore\Product\PurchasePartnerRepository::label($catalogPartner)) ?></option>
