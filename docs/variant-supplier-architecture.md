@@ -123,3 +123,11 @@ Uživatel požaduje postupné dokončení, s předností přehledného editoru a
 5. **Alza:** oddělit odmítnutí HTTP požadavku od zákazu v obsahu robots.txt a od chyby parseru. HTTP 403 při načtení robots znamená, že se parser ceny vůbec nespustil. Veřejný robots byl při průzkumu dostupný a běžné produktové cesty pro obecný bot nezakazoval; to nedokládá přístup z hostingu obchodu. Veřejně doložený vstupní XML feed pro prodejce na AlzaTrade není výstupní ceník Alzy. Případné oficiální API/feed zapojit až podle skutečné dokumentace a oprávnění účtu; nezavádět odhadnuté endpointy, maskování klienta ani obcházení odmítnutého přístupu.
 
 Při každé etapě aktualizovat její stav a ověřit ceny, množství, režimy a identitu variant před/po. Etapy 2–4 jsou otevřené; tato změna je nepovažuje za hotové.
+
+### Dodaný krok 1 (26. 10. 2026)
+
+Editor jednoduchého produktu i variant používá společné šablony, viditelné formuláře a náhled přiřazené fotografie. Při změně fotografie v tabulce se náhled aktualizuje bez zápisu; platí až běžné uložení variant. Chybějící vlastní fotografie je výslovně označená jako společná, nikoli jako ověřená barva. Jediné tlačítko „Partnerské odkazy“ vede na aktivní editor.
+
+Převzatý duplicitní odkaz je ve vedlejším rozbalení pouze tehdy, když stejná varianta a stejný partner mají čerstvě ověřený přesný cíl. Nejde o mazání. Společné zdroje u variantních produktů zůstávají jednou ve spodním rozbalení pro dosavadní cenový automat. Jednoduchý produkt nadále používá starou tabulku; shodný vzhled není migrace datového jádra. Formulář společných odkazů nově používá kontrolu obsahu a produktový zámek proti přepsání souběžné změny/importu.
+
+Cenový automat zařazuje, zpracovává a přebírá ceny jen pro asistovaný nákup. Rozpracovanou kontrolu po přepnutí na vlastní prodej ukončí bez změny cen. Testy zahrnují i starý výsledek s aktuálním fingerprintem, odmítnutí opakování a zachování skladu a odkazů při přepnutí. Diagnostika HTTP 403 vysvětluje odmítnutí přístupu; přístup k Alze tím není vyřešen.

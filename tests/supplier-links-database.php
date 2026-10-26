@@ -101,3 +101,19 @@ $check($bulk->prepare($changed, false, false)[0]['incoming'] === [], 'Repeated a
 $check($variantRepo->snapshot($productKey) === $before && $inventory === $db->query('SELECT * FROM shop_product_inventory WHERE product_key=%s', $productKey) && $revisions === $db->query('SELECT * FROM shop_product_revisions WHERE product_key=%s ORDER BY id', $productKey), 'Link migration modified stock, variants, prices or revisions.');
 $reject(fn() => $bulk->prepare($export, false, true));
 echo "Private variant links: inheritance, tombstones, stable identity, version conflicts and additive JSON passed.\n";
+
+// Shared editor forms cannot overwrite a later edit or revive an imported/deleted link.
+$common = $suppliers->forProduct($productKey)[0];
+$commonVersion = $suppliers::version($common);
+$suppliers->changeChecked($productKey,(int)$common['id'],$commonVersion,false,'Nový popisek',$common['url']);
+$reject(fn() => $suppliers->changeChecked($productKey,(int)$common['id'],$commonVersion,false,'Stará karta',$common['url']));
+$reject(fn() => $suppliers->changeChecked($productKey,(int)$common['id'],$commonVersion,true));
+$current = $suppliers->forProduct($productKey)[0];
+$check($current['label']==='Nový popisek','Stale common form overwrote current link.');
+$reject(fn() => $suppliers->changeChecked($otherKey,(int)$current['id'],$suppliers::version($current),true));
+$suppliers->changeChecked($productKey,(int)$current['id'],$suppliers::version($current),true);
+$reject(fn() => $suppliers->changeChecked($productKey,(int)$current['id'],$suppliers::version($current),false,'Deleted',$current['url']));
+$commonCount = count($suppliers->forProduct($productKey));
+$suppliers->changeChecked($productKey,0,'',false,'Nový zdroj','https://new.example.test/item');
+$check(count($suppliers->forProduct($productKey))===$commonCount+1,'New common form failed.');
+echo "Common link editor: stale changes, ownership and deletion protected.\n";

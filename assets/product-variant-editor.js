@@ -112,8 +112,21 @@
     undo.hidden = previousPrices === null;
   }
   rows.forEach(row => {
+    const photo = row.querySelector('[name="image_path"]');
+    const initialPhoto = photo.value;
+    const group = row.closest('.variant-table-group');
+    const image = group.querySelector('[data-partner-image]');
+    const photoNote = group.querySelector('[data-partner-image-note]');
+    const initialPhotoNote = photoNote?.textContent;
     const changed = event => {
       if (event.target.name === 'price_czk') previousPrices = null;
+      if (event.target === photo && image) {
+        const option = photo.selectedOptions[0];
+        image.src = option.dataset.photoPreview;
+        group.querySelector('[data-partner-image-link]').href = option.dataset.photoFull;
+        photoNote.textContent = photo.value === initialPhoto ? initialPhotoNote
+          : 'Vybraná fotografie — ulož změny variant.';
+      }
       update();
     };
     row.addEventListener('input', changed);

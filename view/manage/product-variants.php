@@ -40,11 +40,12 @@ foreach ($details['options'] as $group) $variantGroups[] = $group['name'] . ': '
     </form>
     <?php else: ?><p>Produkt můžeš prodávat i bez variant. Varianty vytvářej, jen když zákazník vybírá například velikost nebo barvu.</p><?php endif; ?>
   </div>
+  <?php if ($variantRows === []): $partnerSourceOnly = false; require __DIR__.'/product-suppliers.php'; endif; ?>
   <?php if ($variantRows !== []): ?>
   <p data-variant-save-state role="status" hidden></p>
   <p>SKU je nepovinný interní kód varianty, například BUNDA-M-MODRA. Prázdná fotografie přebírá obrázek produktu. Vlastnosti varianty jsou stálé; jinou kombinaci přidej jako novou.</p>
   <div class="variant-partner-tools" id="variant-supplier-links">
-    <p>Partnerské odkazy upravíš přímo pod údaji každé varianty. Převzaté odkazy zatím nepotvrzují správnou velikost či barvu.</p>
+    <p>Fotografii porovnej s otevřenou nabídkou partnera. Stejně pojmenované barvy mohou v různých obchodech vypadat jinak.</p>
     <?php if (!$variantSupplierReady): ?>
     <p>Pro ukládání odkazů variant <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/?section=database') ?>">aktualizuj databázi</a>.</p>
     <?php else: ?>
@@ -74,7 +75,7 @@ foreach ($details['options'] as $group) $variantGroups[] = $group['name'] . ': '
       <td data-label="Volné kusy"><input form="<?= $formId ?>" name="quantity" aria-label="Volné kusy" type="number" min="0" max="1000000" required value="<?= $escape($value('quantity', $variant['quantity'])) ?>"></td>
       <td data-label="Dostupnost"><select form="<?= $formId ?>" name="stock_status" aria-label="Dostupnost"><?php foreach ($stockText as $code => $label): ?><option value="<?= $code ?>" <?= $value('stock_status', $variant['stock_status']) === $code ? 'selected' : '' ?>><?= $escape($label) ?></option><?php endforeach; ?></select></td>
       <td data-label="Vlastní cena Kč"><input form="<?= $formId ?>" name="price_czk" aria-label="Vlastní cena Kč" aria-describedby="variant-price-note-<?= $variant['id'] ?>" type="number" min="1" max="10000000" placeholder="<?= (int) $product['price_czk'] ?>" value="<?= $escape($value('price_czk', $variant['price_czk'] ?? '')) ?>"><small id="variant-price-note-<?= $variant['id'] ?>" data-variant-price-note><?= (string) $value('price_czk', $variant['price_czk'] ?? '') === '' ? 'Společná cena' : 'Vlastní cena' ?></small></td>
-      <td data-label="Fotografie"><select form="<?= $formId ?>" name="image_path" aria-label="Fotografie"><option value="">Společná</option><?php foreach (array_unique(array_merge([$product['image_path']], $details['gallery'], [$variant['image_path']])) as $variantImage): if ($variantImage === '') continue; ?><option value="<?= $escape($variantImage) ?>" <?= $value('image_path', $variant['image_path']) === $variantImage ? 'selected' : '' ?>><?= $escape(basename($variantImage)) ?></option><?php endforeach; ?></select></td>
+      <td data-label="Fotografie"><select form="<?= $formId ?>" name="image_path" aria-label="Fotografie"><option value="" data-photo-full="<?= $escape($imageUrl($product['image_path'])) ?>" data-photo-preview="<?= $escape($imageUrl(\SimpleStore\Media\MediaPath::variant($product['image_path'], 'thumb'))) ?>">Společná</option><?php foreach (array_unique(array_merge([$product['image_path']], $details['gallery'], [$variant['image_path']])) as $variantImage): if ($variantImage === '') continue; ?><option value="<?= $escape($variantImage) ?>" data-photo-full="<?= $escape($imageUrl($variantImage)) ?>" data-photo-preview="<?= $escape($imageUrl(\SimpleStore\Media\MediaPath::variant($variantImage, 'thumb'))) ?>" <?= $value('image_path', $variant['image_path']) === $variantImage ? 'selected' : '' ?>><?= $escape(basename($variantImage)) ?></option><?php endforeach; ?></select></td>
       <td data-label="Nabízet"><input form="<?= $formId ?>" type="checkbox" name="enabled" value="1" aria-label="Nabízet variantu" <?= ($failedRow ? ($rowForm['enabled'] ?? '') === '1' : $variant['enabled']) ? 'checked' : '' ?>></td>
       <td data-label="Akce"><form id="<?= $formId ?>" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>">
         <input type="hidden" name="action" value="product-variants"><input type="hidden" name="operation" value="row"><input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>"><input type="hidden" name="expected" value="<?= $escape($failedRow ? ($variantForm['expected'] ?? '') : $variantInventory['expected']) ?>"><input type="hidden" name="variant_id" value="<?= $variant['id'] ?>">
@@ -92,6 +93,11 @@ foreach ($details['options'] as $group) $variantGroups[] = $group['name'] . ': '
     <input type="hidden" name="action" value="product-variants"><input type="hidden" name="operation" value="batch"><input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>"><input type="hidden" name="expected" value="<?= $escape($variantForm['expected'] ?? $variantInventory['expected']) ?>"><input type="hidden" name="rows_json">
     <button class="inline-small" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit celou tabulku variant</button>
   </form>
+  <details class="partner-source-links" <?= (isset($_GET['supplier_error']) || isset($_GET['supplier_saved'])) && !isset($_GET['supplier_variant']) ? 'open' : '' ?>>
+    <summary>Společné zdroje pro kontrolu cen (<?= count($supplierLinks) ?>)</summary>
+    <p>Tyto původní stránky ještě používá cenový automat pro načítání nabídek. Přesné adresy barev a velikostí upravuj v tabulce výše.</p>
+    <?php $partnerSourceOnly = true; require __DIR__.'/product-suppliers.php'; ?>
+  </details>
   <?php endif; ?>
   <details class="variant-create" id="variant-create" <?= $variantRows === [] || ($variantForm['operation'] ?? '') === 'generate' ? 'open' : '' ?>><summary><?= \SimpleStore\Rendering\Icon::render('plus') ?> <?= $variantRows === [] ? 'Vytvořit varianty' : 'Přidat kombinace' ?></summary>
     <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>" data-variant-generate data-recovered="<?= $variantError !== '' && ($variantForm['operation'] ?? '') === 'generate' ? '1' : '0' ?>">

@@ -121,6 +121,7 @@ jobs:
           php tests/product-partner-assignment.php
           php tests/supplier-prices.php
           php tests/variant-link-matcher.php
+          php tests/partner-link-presentation.php
           php tests/inline-editor.php
           php tests/content-cover.php
           php tests/media-catalog.php
@@ -306,6 +307,7 @@ jobs:
       - name: Verify variant and sale UI on desktop and mobile
         run: |
           node --test tests/product-variants-browser.mjs
+          node --test tests/partner-links-browser.mjs
           node --test tests/product-sale-browser.mjs
           node --test tests/purchase-partners-browser.mjs
           node --test tests/product-partner-assignment-browser.mjs
@@ -328,6 +330,7 @@ jobs:
           name: variant-ui-screenshots
           path: |
             /tmp/variant-screenshots/
+            /tmp/partner-link-screenshots/
             /tmp/sale-screenshots/
             /tmp/sales-mass-screenshots/
             /tmp/checkout-presentation/

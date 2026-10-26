@@ -62,6 +62,30 @@ final class ProductSupplierLinkRepository
             WHERE id=%i AND product_key=%s', $label, $url, $id, $key);
     }
 
+    public static function version(array $link): string
+    {
+        return hash('sha256', json_encode([(int) $link['id'], $link['label'], $link['url']], JSON_THROW_ON_ERROR));
+    }
+
+    /** Browser edits share the product lock with imports and refuse stale forms. */
+    public function changeChecked(string $key, int $id, string $expected, bool $remove, string $label = '', string $url = ''): void
+    {
+        self::validKey($key);
+        $this->db->startTransaction();
+        try {
+            $current = $this->db->queryFirstColumn('SELECT id FROM shop_product_revisions WHERE product_key=%s AND active_product_key IS NOT NULL ORDER BY language FOR UPDATE', $key);
+            if ($current === []) throw new InvalidArgumentException('Produkt už neexistuje.');
+            if ($id !== 0 || $remove) {
+                $old = $this->db->queryFirstRow('SELECT id,label,url FROM shop_product_supplier_links WHERE product_key=%s AND id=%i FOR UPDATE', $key, $id);
+                if ($old === null) throw new InvalidArgumentException('Odkaz už u tohoto produktu neexistuje.');
+                if (!hash_equals(self::version($old), $expected)) throw new InvalidArgumentException('Odkaz se mezitím změnil. Obnov stránku a zkontroluj novou adresu.');
+            } elseif ($expected !== '') throw new InvalidArgumentException('Neplatná verze nového odkazu.');
+            if ($remove) $this->remove($key, $id);
+            else $this->save($key, $id, $label, $url);
+            $this->db->commit();
+        } catch (\Throwable $error) { $this->db->rollback(); throw $error; }
+    }
+
     public static function validate(string $label, string $url): void
     {
         if (preg_match('/^.{1,120}$/usD', $label) !== 1 ||

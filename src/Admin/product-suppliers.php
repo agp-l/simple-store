@@ -43,6 +43,10 @@ try {
             if (!is_string($label) || !is_string($url)) throw new InvalidArgumentException('Vyplň název a adresu partnera.');
             $variantLinks->save($key, $variant, $linkKey, $version, $partner, trim($label), trim($url));
         }
+    } elseif (array_key_exists('expected_link', $_POST)) {
+        $expected = $_POST['expected_link']; $label = $_POST['label'] ?? ''; $url = $_POST['url'] ?? '';
+        if (!is_string($expected) || !is_string($label) || !is_string($url)) throw new InvalidArgumentException('Neplatný partnerský odkaz.');
+        $links->changeChecked($key, (int) $rawId, $expected, $operation === 'remove', trim($label), trim($url));
     } elseif ($operation === 'remove') {
         $links->remove($key, (int) $rawId);
     } else {
