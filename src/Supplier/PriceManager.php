@@ -57,7 +57,7 @@ final class PriceManager
     private function locked(callable $run): mixed
     {
         $name = 'supplier-prices:' . sha1((string)$this->db->queryFirstField('SELECT DATABASE()'));
-        if((int)$this->db->queryFirstField('SELECT GET_LOCK(%s,0)',$name)!==1) throw new InvalidArgumentException('Právě probíhá jiný krok. Zkus to za chvíli.');
+        if((int)$this->db->queryFirstField('SELECT GET_LOCK(%s,0)',$name)!==1) throw new WorkerBusy('Právě probíhá jiný krok. Zkus to za chvíli.');
         try{return $run();}finally{$this->db->query('SELECT RELEASE_LOCK(%s)',$name);}
     }
     public function configure(bool $weekly, bool $paused): void
@@ -205,7 +205,7 @@ final class PriceManager
     public function tick(string $origin='browser'): array
     {
         if(!in_array($origin,['browser','cron','cli'],true))throw new InvalidArgumentException('Neplatný zdroj workeru.');
-        return $this->locked(function()use($origin):array{
+        try{return $this->locked(function()use($origin):array{
             $settings=$this->settings();$now=$this->now();
             $options=json_decode($settings['options_json']??'null',true)??[];
             $options['last_'.$origin.'_tick']=$now;
@@ -341,7 +341,7 @@ final class PriceManager
             $next=$this->db->queryFirstField('SELECT MIN(next_at) FROM shop_supplier_price_jobs WHERE status=%s','queued');
             if($variantLinksMore)return ['state'=>'working','wait'=>1];
             return ['state'=>$next===null?'idle':'waiting','wait'=>$next===null?30:max(1,min(60,(int)$next-$now)),'next_at'=>$next===null?0:(int)$next];
-        });
+        });}catch(WorkerBusy $error){return ['state'=>'waiting','wait'=>5,'next_at'=>$this->now()+5];}
     }
     /** Reuse a fresh model document only when it proves every requested variant URL.
      * Never replace a response already cached for the exact target (including a denial).

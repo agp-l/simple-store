@@ -66,7 +66,9 @@ try{
  $check($manager->enqueue('one','normal',$rate)['daily']===1,'Failure bypassed daily limit.');
  $pause=$make('pause');$manager->enqueue('one','normal',$pause);$manager->configure(false,true);$before=count($requests);$check($manager->tick()['state']==='paused'&&count($requests)===$before,'Pause still fetched.');
  $manager->configure(false,false);
- $other=ConnectionFactory::create(array_replace($config,['database'=>$database]));$lock='supplier-prices:'.sha1($database);$other->query('SELECT GET_LOCK(%s,0)',$lock);$reject(fn()=>$manager->tick());$other->query('SELECT RELEASE_LOCK(%s)',$lock);$other->disconnect();
+ $other=ConnectionFactory::create(array_replace($config,['database'=>$database]));$lock='supplier-prices:'.sha1($database);$other->query('SELECT GET_LOCK(%s,0)',$lock);
+ $before=count($requests);$busy=$manager->tick();$check($busy===['state'=>'waiting','wait'=>5,'next_at'=>$now+5]&&count($requests)===$before,'Busy worker failed instead of waiting without fetching.');
+ $reject(fn()=>$manager->configure(false,false));$other->query('SELECT RELEASE_LOCK(%s)',$lock);$other->disconnect();
  $token=$manager->rotateKey();$check(strlen($token)===64&&$manager->settings()['cron_hash']===hash('sha256',$token),'Cron key not hashed.');
  $manager->configure(true,false);$manager->tick();$next=(int)$manager->settings()['next_weekly'];$check($next===$now+604800,'Weekly enqueue not scheduled.');$manager->tick();$check((int)$manager->settings()['next_weekly']===$next,'Weekly cadence moved on each tick.');
  $check((int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$key)===3,'Partner in-stock limit was not synchronized.');
