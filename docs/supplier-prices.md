@@ -267,5 +267,8 @@ Luxury Fillo requires the expanded version; HyperBead requires explicit model
 technology evidence. Generic colour similarity is not identity evidence. The
 sanitized fixtures in `supplier-identity-regressions.json` exercise the observed
 failures and rejection of unrelated models, colours and SKU selectors. Parser and
-evaluator versions cause unresolved old documents to be refreshed within existing
-request limits; no stock counts or reservations are changed by these checks.
+evaluator versions trigger one maintenance refresh for obsolete, incomplete
+documents, including changed links that reuse an old cached model. This explicit
+release-time exception to daily freshness waits at least 15 minutes from the
+actual HTTP fetch and preserves robots rules, host cooldowns and denied responses.
+Successful or failed fetches replace the legacy document, preventing refresh loops; no stock counts or reservations are changed by these checks.

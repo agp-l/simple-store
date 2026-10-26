@@ -167,7 +167,7 @@ try{
  $report=$manager->diagnostics();$removed=array_values(array_filter($report['items'],static fn(array $item):bool=>$item['product_key']===str_repeat('f',32)))[0];
  $check(!$removed['active']&&$removed['snapshot']===null&&$report['version']===3,'Diagnostic active/history boundary wrong.');
  $check(!str_contains(json_encode($report),'cron_hash')&&!str_contains(json_encode($report),$token),'Diagnostic credential leak.');
- // Missing attributes in an older cache get ONE fresh attempt at the next legal time.
+ // Obsolete parsed documents get one maintenance refresh after the actual request cooldown.
  $db->update('shop_supplier_price_jobs',['status'=>'dismissed'],'status=%s','queued');
  $legacy=$make('legacy-attributes',1000);$legacyUrl='https://gramino.cz/p/legacy-attributes';
  $db->update('shop_product_sales',['partner_id'=>$gramino],'product_key=%s',$legacy);
@@ -181,14 +181,19 @@ try{
  $cache=$db->queryFirstRow('SELECT * FROM shop_supplier_price_cache WHERE url_hash=%s',hash('sha256','product:'.$legacyUrl));
  $data=json_decode($cache['data_json'],true);$data['document']['parser_version']=3;
  $db->update('shop_supplier_price_cache',['data_json'=>json_encode($data)],'url_hash=%s',$cache['url_hash']);
- $manager->retry('one','rapid',false,(int)$last['id']);$before=count($requests);$manager->tick();
- $check(count($requests)===$before&&$job($legacy)['status']==='queued'&&(int)$job($legacy)['next_at']>=$now+86400,'Legacy refresh ignored the fresh daily budget.');
+ $manager->retry('one','rapid',false,(int)$last['id']);
+ // A changed supplier URL can reuse a cached model even in ordinary (not cache-only) mode.
+ $queued=$job($legacy);$queuedData=json_decode($queued['data_json'],true);$queuedData['cache_only']=false;
+ $db->update('shop_supplier_price_jobs',['data_json'=>json_encode($queuedData)],'id=%i',$queued['id']);
+ $before=count($requests);$manager->tick();
+ $check(count($requests)===$before&&$job($legacy)['status']==='queued'&&(int)$job($legacy)['next_at']>=(int)$data['fetched_at']+900,'Parser maintenance ignored the actual request cooldown.');
  $check($manager->retry('one','rapid',true,(int)$job($legacy)['id'])['added']===0,'Scheduled refresh was duplicated.');
  $body=json_decode(substr($responses[\SimpleStore\Supplier\PriceParser::requestUrl($legacyUrl)]['body'],strlen('<script type="application/ld+json">'),-strlen('</script>')),true);
  $body['color']='Green';
  $responses[\SimpleStore\Supplier\PriceParser::requestUrl($legacyUrl)]['body']='<script type="application/ld+json">'.json_encode($body).'</script>';
- $now+=86401;$run(4,100);
+ $now+=901;$run(4,100);
  $check($job($legacy)['status']==='applied','Scheduled legacy refresh did not apply the exact new attributes.');
+ $afterMaintenance=count($requests);$run(3,1);$check(count($requests)===$afterMaintenance,'Parser maintenance repeated a completed fetch.');
  // With global pricing on, blank inherited variant prices can adopt individually proven costs.
  $inherited=$make('inherited-prices',1000);$inheritedUrl='https://gramino.cz/p/inherited-prices';
  $db->update('shop_product_sales',['partner_id'=>$gramino],'product_key=%s',$inherited);

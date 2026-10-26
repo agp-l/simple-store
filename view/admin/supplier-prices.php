@@ -24,6 +24,7 @@ $availability=['in_stock'=>'Skladem u dodavatele','out_of_stock'=>'U dodavatele 
 <?php endforeach; ?>
 </div>
 <p class="panel-help">Počítá se poslední výsledek každého současného produktu. Starší kontroly a odstraněné karty zůstávají pouze v historii.</p>
+<p class="panel-help">Po aktualizaci načítání se mohou jednorázově obnovit neúplná starší data variant. Obnova respektuje nejméně 15 minut od posledního načtení adresy, pravidla a prodlevy partnera.</p>
 <div class="supplier-columns">
 <section class="panel-panel supplier-start"><h2><?= Icon::render('refresh') ?> Spustit kontrolu</h2>
 <p>U variant čteme jejich přesné partnerské odkazy. Ceny uložíme společně až po ověření všech aktivních kombinací u jednoho prodávajícího. Nejdřív zkusíme vybraný obchod, potom další podle priority.</p>

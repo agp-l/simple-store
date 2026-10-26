@@ -11,7 +11,7 @@ use Throwable;
 
 final class PriceManager
 {
-    public const EVALUATOR_VERSION = 9;
+    public const EVALUATOR_VERSION = 10;
     private $transport;
     private $clock;
     private ?bool $variantModesInstalled=null;
@@ -212,6 +212,14 @@ final class PriceManager
             // Once per evaluator release, retry unresolved current products from cache only.
             // This never bypasses supplier backoffs or creates fresh HTTP requests.
             if(!(int)$settings['paused']&&(int)($options['rechecked_version']??0)<self::EVALUATOR_VERSION){
+                // Revisit parser migrations deferred by an older evaluator. This only
+                // wakes local work; normal URL cache, robots and host reservations still apply.
+                foreach($this->db->query('SELECT id,data_json FROM shop_supplier_price_jobs WHERE status=%s','queued')as$pending){
+                    $pendingData=json_decode($pending['data_json'],true);
+                    if(empty($pendingData['parser_refresh'])||(int)$pendingData['parser_refresh']>=PriceParser::VERSION)continue;
+                    $pendingData['parser_refresh']=0;$pendingData['cache_only']=true;$pendingData['refresh_after']=0;
+                    $this->db->update('shop_supplier_price_jobs',['data_json'=>self::json($pendingData),'next_at'=>$now],'id=%i',$pending['id']);
+                }
                 $this->retryInternal('problems','rapid',false);
                 $options['rechecked_version']=self::EVALUATOR_VERSION;
             }
@@ -270,8 +278,9 @@ final class PriceManager
                 if(!$policy['allowed']){$this->failure($job,$data,'robots.txt nepovoluje čtení této adresy.');
                     if(empty($robots['fetched']))continue;return ['state'=>'working','wait'=>$wait];}
                 if(!empty($robots['fetched'])){$this->defer($job,self::delay($job['mode'],$policy['delay']));return ['state'=>'working','wait'=>1];}
-                $result=(($candidate['kind']??'')==='variant'?$this->reusableVariantDocument($snapshot,$candidate,$target,(int)($data['refresh_after']??0)):null)??
-                    $this->cached($target,'product',$job['mode'],$policy['delay'],(int)($data['refresh_after']??0),!empty($data['cache_only']));
+                $refreshAfter=max((int)($data['refresh_after']??0),(int)($data['parser_refresh_after'][HttpClient::cacheKey('product',$target)]??0));
+                $result=(($candidate['kind']??'')==='variant'?$this->reusableVariantDocument($snapshot,$candidate,$target,$refreshAfter):null)??
+                    $this->cached($target,'product',$job['mode'],$policy['delay'],$refreshAfter,!empty($data['cache_only']));
                 if(isset($result['wait'])){$this->defer($job,$result['wait']);continue;}
                 if(isset($result['redirect'])){
                     try{if($data['hops']>=3)throw new InvalidArgumentException('Příliš mnoho přesměrování. Oprav odkaz.');
@@ -295,14 +304,14 @@ final class PriceManager
                     $observed=VariantOfferEvaluation::observe($result['document'],$result['document_source']??$target,$snapshot,$resolved,(int)$result['observed_at']);
                     $data['variant_observations']=array_replace($data['variant_observations']??[],$observed['observations']);
                     $data['variant_issues']=array_merge($data['variant_issues']??[],$observed['issues']);
-                    if($legacy&&$observed['issues']!==[]&&$this->scheduleParserRefresh($job,$data))continue;
+                    if($legacy&&$observed['issues']!==[]&&$this->scheduleParserRefresh($job,$data,$result,$target))continue;
                     $this->advanceVariant($job,$data,$observed['issues'][0]['message']??'Přesné nabídky variant načteny.');
                     if(!$remote)continue;return ['state'=>'working','wait'=>$wait];
                 }
                 if(isset($result['document'])){
                     try{$result=PriceEvaluation::select($result['document'],$target,$snapshot,$this->variantModesInstalled?$settings:[])+['observed_at'=>$result['observed_at']];}
                     catch(InvalidArgumentException $e){
-                        if($legacy&&$this->scheduleParserRefresh($job,$data))continue;
+                        if($legacy&&$this->scheduleParserRefresh($job,$data,$result,$target))continue;
                         $this->failure($job,$data,$e->getMessage());if(!$remote)continue;return ['state'=>'working','wait'=>$wait];
                     }
                 }
@@ -314,7 +323,7 @@ final class PriceManager
                 $reason=self::reviewReason($snapshot,$result);
                 if($reason!==''&&$legacy&&($result['uncertain']||
                     (!empty($snapshot['variantSettings']['enabled'])&&empty($result['uniform_variants'])&&empty($result['variant_offers'])))&&
-                    $this->scheduleParserRefresh($job,$data))continue;
+                    $this->scheduleParserRefresh($job,$data,$result,$target))continue;
                 $this->db->update('shop_supplier_price_jobs',['status'=>'review','checked_at'=>$now,'result_json'=>self::json($result),
                     'message'=>$reason?:'Jednoznačná nabídka vybraného prodávajícího.'],'id=%i',$job['id']);
                 if($reason===''){
@@ -399,18 +408,20 @@ final class PriceManager
         return $result+['fetched'=>true];
     }
     private function defer(array $job,int $wait):void{$this->db->update('shop_supplier_price_jobs',['next_at'=>$this->now()+max(1,$wait)],'id=%i',$job['id']);}
-    private function scheduleParserRefresh(array $job,array $data):bool
+    private function scheduleParserRefresh(array $job,array $data,array $cached,string $target):bool
     {
-        if(empty($data['cache_only'])||!empty($data['parser_refresh']))return false;
-        $previous=$this->db->queryFirstRow('SELECT id,checked_at FROM shop_supplier_price_jobs WHERE id=%i',(int)($data['retry_of']??0));
-        if(!$previous)return false;
-        $lastFresh=(int)$this->db->queryFirstField('SELECT MAX(GREATEST(created_at,checked_at)) FROM shop_supplier_price_jobs WHERE product_key=%s AND retry_of>0',$job['product_key']);
-        $due=max($this->now(),(int)$previous['checked_at']+900,$lastFresh>0?$lastFresh+86400:0);
-        $data['parser_refresh']=1;$data['cache_only']=false;$data['refresh_after']=$due;
-        $data['variant_observations']=[];$data['variant_issues']=[];
-        $data['index']=0;$data['redirect']='';$data['hops']=0;$data['permanent_redirects']=true;
-        $this->db->update('shop_supplier_price_jobs',['data_json'=>self::json($data),'next_at'=>$due,'retry_of'=>(int)$previous['id'],
-            'message'=>'Starší uložená nabídka neobsahuje přesné vlastnosti variant. Nové načtení je naplánované automaticky v povoleném denním limitu.'],'id=%i',$job['id']);
+        $key=HttpClient::cacheKey('product',$target);
+        if(isset($data['parser_refresh_after'][$key]))return false;
+        if(empty($cached['document'])||(int)($cached['document']['parser_version']??0)>=PriceParser::VERSION)return false;
+        // One maintenance refresh per obsolete document, separate from ordinary daily
+        // checks. A successful request replaces it with the current parser; a failed
+        // request replaces it with an error, so neither can trigger a refresh loop.
+        $due=max($this->now(),(int)($cached['fetched_at']??$cached['observed_at']??$this->now())+900);
+        $data['parser_refresh']=PriceParser::VERSION;$data['cache_only']=false;
+        $data['parser_refresh_after'][$key]=$due;
+        $this->db->update('shop_supplier_price_jobs',['data_json'=>self::json($data),'next_at'=>$due,
+            'retry_of'=>(int)($data['retry_of']??$job['id']),
+            'message'=>'Po aktualizaci načítání jednorázově obnovíme neúplná starší data variant. Prodlevy a omezení partnera zůstávají v platnosti.'],'id=%i',$job['id']);
         return true;
     }
     private function saveData(array $job,array $data,string $message,int $wait=2):void
