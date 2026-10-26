@@ -140,3 +140,35 @@ Zákaznický náhled reaguje již na barvu, velikost zůstává povinná pro vlo
 Editor má jedno hromadné uložení a označení změněných řádků. „Použít pro tuto barvu“ připraví hromadnou změnu fotografie, která se odešle až společně s ostatními změněnými variantami. Partnerské odkazy mají výslovně samostatné uložení. Rozpracované varianty se při něm uchovají v dané kartě pouze při shodě verze inventáře; souběžná změna skladu nebo cen vyvolá upozornění a starý návrh se automaticky neobnoví. Bez JavaScriptu zůstává výslovně označené uložení jednotlivých řádků.
 
 Cenový snapshot nově obsahuje stabilní identity aktivních variantních odkazů (`link_key`, `variant_key`, `partner_key`, `url`). Přidání, odebrání či změna adresy/partnera zneplatní starý výsledek při atomickém převzetí. Čas, verze a výsledek pravidelného ověření ani popisek cenu nezneplatňují. Evaluátor 7 jednorázově zopakuje nedořešené výsledky z cache. Tato ochrana **ještě nepřevádí výběr cenových zdrojů na variantní odkazy**: fronta nadále načítá společné zdroje a rozsah ceny prokazuje dosavadními adaptéry. Úplný převod nabídek, galerie a dostupnost D zůstávají otevřené.
+
+
+### Dodaný krok 2a — variantní cenové zdroje (26. 10. 2026)
+
+`VariantOfferPlan` vybírá aktivní variantní odkazy místo společných zdrojů u převedených
+produktů. `VariantOfferEvaluation` váže jednotlivá pozorování na stabilní ID odkazu,
+variantu a partnera. Worker je ukládá průběžně do úlohy a atomicky přebírá až úplný,
+čerstvý a nerozporný soubor jednoho partnera. Neúplný soubor nelze schválit jako společnou
+cenu. Při uloženém přesném URL se ověřuje právě jeho SKU; shodné vlastnosti jiného SKU
+nepřepíšou ruční volbu. Původní modelové odkazy smí dodat jen prokázanou přesnou nabídku.
+Smazané variantní odkazy neobnovují starý produktový zdroj.
+
+Důkazy a časy jsou v diagnostice verze 3, offline replay a přehledu konkrétních variant
+v historii cen. Tlačítko diagnostiky a chráněný POST `supplier-price-probe` ověřují načtení
+bez změny cen, skladu či úloh; sdílí cache a omezení workeru. Schéma ani fyzický sklad
+nebylo potřeba přestavovat. Jednoduché produkty bez aktivních kombinací zůstávají na
+jedné společné nabídce. Rozšíření objednávkového snímku o partnerský link je dál otevřené.
+
+Živá kontrola po nasazení 26. 10. 2026 v 16:06 českého času doložila všech 8 variant
+Patizon D590 (různé dodavatelské ceny 9 966 / 10 439 / 10 490 Kč). Výsledek `checked`
+uchoval produkty, prodejní nastavení, ceny variant i jejich nastavení přesně beze změny.
+MySQL, MariaDB, PHP 8.1/8.4, kompatibilita syntaxe 8.0 a testy prohlížeče prošly.
+
+Alza: nedostupný robots.txt se posuzuje dle RFC 9309 odděleně od veřejné produktové
+stránky. Skutečný produktový požadavek z hostingu 26. 10. 2026 také vrátil 403;
+plné načítání Alzy proto není hotové a vyžaduje povolený zdroj/přístup partnera.
+Gramino, Pod7kilo, HUDY a 4camping mají doložené produktové odpovědi 200 s cenou.
+4camping zatím nemá adaptér přesných barevných nabídek. Dalších 14 nevyřešených
+produktů postrádá úplný důkaz variant, jeden jednoduchý produkt vyžaduje kontrolu
+identity a šest Alza produktů nemá převzatou cenu. Tyto stavy nejsou důvod k hádání
+vlastností nebo cen. Galerie barev, asistované množství/rezervace (D), doplnění chybějících
+shod a objednávkové snímky zůstávají dalšími kroky.

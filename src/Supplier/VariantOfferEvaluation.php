@@ -61,10 +61,12 @@ final class VariantOfferEvaluation
             $offers[$key]['availability'] = count($states) === 1 ? reset($states) : 'unknown';
             $offers[$key]['link_keys'] = array_column($found, 'link_key');
         }
-        $first = reset($offers); $uniform = count(array_unique(array_column($offers, 'amount'))) === 1;
+        $first = reset($offers);
+        foreach($offers as $offer)if((float)$offer['amount']<(float)$first['amount'])$first=$offer;
+        $uniform = count(array_unique(array_column($offers, 'amount'))) === 1;
         $states = array_unique(array_column($offers, 'availability'));
         $result = [
-            'price'=>min(array_column($offers, 'price')), 'amount'=>min(array_column($offers, 'amount')), 'url'=>$first['url'],
+            'price'=>$first['price'], 'amount'=>$first['amount'], 'url'=>$first['url'],
             'availability'=>count($states) === 1 ? reset($states) : 'unknown', 'uncertain'=>false, 'uniform_variants'=>$uniform,
             'observed_at'=>$oldest, 'canonical_variant_offers'=>$offers,
             'identity_evidence'=>['method'=>'variant_partner_links', 'local_variants'=>count($variants),

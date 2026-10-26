@@ -25,6 +25,9 @@ foreach($plan as $source){$out=Evaluation::observe($doc,$url,$snapshot,$source,$
 $result=Evaluation::assemble($snapshot,$observations,1,$now,['pricing_enabled'=>1]);
 $check($result['price']===1000 && $result['variant_offers']['red']['price']===1200 && $result['enable_variant_pricing'],'Variant amounts collapsed into one product price.');
 $check($result['identity_evidence']['local_variants']===2,'Missing coverage evidence.');
+$reversed=$observations;$reversed['b']['price']=1300;$reversed['b']['amount']='1300.00';
+$minimum=Evaluation::assemble($snapshot,$reversed,1,$now,['pricing_enabled'=>1]);
+$check($minimum['url']===$observations['r']['url']&&$minimum['price']===1200&&$minimum['amount']==='1200.00','Minimum summary price points to a differently priced variant.');
 $reject(fn()=>Evaluation::assemble($snapshot,[$observations['b']],1,$now,[]));
 $reject(fn()=>Evaluation::assemble($snapshot,$observations,2,$now,[]));
 $reject(fn()=>Evaluation::assemble($snapshot,$observations,1,$now+86400,[]));
