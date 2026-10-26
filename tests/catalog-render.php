@@ -105,9 +105,15 @@ if (str_contains($publicDetail, 'supplier.example.test') || str_contains($public
 ob_start();
 $renderer->render('product-record', $detailData + ['canEditProduct' => true]);
 $privateDetail = ob_get_clean();
+if (!str_contains($privateDetail, \SimpleStore\Rendering\Icon::render('edit') . ' Upravit produkt') ||
+    str_contains($privateDetail, 'name="action" value="product-supplier-link"')) {
+    throw new RuntimeException('Read-only administrator preview must link to the unified editor.');
+}
+ob_start();
+$renderer->render('product-record', $detailData + ['canEditProduct' => true, 'editMode' => true]);
+$privateDetail = ob_get_clean();
 if (!str_contains($privateDetail, 'supplier.example.test/bota?size=42&amp;source=store') ||
     str_contains($privateDetail, 'Katalog a organizace produktů') ||
-    !str_contains($privateDetail, \SimpleStore\Rendering\Icon::render('edit') . ' Upravit produkt') ||
     !str_contains($privateDetail, 'name="action" value="product-supplier-link"') ||
     !str_contains($privateDetail, 'name="csrf" value="private-token"') ||
     !str_contains($privateDetail, 'Jen pro správce') ||

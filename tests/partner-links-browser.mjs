@@ -28,7 +28,8 @@ test('partner links share a visible editor with scoped photos, private URLs and 
       assert.equal(await blue.locator('.partner-older-links').getAttribute('open'),null);
       assert.equal(await blue.locator('.partner-older-links input[name=url]').isVisible(),false);
       assert.equal(await page.locator('.partner-source-links').count(),1);
-      assert.equal(await page.locator('.partner-source-links input[name=url]').isVisible(),false);
+      assert.equal(await page.locator('.partner-source-links input[name=url]').count(),2);
+      for (const input of await page.locator('.partner-source-links input[name=url]').all()) assert.equal(await input.isVisible(),false);
       const open=live.first().locator('.variant-partner-heading a');
       assert.equal(await open.getAttribute('target'),'_blank');assert.match(await open.getAttribute('rel'),/noopener/);
       assert.match(await open.getAttribute('href'),/color=blue&size=M/);
