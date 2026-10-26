@@ -160,6 +160,11 @@ final class PriceParser
         if (array_is_list($node)) foreach ($node as $item) if (is_array($item)) self::products($item, $products);
     }
 
+    public static function sameOfferUrl(string $a, string $b): bool
+    {
+        return self::identity($a) !== '' && self::identity($a) === self::identity($b);
+    }
+
     private static function identity(string $url): string
     {
         $p = parse_url($url);

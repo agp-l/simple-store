@@ -122,6 +122,7 @@ jobs:
           php tests/product-partner-assignment.php
           php tests/supplier-prices.php
           php tests/variant-link-matcher.php
+          php tests/variant-offer-evaluation.php
           php tests/partner-link-presentation.php
           php tests/inline-editor.php
           php tests/content-cover.php
