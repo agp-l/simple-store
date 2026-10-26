@@ -158,6 +158,8 @@ try{
  $check($manager->dashboard('failed','Patizon D890')['total']===1,'Newest failure missing.');
  $db->update('shop_supplier_price_jobs',['status'=>'dismissed'],'status=%s','queued');
  $options=json_decode($manager->settings()['options_json'],true);$options['rechecked_version']=3;
+ // Isolate the cache-only evaluator migration from the new daily availability scheduler.
+ $options['availability_initialized']=true;$options['availability_next_scan']=$now+86400;
  $db->update('shop_supplier_price_settings',['options_json'=>json_encode($options)],'id=1');
  $before=count($requests);$manager->tick('cron');
  $check(count($requests)===$before,'Evaluator upgrade fetched a supplier instead of replaying cache.');

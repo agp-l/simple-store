@@ -674,6 +674,10 @@ final class PriceManager
             $same=$same&&$overrides===$oldOverrides&&$variantChanges===[];
             if(!$same||$retailChanges!==[])$this->db->update('shop_product_sales',['supplier_price_czk'=>$result['price'],'partner_id'=>$result['partner_id'],'variant_prices_json'=>self::json((array)$overrides),'version'=>(int)$sale['version']+1],
                 'product_key=%s AND version=%i',$job['product_key'],$sale['version']);
+            if($result['fallback']){
+                (new \SimpleStore\Product\PartnerStockState($this->db))->changeSeller($job['product_key'],$sale,'assisted',(int)$result['partner_id']);
+                $result['availability_refresh_requested']=true;
+            }
             $result['variant_price_changes']=$variantChanges;
             $result['retail_changes']=$retailChanges;$result['pricing_policy']=$newRetail===null?null:array_intersect_key($pricing,PricingPolicy::DEFAULTS);
             $same=$same&&$retailChanges===[];
