@@ -7,7 +7,7 @@ final class VariantLinkMatcher
 {
     public const VERSION = 1;
 
-    public static function match(array $document, string $source, string $name, array $variant): array
+    public static function match(array $document, string $source, string $name, array $variant, ?string $exactUrl = null): array
     {
         $none = ['status' => 'no_match', 'message' => 'Nabídka nepotvrzuje přesně tuto kombinaci vlastností.'];
         try { $host = preg_replace('/^www\./', '', HttpClient::url($source)); }
@@ -15,6 +15,14 @@ final class VariantLinkMatcher
         if (!in_array($host, ['gramino.cz', 'pod7kilo.cz', 'hudy.cz'], true)) return ['status' => 'unsupported', 'message' => 'Tento obchod zatím nepodporuje automatické párování variant.'];
         // Version 3 already preserves Gramino's explicit ProductGroup names and URLs.
         if ((int) ($document['parser_version'] ?? 0) < 3) return ['status' => 'old_parser', 'message' => 'Uložená nabídka vyžaduje novější načtení s vlastnostmi variant.'];
+        if($exactUrl!==null){
+            // A saved exact URL selects its SKU even when another SKU has identical colour/size.
+            // All model and attribute checks below still apply; inherited model links never select.
+            $complete=count($document['offers']??[])===($document['product_count']??0);
+            foreach(['offers','scoped_offers'] as $field)if(isset($document[$field]))
+                $document[$field]=array_values(array_filter($document[$field],static fn(array $offer):bool=>PriceParser::sameOfferUrl($offer['url'],$exactUrl)));
+            if($complete)$document['product_count']=count($document['offers']??[]);
+        }
         $choices = json_decode($variant['choices_json'] ?? '{}', true);
         if (!is_array($choices) || !$choices) return $none;
         $id = $variant['variant_key'];

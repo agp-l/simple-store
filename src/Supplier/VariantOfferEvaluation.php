@@ -14,7 +14,8 @@ final class VariantOfferEvaluation
         foreach ($candidate['links'] as $link) {
             $variant = $variants[$link['variant_key']] ?? null;
             if ($variant === null) continue;
-            $match = VariantLinkMatcher::match($document, $sourceUrl, $snapshot['products'][0]['name'], $variant);
+            $exact=($link['origin']??'manual')==='inherited'?null:($candidate['resolved_url']??$candidate['url']);
+            $match = VariantLinkMatcher::match($document, $sourceUrl, $snapshot['products'][0]['name'], $variant, $exact);
             if ($match['status'] === 'exact' && ($link['origin'] ?? 'manual') === 'manual' &&
                 !PriceParser::sameOfferUrl($match['url'], $candidate['url']) &&
                 (empty($candidate['resolved_url']) || !PriceParser::sameOfferUrl($match['url'], $candidate['resolved_url']))) {

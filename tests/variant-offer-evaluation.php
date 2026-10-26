@@ -32,6 +32,10 @@ $conflicting=$observations;$conflicting['duplicate']=array_replace($observations
 $reject(fn()=>Evaluation::assemble($snapshot,$conflicting,1,$now,[]));
 $wrong=$plan[0];$wrong['url']=$url.'?v_id=red';
 $check(Evaluation::observe($doc,$url.'?v_id=blue',$snapshot,$wrong,$now)['observations']===[],'A model cache repaired an explicitly wrong manual URL.');
+$duplicate=$doc;$extra=$duplicate['offers'][0];$extra['url']=$url.'?v_id=another-blue';$duplicate['offers'][]=$extra;$duplicate['product_count']++;
+$check(count(Evaluation::observe($duplicate,$url,$snapshot,$plan[0],$now)['observations'])===1,'Exact saved SKU lost priority to another SKU with the same attributes.');
+$inherited=$plan[0];$inherited['links'][0]['origin']='inherited';
+$check(Evaluation::observe($duplicate,$url,$snapshot,$inherited,$now)['observations']===[],'Inherited model URL silently selected one of two matching SKUs.');
 $removed=$snapshot;foreach($removed['variantLinks'] as &$link)$link['removed']=1;unset($link);
 $check(Plan::candidates($removed)===[],'Removed links fell back to legacy product sources.');
 $legacy=$snapshot;$legacy['variantLinks']=[];$check(Plan::candidates($legacy)===null,'Unmigrated product lost legacy support.');
