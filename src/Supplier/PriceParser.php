@@ -7,7 +7,7 @@ use InvalidArgumentException;
 /** Reads explicit offers, never guesses a price from arbitrary visible numbers. */
 final class PriceParser
 {
-    public const VERSION = 8;
+    public const VERSION = 9;
     /** Gramino advertises this public mirror in /.well-known/ai-catalog.json and /openapi.json. */
     public static function requestUrl(string $url):string
     {
@@ -46,7 +46,7 @@ final class PriceParser
                 if (!is_array($offer) || !self::type($offer, 'Offer') || !isset($offer['price'], $offer['priceCurrency'])) continue;
                 // Conditional/member prices and expired offers must not become the general cost.
                 if (isset($offer['validForMemberTier']) || isset($offer['eligibleCustomerType']) ||
-                    (isset($offer['priceValidUntil']) && (!is_string($offer['priceValidUntil']) || strtotime($offer['priceValidUntil'].' 23:59:59 UTC') < time()))) continue;
+                    (isset($offer['priceValidUntil']) && !self::validUntil($offer['priceValidUntil']))) continue;
                 if ($offer['priceCurrency'] !== 'CZK') continue;
                 $price = self::amount($offer['price']);
                 if ($price === null) continue;
@@ -110,6 +110,15 @@ final class PriceParser
         $result['uncertain'] = $exact === [] && !$groupExact && (parse_url($url, PHP_URL_QUERY) !== null || parse_url($url, PHP_URL_FRAGMENT) !== null ||
             ($result['url'] !== '' && self::identity($result['url']) !== self::identity($url)));
         return $result;
+    }
+
+    private static function validUntil(mixed $value): bool
+    {
+        if (!is_string($value)) return false;
+        if (preg_match('/^\d{4}-\d{2}-\d{2}$/D',$value)) $value.='T23:59:59Z';
+        elseif (!preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2})?(?:Z|[+-]\d{2}:?\d{2})$/D',$value)) return false;
+        $timestamp=strtotime($value);
+        return $timestamp!==false && $timestamp>=time();
     }
 
     private static function name(string $value): string

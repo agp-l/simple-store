@@ -266,6 +266,25 @@ $doc4=Parser::document($html4($f4),$f4['url']);$orange=$f4['url'].'#oranzova';
 $r4=Parser::select($doc4,$orange);
 $check($r4['price']===689&&$r4['attributes']['color']==='orange'&&$r4['identity_evidence']['variant_id']==='45483'&&!$r4['uncertain'],'Opinel orange was not identified exactly.');
 $check($r4['availability']==='in_stock','4camping stock label not read.');
+$axes4=$f4;$axes4['data']['variantsInfo']['45483']['name']='Velikost bot (EU): 42,5 / Barva: šedá/černá';
+$axesOffer=Parser::select(Parser::document($html4($axes4),$f4['url']),$orange);
+$check($axesOffer['attributes']===['size'=>'42.5','color'=>'grey black'],'Slash-labelled axes merged or decimal/colour separators were split.');
+$zip4=$f4;$zip4['data']['variantsInfo']['45483']['name']='Zip: Levý / Barva: oranžová';
+$check(Parser::select(Parser::document($html4($zip4),$f4['url']),$orange)['attributes']===['zip'=>'left','color'=>'orange'],'Zip swallowed the following colour.');
+foreach([gmdate('Y-m-d',time()+86400),gmdate('Y-m-d\\TH:i:s\\Z',time()+86400),gmdate('Y-m-d\\TH:i',time()+86400).'+0100']as$date){
+ $dated=$f4;$dated['product']['offers']['priceValidUntil']=$date;
+ $check(count(Parser::document($html4($dated),$f4['url'])['offers'])===1,'Valid ISO date/time was incorrectly expired.');
+}
+foreach(['not a date','yesterday','2001-01-01T12:00:00Z']as$date){
+ $dated=$f4;$dated['product']['offers']['priceValidUntil']=$date;
+ $check(Parser::document($html4($dated),$f4['url'])['offers']===[],'Expired or invalid dated offer was accepted.');
+}
+$coupon4=$f4;
+foreach($coupon4['data']['variantsInfo']as&$sku)$sku['voucher']=['name'=>'TEST10','priceWithVoucherDiscountFormatted'=>round($sku['price']*.9).'&nbsp;<span>Kč</span>'];unset($sku);
+$coupon4['product']['offers']['price']=min(array_map(static fn(array $v):int=>(int)round($v['price']*.9),$coupon4['data']['variantsInfo']));
+$check(Parser::select(Parser::document($html4($coupon4),$f4['url']),$orange)['price']===689,'Coupon price replaced the unconditional variant cost.');
+$coupon4['product']['offers']['price']=1;
+$check(!isset(Parser::document($html4($coupon4),$f4['url'])['scoped_offers']),'Unrelated coupon/schema prices were accepted.');
 $reject(fn()=>Parser::select($doc4,$f4['url'].'#neznama-barva'));
 $reject(fn()=>Parser::select($doc4,$f4['url']));
 $different=$f4;$different['data']['variantsInfo']['45483']['price']=799;

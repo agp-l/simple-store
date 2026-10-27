@@ -39,7 +39,9 @@ final class FourCampingVariantIdentity
             $selector = trim(substr($variantPath, strlen($path)), '/');
             if ($selector === '' || isset($seen[$selector])) return [];
             $seen[$selector] = true;
-            preg_match_all('/(?:^|,\s+)([^:,]+):\s*(.*?)(?=,\s+[^:,]+:|$)/u', $variant['name'], $parts, PREG_SET_ORDER);
+            // Separators precede a labelled axis; slashes inside a colour and decimal
+            // commas inside a shoe size are values, not separators.
+            preg_match_all('~(?:^|,\s+|\s+/\s+)([^:,/]+):\s*(.*?)(?=(?:,\s+|\s+/\s+)[^:,/]+:|$)~u', $variant['name'], $parts, PREG_SET_ORDER);
             $values = [];
             foreach ($parts as $part) $values[trim($part[1])] = trim($part[2]);
             $attributes = StructuredVariantScope::attributes($values);
@@ -58,7 +60,22 @@ final class FourCampingVariantIdentity
         $selected = $data['selectedVariantId'] ?? null;
         if ($selected !== null && (self::identifier($selected) === null || !isset($data['variantsInfo'][$selected]))) return [];
         $reference = $selected === null ? min(array_column($out, 'amount')) : $data['variantsInfo'][$selected]['price'];
-        if (number_format((float) $reference, 2, '.', '') !== number_format((float) $offer['amount'], 2, '.', '')) return [];
+        if (number_format((float) $reference, 2, '.', '') !== number_format((float) $offer['amount'], 2, '.', '')) {
+            // Some pages advertise a coupon price in JSON-LD. Bind it to the explicit
+            // voucher table, but keep the unconditional SKU price as the purchase cost.
+            $vouchers=[];
+            foreach ($data['variantsInfo'] as $id=>$variant) {
+                $voucher=$variant['voucher']??null;
+                if (!is_array($voucher) || !is_string($voucher['name']??null) || trim($voucher['name'])==='' || !is_string($voucher['priceWithVoucherDiscountFormatted']??null)) return [];
+                $text=html_entity_decode(strip_tags($voucher['priceWithVoucherDiscountFormatted']),ENT_QUOTES|ENT_HTML5,'UTF-8');
+                if (!preg_match('/^\s*([0-9][0-9\s\x{00a0}]*(?:[,.][0-9]{1,2})?)\s*Kč\s*$/u',$text,$m)) return [];
+                $value=str_replace(',','.',preg_replace('/[\s\x{00a0}]/u','',$m[1]));
+                if (PriceParser::amount($value)===null || (float)$value>(float)$variant['price']) return [];
+                $vouchers[$id]=$value;
+            }
+            $discounted=$selected===null?min($vouchers):$vouchers[$selected];
+            if (number_format((float)$discounted,2,'.','')!==number_format((float)$offer['amount'],2,'.','')) return [];
+        }
         return $out;
     }
 
