@@ -1606,3 +1606,22 @@ CREATE TABLE IF NOT EXISTS shop_supplier_offers (
             evidence_json MEDIUMTEXT NOT NULL, message VARCHAR(1000) NOT NULL DEFAULT '',
             KEY product (product_key), KEY partner (partner_key,status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Minimal public tombstones; full catalog data is removed, order snapshots are kept.
+CREATE TABLE IF NOT EXISTS shop_removed_product_urls (
+  language CHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  slug VARCHAR(190) NOT NULL,
+  product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  removed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (language,slug), KEY removed_product (product_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Durable, retryable file cleanup after the catalog transaction commits.
+CREATE TABLE IF NOT EXISTS shop_product_media_cleanup (
+  product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+  name VARCHAR(255) NOT NULL,
+  files_json LONGTEXT NOT NULL,
+  result_json LONGTEXT NOT NULL,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -14,7 +14,7 @@ final class PartnerRefreshQueue
     }
     public function request(string $key, int $after): void
     {
-        $this->db->query('INSERT INTO shop_partner_refresh_requests (product_key,requested_after) VALUES (%s,%i) ON DUPLICATE KEY UPDATE requested_after=GREATEST(requested_after,VALUES(requested_after)),generation=generation+1',$key,$after);
+        $this->db->query('INSERT INTO shop_partner_refresh_requests (product_key,requested_after) SELECT %s,%i FROM shop_product_revisions WHERE product_key=%s AND active_product_key IS NOT NULL LIMIT 1 ON DUPLICATE KEY UPDATE requested_after=GREATEST(requested_after,VALUES(requested_after)),generation=generation+1',$key,$after,$key);
     }
     /** Historic ledgers predate per-order partner limits. Use the immutable order mode. */
     public function assistedKeys(int $orderId): array

@@ -149,7 +149,7 @@ final class MediaLibrary
     }
 
     /** Permanently remove one owned original and both generated sizes. */
-    public function deleteManaged(string $type, string $key, string $path): void
+    public function deleteManaged(string $type, string $key, string $path, bool $allowMissing = false): void
     {
         $relative = MediaPath::directory($type, $key);
         if (!MediaPath::isManaged($path) || dirname($path) !== $relative) {
@@ -160,6 +160,7 @@ final class MediaLibrary
             $folder .= '/' . $part;
             if (is_link($folder)) throw new RuntimeException('Složka fotografií nesmí být symbolický odkaz.');
         }
+        if ($allowMissing && !file_exists($folder)) return;
         if (!is_dir($folder) || !is_writable($folder)) {
             throw new RuntimeException('Složku fotografií nelze upravit. Zkontroluj práva k images/.');
         }
@@ -170,7 +171,7 @@ final class MediaLibrary
                 throw new RuntimeException('Fotografie nesmí být symbolický odkaz ani složka.');
             }
         }
-        if (!is_file($folder . '/' . basename($path))) {
+        if (!$allowMissing && !is_file($folder . '/' . basename($path))) {
             throw new InvalidArgumentException('Fotografie už v knihovně není. Obnov stránku.');
         }
         foreach (array_reverse($targets) as $target) {
