@@ -298,3 +298,8 @@ $conflict=SimpleStore\Supplier\StructuredVariantScope::productAttributes(
  ['url'=>'https://gramino.cz/p/sleeping-bag?v_id=sku','color'=>'Blue'],"## Specifikace\n- Barva: Červená\n",'https://gramino.cz/p/sleeping-bag?v_id=sku',true);
 $check($conflict===[],'Conflicting structured/specification colour accepted.');
 echo "Supplier identities: equivalent repeated single-SKU properties retained, conflicts rejected.\n";
+// Same colour and price do not prove that a legacy model link still names the right product.
+$identityUrl='https://gramino.cz/p/identity-model';
+$identityDoc=Parser::document($wrap(['@type'=>'Product','name'=>'Other model','color'=>'Blue','offers'=>['@type'=>'Offer','url'=>$identityUrl,'price'=>1000,'priceCurrency'=>'CZK']]),$identityUrl);
+$identityResult=SimpleStore\Supplier\PriceEvaluation::select($identityDoc,$identityUrl,['products'=>[['name'=>'Expected model']],'variantSettings'=>['enabled'=>1],'variants'=>[['enabled'=>1,'variant_key'=>'v','choices_json'=>'{"Barva":"Modrá"}']]]);
+$check($identityResult['uncertain'],'Legacy structured attributes bypassed model proof.');
