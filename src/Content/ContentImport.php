@@ -67,7 +67,7 @@ final class ContentImport
         $fields['type'] = $data['type'];
         $fields['language'] = $data['language'];
         $document = $data['content'];
-        self::keys($document, ['title', 'slug', 'summary', 'body', 'sections', 'published', 'visible_in_menu', 'menu_order', 'cover_path']);
+        self::keys($document, ['title', 'slug', 'summary', 'body', 'sections', 'published', 'visible_in_menu', 'menu_order', 'cover_path', 'topic']);
         foreach (['title', 'slug', 'summary'] as $field) {
             if (!array_key_exists($field, $document)) continue;
             if (!is_string($document[$field])) throw new InvalidArgumentException($field . ' musí být text.');
@@ -109,8 +109,13 @@ final class ContentImport
             $cover = $document['cover_path'];
             if ($cover !== null && !is_string($cover)) throw new InvalidArgumentException('cover_path musí být cesta k obrázku, prázdný text nebo null.');
         }
-        if ($cover !== ContentBody::coverSetting($fields['body'])) {
-            $fields['body'] = ContentBody::encode(ContentBody::decode($fields['body']), $cover);
+        $topic = $mode === 'update' ? ContentBody::topic($current['body']) : 'zapisnik';
+        if (array_key_exists('topic', $document)) {
+            if ($fields['type'] !== 'post') throw new InvalidArgumentException('Kategorie patří pouze článkům.');
+            $topic = BlogTopics::validate($document['topic']);
+        }
+        if ($cover !== ContentBody::coverSetting($fields['body']) || $topic !== ContentBody::topic($fields['body'])) {
+            $fields['body'] = ContentBody::encode(ContentBody::decode($fields['body']), $cover, $topic);
         }
         if ($fields['slug'] === '') $fields['slug'] = Slugger::fromTitle($fields['title']);
         if (preg_match('/^.{1,255}$/usD', $fields['title']) !== 1 || strlen($fields['summary']) > 65535) {
@@ -142,6 +147,7 @@ final class ContentImport
             'content' => [
                 'title' => $row['title'], 'slug' => $row['slug'], 'summary' => $row['summary'],
                 'published' => (bool) $row['published'], 'visible_in_menu' => (bool) $row['visible_in_menu'],
+                ...($row['type'] === 'post' ? ['topic' => ContentBody::topic($row['body'])] : []),
                 'cover_path' => ContentBody::coverSetting($row['body']),
                 'menu_order' => (int) $row['menu_order'], 'sections' => ContentBody::decode($row['body']),
             ],

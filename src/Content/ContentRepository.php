@@ -38,20 +38,42 @@ final class ContentRepository
         );
     }
 
-    public function publishedPostsPage(string $language, int $offset = 0, int $limit = 6): array
+    public function publishedPostsPage(string $language, int $offset = 0, int $limit = 6, ?string $topic = null): array
     {
         if ($offset < 0 || $offset > 100000 || $limit < 1 || $limit > 48) {
             throw new InvalidArgumentException('Invalid blog page.');
         }
+        if ($topic !== null) BlogTopics::validate($topic);
+        $topicWhere = $topic === null ? '' : ' AND ('.self::topicExpression().')=%s';
         $rows = $this->db->query(
             'SELECT document_key, language, slug, title, summary, body, saved_at, revision_number
              FROM shop_content_revisions WHERE type=%s AND language=%s
-             AND active_document_key IS NOT NULL AND published=1
+             AND active_document_key IS NOT NULL AND published=1'.$topicWhere.'
              ORDER BY id DESC LIMIT %i OFFSET %i',
-            'post', $language, $limit + 1, $offset
+            ...array_merge(['post', $language], $topic === null ? [] : [$topic], [$limit + 1, $offset])
         );
         $hasMore = count($rows) > $limit;
         return ['items' => array_slice($rows, 0, $limit), 'nextOffset' => $hasMore ? $offset + $limit : null];
+    }
+
+    private static function topicExpression(): string
+    {
+        // Old plain-text bodies are valid articles too; JSON functions must never receive them.
+        $json = "CASE WHEN JSON_VALID(body) THEN body ELSE '{}' END";
+        $topic = "JSON_UNQUOTE(JSON_EXTRACT($json, '$.topic'))";
+        $known = "'".implode("','", array_keys(BlogTopics::LABELS))."'";
+        return "CASE WHEN JSON_UNQUOTE(JSON_EXTRACT($json, '$.format'))='simple-store-blocks-v1' AND $topic IN ($known) THEN $topic ELSE 'zapisnik' END";
+    }
+
+    public function publishedTopicCounts(string $language): array
+    {
+        $counts = [];
+        foreach ($this->db->query('SELECT '.self::topicExpression().' AS topic, COUNT(*) AS total
+            FROM shop_content_revisions WHERE type=%s AND language=%s
+            AND active_document_key IS NOT NULL AND published=1 GROUP BY topic', 'post', $language) as $row) {
+            $counts[$row['topic']] = (int) $row['total'];
+        }
+        return $counts;
     }
 
     /** Current unpublished articles are available only to authenticated storefront code. */

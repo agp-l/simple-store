@@ -107,6 +107,9 @@ final class PageRenderer
         $canManageContent = (bool) ($data['canManageContent'] ?? false);
         $adminCsrf = (string) ($data['adminCsrf'] ?? '');
         $draftPosts = $data['draftPosts'] ?? [];
+        $blogTopic = $data['blogTopic'] ?? null;
+        $blogTopicCounts = $data['blogTopicCounts'] ?? [];
+        $managingBlog = (bool) ($data['managingBlog'] ?? false);
         $draftNextUrl = (string) ($data['draftNextUrl'] ?? '');
         $contentHistory = $data['contentHistory'] ?? [];
         $editToken = (string) ($data['editToken'] ?? '');
