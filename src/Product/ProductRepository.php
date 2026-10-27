@@ -443,6 +443,7 @@ final class ProductRepository
                 $this->db->query('UPDATE shop_product_inventory SET available_quantity=%i WHERE product_key=%s', $quantity, $key);
             }
             if ($suppliers !== null) (new ProductSupplierLinkRepository($this->db))->replace($key, $suppliers);
+            if (isset($fields['variant_supplier_links'])) ProductImportVariantLinks::apply($this->db, $key, $fields['variant_supplier_links']);
             if ($revision > $this->revisionLimit) {
                 $this->db->query(
                     'DELETE FROM shop_product_revisions WHERE product_key=%s AND language=%s

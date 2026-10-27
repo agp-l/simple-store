@@ -25,6 +25,17 @@ final class ProductImportPromptRepository
         return $text;
     }
 
+    /** Always ship the current contract, while retaining saved editorial preferences verbatim. */
+    public static function instructions(string $custom, string $categories): string
+    {
+        $current = self::defaultText();
+        $text = "AKTUÁLNÍ ZADÁNÍ PRO IMPORT PRODUKTŮ\nTechnická pravidla a JSON formát v této části mají přednost před případným starším formátem v doplňkových pokynech.\n\n" . $current;
+        if (trim($custom) !== trim($current)) {
+            $text .= "\n\nDOPLŇKOVÉ POKYNY SPRÁVCE\nPoužij redakční styl a věcné požadavky. Případný starší popis formátu nahraď aktuálními technickými pravidly výše.\n\n" . $custom;
+        }
+        return $text . "\n\nPLATNÉ KATEGORIE TOHOTO OBCHODU\n" . $categories;
+    }
+
     public function load(): string
     {
         $exists = (int) $this->db->queryFirstField('SELECT COUNT(*) FROM information_schema.TABLES

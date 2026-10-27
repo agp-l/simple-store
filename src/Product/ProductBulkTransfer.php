@@ -53,9 +53,13 @@ final class ProductBulkTransfer
     {
         if (count($rows) > self::COUNT_LIMIT) throw new InvalidArgumentException('Rozděl export podle kategorií (nejvýše 10 000 položek v dávce).');
         $suppliers = (new ProductSupplierLinkRepository($this->db))->forOrderItems($rows);
+        $variantLinks = [];
+        foreach ((new ProductVariantSupplierRepository($this->db))->forProducts(array_values(array_unique(array_column($rows, 'product_key')))) as $link) {
+            $variantLinks[$link['product_key']][] = $link;
+        }
         $documents = [];
         foreach ($rows as $row) {
-            $document = json_decode(ProductImport::export($row, $suppliers[$row['product_key']] ?? []), true, 32, JSON_THROW_ON_ERROR);
+            $document = json_decode(ProductImport::export($row, $suppliers[$row['product_key']] ?? [], $variantLinks[$row['product_key']] ?? []), true, 32, JSON_THROW_ON_ERROR);
             if (strlen(json_encode($document, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)) > ProductImport::LIMIT) throw new InvalidArgumentException('Produkt ' . $row['name'] . ' přesahuje limit 1 MiB pro zpětný import. Zkrať jeho obsah.');
             if (!($row['variant_inventory']['enabled'] ?? false)) $document['stock_quantity'] = (int) ($row['stock_quantity'] ?? 0);
             $documents[] = $document;
@@ -149,6 +153,10 @@ final class ProductBulkTransfer
                     if (!is_array($data['product']['variants'])) throw new InvalidArgumentException('Neplatné varianty.');
                     $definition = &$data['product']['variants'];
                     if ($restore) $definition['expected'] = $variantState['expected'];
+                    if ($restore && is_array($definition['items'] ?? null)) {
+                        $definition['items'] = ProductImportVariantLinks::restore($definition['items'],
+                            (new ProductVariantSupplierRepository($this->db))->forProduct($stockKey));
+                    }
                     if (!$includeStock && is_array($definition['items'] ?? null)) {
                         $quantities = array_column($variantState['items'], 'quantity', 'id');
                         foreach ($definition['items'] as &$variant) {

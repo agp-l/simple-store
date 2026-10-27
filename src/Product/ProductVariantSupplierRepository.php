@@ -17,9 +17,15 @@ final class ProductVariantSupplierRepository
     }
     public function forProduct(string $key, bool $lock = false, bool $removed = false): array
     {
-        self::key($key);
-        if (!$this->installed()) return [];
-        $rows = $this->db->query('SELECT * FROM shop_product_variant_supplier_links WHERE product_key=%s' . ($removed ? '' : ' AND removed=0') . ' ORDER BY variant_key,link_key' . ($lock ? ' FOR UPDATE' : ''), $key);
+        return $this->forProducts([$key], $lock, $removed);
+    }
+    /** One query for a full catalog export, including all requested languages. */
+    public function forProducts(array $keys, bool $lock = false, bool $removed = false): array
+    {
+        foreach ($keys as $key) self::key($key);
+        if ($keys === [] || !$this->installed()) return [];
+        $in = implode(',', array_fill(0, count($keys), '%s'));
+        $rows = $this->db->query('SELECT * FROM shop_product_variant_supplier_links WHERE product_key IN (' . $in . ')' . ($removed ? '' : ' AND removed=0') . ' ORDER BY product_key,variant_key,link_key' . ($lock ? ' FOR UPDATE' : ''), ...$keys);
         foreach ($rows as &$row) {
             $row['version'] = (int) $row['version']; $row['checked_at'] = (int) $row['checked_at'];
             $row['result'] = json_decode($row['result_json'], true, 16, JSON_THROW_ON_ERROR);
