@@ -6,7 +6,7 @@
   const field = document.querySelector('#supplier-product-field');
   const retry = document.querySelector('#supplier-retry-field');
   const syncScope = () => { if (retry) { retry.hidden = !['review','failed','problems'].includes(scope.value); retry.querySelector('input').disabled = retry.hidden; } field.hidden = scope.value !== 'one'; field.querySelector('select').required = scope.value === 'one'; };
-  scope.addEventListener('change', syncScope); syncScope();
+  if (scope && field) { scope.addEventListener('change', syncScope); syncScope(); }
   const pricing = document.querySelector('#supplier-pricing-form');
   if (pricing) {
     const preview = () => {

@@ -14,6 +14,8 @@ $availability=['limited'=>'Poslední kusy u dodavatele – bez přesného počtu
   <div><p class="panel-eyebrow">Produkty / dodavatelé</p><h1>Ceny dodavatelů</h1><p>Přehled cen a dostupnosti, bez každodenního otevírání jednotlivých obchodů.</p></div>
   <span class="supplier-limit"><?= Icon::render('clock') ?> Běžná aktualizace nejvýše 1× za 24 hodin</span>
 </section>
+<nav class="supplier-actions" aria-label="Přehledy dodavatelů"><a class="panel-button" href="<?= $escape($priceUrl) ?>">Ceny a sklad produktu</a><a class="panel-button" href="<?= $escape($priceUrl.'?tab=offers') ?>">Pokrytí partnerů a všechny nabídky</a></nav>
+<?php if($offersTab??false): require __DIR__.'/supplier-offers.php'; echo '</div>'; return; endif; ?>
 <?php if(!$pricesReady): ?><section class="panel-panel"><h2>Připravit databázi</h2><p>Pro uložení fronty a historie nejprve <a href="<?= PanelUrl::escape($adminUrl.'?section=database') ?>">aktualizuj SQL tabulky</a>.</p></section>
 <?php else: ?>
 <?php if($pricesNotice!==''): ?><p class="panel-notice" role="status"><?= $escape($pricesNotice) ?></p><?php endif; ?>

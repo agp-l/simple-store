@@ -127,3 +127,6 @@ Pro hromadné úpravy pouze odkazů již existujících variant lze dál použí
 
 ZÁVĚREČNÁ KONTROLA VARIANT
 Ověř každou kombinaci, úplnost významových URL parametrů, přiřazení fotografií a shodu modelů u všech partnerů. Chybějící nebo nejisté informace sepiš mimo importovaná data; nevytvářej náhradní údaje pro umlčení kontroly. Před odevzdáním parsuj JSON a ověř, že neobsahuje duplicitní kombinace, URL stejné varianty ani nepodporovaná pole.
+
+ALTERNATIVNÍ PARTNEŘI JIŽ EXISTUJÍCÍCH PRODUKTŮ
+Pro hromadné PŘIDÁNÍ zdrojů použij {"format":"simple-store.partner-sources.v1","products":[{"product_key":"klíč z exportu","language":"cs","sources":[{"label":"Název existujícího partnera","url":"https://partner.example/p/model"}]}]}. Tento formát nic nemaže ani nepřepíná prodávajícího. Stránka modelu bez variant_key se uloží jako neověřený zdroj pro párování všech kombinací. Pokud máš přesnou adresu varianty, do zdroje přidej variant_key a choices beze změny z aktuálního exportu Pokrytí partnerů. Import nesmí obsahovat ceny, dostupnost, časy nebo tvrzení o ověření. Ty získá samostatná denní kontrola všech partnerů. Nezaměňuj ročník/generaci, materiál, střih, pohlaví, délku, šířku či barvu. Nenalezeno není důkaz, že obchod produkt neprodává. Nalezený odkaz není důkaz skladové dostupnosti.

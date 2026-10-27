@@ -1586,3 +1586,23 @@ CREATE TABLE IF NOT EXISTS shop_partner_refresh_requests (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS shop_partner_stock_state (product_key CHAR(32) NOT NULL PRIMARY KEY, partner_id INT UNSIGNED NOT NULL, observed_at BIGINT UNSIGNED NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS shop_supplier_offer_scans (
+            product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+            fingerprint CHAR(64) NOT NULL DEFAULT '', status VARCHAR(16) NOT NULL DEFAULT 'queued',
+            next_at BIGINT UNSIGNED NOT NULL DEFAULT 0, checked_at BIGINT UNSIGNED NOT NULL DEFAULT 0,
+            data_json MEDIUMTEXT NOT NULL, KEY due (status,next_at)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shop_supplier_offers (
+            offer_key CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+            product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+            variant_key VARCHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL DEFAULT '',
+            partner_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+            source_url VARCHAR(1000) NOT NULL, resolved_url VARCHAR(1000) NOT NULL DEFAULT '',
+            fingerprint CHAR(64) NOT NULL, status VARCHAR(24) NOT NULL, price_czk INT UNSIGNED DEFAULT NULL, amount DECIMAL(12,2) DEFAULT NULL,
+            availability VARCHAR(24) NOT NULL DEFAULT 'unknown', reported_quantity INT UNSIGNED DEFAULT NULL,
+            observed_at BIGINT UNSIGNED NOT NULL DEFAULT 0, checked_at BIGINT UNSIGNED NOT NULL,
+            evidence_json MEDIUMTEXT NOT NULL, message VARCHAR(1000) NOT NULL DEFAULT '',
+            KEY product (product_key), KEY partner (partner_key,status)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

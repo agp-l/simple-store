@@ -125,6 +125,7 @@ jobs:
           php tests/supplier-prices.php
           php tests/variant-link-matcher.php
           php tests/variant-offer-evaluation.php
+          php tests/partner-coverage.php
           php tests/partner-link-presentation.php
           php tests/inline-editor.php
           php tests/content-cover.php
@@ -206,6 +207,7 @@ jobs:
           php tests/homepage-database.php
           php tests/product-import-database.php
           php tests/product-import-offers-database.php
+          php tests/partner-offers-database.php
           php tests/content-import-database.php
           php tests/configuration-backup-database.php
           php tests/assisted-purchase-database.php
@@ -272,6 +274,7 @@ jobs:
           php tests/homepage-database.php
           php tests/product-import-database.php
           php tests/product-import-offers-database.php
+          php tests/partner-offers-database.php
           php tests/content-import-database.php
           php tests/configuration-backup-database.php
           php tests/assisted-purchase-database.php
@@ -332,7 +335,7 @@ jobs:
           node --test tests/product-sale-browser.mjs
           node --test tests/purchase-partners-browser.mjs
           node --test tests/product-partner-assignment-browser.mjs
-          node --test tests/supplier-prices-browser.mjs
+          node --test tests/supplier-prices-browser.mjs tests/partner-offers-browser.mjs
           node --test tests/product-families-browser.mjs
           node --test tests/product-sales-mass-browser.mjs
           node --test tests/checkout-presentation-browser.mjs

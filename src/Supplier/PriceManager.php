@@ -79,6 +79,15 @@ final class PriceManager
             ($scope==='one'&&!preg_match('/^[a-f0-9]{32}$/D',$key))) throw new InvalidArgumentException('Neplatný rozsah kontroly.');
         return $this->locked(fn():array=>$this->enqueueInternal($scope,$mode,$key));
     }
+    public function enqueueOffers(): int
+    {
+        return $this->locked(function():int {
+            $settings=$this->settings(); $options=json_decode($settings['options_json']??'{}',true)??[];
+            $options['offer_catalog_enabled']=true;
+            $this->db->update('shop_supplier_price_settings',['options_json'=>self::json($options)],'id=1');
+            return (new PartnerOfferCatalog($this->db,$this->now()))->schedule();
+        });
+    }
     /** Manual, bounded exception for unresolved results; successful checks retain the 24h limit. */
     public function retry(string $scope,string $mode,bool $fresh,int $id=0):array
     {
@@ -225,6 +234,22 @@ final class PriceManager
             }
             $this->db->update('shop_supplier_price_settings',['last_tick'=>$now,'options_json'=>self::json($options)],'id=1');
             if((int)$settings['paused'])return ['state'=>'paused','wait'=>30];
+            $offerCatalog=new PartnerOfferCatalog($this->db,$now);
+            if ($offerCatalog->installed() && !empty($options['offer_catalog_enabled'])) {
+                try {
+                    if ((int)($options['offer_catalog_next_scan']??0)<=$now) {
+                        $offerCatalog->schedule(); $options['offer_catalog_next_scan']=$now+300;
+                    }
+                    $options['offer_catalog_turn']=(int)($options['offer_catalog_turn']??0)+1;
+                    $this->db->update('shop_supplier_price_settings',['options_json'=>self::json($options)],'id=1');
+                    // Give alternatives a regular turn while retaining priority for checkout refreshes.
+                    if ($options['offer_catalog_turn']%3===0) {
+                        $step=$offerCatalog->step(fn(string $key,bool $lock=false):?array=>$this->snapshot($key,$lock),
+                            fn(array $snapshot,array $candidate,array $state):array=>$this->readAlternative($snapshot,$candidate,$state));
+                        if ($step!==null) return $step;
+                    }
+                } catch (Throwable $error) { error_log('Partner offer catalog: '.get_class($error)); }
+            }
             $variantLinksMore=false;
             if(!empty($options['variant_links_enabled'])&&(int)($options['variant_links_next_at']??0)<=$now){
                 try{
@@ -339,6 +364,7 @@ final class PriceManager
                 return ['state'=>'working','wait'=>$wait];
             }
             $next=$this->db->queryFirstField('SELECT MIN(next_at) FROM shop_supplier_price_jobs WHERE status=%s','queued');
+            if (!empty($options['offer_catalog_enabled']) && ($offerNext=$offerCatalog->nextAt())!==null) $next=$next===null?$offerNext:min((int)$next,$offerNext);
             if($variantLinksMore)return ['state'=>'working','wait'=>1];
             return ['state'=>$next===null?'idle':'waiting','wait'=>$next===null?30:max(1,min(60,(int)$next-$now)),'next_at'=>$next===null?0:(int)$next];
         });}catch(WorkerBusy $error){return ['state'=>'waiting','wait'=>5,'next_at'=>$this->now()+5];}
@@ -395,6 +421,32 @@ final class PriceManager
             }
             $this->db->commit();
         }catch(Throwable $e){$this->db->rollback();throw $e;}
+    }
+
+    /** Shared robots/cache/host budget; alternatives never get a second HTTP request per tick. */
+    private function readAlternative(array $snapshot,array $candidate,array $state): array
+    {
+        $target=$state['redirect']??$candidate['url']; $hops=(int)($state['hops']??0);
+        for ($local=0;$local<4;$local++) {
+            $robots=$this->cached('https://'.HttpClient::url($target).'/robots.txt','robots','fast',0);
+            if (isset($robots['wait'])||isset($robots['error'])) return $robots;
+            $policy=Robots::policy($robots['body'],$target); $request=Robots::policy($robots['body'],PriceParser::requestUrl($target));
+            if (!$policy['allowed']||!$request['allowed']) return ['error'=>'robots.txt nepovoluje čtení této adresy.'];
+            $delay=max($policy['delay'],$request['delay']);
+            if (!empty($robots['fetched'])) return ['wait'=>self::delay('fast',$delay)];
+            $result=(($candidate['kind']??'')==='variant'?$this->reusableVariantDocument($snapshot,$candidate,$target):null)??$this->cached($target,'product','fast',$delay);
+            if (isset($result['wait'])||isset($result['error'])) return $result;
+            if (isset($result['redirect'])) {
+                try {
+                    if (++$hops>3) throw new InvalidArgumentException('Příliš mnoho přesměrování. Oprav odkaz.');
+                    $target=HttpClient::redirect($target,$result['redirect']);
+                } catch (InvalidArgumentException $e) { return ['error'=>$e->getMessage()]; }
+                if (!empty($result['fetched'])) return ['wait'=>1,'state'=>['redirect'=>$target,'hops'=>$hops]];
+                continue;
+            }
+            return $result+['source_url'=>$result['document_source']??$target];
+        }
+        return ['error'=>'Příliš mnoho přesměrování. Oprav odkaz.'];
     }
 
     private function reusableVariantDocument(array $snapshot,array $candidate,string $target,int $refreshAfter=0):?array

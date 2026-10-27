@@ -4,6 +4,16 @@ use SimpleStore\Supplier\PriceManager;
 
 $screen='supplier-prices';$priceManager=new PriceManager($db);$pricesReady=$priceManager->installed();
 $pricesAutoStart=false;$pricesError='';$pricesNotice='';$cronKey='';
+$offersTab=($_GET['tab']??'')==='offers';
+$offerCatalog=new \SimpleStore\Supplier\PartnerOfferCatalog($db);
+if ($method==='GET' && in_array($_GET['format']??'',['partner-offers','partner-source-template'],true)) {
+    $report=$offerCatalog->report();
+    if ($_GET['format']==='partner-source-template') $report=['format'=>\SimpleStore\Product\PartnerSourceTransfer::FORMAT,
+        'products'=>array_map(static fn(array $p):array=>['product_key'=>$p['product_key'],'language'=>$p['language'],'name'=>$p['name'],'sources'=>[]],$report['products'])];
+    header('Content-Type: application/json; charset=utf-8'); header('Cache-Control: no-store');
+    header('Content-Disposition: attachment; filename="'.$_GET['format'].'.json"');
+    echo json_encode($report,JSON_THROW_ON_ERROR|JSON_PRETTY_PRINT|JSON_UNESCAPED_UNICODE|JSON_UNESCAPED_SLASHES); exit;
+}
 if ($method === 'GET' && $pricesReady && ($_GET['format'] ?? '') === 'variant-link-plan') {
     $key = is_string($_GET['product_key'] ?? null) ? $_GET['product_key'] : '';
     if ($key !== '' && !preg_match('/^[a-f0-9]{32}$/D', $key)) { http_response_code(400); exit; }
@@ -24,7 +34,11 @@ if($method==='GET'&&$pricesReady&&($_GET['format']??'')==='json'){
 }
 if($method==='POST'&&$pricesReady){
     try{
-        if($action==='supplier-variant-links-settings'){
+        if($action==='supplier-offers-start'){
+            if (!$offerCatalog->installed()) throw new InvalidArgumentException('Nejprve aktualizuj databázi nebo vyčkej na nejbližší běh cronu.');
+            $count=$priceManager->enqueueOffers(); $pricesAutoStart=true; $offersTab=true;
+            $pricesNotice='K ověření alternativ přidáno '.$count.' produktů. Čerstvé výsledky zůstávají v denní cache. Ceny a prodávající se tímto porovnáním nemění.';
+        }elseif($action==='supplier-variant-links-settings'){
             $enabled=($_POST['enabled']??'')==='1';$priceManager->configureVariantLinks($enabled);$pricesAutoStart=$enabled;
             $pricesNotice=$enabled?'Automatické párování přesných odkazů je zapnuté. Výsledky budou u jednotlivých variant.':'Automatické párování odkazů je vypnuté.';
         }elseif($action==='supplier-variant-links-export'){
@@ -82,4 +96,5 @@ $pricesQuery=is_string($_GET['q']??null)?substr(trim($_GET['q']),0,200):'';
 $pricesPage=max(1,(int)($_GET['page']??1));
 $pricesHistory=($_GET['history']??'')==='1';
 $pricesSettings=$pricesReady?$priceManager->settings():[];
-$pricesDashboard=$pricesReady?$priceManager->dashboard($pricesFilter,$pricesQuery,$pricesPage,$pricesHistory):[];
+$pricesDashboard=$pricesReady&&!$offersTab?$priceManager->dashboard($pricesFilter,$pricesQuery,$pricesPage,$pricesHistory):[];
+$offersReport=$offersTab?$offerCatalog->report():null;
