@@ -2,7 +2,7 @@
 // Group the same server-priced snapshots that are signed in the order review.
 $partnerGroups=[];
 foreach ($checkoutItems as $groupItem) {
-    if (($groupItem['sale_mode']??'own')!=='assisted' || ($groupItem['issue']??null)!==null) continue;
+    if (($groupItem['sale_mode']??'own')!=='assisted' || !empty($groupItem['issue'])) continue;
     $groupKey=$groupItem['supplier_selection']['partner_key']??$groupItem['seller']['ico'];
     $partnerGroups[$groupKey]['name']=$groupItem['seller']['name'];
     $partnerGroups[$groupKey]['items'][]=$groupItem;

@@ -53,6 +53,12 @@ test('checkout: readable secondary BTC, compact assisted disclosure and historic
           assert.match(await disclosure.innerText(), /IČO 05769884/);
           await disclosure.locator('summary').click();
         }
+        if (['cart','review'].includes(mode)) {
+          assert.ok(await page.getByRole('heading',{name:'Kdo vám zboží dodá'}).isVisible());
+          assert.equal(await page.locator('.checkout-partner-group').count(),1);
+          assert.equal(await page.locator('.checkout-partner-group li').count(),2);
+          assert.doesNotMatch(await page.locator('.checkout-partners').innerText(),/Ponožky na výlety/);
+        }
         if (mode === 'review') {
           assert.ok(await page.getByRole('button', { name: 'Objednat s povinností platby' }).isVisible());
           assert.equal(await page.locator('.checkout-summary-total .money-main').textContent(), '3 884 Kč');

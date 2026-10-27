@@ -27,15 +27,15 @@ final class ProductSalesRepository
         return $this->installed() ? (new PurchasePartnerRepository($this->db))->all() : [];
     }
 
-    public function forProduct(string $key): array
+    public function forProduct(string $key, bool $lock = false): array
     {
         if (!$this->installed()) return ['mode' => 'own', 'version' => 0];
-        $row = $this->db->queryFirstRow('SELECT * FROM shop_product_sales WHERE product_key=%s', $key);
+        $row = $this->db->queryFirstRow('SELECT * FROM shop_product_sales WHERE product_key=%s'.($lock?' FOR UPDATE':''), $key);
         if ($row === null) return ['mode' => 'own', 'version' => 0];
         $row['supplier_price_czk'] = $row['supplier_price_czk'] === null ? null : (int) $row['supplier_price_czk'];
         $row['version'] = (int) $row['version'];
         $row['variant_prices'] = json_decode((string) $row['variant_prices_json'], true, 32, JSON_THROW_ON_ERROR);
-        $partner = $row['partner_id'] === null ? null : (new PurchasePartnerRepository($this->db))->find((int) $row['partner_id']);
+        $partner = $row['partner_id'] === null ? null : (new PurchasePartnerRepository($this->db))->find((int) $row['partner_id'], $lock);
         if ($partner !== null && PurchasePartnerRepository::missing($partner) !== []) $partner = null;
         if ($partner !== null) $partner = array_intersect_key($partner, PurchasePartnerRepository::FIELDS);
         $row['seller'] = $partner;

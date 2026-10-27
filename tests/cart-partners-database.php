@@ -74,6 +74,22 @@ try {
     $check($token!==CheckoutReview::token($service->summary($cart),[],0,'bank_transfer','legal','secret'),'Changed allocation escaped review signature.');
     $db->startTransaction(); $reject(fn()=>$planner->assertCurrent($original['items'])); $db->rollback();
     $write('a');
+    // A checkout transaction may already have a REPEATABLE READ snapshot. Locking
+    // validation must see a concurrent committed update, not that older read view.
+    $other=ConnectionFactory::create(array_replace($config,['database'=>$database]));
+    $db->startTransaction(); $db->queryFirstField('SELECT price_czk FROM shop_supplier_offers WHERE offer_key=%s',$offerA);
+    $other->update('shop_supplier_offers',['price_czk'=>48,'amount'=>48],'offer_key=%s',$offerA);
+    $reject(fn()=>$planner->assertCurrent($original['items'])); $db->rollback(); $other->disconnect();
+    $write('a');
+    // Conflicting active sources must not manufacture a usable price.
+    $db->insert('shop_product_supplier_links',['product_key'=>$keys['a'],'label'=>'Duplicate','url'=>'https://c.test/second']);
+    $extraLink=(int)$db->insertId(); $write('a');
+    $extra=$db->queryFirstRow('SELECT * FROM shop_supplier_offers WHERE offer_key=%s',$offerA);
+    $extra['offer_key']=PartnerOfferCatalog::offerKey($keys['a'],'',$partnerKeys['c'],'https://c.test/second');
+    $extra['source_url']='https://c.test/second'; $extra['price_czk']=49; $extra['amount']=49;
+    $db->insert('shop_supplier_offers',$extra);
+    $check($service->summary($cart)['items'][0]['seller']['name']==='Partner a','Contradictory duplicate sources were used.');
+    $db->query('DELETE FROM shop_product_supplier_links WHERE id=%i',$extraLink); $write('a');
     // Freeze the exact selected seller, cost and URL atomically with the real order.
     $contents=new ContentRepository($db);
     foreach ([AssistedPurchase::TERMS_SLUG,OrderLegalDocuments::TERMS_SLUG] as $slug) $contents->saveRevision(['type'=>'page','language'=>'cs','title'=>$slug,'slug'=>$slug,'body'=>'Test terms','published'=>true]);
@@ -93,5 +109,20 @@ try {
     $write('a',['availability'=>'out_of_stock']);
     $retry=$orders->create(null,'buyer@example.test',$summary['items'],$shipping,79,$idempotency);
     $check($retry['id']===$order['id'] && $retry['items']===$order['items'],'Retry reallocated an existing contract.');
+    // A real enabled blue variant can use its exact source; red cannot borrow it.
+    $blue=bin2hex(random_bytes(16)); $red=bin2hex(random_bytes(16));
+    $db->insert('shop_product_variant_settings',['product_key'=>$keys['a'],'enabled'=>1]);
+    foreach ([$blue=>'Blue',$red=>'Red'] as $variant=>$color) $db->insert('shop_product_variants',['product_key'=>$keys['a'],'variant_key'=>$variant,'choices_json'=>json_encode(['Barva'=>$color]),'available_quantity'=>10,'enabled'=>1]);
+    $url='https://c.test/p/a?color=blue';
+    $db->insert('shop_product_variant_supplier_links',['link_key'=>bin2hex(random_bytes(16)),'product_key'=>$keys['a'],'variant_key'=>$blue,
+        'partner_key'=>$partnerKeys['c'],'label'=>'Blue','url'=>$url,'url_hash'=>hash('sha256',$url),'result_json'=>'{}']);
+    $exact=$db->queryFirstRow('SELECT * FROM shop_supplier_offers WHERE offer_key=%s',$offerA);
+    $exact=array_replace($exact,['offer_key'=>PartnerOfferCatalog::offerKey($keys['a'],$blue,$partnerKeys['c'],$url),'variant_key'=>$blue,
+        'source_url'=>$url,'resolved_url'=>$url,'availability'=>'in_stock','fingerprint'=>PartnerOfferCatalog::fingerprint($catalog->snapshots([$keys['a']])[$keys['a']])]);
+    $db->insert('shop_supplier_offers',$exact); $cart->clear();
+    $service->add($cart,$keys['a'],'cs',[],1,$blue); $service->add($cart,$keys['a'],'cs',[],1,$red); $service->add($cart,$keys['b'],'cs',[]);
+    $variants=$service->summary($cart);
+    $check($variants['can_continue'] && $variants['items'][0]['seller']['name']==='Partner c' && $variants['items'][1]['seller']['name']==='Partner a','Exact blue/red alternatives were mixed.');
+    $check($variants['items'][0]['supplier_selection']['source_url']===$url,'Variant source URL lost.');
     echo "Cart partners: exact fresh offers, quantity, cost guard, review, atomic order snapshot and mixed stock passed.\n";
 } finally { $db->disconnect(); $admin->query('DROP DATABASE %b',$database); }

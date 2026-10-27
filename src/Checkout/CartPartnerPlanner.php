@@ -12,22 +12,22 @@ final class CartPartnerPlanner
 {
     public function __construct(private MeekroDB $db, private ?int $now = null) {}
 
-    public function plan(array $items): array
+    public function plan(array $items, bool $lock = false): array
     {
         $keys=[];
         foreach ($items as $item) if (($item['sale_mode']??'own')==='assisted' && ($item['issue']??null)===null) $keys[$item['product_key']]=true;
         $catalog=new PartnerOfferCatalog($this->db,$this->now);
         if ($keys===[] || !$catalog->installed()) return $items;
-        $products=array_column($catalog->report(array_keys($keys))['products'],null,'product_key');
+        $products=array_column($catalog->report(array_keys($keys),$lock)['products'],null,'product_key');
         $partners=[];
-        foreach ((new PurchasePartnerRepository($this->db))->all() as $partner) {
+        foreach ((new PurchasePartnerRepository($this->db))->all($lock) as $partner) {
             if (PurchasePartnerRepository::missing($partner)===[]) $partners[$partner['partner_key']]=$partner;
         }
         $sales=new ProductSalesRepository($this->db); $settings=[]; $rows=[];
         foreach ($items as $item) {
             $key=$item['product_key'];
             if (!isset($keys[$key]) || ($item['sale_mode']??'own')!=='assisted' || ($item['issue']??null)!==null) continue;
-            $settings[$key]??=$sales->forProduct($key);
+            $settings[$key]??=$sales->forProduct($key,$lock);
             $variant=$item['variant_key']??''; $rowKey=$key.':'.$variant;
             $sale=$settings[$key];
             $budget=$sale['variant_prices'][$variant]??$sale['supplier_price_czk']??null;
@@ -44,6 +44,14 @@ final class CartPartnerPlanner
             // Preserve the existing published primary offer when independent evidence is
             // still pending. An alternative always requires fresh, exact stock and price.
             $row['offers'][$primary]=['partner_key'=>$primary,'cost'=>$budget,'primary'=>true,'source'=>null];
+            // Keep a current source for fulfilment even when the main pricing engine
+            // supplied the primary price before the independent scan completed.
+            foreach ($products[$row['product_key']]['offers']??[] as $source) {
+                if ($source['variant_key']===$row['variant_key'] && $source['partner_key']===$primary) {
+                    $row['offers'][$primary]['source']=['partner_key'=>$primary,'source_url'=>$source['source_url'],'resolved_url'=>'','observed_at'=>0];
+                    break;
+                }
+            }
             $observations=[];
             foreach ($products[$row['product_key']]['offers']??[] as $offer) {
                 if ($offer['variant_key']!==$row['variant_key'] || $offer['status']!=='verified' || !isset($partners[$offer['partner_key']])) continue;
@@ -96,7 +104,7 @@ final class CartPartnerPlanner
         $this->db->query('SELECT product_key FROM shop_product_sales WHERE product_key IN %ls ORDER BY product_key FOR UPDATE',$keys);
         $this->db->query('SELECT id FROM shop_purchase_partners ORDER BY id FOR UPDATE');
         $this->db->query('SELECT offer_key FROM shop_supplier_offers WHERE product_key IN %ls ORDER BY offer_key FOR UPDATE',$keys);
-        $planned=$this->plan($items);
+        $planned=$this->plan($items,true);
         foreach ($items as $index=>$item) {
             if (($item['sale_mode']??'own')!=='assisted') continue;
             $current=$planned[$index];
