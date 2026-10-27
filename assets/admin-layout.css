@@ -519,5 +519,4 @@
 .product-removal-card.is-delete { border-color:#e7bbb5;background:#fff8f6; }
 .product-removal-card.is-keep { border-color:#c5d8ba;background:#f5f9f1; }
 .product-removal-actions { display:flex;align-items:center;flex-wrap:wrap;gap:20px;margin-top:20px; }
-.product-removal-confirm { background:#9e3329!important;color:white!important;border-color:#9e3329!important; }
 @media(max-width:760px) { .product-removal-grid { grid-template-columns:1fr; } }

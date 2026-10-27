@@ -282,7 +282,7 @@ final class ProductRepository
         ) > 0;
     }
 
-    /** Delete one language of a product and its revisions; media files are left untouched. */
+    /** Legacy language-only operation for internal callers. Admin deletion uses ProductRemoval. */
     public function deleteProduct(string $key, string $language, int $expectedRevision): void
     {
         if (preg_match('/^[a-f0-9]{32}$/D', $key) !== 1 ||

@@ -27,7 +27,7 @@
   <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>">
     <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="delete-product"><input type="hidden" name="phase" value="confirm"><input type="hidden" name="preview_id" value="<?= $escape($removalPreviewId) ?>">
     <label><input type="checkbox" name="confirm" value="1" required> Potvrzuji trvalé smazání produktu ve všech jazycích a jeho nepotřebných fotografií podle tohoto náhledu.</label>
-    <div class="product-removal-actions"><button class="panel-button product-removal-confirm" type="submit"><?= \SimpleStore\Rendering\Icon::render('delete') ?> Trvale smazat produkt</button><a href="<?= $escape($basePath.$p['language'].'/produkt/'.$p['current'][$p['language']]['slug'].'?edit=1') ?>">Zpět do editoru</a></div>
+    <div class="product-removal-actions"><button class="panel-button panel-action--danger" type="submit"><?= \SimpleStore\Rendering\Icon::render('delete') ?> Trvale smazat produkt</button><a href="<?= $escape($basePath.$p['language'].'/produkt/'.$p['current'][$p['language']]['slug'].'?edit=1') ?>">Zpět do editoru</a></div>
   </form>
 </section>
 <?php endif; ?>
