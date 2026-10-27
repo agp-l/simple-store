@@ -11,7 +11,7 @@ final class SupplierCatalogAliases
         if(in_array($host,['pod7kilo.cz','hudy.cz'],true)){
             // A category prefix is not part of the manufacturer's model name. Do not remove
             // brands, years, gender, capacities or any other suffix/word from the model.
-            $prefix='/^(?:batoh|spacák|ponožky|boty|přikrývka|karimatka|polštář)\s+/ui';
+            $prefix='/^(?:batoh(?:\/(?:taška|kabelka))?|(?:sbalitelný|kabinový|cestovatelský) batoh|spací pytel|bivakovací vak|spacák|ponožky|boty|přikrývka|karimatka|polštář)\s+/ui';
             $local=preg_replace($prefix,'',$name);$remote=preg_replace($prefix,'',$group);
             if(($local!==$name||$remote!==$group)&&PriceParser::sameProductName(['product_name'=>$remote],$local))return $group;
         }
@@ -40,7 +40,7 @@ final class SupplierCatalogAliases
             if(($path===$modelPath||($host==='pod7kilo.cz'&&str_starts_with($path,$modelPath.'/')))&&
                 PriceParser::sameProductName(['product_name'=>$name],$local)&&PriceParser::sameProductName(['product_name'=>$group],$remote))return $group;
         }
-        if($host==='gramino.cz'&&in_array($path,['/p/big-agnes-tiger-wall-ul2','/p/big-agnes-tiger-wall-ul3'],true)&&
+        if($host==='gramino.cz'&&preg_match('~^/p/big-agnes-(?:tiger-wall-ul[23]|copper-spur-ul[1-4](?:-xl)?)$~D',$path)&&
             in_array('HyperBead',$evidence['model_features']??[],true)&&PriceParser::sameProductName(['product_name'=>$name],$group.' HyperBead'))return $group;
         // Size tables: https://gramino.cz/p/nemo-tensor-elite,
         // /p/nemo-tensor-all-season, /p/therm-a-rest-neoair-xlite-nxt.
@@ -84,6 +84,12 @@ final class SupplierCatalogAliases
         $path=rtrim((string)parse_url($url,PHP_URL_PATH),'/');
         if($host==='pod7kilo.cz'&&($path==='/p/polstar-nemo-fillo-elite'||str_starts_with($path,'/p/polstar-nemo-fillo-elite/'))&&
             $local&&PriceParser::sameProductName(['product_name'=>$name],'NEMO Fillo Elite Luxury'))$attributes['version']='rozšířený';
+        // Pod7kilo spells out Cumulus' height bands as well as the manufacturer's
+        // size letter. This is a closed size table, never a generic suffix removal.
+        if($host==='pod7kilo.cz'&&preg_match('~^/p/spaci-pytel-cumulus-~',$path)&&isset($attributes['size'])){
+            $sizes=['do 170 cm - zkrácený (s)'=>'s','do 183 cm - standardní (m)'=>'m','do 196 cm - prodloužený (l)'=>'l'];
+            $attributes['size']=$sizes[$attributes['size']]??$attributes['size'];
+        }
         if(!$local&&isset($attributes['color'])){
             $maps=[
                 'hudy.cz'=>[
@@ -96,7 +102,9 @@ final class SupplierCatalogAliases
                     '/p/big-agnes-tiger-wall-ul3'=>['grey / green'=>'green'],
                 ],
             ];
-            $attributes['color']=$maps[$host][$path][$attributes['color']]??$attributes['color'];
+            foreach($maps[$host][$path]??[]as$from=>$to)if(VariantAttributes::value('color',$from)===$attributes['color']){
+                $attributes['color']=VariantAttributes::value('color',$to);break;
+            }
         }
         return $attributes;
     }

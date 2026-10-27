@@ -38,3 +38,33 @@ $check(Matcher::match($doc,$f['url'],'Unrelated model',$v)['status']==='no_match
 $doc['parser_version']=0;
 $check(Matcher::match($doc,$f['url'],$f['offer']['product_name'],$v)['status']==='old_parser','Legacy document treated as current evidence.');
 echo "Variant links: exact colour/size, equal-price ambiguity, missing variants, model identity and URL scope passed.\n";
+
+// Legacy local labels and JSON-LD axes are two representations of the same identity.
+use SimpleStore\Supplier\VariantAttributes as Attributes;
+foreach([
+ ['Barva a velikost'=>'Černá / S/M'],['Velikost a barva'=>'S/M – černá'],['Varianta'=>'S/M / černá']
+]as$choices){
+ $wanted=Attributes::normalize($choices);
+ $check($wanted!==null&&Attributes::matches($wanted,['color'=>'black','size'=>'s m']),'Compound label or internal size slash lost.');
+ $check(!Attributes::matches($wanted,['color'=>'black','size'=>'m l']),'Different combined size accepted.');
+ $check(!Attributes::matches($wanted,['color'=>'dark black','size'=>'s m']),'Named shade qualifier removed.');
+}
+$check(Attributes::normalize(['Barva a velikost'=>'black / M','Velikost'=>'L'])===null,'Conflicting duplicate axis ignored.');
+$check(Attributes::normalize(['Material'=>'Ultra 200X'])===null,'Unknown local dimension ignored.');
+$check(Attributes::value('color','Hi-vis žlutá')==='hi vis yellow','Existing high-visibility colour normalization regressed.');
+$check(Attributes::value('color','Black Sand (tmavě green)')==='black sand (dark green)','Partly normalized legacy colour not repaired.');
+$check(Attributes::value('color','Modrá (blue)')==='blue','Equivalent translated colour repeated.');
+$check(Attributes::value('color','Jasper Pro (green)')!=='green','Named fabric/colour qualifier discarded.');
+$check(PriceParser::sameProductName(['product_name'=>'Backpack 50 L (2026)'],'Backpack 50L 2026'),'Units and year punctuation failed.');
+$check(!PriceParser::sameProductName(['product_name'=>'Backpack 50 L (2025)'],'Backpack 50L 2026'),'Model year discarded.');
+$url='https://gramino.cz/p/cumulus-mysterious-traveller-500';
+$group=['@type'=>'ProductGroup','name'=>'Cumulus Mysterious Traveller 500','url'=>$url,'hasVariant'=>[
+ ['@type'=>'Product','name'=>'Cumulus Mysterious Traveller 500 – Levá strana','color'=>'Crystal Wave','size'=>'M',
+ 'offers'=>['@type'=>'Offer','url'=>$url.'?v_id=left','price'=>10000,'priceCurrency'=>'CZK']]]];
+$v=['variant_key'=>str_repeat('c',32),'enabled'=>1,'choices_json'=>'{"Zip":"Levá strana"}'];
+$doc=PriceParser::document('<script type="application/ld+json">'.json_encode($group).'</script>',$url);
+$check(Matcher::match($doc,$url,'Cumulus Mysterious Traveller 500 – M',$v)['status']==='exact','Size omitted from title but explicit in JSON-LD lost.');
+$check(Matcher::match($doc,$url,'Cumulus Mysterious Traveller 500 – L',$v)['status']==='no_match','Title size ignored.');
+$doc['offers'][0]['attributes']['zip']='right';
+$check(Matcher::match($doc,$url,'Cumulus Mysterious Traveller 500 – M',$v)['status']==='no_match','Conflicting title and typed zipper side accepted.');
+echo "Variant links: composite labels, typed axes, translated colours and conflicting evidence passed.\n";
