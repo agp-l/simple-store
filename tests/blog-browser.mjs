@@ -40,7 +40,7 @@ test('blog magazine, centered story and category editor work on desktop and mobi
     }
    }
    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`Overflow ${mode} ${width}`);
-   await page.locator('main img').evaluateAll(images=>Promise.all(images.map(image=>image.decode())));
+   await page.locator('main img').evaluateAll(images=>Promise.all(images.map(image=>{image.loading='eager';return image.decode();})));
    assert.deepEqual(errors,[]);
    await page.screenshot({path:`/tmp/blog-screenshots/${mode}-${width}.png`,fullPage:true});await page.close();
   }
