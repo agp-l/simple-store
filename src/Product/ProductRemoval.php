@@ -65,8 +65,12 @@ final class ProductRemoval
             $current=$this->preview($key,$preview['language']??'',(int)($preview['revision']??0),true);
             if (!is_string($preview['hash']??null) || !hash_equals($current['hash'],$preview['hash'])) throw new InvalidArgumentException('Produkt, varianty nebo fotografie se mezitím změnily. Připrav nový náhled smazání.');
             // Preserve all known historic addresses, including incoming merge redirects.
-            $urls=$this->db->query('SELECT language,slug,name FROM shop_product_revisions WHERE product_key=%s AND published=1',$key);
-            foreach ($this->db->query('SELECT language,source_slug FROM shop_product_redirects WHERE target_key=%s FOR UPDATE',$key) as $row) $urls[]=['language'=>$row['language'],'slug'=>$row['source_slug'],'name'=>$current['name']];
+            $urls=$this->db->query('SELECT language,slug,name FROM shop_product_revisions WHERE product_key=%s AND published=1 ORDER BY revision_number,id',$key);
+            $publicNames=array_column($urls,'name','language');
+            foreach ($this->db->query('SELECT language,source_slug FROM shop_product_redirects WHERE target_key=%s FOR UPDATE',$key) as $row) {
+                // A never-published draft must not disclose its title through a merge alias.
+                if ($publicNames!==[]) $urls[]=['language'=>$row['language'],'slug'=>$row['source_slug'],'name'=>$publicNames[$row['language']]??reset($publicNames)];
+            }
             foreach ($urls as $url) $this->db->replace('shop_removed_product_urls',['language'=>$url['language'],'slug'=>$url['slug'],'product_key'=>$key,'name'=>$url['name']]);
             $this->db->query('DELETE FROM shop_product_redirects WHERE target_key=%s',$key);
             $this->db->query('DELETE FROM shop_product_relations WHERE product_a=%s OR product_b=%s',$key,$key);

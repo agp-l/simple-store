@@ -130,7 +130,9 @@ try {
     $check($cleanup->state($key)['counts']===$result['counts'],'Repeated schema apply damaged cleanup history.');
 
     $hidden=str_repeat('e',32); $product($hidden,'cs',1,true,false);
+    $db->insert('shop_product_redirects',['language'=>'cs','source_slug'=>'hidden-alias','target_key'=>$hidden]);
     $removal->delete($removal->preview($hidden,'cs',1));
+    $check($removal->removed('cs','hidden-alias')===null,'A private draft leaked through a merge alias.');
     $check($removal->removed('cs','product-'.$hidden.'-cs-1')===null,'A private draft leaked to a public tombstone.');
     // Reimporting an old identity deliberately stops any historical file cleanup.
     $product($key,'cs',1,true,true,$photos['order']);

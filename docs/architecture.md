@@ -45,7 +45,9 @@ CMS řeší stránky, blog a produkty s revizemi. Pokladna nabízí české doru
 | `src/Product/ProductStockRepository.php` | Rezervace, uvolnění a spotřebování volných kusů podle zdroje expedice. |
 | `config/checkout.php` | Místní banka, doprava a obchodní podmínky; vychází z `config/checkout.example.php` a není ve verzovacím systému. |
 | `src/Admin/orders.php`, `view/admin/orders.php` | Přehled přijatých objednávek a ruční kontrola přijatého bankovního převodu. |
-| `src/Admin/delete-product.php` | Tenký POST vstup do kontroly revize a transakčního odstranění produktu. |
+| `src/Admin/delete-product.php`, `src/Product/ProductRemoval.php` | Náhled v session, potvrzení a transakční odstranění celé katalogové identity ve všech jazycích; historie obchodů zůstává. |
+| `src/Media/ProductMediaCleanup.php` | Opakovatelný úklid vlastních fotografií po commitu; zachovává sdílené a historicky používané soubory. |
+| `src/Supplier/WorkerLock.php` | Společný zámek cenového workeru a mazání produktu. |
 | `src/Admin/inline-product.php` | Přijme ověřený požadavek z náhledu, uloží revizi a vrátí její číslo. |
 | `config/site.php` | Výchozí a podporované jazyky. |
 | `config/database.php` | Místní údaje k DB, není ve verzovacím systému. |

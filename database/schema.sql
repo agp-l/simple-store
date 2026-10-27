@@ -1610,7 +1610,7 @@ CREATE TABLE IF NOT EXISTS shop_supplier_offers (
 -- Minimal public tombstones; full catalog data is removed, order snapshots are kept.
 CREATE TABLE IF NOT EXISTS shop_removed_product_urls (
   language CHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  slug VARCHAR(190) NOT NULL,
+  slug VARCHAR(190) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   product_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
   name VARCHAR(255) NOT NULL,
   removed_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
