@@ -138,6 +138,47 @@ try{
  $check($sales->forProduct($managed)['variant_pricing']==='manual','Explicit opt-out was ignored.');
  $sales->save($managed,'cs',array_replace($settings($managed),['variant_pricing'=>'inherit']));
  $check($sales->forProduct($managed)['variant_pricing']==='inherit','Default policy was not restored.');
+
+ // Explicit approval may switch a whole exact-variant set, never individual prices
+ // or an incomplete set; the background worker still requires this approval.
+ $backupId=$partners->save(0,['name'=>'Backup','ico'=>'24295825','address'=>'Test','email'=>'test@backup.test','terms_url'=>'https://www.pod7kilo.cz/terms','website_url'=>'https://www.pod7kilo.cz','priority'=>'20','confirmed'=>'1']);
+ $backup=$partners->find($backupId);
+ $fallbackCase=static function(string $path,?int $mode)use($make,$db,$links,$backup,&$responses):array{
+  [$k,$unused,$vs]=$make($path);$bu='https://www.pod7kilo.cz/p/'.$path;
+  if($mode!==null)$db->insert('shop_product_supplier_variant_modes',['product_key'=>$k,'enabled'=>$mode]);
+  $offers=[];
+  foreach(['Blue'=>1000,'Red'=>1200]as$color=>$price){
+   $u=$bu.'?variant='.strtolower($color);
+   $links->save($k,$vs[$color],'',0,$backup['partner_key'],'Backup',$u);
+   $offers[]=['@type'=>'Product','name'=>'Patizon D590','color'=>$color,'size'=>'M','offers'=>['@type'=>'Offer','price'=>$price,'priceCurrency'=>'CZK','url'=>$u,'availability'=>'https://schema.org/InStock']];
+  }
+  $body='<script type="application/ld+json">'.json_encode(['@type'=>'ProductGroup','name'=>'Patizon D590','url'=>$bu,'hasVariant'=>$offers]).'</script>';
+  foreach(['blue','red']as$c)$responses[$bu.'?variant='.$c]=['code'=>200,'body'=>$body,'headers'=>[]];
+  return [$k,$vs];
+ };
+ [$switched,$sv]=$fallbackCase('approved-fallback',1);
+ $inactive=bin2hex(random_bytes(16));
+ $db->insert('shop_product_variants',['product_key'=>$switched,'variant_key'=>$inactive,'choices_json'=>json_encode(['Barva'=>'Green','Velikost'=>'M']),'enabled'=>0]);
+ $db->update('shop_product_sales',['variant_prices_json'=>json_encode([$sv['Blue']=>900,$sv['Red']=>1000,$inactive=>800])],'product_key=%s',$switched);
+ $db->insert('shop_partner_stock_state',['product_key'=>$switched,'partner_id'=>$partnerId,'observed_at'=>$now]);
+ $beforeSale=$sale($switched);$manager->enqueue('one','rapid',$switched);$run(20);
+ $check($job($switched)['status']==='review'&&$sale($switched)===$beforeSale,'Fallback did not wait for approval: '.$job($switched)['status'].' / '.$job($switched)['message']);
+ $manager->apply((int)$job($switched)['id'],false);
+ $switchedCosts=json_decode($sale($switched)['variant_prices_json'],true);
+ $check((int)$sale($switched)['partner_id']===$backupId&&count($switchedCosts)===2&&$switchedCosts[$sv['Blue']]===1000&&$switchedCosts[$sv['Red']]===1200,'Approved fallback did not replace exact costs atomically.');
+ $check((int)$db->queryFirstField('SELECT price_czk FROM shop_product_variants WHERE variant_key=%s',$sv['Red'])===1300,'Fallback lost per-variant retail price.');
+ $check((int)$db->queryFirstField('SELECT MAX(available_quantity) FROM shop_product_variants WHERE product_key=%s',$switched)===0,'Previous partner stock survived seller switch.');
+ $run(20);$check(in_array($job($switched)['status'],['applied','checked'],true),'Approved partner did not continue automatically.');
+ $check((int)$db->queryFirstField('SELECT MIN(available_quantity) FROM shop_product_variants WHERE product_key=%s AND enabled=1',$switched)===3,'New partner availability was not refreshed.');
+ [$manualFallback]=$fallbackCase('manual-fallback',0);$manager->enqueue('one','rapid',$manualFallback);$run(20);$beforeSale=$sale($manualFallback);
+ $reject(fn()=>$manager->apply((int)$job($manualFallback)['id'],false));
+ $check($sale($manualFallback)===$beforeSale,'Fallback silently enabled manual variant pricing.');
+ [$defaultFallback]=$fallbackCase('default-fallback',null);$manager->enqueue('one','rapid',$defaultFallback);$run(20);
+ $j=$job($defaultFallback);$originalData=$j['data_json'];$broken=json_decode($originalData,true);array_pop($broken['variant_observations']);
+ $db->update('shop_supplier_price_jobs',['data_json'=>json_encode($broken)],'id=%i',$j['id']);$beforeSale=$sale($defaultFallback);
+ $reject(fn()=>$manager->apply((int)$j['id'],false));$check($sale($defaultFallback)===$beforeSale,'Incomplete fallback proof changed seller.');
+ $db->update('shop_supplier_price_jobs',['data_json'=>$originalData],'id=%i',$j['id']);$manager->apply((int)$j['id'],false);
+ $check((int)$sale($defaultFallback)['partner_id']===$backupId&&(int)$db->queryFirstField('SELECT enabled FROM shop_product_supplier_variant_modes WHERE product_key=%s',$defaultFallback)===1,'Eligible default pricing did not follow explicit fallback approval.');
  $report=$manager->diagnostics();$check($report['version']===3,'Canonical diagnostic version missing.');
  $replay=PriceEvaluation::replay($report);$check(count($replay['items'])>0,'Read-only replay lost unresolved canonical offers.');
  echo "Exact supplier prices: durable variant collection, atomic apply, cache proof, stale/manual URL guards, own mode and robots/product denial passed.\n";
