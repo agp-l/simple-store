@@ -33,6 +33,8 @@ $original = $copy->load('cs');
 if ($original !== SiteCopyRepository::DEFAULTS) throw new RuntimeException('Missing copy defaults failed.');
 $changed = array_replace($original, [
     'hero_title' => 'Výprava do hor', 'footer_intro' => 'Vybavení & odolnost',
+    'blog_eyebrow' => 'Z cest', 'blog_title' => 'Naše příběhy',
+    'blog_intro' => 'Text <b>zůstává textem</b>.', 'blog_note' => 'Pojď ven.',
 ]);
 $copy->save('cs', $changed);
 if ($copy->load('cs') !== $changed || $copy->load('en') !== $original) {
@@ -48,4 +50,14 @@ foreach ([['hero_title' => '<script>' . str_repeat('a', 100)],
 if ($copy->load('cs') !== $changed) throw new RuntimeException('Invalid copy changed saved data.');
 $db->ready = false;
 if ($copy->load('cs') !== $original) throw new RuntimeException('Legacy schema must keep default copy.');
+$db->ready = true;
+$db->rows['en'] = json_encode(['hero_title' => 'Old saved header']);
+$legacy = $copy->load('en');
+if ($legacy['hero_title'] !== 'Old saved header' || $legacy['blog_title'] !== $original['blog_title']) throw new RuntimeException('Old saved copy must inherit new blog defaults.');
+ob_start();
+(new \SimpleStore\Rendering\PageRenderer(dirname(__DIR__).'/view'))->render('blog', ['siteCopy'=>$changed]);
+$html = ob_get_clean();
+foreach (['Z cest','Naše příběhy','Text &lt;b&gt;zůstává textem&lt;/b&gt;.','Pojď ven.'] as $text) {
+    if (!str_contains($html,$text)) throw new RuntimeException('Blog text missing or not safely escaped.');
+}
 echo "Site copy settings OK\n";

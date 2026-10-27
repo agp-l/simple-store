@@ -16,13 +16,13 @@ $row=$fields+['document_key'=>$document['document_key'],'revision_number'=>28,'s
 $mode=$argv[1]??'index';
 $renderer=new SimpleStore\Rendering\PageRenderer(dirname(__DIR__,2).'/view');
 $data=['basePath'=>'/','language'=>'cs','privatePage'=>true];
-if ($mode==='index') {
+if (in_array($mode,['index','manage'],true)) {
     $posts=[];foreach (['Dva roky ve stanu','Pěšky přes hory','Ráno u jezera','Batoh na celý svět','Toulání bez mapy','Déšť patří k cestě'] as $i=>$title) {
-        $post=$row; $post['title']=$title; $post['slug']='pribeh-'.$i;
+        $post=$row; $post['document_key']=sprintf('%032x',$i+1); $post['title']=$title; $post['slug']='pribeh-'.$i;
         if($i===3)$post['body']=ContentBody::encode([['type'=>'text','heading'=>'','body'=>'Článek bez fotografie.']], '');
         $posts[]=$post;
     }
-    $renderer->render('blog',$data+['posts'=>$posts,'blogTopicCounts'=>['spani-venku'=>4,'cestopisy'=>2]]);
+    $renderer->render('blog',$data+['posts'=>$posts,'blogTopicCounts'=>['spani-venku'=>4,'cestopisy'=>2], 'canManageContent'=>$mode==='manage', 'adminCsrf'=>'test-token', 'blogPlacement'=>['featured'=>sprintf('%032x',1),'pinned'=>[sprintf('%032x',2)]]]);
 } else {
     $renderer->render('post',$data+['content'=>$row,'backLink'=>'/cs/blog', 'canEditContent'=>$mode==='edit','contentEditMode'=>$mode==='edit','editToken'=>'test-token']);
 }

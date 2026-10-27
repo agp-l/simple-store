@@ -39,7 +39,7 @@ final class StorefrontReturnUrl
         $query = [];
         parse_str($parts['query'] ?? '', $input);
         foreach (['edit', 'manage', 'homepage_edit', 'visibility', 'pick', 'pick_offset',
-            'draft_offset', 'search', 'sort', 'all', 'offset'] as $key) {
+            'draft_offset', 'search', 'sort', 'all', 'offset', 'topic'] as $key) {
             if (isset($input[$key]) && is_string($input[$key]) && strlen($input[$key]) <= 200) {
                 $query[$key] = $input[$key];
             }

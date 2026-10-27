@@ -26,7 +26,7 @@ $btcpayWebhookSecretConfigured ??= false;
 <div class="panel-settings-overview">
   <?php foreach ([
       ['products', 'Hromadná úprava produktů', 'Přiřazení prodávajících, způsob prodeje, sklad a zveřejnění produktů.'],
-      ['appearance', 'Texty webu', 'Hlavička, výpis produktů a patička.'],
+      ['appearance', 'Texty webu', 'Hlavička, výpis produktů, blog a patička.'],
       ['delivery', 'Doprava', 'Ceník a dostupnost výdejních míst i doručení na adresu.'],
       ['carriers', 'Dopravci', 'Widgety výdejních míst a údaje pro podávání zásilek.'],
       ['payment', 'Platby', 'Bankovní převod a připojené platební brány.'],
@@ -64,6 +64,14 @@ $btcpayWebhookSecretConfigured ??= false;
     <label>Text pod výběrem na úvodní stránce<input name="catalog_home_intro" value="<?= $escape($siteCopyValues['catalog_home_intro']) ?>" maxlength="200" required></label>
     <label>Text pod celým katalogem<input name="catalog_all_intro" value="<?= $escape($siteCopyValues['catalog_all_intro']) ?>" maxlength="200" required></label>
     <label>Text v kategorii<input name="catalog_category_intro" value="<?= $escape($siteCopyValues['catalog_category_intro']) ?>" maxlength="200" required></label>
+    <fieldset class="panel-settings-block" id="blog-texts">
+      <legend><strong><?= \SimpleStore\Rendering\Icon::render('book') ?> Úvod blogu</strong></legend>
+      <p class="panel-help">Tyto čtyři texty se zobrazují nad články na stránce Blog. Uloží se společně tlačítkem Uložit texty.</p>
+      <label>Krátký nadpis nad titulkem blogu<input name="blog_eyebrow" value="<?= $escape($siteCopyValues['blog_eyebrow']) ?>" maxlength="200" required></label>
+      <label>Hlavní nadpis blogu<input name="blog_title" value="<?= $escape($siteCopyValues['blog_title']) ?>" maxlength="90" required></label>
+      <label>Úvodní text blogu<input name="blog_intro" value="<?= $escape($siteCopyValues['blog_intro']) ?>" maxlength="200" required></label>
+      <label>Krátké motto blogu<input name="blog_note" value="<?= $escape($siteCopyValues['blog_note']) ?>" maxlength="200" required></label>
+    </fieldset>
     <h3>Patička</h3>
     <label>Úvodní text patičky<input name="footer_intro" value="<?= $escape($siteCopyValues['footer_intro']) ?>" maxlength="200" required></label>
     <label>Krátký závěr patičky<input name="footer_closing" value="<?= $escape($siteCopyValues['footer_closing']) ?>" maxlength="200" required></label>

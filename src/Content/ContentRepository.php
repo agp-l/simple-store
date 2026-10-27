@@ -38,19 +38,35 @@ final class ContentRepository
         );
     }
 
-    public function publishedPostsPage(string $language, int $offset = 0, int $limit = 6, ?string $topic = null): array
+    public function publishedPostsPage(string $language, int $offset = 0, int $limit = 6, ?string $topic = null, ?array $placement = null): array
     {
         if ($offset < 0 || $offset > 100000 || $limit < 1 || $limit > 48) {
             throw new InvalidArgumentException('Invalid blog page.');
         }
         if ($topic !== null) BlogTopics::validate($topic);
+        $order = 'id DESC';
+        $orderValues = [];
+        if ($placement !== null) {
+            $placement = BlogPlacement::validate($placement);
+            $parts = [];
+            if ($placement['featured'] !== null) {
+                $parts[] = '(document_key=%s) DESC';
+                $orderValues[] = $placement['featured'];
+            }
+            if ($placement['pinned'] !== []) {
+                $parts[] = '(document_key IN ('.implode(',', array_fill(0, count($placement['pinned']), '%s')).')) DESC';
+                array_push($orderValues, ...$placement['pinned']);
+            }
+            $parts[] = $order;
+            $order = implode(', ', $parts);
+        }
         $topicWhere = $topic === null ? '' : ' AND ('.self::topicExpression().')=%s';
         $rows = $this->db->query(
             'SELECT document_key, language, slug, title, summary, body, saved_at, revision_number
              FROM shop_content_revisions WHERE type=%s AND language=%s
              AND active_document_key IS NOT NULL AND published=1'.$topicWhere.'
-             ORDER BY id DESC LIMIT %i OFFSET %i',
-            ...array_merge(['post', $language], $topic === null ? [] : [$topic], [$limit + 1, $offset])
+             ORDER BY '.$order.' LIMIT %i OFFSET %i',
+            ...array_merge(['post', $language], $topic === null ? [] : [$topic], $orderValues, [$limit + 1, $offset])
         );
         $hasMore = count($rows) > $limit;
         return ['items' => array_slice($rows, 0, $limit), 'nextOffset' => $hasMore ? $offset + $limit : null];

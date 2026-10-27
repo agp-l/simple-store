@@ -25,7 +25,7 @@ final class PageRenderer
         $pageTitle = (string) ($data['title'] ?? 'Dobrodruzi.cz — vybavení na každou cestu');
         $pageDescription = (string) ($data['description'] ?? 'Batohy, stany, spacáky a vybavení na cesty ven.');
         $language = (string) ($data['language'] ?? 'cs');
-        $siteCopy = $data['siteCopy'] ?? \SimpleStore\Content\SiteCopyRepository::DEFAULTS;
+        $siteCopy = array_replace(\SimpleStore\Content\SiteCopyRepository::DEFAULTS, $data['siteCopy'] ?? []);
         $basePath = (string) ($data['basePath'] ?? '/');
         $siteRoot = htmlspecialchars($basePath, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $priceDisplay = $data['priceDisplay'] ?? null;
@@ -109,6 +109,8 @@ final class PageRenderer
         $draftPosts = $data['draftPosts'] ?? [];
         $blogTopic = $data['blogTopic'] ?? null;
         $blogTopicCounts = $data['blogTopicCounts'] ?? [];
+        $blogPlacement = $data['blogPlacement'] ?? \SimpleStore\Content\BlogPlacement::EMPTY;
+        $blogPlacementReturn = $data['blogPlacementReturn'] ?? $basePath.$language.'/blog?manage=1';
         $managingBlog = (bool) ($data['managingBlog'] ?? false);
         $draftNextUrl = (string) ($data['draftNextUrl'] ?? '');
         $contentHistory = $data['contentHistory'] ?? [];
@@ -187,6 +189,8 @@ final class PageRenderer
         $categoryLabels = $data['categoryLabels'] ?? [];
         $canManageContent = (bool) ($data['canManageContent'] ?? false);
         $adminCsrf = (string) ($data['adminCsrf'] ?? '');
+        $blogPlacement = $data['blogPlacement'] ?? \SimpleStore\Content\BlogPlacement::EMPTY;
+        $blogPlacementReturn = $data['blogPlacementReturn'] ?? $basePath.$language.'/blog?manage=1';
         $managingCatalog = (bool) ($data['managingCatalog'] ?? false);
         $canManageCatalog = (bool) ($data['canManageCatalog'] ?? false);
         $cartToken = (string) ($data['cartToken'] ?? '');

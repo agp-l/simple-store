@@ -18,6 +18,10 @@ final class SiteCopyRepository
         'catalog_home_intro' => 'Lehké, odolné a osvědčené vybavení na cesty.',
         'catalog_all_intro' => 'Poctivý výběr pro pohodlí na stezce i mimo ni.',
         'catalog_category_intro' => 'Vybavení na každou cestu. Vyberte si z nabídky níže.',
+        'blog_eyebrow' => 'Zápisky dobrodruhů',
+        'blog_title' => 'Venku je o čem vyprávět.',
+        'blog_intro' => 'Cesty, spaní pod širákem i vybavení, které dostalo zabrat. Příběhy z vlastní zkušenosti pro tvoje další dobrodružství.',
+        'blog_note' => 'Méně věcí. Více zážitků.',
         'footer_intro' => 'Výběr nejlepšího turistického vybavení. Lehké. Odolné. Osvědčené.',
         'footer_closing' => 'Na další cestu připraveni.',
     ];
@@ -67,7 +71,7 @@ final class SiteCopyRepository
             $value = $input[$field] ?? null;
             if (!is_string($value)) throw new InvalidArgumentException('Vyplň všechny texty obchodu.');
             $value = trim($value);
-            if (!self::valid($value, in_array($field, ['hero_title', 'catalog_home_title', 'catalog_title'], true) ? 90 : 200)) {
+            if (!self::valid($value, in_array($field, ['hero_title', 'catalog_home_title', 'catalog_title', 'blog_title'], true) ? 90 : 200)) {
                 throw new InvalidArgumentException('Texty musí být na jednom řádku a mít nejvýše 200 znaků (nadpisy 90).');
             }
             $copy[$field] = $value;

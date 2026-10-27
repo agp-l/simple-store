@@ -1625,3 +1625,9 @@ CREATE TABLE IF NOT EXISTS shop_product_media_cleanup (
   result_json LONGTEXT NOT NULL,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- One atomic layout choice per language, independent of content revision history.
+CREATE TABLE IF NOT EXISTS shop_blog_placements (
+  language CHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+  placement_json TEXT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
