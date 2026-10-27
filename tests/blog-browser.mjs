@@ -4,7 +4,7 @@ import {spawn,execFileSync} from 'node:child_process';
 import {writeFileSync,unlinkSync,mkdirSync} from 'node:fs';
 import {chromium} from 'playwright';
 test('blog magazine, centered story and category editor work on desktop and mobile',async()=>{
- const modes=['index','story','edit'];
+ const modes=['index','manage','story','edit'];
  for(const mode of modes)writeFileSync(`tests/fixtures/blog-${mode}.html`,execFileSync('php',['tests/fixtures/blog-magazine.php',mode]));
  const server=spawn('php',['-S','127.0.0.1:9884','-t','.'],{stdio:'ignore'});
  let browser;
@@ -16,9 +16,16 @@ test('blog magazine, centered story and category editor work on desktop and mobi
    const errors=[];page.on('pageerror',e=>errors.push(e.message));
    await page.goto(`http://127.0.0.1:9884/tests/fixtures/blog-${mode}.html`);
    assert.equal(await page.locator('h1:visible').count(),1,'Blog should have one visible main heading.');
-   if(mode==='index'){
+   if(mode==='index'||mode==='manage'){
     const geometry=await page.locator('.blog-card').evaluateAll(cards=>cards.map(c=>({w:c.getBoundingClientRect().width,y:c.getBoundingClientRect().y})));
     assert.equal(geometry.length,6);
+    assert.equal(await page.locator('.blog-placement-controls').count(),mode==='manage'?6:0);
+    if(mode==='manage'){
+     assert.equal(await page.getByRole('button',{name:'Zrušit první místo',exact:true}).getAttribute('aria-pressed'),'true');
+     assert.equal(await page.getByRole('button',{name:'Odepnout',exact:true}).getAttribute('aria-pressed'),'true');
+     assert.equal(await page.locator('.blog-placement-controls input[name=expected]').first().getAttribute('value').then(v=>v.length),64);
+     assert.ok(await page.getByRole('link',{name:'Upravit úvod blogu',exact:true}).getAttribute('href').then(v=>v.includes('tab=appearance')));
+    }
     if(width===1440){assert.ok(geometry[0].w>geometry[1].w*1.9);assert.equal(geometry[0].y,geometry[1].y);}
     else assert.ok(Math.abs(geometry[0].w-geometry[1].w)<2);
     assert.ok(await page.getByRole('link',{name:'Spaní venku 4',exact:true}).getAttribute('href').then(h=>h.includes('topic=spani-venku')));

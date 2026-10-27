@@ -501,7 +501,11 @@ try {
         }
         if ($blogTopic !== null) $shared['canonicalUrl'] .= (str_contains($shared['canonicalUrl'], '?') ? '&' : '?') . 'topic=' . rawurlencode($blogTopic);
         $blogTopicCounts = $hasContent ? $contents->publishedTopicCounts($url->getLanguage()) : [];
-        $batch = $hasContent ? $contents->publishedPostsPage($url->getLanguage(), $offset, 6, $blogTopic)
+        $blogPlacement = (new \SimpleStore\Content\BlogPlacement($db, $site['languages']))->load($url->getLanguage());
+        $shared['blogPlacement'] = $blogPlacement;
+        $shared['blogPlacementReturn'] = $url->path('blog') . '?' . http_build_query([
+            'manage' => '1', 'topic' => $blogTopic, 'offset' => $offset > 0 ? $offset : null]);
+        $batch = $hasContent ? $contents->publishedPostsPage($url->getLanguage(), $offset, 6, $blogTopic, $blogPlacement)
             : ['items' => [], 'nextOffset' => null];
         $draftBatch = $managingBlog && $hasContent
             ? $contents->unpublishedPostsPage($url->getLanguage(), $draftOffset, 24)
@@ -536,6 +540,7 @@ try {
             : $contents->findPublished($type, $slug, $url->getLanguage());
         $contentEditMode = $editRequested && $canEdit && $item !== null;
         if ($contentEditMode && $type === 'post') $shared['catalogPostKeys'] = (new \SimpleStore\Content\CatalogPostSelection($db, $site['languages']))->keys($url->getLanguage());
+        if ($contentEditMode && $type === 'post') $shared['blogPlacement'] = (new \SimpleStore\Content\BlogPlacement($db, $site['languages']))->load($url->getLanguage());
         if ($contentEditMode) {
             $shared['contentHistory'] = $contents->historySummary($item['document_key'], $url->getLanguage());
             $shared['editToken'] = $auth->token();

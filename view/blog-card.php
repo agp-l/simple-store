@@ -18,5 +18,6 @@ $coverUrl = str_starts_with($cover, 'images/') ? $basePath . $cover : $cover;
                 <p class="cms-post-summary"><?= $escape($post['summary'] ?? '') ?></p>
                 <a class="blog-read" href="<?= $escape($postUrl) ?>">Přečíst příběh <?= \SimpleStore\Rendering\Icon::render('arrow-right') ?></a>
               <?php if ($canManageContent): ?><div class="inline-entry"><a href="<?= $escape($siteRoot . $language . '/blog/' . rawurlencode($post['slug']) . '?edit=1') ?>">✎ Upravit článek</a><?php $deletablePost = $post; require __DIR__ . '/blog-delete.php'; ?></div><?php endif; ?>
+              <?php if ($canManageContent): $placementPost = $post; $placementToken = $adminCsrf; $placementReturn = $blogPlacementReturn; require __DIR__.'/manage/blog-placement.php'; endif; ?>
               </div>
             </article>

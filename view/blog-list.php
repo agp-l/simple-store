@@ -4,10 +4,10 @@
     <nav class="breadcrumbs" aria-label="Drobečková navigace"><a href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">Úvod</a><span aria-hidden="true">/</span><span>Blog</span></nav>
     <div class="blog-layout">
       <header class="blog-intro">
-        <p class="cms-eyebrow">Zápisky dobrodruhů</p>
-        <h1>Venku je o čem vyprávět.</h1>
-        <p>Cesty, spaní pod širákem i vybavení, které dostalo zabrat. Příběhy z vlastní zkušenosti pro tvoje další dobrodružství.</p>
-        <span class="blog-intro-note">Méně věcí. Více zážitků.</span>
+        <p class="cms-eyebrow"><?= htmlspecialchars($siteCopy['blog_eyebrow'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
+        <h1><?= htmlspecialchars($siteCopy['blog_title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></h1>
+        <p><?= htmlspecialchars($siteCopy['blog_intro'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></p>
+        <span class="blog-intro-note"><?= htmlspecialchars($siteCopy['blog_note'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span>
       </header>
       <?php $blogRoot = $basePath.$language.'/blog'; $blogFilterUrl = static fn(?string $topic): string => $blogRoot . (($query = http_build_query(['topic'=>$topic, 'manage'=>$managingBlog ? '1' : null])) !== '' ? '?'.$query : '') . '#clanky'; ?>
       <nav class="blog-topics" aria-label="Kategorie blogu" id="clanky">

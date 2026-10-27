@@ -213,6 +213,7 @@ jobs:
           php tests/product-import-offers-database.php
           php tests/partner-offers-database.php
           php tests/content-import-database.php
+          php tests/blog-placement-database.php
           php tests/configuration-backup-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
@@ -280,6 +281,7 @@ jobs:
           php tests/product-import-offers-database.php
           php tests/partner-offers-database.php
           php tests/content-import-database.php
+          php tests/blog-placement-database.php
           php tests/configuration-backup-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
