@@ -8,11 +8,11 @@ Přesouvají se skutečné varianty se stejnými identifikátory a kusy. Samosta
 
 Známé ceny všech variant umožní automatický přepočet podle nastaveného zaokrouhlení. Když přesné ceny některých kombinací chybějí, zachovají se dosavadní ceny a automatika zůstane vypnutá. Původní adresy přesměrují na společný produkt, ostatní karty se skryjí jako koncepty. Historie dovoluje sloučení vrátit, dokud nevznikne objednávka nebo se nezmění související produkt, sklad či cena; úplný snímek původních dat se uchovává i poté. Funkce vyžaduje aktuální schéma databáze.
 
-V administraci otevři **Import z AI**, dostupný i nad katalogem. Nepotřebuje veřejné API ani další klíč: všechny akce vyžadují relaci správce a CSRF. SQL dodané AI se nikdy neprovádí. Databázová migrace není potřeba (používá existující produkty, sklad a tabulku dodavatelů).
+V administraci otevři **Import z AI**, dostupný i nad katalogem. Nepotřebuje veřejné API ani další klíč: všechny akce vyžadují relaci správce a CSRF. SQL dodané AI se nikdy neprovádí. Používá stávající tabulky produktů, variant a partnerských odkazů; databáze musí mít aktuální schéma. Nové tabulky pro tento JSON formát nejsou potřeba.
 
 ## Přesné zadání pro AI
 
-Celý aktuální prompt je v [`src/Product/import-prompt.txt`](../src/Product/import-prompt.txt). Stejný soubor administrace zobrazuje ke kopírování spolu se skutečným seznamem kategorií. Popisuje všechny podporované položky JSON, typy, limity, textové formátování, varianty, aktualizace i strukturu ZIP. Je to jediný zdroj zadání, aby dokumentace a formulář neobsahovaly různé formáty.
+Celý aktuální prompt je v [`src/Product/import-prompt.txt`](../src/Product/import-prompt.txt). Administrace z něj vždy skládá kompletní zadání ke kopírování spolu s uloženými vlastními pokyny a skutečným seznamem kategorií. Popisuje všechny podporované položky JSON, typy, limity, textové formátování, varianty, aktualizace i strukturu ZIP. Je to zdroj aktuálního technického formátu. Starší uložené pokyny se nemažou, ale při rozporu má aktuální technická část přednost. Kopíruj horní pole „Kompletní zadání pro AI“, které obsahuje i kategorie; po editaci vlastních pokynů je nejprve ulož.
 
 ## Jeden produkt jako JSON
 
@@ -23,19 +23,19 @@ Vlož JSON → náhled → uložit. Nový produkt je výchozím nastavením konc
   "format": "simple-store.product.v1",
   "language": "cs",
   "product": {
-    "name": "Název produktu",
-    "category_path": "vybaveni/powerbanky",
+    "name": "Ukázkový batoh",
+    "category_path": "batohy",
     "price_czk": 1960,
     "published": false,
     "summary": "Perex do 180 znaků.",
     "suppliers": [
-      {"label": "Gramino", "url": "https://gramino.cz/produkt/topo-athletic-pursuit-3-mens/"}
+      {"label": "Ukázkový partner", "url": "https://shop.example.com/ukazkovy-batoh"}
     ]
   }
 }
 ```
 
-Odkaz v tomto minimálním příkladu demonstruje pole dodavatele; při skutečném importu musí odpovídat výrobku. Dodavatelé nejsou veřejnou součástí popisu. Zobrazují se ve stávající administraci produktu a objednávek.
+Příklad je fiktivní; název, cenu, kategorii i adresu nahraď ověřenými údaji. Dodavatelé nejsou veřejnou součástí popisu. Zobrazují se ve stávající administraci produktu a objednávek.
 
 ## ZIP s jedním nebo více produkty
 
@@ -66,9 +66,9 @@ Nebezpečné cesty, duplicitní ZIP cesty a nadměrný archiv se odmítají pře
 
 ## Úpravy a dodavatelé
 
-**JSON pro AI** v detailu exportuje `product_key`, aktuální `revision`, `language` a aktuální dodavatele. Pro úpravu zachovej identifikátory; vynechaná pole se nemění. Seznamy gallery/options/specifications/sections/**suppliers** se nahrazují celé; `[]` je vyprázdní. Dodavatelé jsou společné údaje produktu napříč jazyky. Stará revize se odmítne, stejně jako duplicitní slug u nového produktu.
+**JSON pro AI** v detailu exportuje `product_key`, aktuální `revision`, `language`, společné zdroje a přesné odkazy u všech uložených variant. Pro úpravu zachovej identifikátory; vynechaná pole se nemění. Seznamy gallery/options/specifications/sections/**product.suppliers** se nahrazují celé; `[]` je vyprázdní. Dodavatelé jsou společné údaje produktu napříč jazyky. Stará revize se odmítne, stejně jako duplicitní slug u nového produktu.
 
-ZIP úprava může nechat obrazová pole vynechaná. Uvedené cesty musí existovat v aktuálním ZIP. Nově přibalené obrázky bez explicitní gallery se přidají k dosavadní galerii; hlavní fotografie stávajícího produktu se změní jen explicitním image_path. Skladové kusy, rezervace a výběr na úvodní stránku import nemění.
+ZIP úprava může nechat obrazová pole vynechaná. Uvedené cesty musí existovat v aktuálním ZIP. Nově přibalené obrázky bez explicitní gallery se přidají k dosavadní galerii; hlavní fotografie stávajícího produktu se změní jen explicitním image_path. Bez variants se skladové kusy nemění. Uvedené variants v jednom JSON/ZIP mění i jejich sklad; hromadný JSON chrání počty samostatnou volbou. Rezervace a výběr na úvodní stránku se nemění.
 
 ## Externí fotografie
 
@@ -79,20 +79,21 @@ Ukázka Flextail (`src/Product/examples/flextail.json`) obsahuje soukromý zdroj
 ## Třídy a testy
 
 - ProductImport: formát, převod, export, validace dodavatelů.
+- ProductImportVariantLinks: soukromé variantní nabídky, validace, transakční zápis, kopie a obnova.
 - ProductZipArchive: validace archivu, bezpečné omezené čtení položek.
 - ProductImportJob: soukromá fronta, zámek, checkpoint a oddělené výsledky.
 - ProductPackageImporter: fotografie, mapování cest, revize a úklid chyb.
 - ProductRepository a ProductSupplierLinkRepository: společný transakční zápis produktu a dodavatelů.
 
-Testy: `tests/product-import.php`, `tests/product-import-database.php`, `tests/product-zip-database.php`, `tests/media-library.php`. ZIP testy běží na MySQL i MariaDB a ověřují úspěšný produkt mezi vadnými, 15 fotografií s miniaturami, odstranění fotek vadného produktu, dodavatele, rollback, neopakování hotové fronty a nebezpečné archivy.
+Testy: `tests/product-import.php`, `tests/product-import-database.php`, `tests/product-import-offers-database.php`, `tests/product-zip-database.php`, `tests/media-library.php`. ZIP testy běží na MySQL i MariaDB a ověřují úspěšný produkt mezi vadnými, 15 fotografií s miniaturami, odstranění fotek vadného produktu, dodavatele, rollback, neopakování hotové fronty a nebezpečné archivy.
 
 ## Hromadný export, zálohy a spolupráce s AI
 
 Administrace → **Import a export** → **Export a seznam pro AI** zobrazuje aktuální produkty včetně konceptů a překladů. Lze filtrovat jazyk, kategorii včetně podkategorií a název/adresu. Zaškrtávací výběr se odesílá v jediném JSON poli, takže jej PHP `max_input_vars` nezkrátí. Tlačítko exportu všech výsledků filtru funguje i bez JavaScriptu. Bez filtrů exportuje celý katalog.
 
-- **Úplný JSON**: identita, revize, jazyk, všechny podporované produktové údaje, dodavatelé a dostupné skladové kusy.
+- **Úplný JSON**: identita, revize, jazyk, všechny podporované produktové údaje, společné i přesné variantní partnerské odkazy a dostupné skladové kusy.
 - **Přehled pro AI a dodavatelé (JSON)**: identita, název, úplná adresa, kategorie, veřejný/koncept a dodavatelské odkazy. Slouží jako stručný přehled i pro import pouze dodavatelů; podrobnosti níže.
-- Jde o zálohu aktuálních produktových dat. Fotografie jsou pouze jako cesty; jejich soubory, nastavení kategorií, historie revizí, objednávky a rezervace nejsou součástí JSON. Pro úplné zotavení webu zálohuj databázi a `images/`.
+- Jde o zálohu aktuálních produktových dat. Fotografie jsou pouze jako cesty; jejich soubory, režim a nastavení prodeje, nastavení kategorií, historie revizí, objednávky a rezervace nejsou součástí JSON. Pro úplné zotavení webu zálohuj databázi a `images/`.
 
 ```json
 {
@@ -179,3 +180,64 @@ the same bulk queue without changing product content. See [product-relations.md]
 ## Sklad jednotlivých variant
 
 Volitelné `product.variants` obsahuje kombinace s vlastní identitou, kusy, SKU, cenou a fotografií. Jeho vynechání zachová sklad. Export přidá `expected` pro kontrolu souběžných změn. Podrobnosti a pravidla obnovy skladu jsou v [Variantách produktu](product-variants.md).
+
+
+## Úplný JSON s nabídkami jednotlivých variant
+
+Použij `product.variants.items[].suppliers`. Každá kombinace obsahuje vlastní seznam odkazů od libovolného počtu partnerů; pro nový odkaz stačí `label` a `url`. URL zachovává query parametry i fragment. Samotná URL není důkaz ceny, identity ani dostupnosti: importované nabídky zůstávají neověřené a změna se zařadí do fronty kontroly. Neznámá doména zůstane bez přiřazeného profilu; jednoznačný známý web se propojí přes `partner_key`. Aktivní prodávající ani režim prodeje se tím nemění.
+
+```json
+{
+  "format": "simple-store.product.v1",
+  "language": "cs",
+  "product": {
+    "name": "Ukázkový batoh",
+    "category_path": "batohy",
+    "price_czk": 1900,
+    "published": false,
+    "stock_status": "out_of_stock",
+    "options": [],
+    "variants": {
+      "enabled": true,
+      "items": [
+        {
+          "choices": {"Barva": "Navy", "Objem": "20 l"},
+          "quantity": 0,
+          "stock_status": "out_of_stock",
+          "price_czk": null,
+          "enabled": true,
+          "suppliers": [
+            {"label": "Partner A", "url": "https://shop.example.com/batoh?variant=navy-20"},
+            {"label": "Partner B", "url": "https://other.example.com/batoh?v_id=navy-20"}
+          ]
+        }
+      ]
+    }
+  }
+}
+```
+
+Fiktivní příklad nahraď skutečným modelem, cenou a URL. Stačí jediná skutečná kombinace; nevytvářej umělé vlastnosti pro výrobek bez voleb. Ten dál používá `product.suppliers`. Při variantním výrobku nevkládej kopie všech přesných URL zároveň do společných zdrojů.
+
+| Pole | Chování při importu |
+| --- | --- |
+| `variants.items` | Definice skutečných kombinací. Zachovej existující `id`, neměň jejich `choices`; nové kombinace bez ID. Vynechané kombinace se deaktivují. |
+| `variants.expected` | Otisk variant a skladu z čerstvého exportu. Nový produkt jej nepotřebuje. |
+| `variants.items[].suppliers` | Doplnění/úprava odkazů; vynechání i `[]` ostatní odkazy zachovává. Odebrání je v editoru. |
+| `link_key`, `version` | Exportované identity odkazu; povinné při změně existujícího odkazu. Nový odkaz je nemá. |
+| `partner_key` | Volitelný ověřitelný odkaz na profil známého partnera; musí odpovídat doméně. Bez něj se nová URL páruje jen při jednoznačné shodě. |
+| `product.suppliers` | Zpětně kompatibilní společné zdroje; dodaný seznam je nahrazuje celý. |
+| `product.suppliers_expected` | Otisk společných zdrojů z exportu. Zachovej jej, pokud měníš `product.suppliers`; při úpravě pouze textů vynech obě pole. Starší JSON bez otisku zůstává podporovaný. |
+
+Nezměněné odkazy se neduplikují ani znovu neoznačují za ověřené. Konflikt verze odkazu vrátí zpět celou položku včetně popisu, variant, skladu a ostatních odkazů. Úplný export neobsahuje importovatelné důkazy ověření ani automaticky nespouští HTTP požadavky. Rozhodnutí o prodejci a publikování nového konceptu provádí správce.
+
+ZIP používá stejné vložené odkazy a mapuje fotografie variant na lokální soubory. Kopie dostane nové identity odkazů, nulový sklad a zůstane konceptem. Výslovná obnova zálohy přebírá aktuální verze odkazů při přípravě; další souběžná změna se při provádění opět odmítne. Odstraněné variantní odkazy se automaticky neoživují; jejich obnovení vyžaduje vyřešení v editoru. Vícejazyčná dávka importuje společné nabídky pouze jednou a odmítne rozporné údaje překladů.
+
+### Pravidla pro AI a automatickou kontrolu
+
+- Pouze skutečné kombinace, žádný automatický součin všech barev a velikostí.
+- Přesný model, generace, materiál, odstín a systém velikostí; různé modely či odstíny neslučovat podle podobného názvu.
+- Ponechat významové parametry URL a ověřit vybranou barvu i velikost po otevření odkazu. Pokud konkrétní URL neexistuje, uvést nejistotu mimo JSON.
+- Fotografie přiřadit podle skutečné barvy; velikosti stejné barvy mohou sdílet obrázek. Pevné vlastnosti patří do specifications.
+- U nových konceptů nulový sklad, nedostupnost a převzatá cena varianty (`null`). Cizí „skladem“ nesimulovat jako vlastní inventuru. Dostupnost asistovaného nákupu později upraví ověřovací jádro.
+- Neimportovat `verification`, `result`, `checked_at` ani vymyšlené identifikátory. Nové zdroje nelze pokládat za ověřené jen proto, že je vytvořila AI.

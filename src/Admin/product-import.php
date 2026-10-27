@@ -100,9 +100,10 @@ try {
         if (preg_match('/^[a-f0-9]{32}$/D', $key) !== 1) throw new InvalidArgumentException('Neplatný klíč produktu.');
         $current = $repository->current($key, $language);
         if ($current === null) throw new InvalidArgumentException('Produkt neexistuje.');
-        $importJson = ProductImport::export($current, (new ProductSupplierLinkRepository($db))->forProduct($key));
-    } elseif (($_GET['example'] ?? '') === 'flextail') {
-        $importJson = (string) file_get_contents(__DIR__ . '/../Product/examples/flextail.json');
+        $importJson = ProductImport::export($current, (new ProductSupplierLinkRepository($db))->forProduct($key),
+            (new \SimpleStore\Product\ProductVariantSupplierRepository($db))->forProduct($key));
+    } elseif (in_array($_GET['example'] ?? '', ['flextail', 'variants'], true)) {
+        $importJson = (string) file_get_contents(__DIR__ . '/../Product/examples/' . $_GET['example'] . '.json');
     }
 } catch (InvalidArgumentException | RuntimeException $exception) {
     $importError = $exception->getMessage();

@@ -90,3 +90,31 @@ $check(!str_contains($html, '<script>alert(1)</script>') && str_contains($html, 
 $check(str_contains($html, 'name="ai_prompt"') && str_contains($html, 'value="product-prompt-save"') && str_contains($html, 'name="csrf"'), 'Editable prompt form must use authenticated POST.');
 $check(AdminActionPolicy::allows('product-prompt-save'), 'Prompt save is not allowed for administrators.');
 echo "Editable AI prompt view: safe text retention and authenticated form passed.\n";
+
+// Exact supplier links travel beside the variant they describe, without becoming stock evidence.
+$withVariants = $minimal;
+$withVariants['product']['variants'] = ['enabled'=>true, 'items'=>[
+    ['choices'=>['Barva'=>'Blue', 'Velikost'=>'S'], 'suppliers'=>[['label'=>'Example', 'url'=>'https://example.com/model?v_id=blue-s#blue']]],
+    ['choices'=>['Barva'=>'Blue', 'Velikost'=>'M'], 'suppliers'=>[]],
+]];
+$variantFields = ProductImport::fields($withVariants);
+$variantKey = $variantFields['variant_inventory']['items'][0]['id'];
+$check($variantFields['variant_supplier_links'][$variantKey][0]['url']==='https://example.com/model?v_id=blue-s#blue', 'Exact URL or variant association lost.');
+$check(!isset($variantFields['variant_inventory']['items'][0]['suppliers']), 'Private links leaked into inventory definition.');
+foreach ([null, ['not-a-list'=>'x'], [['label'=>'Bad', 'url'=>'javascript:bad']],
+    [['label'=>'Example', 'url'=>'https://example.com/model', 'verification'=>'verified']],
+    [['label'=>'Example', 'url'=>'https://example.com/model', 'version'=>1]],
+    [['label'=>'Example', 'url'=>'https://example.com/model', 'link_key'=>str_repeat('a',32)]],
+    [['label'=>'Example', 'url'=>'https://example.com/model', 'partner_key'=>null]],
+] as $bad) {
+    $input=$withVariants;
+    $input['product']['variants']['items'][0]['suppliers']=$bad;
+    $reject(fn()=>ProductImport::fields($input));
+}
+$prompt=\SimpleStore\Product\ProductImportPromptRepository::instructions('Vlastní český styl.', 'batohy — Batohy');
+$check(str_contains($prompt,'Vlastní český styl.') && str_contains($prompt,'batohy — Batohy') && str_contains($prompt,'suppliers'), 'Current contract, custom instructions or categories missing.');
+echo "Inline variant suppliers: exact URL preservation, strict validation and current AI instructions passed.\n";
+
+$sample = ProductImport::decode(file_get_contents(dirname(__DIR__) . '/src/Product/examples/variants.json'));
+$sampleFields=ProductImport::fields($sample);
+$check(count($sampleFields['variant_inventory']['items'])===2 && count($sampleFields['variant_supplier_links'])===2, 'AI variant example is not importable.');

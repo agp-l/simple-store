@@ -60,7 +60,13 @@ final class ProductImport
             'spec_name' => [], 'spec_value' => [], 'section_type' => [], 'section_heading' => [], 'section_body' => [],
         ] : ProductInlineEditor::fromRevision($current);
         $product = $data['product'];
-        self::keys($product, array_merge(self::TEXT, ['price_czk', 'published', 'gallery', 'options', 'specifications', 'sections', 'suppliers', 'variants']));
+        self::keys($product, array_merge(self::TEXT, ['price_czk', 'published', 'gallery', 'options', 'specifications', 'sections', 'suppliers', 'suppliers_expected', 'variants']));
+        if (array_key_exists('suppliers_expected', $product)) {
+            if (!array_key_exists('suppliers', $product) || !is_string($product['suppliers_expected']) || preg_match('/^[a-f0-9]{64}$/D', $product['suppliers_expected']) !== 1) {
+                throw new InvalidArgumentException('suppliers_expected musí být otisk z exportu společně se suppliers.');
+            }
+            $fields['supplier_links_expected'] = $product['suppliers_expected'];
+        }
         foreach (self::TEXT as $field) {
             if (!array_key_exists($field, $product)) continue;
             if (!is_string($product[$field])) throw new InvalidArgumentException($field . ' musí být text.');
@@ -126,7 +132,18 @@ final class ProductImport
             self::keys($variants, ['enabled', 'expected', 'items']);
             if (!is_bool($variants['enabled'] ?? null) || !is_array($variants['items'] ?? null)) throw new InvalidArgumentException('Varianty potřebují enabled a items.');
             self::list($variants['items'], 'variants.items');
+            $linksByPosition = [];
+            foreach ($variants['items'] as $position => &$item) {
+                if (is_array($item) && array_key_exists('suppliers', $item)) {
+                    $linksByPosition[$position] = ProductImportVariantLinks::normalize($item['suppliers']);
+                    unset($item['suppliers']);
+                }
+            }
+            unset($item);
             $variants['items'] = ProductVariants::normalize($variants['items']);
+            foreach ($linksByPosition as $position => $links) {
+                $fields['variant_supplier_links'][$variants['items'][$position]['id']] = $links;
+            }
             if (!isset($variants['expected']) && !$updating) $variants['expected'] = ProductVariantRepository::empty()['expected'];
             if (!is_string($variants['expected'] ?? null) || preg_match('/^[a-f0-9]{64}$/D', $variants['expected']) !== 1) throw new InvalidArgumentException('Pro aktualizaci variant použij expected z aktuálního exportu.');
             $fields['variant_inventory'] = $variants;
@@ -136,7 +153,7 @@ final class ProductImport
         return $fields;
     }
 
-    public static function export(array $row, ?array $suppliers = null): string
+    public static function export(array $row, ?array $suppliers = null, ?array $variantLinks = null): string
     {
         $fields = ProductInlineEditor::fromRevision($row);
         $product = [];
@@ -147,8 +164,18 @@ final class ProductImport
         if (($row['variant_inventory']['version'] ?? 0) > 0) {
             $product['variants'] = $row['variant_inventory'];
             unset($product['variants']['version']);
+            if ($variantLinks !== null) {
+                foreach ($product['variants']['items'] as &$variant) {
+                    $variant['suppliers'] = ProductImportVariantLinks::export(array_values(array_filter($variantLinks,
+                        static fn(array $link): bool => $link['variant_key'] === $variant['id'])));
+                }
+                unset($variant);
+            }
         }
-        if ($suppliers !== null) $product['suppliers'] = array_map(static fn (array $link): array => ['label' => $link['label'], 'url' => $link['url']], $suppliers);
+        if ($suppliers !== null) {
+            $product['suppliers'] = array_map(static fn (array $link): array => ['label' => $link['label'], 'url' => $link['url']], $suppliers);
+            $product['suppliers_expected'] = ProductSupplierLinkRepository::fingerprint($suppliers);
+        }
         return json_encode(['format' => self::FORMAT, 'product_key' => $row['product_key'],
             'revision' => (int) $row['revision_number'], 'language' => $row['language'], 'product' => $product],
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);

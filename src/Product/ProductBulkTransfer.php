@@ -53,9 +53,13 @@ final class ProductBulkTransfer
     {
         if (count($rows) > self::COUNT_LIMIT) throw new InvalidArgumentException('Rozděl export podle kategorií (nejvýše 10 000 položek v dávce).');
         $suppliers = (new ProductSupplierLinkRepository($this->db))->forOrderItems($rows);
+        $variantLinks = [];
+        foreach ((new ProductVariantSupplierRepository($this->db))->forProducts(array_values(array_unique(array_column($rows, 'product_key')))) as $link) {
+            $variantLinks[$link['product_key']][] = $link;
+        }
         $documents = [];
         foreach ($rows as $row) {
-            $document = json_decode(ProductImport::export($row, $suppliers[$row['product_key']] ?? []), true, 32, JSON_THROW_ON_ERROR);
+            $document = json_decode(ProductImport::export($row, $suppliers[$row['product_key']] ?? [], $variantLinks[$row['product_key']] ?? []), true, 32, JSON_THROW_ON_ERROR);
             if (strlen(json_encode($document, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR)) > ProductImport::LIMIT) throw new InvalidArgumentException('Produkt ' . $row['name'] . ' přesahuje limit 1 MiB pro zpětný import. Zkrať jeho obsah.');
             if (!($row['variant_inventory']['enabled'] ?? false)) $document['stock_quantity'] = (int) ($row['stock_quantity'] ?? 0);
             $documents[] = $document;
@@ -113,7 +117,7 @@ final class ProductBulkTransfer
             if ($restore || $includeStock) throw new InvalidArgumentException('JSON dodavatelů použij v běžném režimu aktualizace bez přepisu skladu.');
             return (new ProductSupplierTransfer($this->db, $this->products, $this->languages))->prepare($documents);
         }
-        $items = []; $seen = []; $stockValues = []; $variantValues = [];
+        $items = []; $seen = []; $stockValues = []; $variantValues = []; $supplierValues = [];
         foreach ($documents as $index => $document) {
             $item = ['folder' => 'Položka ' . ($index + 1), 'status' => 'pending', 'message' => '', 'new_key' => bin2hex(random_bytes(16))];
             try {
@@ -143,12 +147,28 @@ final class ProductBulkTransfer
                     }
                 }
                 $stockKey = $key ?? $item['new_key'];
+                if ($restore && array_key_exists('suppliers_expected', $data['product'])) {
+                    $data['product']['suppliers_expected'] = ProductSupplierLinkRepository::fingerprint(
+                        (new ProductSupplierLinkRepository($this->db))->forProduct($stockKey));
+                }
+                $supplierSignature = null;
+                if (array_key_exists('suppliers', $data['product'])) {
+                    $supplierSignature = json_encode([$data['product']['suppliers'], $data['product']['suppliers_expected'] ?? null], JSON_THROW_ON_ERROR);
+                    if (isset($supplierValues[$stockKey])) {
+                        if ($supplierValues[$stockKey] !== $supplierSignature) throw new InvalidArgumentException('Překlady jednoho produktu mají rozdílné společné odkazy.');
+                        unset($data['product']['suppliers'], $data['product']['suppliers_expected']);
+                    }
+                }
                 $variantState = (new ProductVariantRepository($this->db))->snapshot($stockKey);
                 if (isset($data['product']['variants'])) {
                     // Stock restoration is opt-in, including quantities nested in variants.
                     if (!is_array($data['product']['variants'])) throw new InvalidArgumentException('Neplatné varianty.');
                     $definition = &$data['product']['variants'];
                     if ($restore) $definition['expected'] = $variantState['expected'];
+                    if ($restore && is_array($definition['items'] ?? null)) {
+                        $definition['items'] = ProductImportVariantLinks::restore($definition['items'],
+                            (new ProductVariantSupplierRepository($this->db))->forProduct($stockKey));
+                    }
                     if (!$includeStock && is_array($definition['items'] ?? null)) {
                         $quantities = array_column($variantState['items'], 'quantity', 'id');
                         foreach ($definition['items'] as &$variant) {
@@ -188,6 +208,7 @@ final class ProductBulkTransfer
                     }
                 }
                 if (isset($fields['variant_inventory'])) $variantValues[$stockKey] = $signature;
+                if ($supplierSignature !== null) $supplierValues[$stockKey] = $supplierSignature;
             } catch (InvalidArgumentException $error) {
                 $item['status'] = 'error'; $item['message'] = $error->getMessage(); unset($item['data']);
             }

@@ -4,7 +4,9 @@
 .product-transfer-tabs a { display: inline-flex; align-items: center; gap: .5rem; }
 .product-prompt-panel .panel-form { width: 100%; min-width: 0; }
 .product-prompt-panel textarea { width: 100%; box-sizing: border-box; resize: vertical; line-height: 1.65; }
-.product-prompt-form textarea { min-height: 30rem; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .875rem; }
+.product-prompt-form textarea { min-height: 15rem; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .875rem; }
+.product-prompt-current { margin-block: 1rem 2rem; padding: 1rem; border: 1px solid #bfdbc9; border-radius: .65rem; background: #f3faf5; color: #173b26; }
+.product-prompt-current textarea { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; font-size: .875rem; background: #fff; color: #202b24; }
 .product-prompt-panel .panel-help { margin: 0; }
 .product-transfer-filters label,
 .product-transfer-actions label { display: grid; gap: .3rem; flex: 1 1 12rem; min-width: 0; }

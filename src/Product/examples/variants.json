@@ -1,0 +1,58 @@
+{
+  "format": "simple-store.product.v1",
+  "language": "cs",
+  "product": {
+    "name": "UKÁZKA – batoh se dvěma variantami",
+    "category_path": "batohy",
+    "price_czk": 1900,
+    "published": false,
+    "stock_status": "out_of_stock",
+    "summary": "Fiktivní ukázka formátu. Před importem nahraď všechny údaje skutečným produktem.",
+    "options": [],
+    "variants": {
+      "enabled": true,
+      "items": [
+        {
+          "choices": {
+            "Barva": "Navy",
+            "Objem": "20 l"
+          },
+          "quantity": 0,
+          "stock_status": "out_of_stock",
+          "price_czk": null,
+          "enabled": true,
+          "suppliers": [
+            {
+              "label": "Ukázkový partner A",
+              "url": "https://shop.example.com/batoh?variant=navy-20"
+            },
+            {
+              "label": "Ukázkový partner B",
+              "url": "https://other.example.com/batoh?v_id=navy-20"
+            }
+          ]
+        },
+        {
+          "choices": {
+            "Barva": "Black",
+            "Objem": "20 l"
+          },
+          "quantity": 0,
+          "stock_status": "out_of_stock",
+          "price_czk": null,
+          "enabled": true,
+          "suppliers": [
+            {
+              "label": "Ukázkový partner A",
+              "url": "https://shop.example.com/batoh?variant=black-20"
+            },
+            {
+              "label": "Ukázkový partner B",
+              "url": "https://other.example.com/batoh?v_id=black-20"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

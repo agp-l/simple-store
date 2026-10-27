@@ -27,6 +27,7 @@ final class ProductZipConflictPolicy
             : ($slug === '' ? null : $products->findCurrentBySlug($slug, $data['language']));
         if ($current !== null && $mode === 'skip') return ['skipped' => true, 'message' => 'Produkt již existuje: ' . $current['name'] . '. Podle zvolené volby byl přeskočen.'];
         if ($mode === 'copy' && ($current !== null || $key !== null)) {
+            $data = ProductImportVariantLinks::forCopy($data);
             unset($data['product_key'], $data['revision']);
             if (is_array($data['product']['variants'] ?? null)) {
                 $data['product']['variants']['expected'] = ProductVariantRepository::empty()['expected'];

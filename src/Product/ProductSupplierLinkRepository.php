@@ -19,11 +19,11 @@ final class ProductSupplierLinkRepository
             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', 'shop_product_supplier_links') === 1;
     }
 
-    public function forProduct(string $key): array
+    public function forProduct(string $key, bool $lock = false): array
     {
         self::validKey($key);
         return $this->db->query('SELECT id, label, url FROM shop_product_supplier_links
-            WHERE product_key=%s ORDER BY id ASC', $key);
+            WHERE product_key=%s ORDER BY id ASC' . ($lock ? ' FOR UPDATE' : ''), $key);
     }
 
     /** @return array<string, array<int, array<string, mixed>>> */
@@ -67,6 +67,12 @@ final class ProductSupplierLinkRepository
         return hash('sha256', json_encode([(int) $link['id'], $link['label'], $link['url']], JSON_THROW_ON_ERROR));
     }
 
+    public static function fingerprint(array $links): string
+    {
+        return hash('sha256', json_encode(array_map(static fn(array $link): array =>
+            [(int) ($link['id'] ?? 0), $link['label'], $link['url']], $links), JSON_THROW_ON_ERROR));
+    }
+
     /** Browser edits share the product lock with imports and refuse stale forms. */
     public function changeChecked(string $key, int $id, string $expected, bool $remove, string $label = '', string $url = ''): void
     {
@@ -102,10 +108,16 @@ final class ProductSupplierLinkRepository
     }
 
     /** Caller must hold the product revision transaction. Omitted suppliers are never replaced. */
-    public function replace(string $key, array $links): void
+    public function replace(string $key, array $links, ?string $expected = null): void
     {
         self::validKey($key);
         foreach ($links as $link) self::validate($link['label'], $link['url']);
+        $current = $this->forProduct($key, true);
+        if ($expected !== null && !hash_equals(self::fingerprint($current), $expected)) {
+            throw new InvalidArgumentException('Společné partnerské odkazy se mezitím změnily. Použij nový export.');
+        }
+        $values = static fn(array $link): array => ['label'=>$link['label'], 'url'=>$link['url']];
+        if (array_map($values, $current) === array_map($values, $links)) return;
         $this->db->query('DELETE FROM shop_product_supplier_links WHERE product_key=%s', $key);
         foreach ($links as $link) $this->save($key, 0, $link['label'], $link['url']);
     }

@@ -428,7 +428,8 @@ final class ProductRepository
             ]);
             $id = $this->db->insertId();
             $this->stock?->ensure($key);
-            if (isset($fields['variant_inventory'])) $variantRepository->apply($key, $fields['variant_inventory']);
+            if (isset($fields['variant_inventory'])) $variantRepository->apply($key, $fields['variant_inventory'],
+                array_keys($fields['variant_supplier_links'] ?? []));
             if ($inventory !== null) {
                 if ($variantRepository->snapshot($key, true)['enabled']) throw new InvalidArgumentException('Počet kusů tohoto produktu nastav v jednotlivých variantách.');
                 $quantity = $inventory['quantity'] ?? null;
@@ -442,7 +443,8 @@ final class ProductRepository
                 }
                 $this->db->query('UPDATE shop_product_inventory SET available_quantity=%i WHERE product_key=%s', $quantity, $key);
             }
-            if ($suppliers !== null) (new ProductSupplierLinkRepository($this->db))->replace($key, $suppliers);
+            if ($suppliers !== null) (new ProductSupplierLinkRepository($this->db))->replace($key, $suppliers, $fields['supplier_links_expected'] ?? null);
+            if (isset($fields['variant_supplier_links'])) ProductImportVariantLinks::apply($this->db, $key, $fields['variant_supplier_links']);
             if ($revision > $this->revisionLimit) {
                 $this->db->query(
                     'DELETE FROM shop_product_revisions WHERE product_key=%s AND language=%s
