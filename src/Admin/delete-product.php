@@ -16,7 +16,8 @@ try {
         $plan=$_SESSION['product_removal_previews'][$previewId];
         $removalPlan=$plan; $removalPreviewId=$previewId;
         $removalResult=$removal->delete($plan); unset($_SESSION['product_removal_previews'][$previewId]);
-        header('Location: '.\SimpleStore\Navigation\PanelUrl::pretty($adminUrl.'?'.http_build_query(['section'=>'product-removal','key'=>$plan['key']])),true,303); exit;
+        // Return to a fresh catalog GET; refreshing must never repeat the deletion POST.
+        header('Location: '.$basePath.$plan['language'].'?manage=1&deleted=1#produkty',true,303); exit;
     } elseif ($method==='POST' && ($_POST['phase']??'')==='cleanup') {
         $key=$_POST['key']??null;
         if (!is_string($key)) throw new InvalidArgumentException('Neplatný úklid produktu.');

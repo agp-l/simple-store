@@ -91,6 +91,12 @@ final class ProductRemoval
         // Never claim database deletion failed after it committed. Pending file work is durable.
         $cleanup=new ProductMediaCleanup($this->db,$this->root);
         try { return $cleanup->run($key); }
-        catch (\Throwable $e) { error_log('Product photo cleanup pending: '.$e->getMessage()); return $cleanup->state($key); }
+        catch (\Throwable $e) {
+            error_log('Product photo cleanup pending: '.$e->getMessage());
+            // Do not repeat a failing database read after the catalog transaction committed.
+            // The durable manifest remains authoritative for the later cleanup screen.
+            return ['product_key'=>$key,'name'=>$current['name'],
+                'counts'=>['deleted'=>0,'retained'=>0,'pending'=>count($current['files'])]];
+        }
     }
 }
