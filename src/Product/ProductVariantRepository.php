@@ -95,7 +95,7 @@ final class ProductVariantRepository
         catch (Throwable $error) { $this->db->rollback(); throw $error; }
     }
     /** Caller owns the transaction; take the same product inventory lock as checkout. */
-    public function apply(string $key, array $data): void
+    public function apply(string $key, array $data, array $explicitSupplierVariants = []): void
     {
         self::key($key);
         if (!is_bool($data['enabled'] ?? null) || !is_array($data['items'] ?? null) || !is_string($data['expected'] ?? null)) throw new InvalidArgumentException('Neplatný sklad variant.');
@@ -136,7 +136,7 @@ final class ProductVariantRepository
         $this->db->query('INSERT INTO shop_product_variant_settings (product_key,enabled,version) VALUES (%s,%i,1)
             ON DUPLICATE KEY UPDATE enabled=VALUES(enabled),version=version+1', $key, (int) $data['enabled']);
         // Existing manual/exact links survive; new rows inherit unverified defaults.
-        (new ProductVariantSupplierRepository($this->db))->inheritInTransaction($key);
+        (new ProductVariantSupplierRepository($this->db))->inheritInTransaction($key, $explicitSupplierVariants);
         if ($data['enabled'] !== $current['enabled']) {
             $this->db->query('UPDATE shop_product_inventory SET available_quantity=0 WHERE product_key=%s', $key);
         }

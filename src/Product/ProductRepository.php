@@ -428,7 +428,8 @@ final class ProductRepository
             ]);
             $id = $this->db->insertId();
             $this->stock?->ensure($key);
-            if (isset($fields['variant_inventory'])) $variantRepository->apply($key, $fields['variant_inventory']);
+            if (isset($fields['variant_inventory'])) $variantRepository->apply($key, $fields['variant_inventory'],
+                array_keys($fields['variant_supplier_links'] ?? []));
             if ($inventory !== null) {
                 if ($variantRepository->snapshot($key, true)['enabled']) throw new InvalidArgumentException('Počet kusů tohoto produktu nastav v jednotlivých variantách.');
                 $quantity = $inventory['quantity'] ?? null;

@@ -99,6 +99,13 @@ try {
     $sources->save($plainKey,(int)$before[0]['id'],'Changed','https://partner.test/new-plain');
     $reject(fn()=>$products->saveRevision(ProductImport::fields($plainDoc,$plainRow),$plainKey,$plainDoc['revision'],ProductImport::suppliers($plainDoc)));
     $check($sources->forProduct($plainKey)[0]['url']==='https://partner.test/new-plain' && $products->current($plainKey,'cs')===$plainRow, 'Stale full export resurrected old default-product source.');
+    // A complete export must not re-create generic inherited URLs beside exact variant offers.
+    $sources->save($key,0,'Legacy model','https://partner.test/generic-model');
+    $variantOffersBefore=$links->forProduct($key);
+    $complete=$transfer->export([$products->current($key,'cs')]);
+    $plan=$transfer->prepare($complete,false,false);
+    $transfer->import($plan[0]);
+    $check($links->forProduct($key)===$variantOffersBefore, 'Full import regenerated redundant inherited URLs.');
     echo "Product JSON offers: atomic create, multi-partner round trip, stale rollback, stock protection, copy, host validation and restore passed.\n";
 } finally {
     $db->disconnect();

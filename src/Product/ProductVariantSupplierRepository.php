@@ -53,7 +53,7 @@ final class ProductVariantSupplierRepository
         return $this->transaction($key, fn(): int => $this->inheritInTransaction($key));
     }
     /** The caller holds the product revision lock. Only missing source/variant pairs are added. */
-    public function inheritInTransaction(string $key): int
+    public function inheritInTransaction(string $key, array $explicitVariants = []): int
     {
         if (!$this->installed()) return 0;
         $links = $this->db->query('SELECT id,label,url FROM shop_product_supplier_links WHERE product_key=%s ORDER BY id FOR UPDATE', $key);
@@ -66,6 +66,7 @@ final class ProductVariantSupplierRepository
         }
         $added = 0;
         foreach ($variants as $variant) foreach ($links as $link) {
+            if (in_array($variant, $explicitVariants, true)) continue;
             $hash = hash('sha256', $link['url']); $pair = $variant . ':' . $hash;
             if (isset($seen[$pair])) continue;
             $matches = array_values(array_filter($partners, static fn(array $p): bool => ProductPartnerAssignment::host($p['website_url'] ?? '') === ProductPartnerAssignment::host($link['url'])));
