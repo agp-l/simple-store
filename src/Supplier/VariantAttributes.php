@@ -28,6 +28,7 @@ final class VariantAttributes
         }
         if($dimension==='size'){
             $value=trim(preg_replace('~\s*/\s*~',' ',preg_replace('/\s*eu$/','',$value)));
+            if(preg_match('/^\d+,\d+$/D',$value))$value=str_replace(',','.',$value);
             $value=preg_replace('/\s*[x×]\s*/u','x',$value);
             $value=preg_replace('/(?<=\d)\s+(?=cm$|ml$|l$)/','',$value);
             return ['small'=>'s','medium'=>'m','large'=>'l'][$value]??$value;
@@ -51,7 +52,7 @@ final class VariantAttributes
             }
             $dimension=match($key){
                 'barva','barva (vzor)','color','colour'=>'color',
-                'velikost','velikost produktu','velikost karimatky','výška postavy','size','objem','rozměr','velikost a bederní pás'=>'size',
+                'velikost','velikost produktu','velikost karimatky','velikost bot (eu)','výška postavy','size','objem','rozměr','velikost a bederní pás'=>'size',
                 'kapacita','kapacita baterie','capacity'=>'capacity','zip','strana zipu','pozice zipu'=>'zip',
                 'verze','version'=>'version','příchuť','flavor'=>'flavor','varianta','variant'=>'variant',default=>null};
             if($dimension===null||isset($out[$dimension]))return null;
