@@ -64,6 +64,9 @@ try {
                 $importJson = $uploadedJson;
             }
         }
+        // Browsers submit textarea line endings as CRLF, even when the uploaded JSON used LF.
+        // Sign the same normalized text on preview and save; actual content edits still invalidate it.
+        $importJson = str_replace(["\r\n", "\r"], "\n", $importJson);
         $data = ContentImport::decode($importJson);
         $current = $importMode === 'update' && isset($data['document_key'])
             ? $content->currentDocument($data['document_key'], $data['language']) : null;

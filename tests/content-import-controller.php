@@ -33,6 +33,11 @@ $json = json_encode(['format' => ContentImport::FORMAT, 'type' => 'page', 'langu
 $post = ['action' => 'content-import-preview', 'mode' => 'new', 'json' => $json];
 [$preview, $error, $retained, $token] = $run($post);
 $check($error === '' && $preview['slug'] === 'importovany-dokument' && $retained === $json && $token !== '', 'Preview did not retain the validated input.');
+$pretty = json_encode(json_decode($json, true), JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+[, $lfError, , $lfToken] = $run(array_replace($post, ['json'=>$pretty]));
+[, $crlfError, $normalized, $crlfToken] = $run(array_replace($post, ['json'=>str_replace("\n", "\r\n", $pretty)]));
+$check($lfError === '' && $crlfError === '' && $lfToken === $crlfToken && $normalized === $pretty,
+    'A file preview must survive browser textarea line-ending conversion without a second preview.');
 foreach ([['action' => 'content-import-save'], ['action' => 'content-import-save', 'preview_token' => 'wrong'],
     ['action' => 'content-import-save', 'preview_token' => $token, 'json' => str_replace('Text', 'Changed', $json)],
     ['json' => '{'], ['mode' => []]] as $override) {
