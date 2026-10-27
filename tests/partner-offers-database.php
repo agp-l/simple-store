@@ -71,6 +71,21 @@ try {
     $counts=array_count_values(array_column($requests,0));foreach($counts as$count)$check($count===1,'Shared URL fetched more than once in 24 hours.');
     $expired=(new PartnerOfferCatalog($db,$now+86401))->report();
     foreach($expired['summary']['partners']as$row)$check($row['available_variants']===0,'Expired stock counted as available.');
+    // Old parser caches must be refreshed by the alternative queue as well, with
+    // the same 15-minute floor and shared one-request-per-step reservation.
+    $legacyUrl='https://gramino.cz/p/'.$simple;
+    $legacyKey=SimpleStore\Supplier\HttpClient::cacheKey('product',$legacyUrl);
+    $legacy=json_decode($db->queryFirstField('SELECT data_json FROM shop_supplier_price_cache WHERE url_hash=%s',$legacyKey),true);
+    $legacy['document']['parser_version']=0; $legacy['fetched_at']=$now; $legacy['observed_at']=$now;
+    $db->update('shop_supplier_price_cache',['data_json'=>json_encode($legacy),'expires_at'=>$now+86400],'url_hash=%s',$legacyKey);
+    $catalog->request($simple); $requestStart=count($requests); $refreshStart=$now;
+    for($i=0;$i<20;$i++){ $before=count($requests);$manager->tick();$check(count($requests)-$before<=1,'Alternative maintenance exceeded request budget.');$now+=25; }
+    $check(count($requests)===$requestStart,'Alternative old-parser refresh ignored the 15-minute floor.');
+    for($i=0;$i<30;$i++){ $before=count($requests);$manager->tick();$check(count($requests)-$before<=1,'Alternative maintenance exceeded request budget.');$now+=25; }
+    $check(count($requests)===$requestStart+1,'Alternative old-parser refresh was missing or repeated.');
+    $check($requests[$requestStart][1]>=$refreshStart+900,'Old-parser source fetched too soon.');
+    $fresh=json_decode($db->queryFirstField('SELECT data_json FROM shop_supplier_price_cache WHERE url_hash=%s',$legacyKey),true);
+    $check($fresh['document']['parser_version']===SimpleStore\Supplier\PriceParser::VERSION,'Alternative parser cache remained obsolete.');
     $old=$common->forProduct($simple)[0];$common->remove($simple,(int)$old['id']);
     $after=(new PartnerOfferCatalog($db,$now))->report();
     $p=array_values(array_filter($after['products'],static fn(array $p):bool=>$p['product_key']===$simple))[0];

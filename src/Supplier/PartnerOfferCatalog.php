@@ -63,7 +63,7 @@ final class PartnerOfferCatalog
     {
         $variants=[];
         foreach (VariantOfferPlan::activeVariants($snapshot) as $variant) $variants[$variant['variant_key']]=$variant['choices_json'];
-        return hash('sha256',self::json([$snapshot['products'][0]['name'],$variants,self::candidates($snapshot)]));
+        return hash('sha256',self::json([PriceParser::VERSION,$snapshot['products'][0]['name'],$variants,self::candidates($snapshot)]));
     }
     public static function offerKey(string $key,string $variant,string $partner,string $url): string
     {

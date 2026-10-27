@@ -434,7 +434,9 @@ final class PriceManager
             if (!$policy['allowed']||!$request['allowed']) return ['error'=>'robots.txt nepovoluje čtení této adresy.'];
             $delay=max($policy['delay'],$request['delay']);
             if (!empty($robots['fetched'])) return ['wait'=>self::delay('fast',$delay)];
-            $result=(($candidate['kind']??'')==='variant'?$this->reusableVariantDocument($snapshot,$candidate,$target):null)??$this->cached($target,'product','fast',$delay);
+            $cacheKey=HttpClient::cacheKey('product',$target);
+            $refreshAfter=(int)($state['parser_refresh_after'][$cacheKey]??0);
+            $result=(($candidate['kind']??'')==='variant'?$this->reusableVariantDocument($snapshot,$candidate,$target,$refreshAfter):null)??$this->cached($target,'product','fast',$delay,$refreshAfter);
             if (isset($result['wait'])||isset($result['error'])) return $result;
             if (isset($result['redirect'])) {
                 try {
@@ -443,6 +445,13 @@ final class PriceManager
                 } catch (InvalidArgumentException $e) { return ['error'=>$e->getMessage()]; }
                 if (!empty($result['fetched'])) return ['wait'=>1,'state'=>['redirect'=>$target,'hops'=>$hops]];
                 continue;
+            }
+            if (!empty($result['document']) && (int)($result['document']['parser_version']??0)<PriceParser::VERSION && $refreshAfter===0) {
+                // The alternative queue uses the same bounded maintenance refresh as
+                // primary prices: never preserve an old parser failure for another day.
+                $due=max($this->now(),(int)($result['fetched_at']??$result['observed_at']??$this->now())+900);
+                $refresh=$state['parser_refresh_after']??[]; $refresh[$cacheKey]=$due;
+                return ['wait'=>max(1,$due-$this->now()),'state'=>['redirect'=>$target,'hops'=>$hops,'parser_refresh_after'=>$refresh]];
             }
             return $result+['source_url'=>$result['document_source']??$target];
         }
