@@ -11,7 +11,7 @@ final class SupplierCatalogAliases
         if(in_array($host,['pod7kilo.cz','hudy.cz','4camping.cz'],true)){
             // A category prefix is not part of the manufacturer's model name. Do not remove
             // brands, years, gender, capacities or any other suffix/word from the model.
-            $prefix='/^(?:batoh(?:\/(?:taška|kabelka))?|(?:sbalitelný|kabinový|cestovatelský) batoh|spací pytel|bivakovací vak|pončo \/ přístřešek|(?:péřový )?spacák|ponožky|boty|přikrývka|(?:nafukovací |samonafukovací |pěnová )?karimatka|polštář|(?:ultralehký )?stan|čelovka|pumpa|hrnec|filtr|lžíce|příbor|ručník|vak|lahev|trekové hole)\s+/ui';
+            $prefix='/^(?:batoh(?:\/(?:taška|kabelka))?|(?:sbalitelný|skládací|kabinový|cestovatelský|turistický) batoh|spací pytel|bivakovací vak|pončo \/ přístřešek|(?:péřový )?spacák|ponožky|boty|přikrývka|(?:nafukovací |samonafukovací |pěnová )?karimatka|(?:cestovní )?polštář|(?:ultralehký )?stan|čelovka|pumpa|hrnec|filtr|lžíce|příbor|ručník|vak|lahev|trekové hole|spork|zápalky|sada příborů|skládací miska|pánev|pončo|spojovací popruh|cestovní pouzdro|nepromokavý (?:vak|obal)|tarp)\s+/ui';
             $local=preg_replace($prefix,'',$name);$remote=preg_replace($prefix,'',$group);
             if(($local!==$name||$remote!==$group)&&PriceParser::sameProductName(['product_name'=>$remote],$local))return $group;
         }

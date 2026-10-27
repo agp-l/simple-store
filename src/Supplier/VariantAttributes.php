@@ -52,7 +52,7 @@ final class VariantAttributes
             }
             $dimension=match($key){
                 'barva','barva (vzor)','color','colour'=>'color',
-                'velikost','velikost produktu','velikost karimatky','velikost bot (eu)','výška postavy','size','objem','rozměr','velikost a bederní pás'=>'size',
+                'velikost','velikost produktu','velikost karimatky','velikost bot (eu)','velikost ponožek','velikost zad batohu','velikost ručníku','výška postavy','size','objem','rozměr','velikost a bederní pás'=>'size',
                 'kapacita','kapacita baterie','capacity'=>'capacity','zip','strana zipu','pozice zipu'=>'zip',
                 'verze','version'=>'version','příchuť','flavor'=>'flavor','varianta','variant'=>'variant',default=>null};
             if($dimension===null||isset($out[$dimension]))return null;

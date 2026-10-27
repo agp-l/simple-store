@@ -7,7 +7,7 @@ use InvalidArgumentException;
 /** Reads explicit offers, never guesses a price from arbitrary visible numbers. */
 final class PriceParser
 {
-    public const VERSION = 9;
+    public const VERSION = 10;
     /** Gramino advertises this public mirror in /.well-known/ai-catalog.json and /openapi.json. */
     public static function requestUrl(string $url):string
     {

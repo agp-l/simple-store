@@ -51,6 +51,17 @@ foreach([
 }
 $check(Attributes::normalize(['Barva a velikost'=>'black / M','Velikost'=>'L'])===null,'Conflicting duplicate axis ignored.');
 $check(Attributes::normalize(['Material'=>'Ultra 200X'])===null,'Unknown local dimension ignored.');
+// Partner-specific axis captions must not discard the whole structured SKU.
+$check(Attributes::normalize(['Velikost zad batohu'=>'XS/S','Barva'=>'Modrá'])===['size'=>'xs s','color'=>'blue'],'Backpack torso size was not parsed.');
+$check(Attributes::normalize(['Velikost ponožek'=>'35-37,5','Barva'=>'Modrá'])===['size'=>'35-37,5','color'=>'blue'],'Sock range or colour evidence was lost.');
+$check(Attributes::normalize(['Velikost ručníku'=>'S'])===['size'=>'s'],'Towel size caption was not parsed.');
+$check(!Attributes::matches(['size'=>'s'],Attributes::normalize(['Velikost ponožek'=>'35-37,5'])),'Numeric sock range was guessed to be a letter size.');
+$check(Attributes::normalize(['Velikost'=>'M','Velikost zad batohu'=>'L'])===null,'Duplicate partner size axes were accepted.');
+foreach(['Zápalky'=>'Lifesystems Stormproof Matches','Cestovní polštář'=>'Sea to Summit Foam Core Pillow','Turistický batoh'=>'Osprey Exos Pro 55']as$prefix=>$model){
+ $remote=$prefix.' '.$model;$source='https://www.4camping.cz/p/example/';
+ $check(SimpleStore\Supplier\SupplierCatalogAliases::name($model,$remote,$source)===$remote,'Partner category prefix prevented exact model identity.');
+ $check(SimpleStore\Supplier\SupplierCatalogAliases::name($model.' 2026',$remote,$source)===$model.' 2026','Category cleanup discarded model year.');
+}
 $check(Attributes::value('color','Hi-vis žlutá')==='hi vis yellow','Existing high-visibility colour normalization regressed.');
 $check(Attributes::value('color','Black Sand (tmavě green)')==='black sand (dark green)','Partly normalized legacy colour not repaired.');
 $check(Attributes::value('color','Modrá (blue)')==='blue','Equivalent translated colour repeated.');
