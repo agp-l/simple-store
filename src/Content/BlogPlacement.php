@@ -56,7 +56,9 @@ final class BlogPlacement
         $this->db->query(self::SCHEMA);
         $this->db->startTransaction();
         try {
-            $this->db->query('INSERT IGNORE INTO shop_blog_placements (language,placement_json) VALUES (%s,%s)',
+            // A no-op upsert takes the exclusive row lock immediately, including the first write.
+            $this->db->query('INSERT INTO shop_blog_placements (language,placement_json) VALUES (%s,%s)
+                ON DUPLICATE KEY UPDATE language=VALUES(language)',
                 $language, json_encode(self::EMPTY, JSON_THROW_ON_ERROR));
             $state = self::validate(json_decode($this->db->queryFirstField(
                 'SELECT placement_json FROM shop_blog_placements WHERE language=%s FOR UPDATE', $language), true, 8, JSON_THROW_ON_ERROR));
