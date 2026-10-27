@@ -11,7 +11,7 @@ $check=static function(bool $ok,string $why):void{if(!$ok)throw new RuntimeExcep
 $reject=static function(callable $run):void{try{$run();}catch(InvalidArgumentException $e){return;}throw new RuntimeException('Unsafe import accepted.');};
 try {
     (new SchemaUpdater($db,dirname(__DIR__).'/database/schema.sql'))->apply();
-    $products=new ProductRepository($db,['cs']);$partners=new PurchasePartnerRepository($db);$common=new ProductSupplierLinkRepository($db);$variantLinks=new ProductVariantSupplierRepository($db);
+    $products=new ProductRepository($db,['cs'],new \SimpleStore\Category\CategoryRepository($db),50,new \SimpleStore\Product\ProductStockRepository($db));$partners=new PurchasePartnerRepository($db);$common=new ProductSupplierLinkRepository($db);$variantLinks=new ProductVariantSupplierRepository($db);
     foreach (['Gramino'=>'https://gramino.cz','Pod 7 kilo'=>'https://www.pod7kilo.cz'] as $name=>$url) $partners->save(0,['name'=>$name,'website_url'=>$url]);
     $make=static function(string $slug,bool $variant)use($products):string {
         $data=['format'=>ProductImport::FORMAT,'language'=>'cs','product'=>['name'=>'Patizon D590','slug'=>$slug,'category_path'=>'batohy','price_czk'=>3000]];
