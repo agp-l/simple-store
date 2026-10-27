@@ -29,4 +29,14 @@ První tlačítko zařazení zapne denní kontrolu všech nabídek; další běh
 
 Produkty se počítají jednou bez ohledu na počet velikostí a jazyků. Samostatně se vykazují aktivní varianty, čerstvě ověřené produkty, kompletní pokrytí všech variant a produkty s alespoň jednou dostupnou variantou. Poslední kus se nepovažuje za nabízený. Rozporné nabídky stejného partnera a varianty se nepočítají mezi použitelné. Po 24 hodinách ověření vyprší. Překryv podle odkazů neznamená záruku splnitelnosti konkrétního košíku.
 
-Tento katalog je podklad pro budoucí výběr dodavatele na úrovni objednávky; sám ještě neoptimalizuje košík ani nemění přijaté objednávky.
+## Výběr prodávajících v košíku
+
+`CartPartnerPlanner` při načtení košíku i dalších kroků sestaví nabídky pouze pro produkty v košíku. `PartnerAllocation` hledá nejmenší počet prodávajících pro celý asistovaný nákup; při shodném počtu upřednostní nižší nákupní cenu, pak původního partnera. Stejná varianta ve více jazycích sdílí limit kusů. Vlastní prodej se do výběru nezapojuje.
+
+Alternativa vyžaduje aktuální zdroj a přesnou variantu, shodný otisk katalogu, ověření mladší než 24 hodin, potvrzený úplný profil prodávajícího a dostatek kusů. Poslední kus ani nejasná dostupnost nestačí; obecné „skladem“ umožní nejvýše tři kusy jedné varianty. Rozporné čerstvé nabídky partnera se vyřadí. Nákupní cena alternativy nesmí překročit dosavadní nákupní cenu položky. Zákaznická cena zůstává stejná, rozpis zboží a služby odpovídá vybranému partnerovi. Základní publikovaná nabídka vybraného partnera zůstává zálohou, dokud nezávislé ověřování nemá novější rozporný výsledek; nadále podléhá běžné kontrole produktové dostupnosti a množství.
+
+Košík nestahuje partnerské weby a nepřepisuje primárního partnera v katalogu. Nabídky obnovuje společný worker. Nejvýše 20 000 stavů prohledávání chrání odezvu před neobvykle složitým katalogem; po vyčerpání se použije nejlepší nalezené platné řešení, ne slib matematického minima. U současného malého počtu partnerů se prohledají všechny relevantní kombinace.
+
+Přehled „Kdo vám zboží dodá“ v košíku i před odesláním ukazuje skutečné skupiny položek. Podepsaný souhrn zahrnuje vybraného prodávajícího, cenu i nabídku. Před vytvořením objednávky se znovu ověřují aktuální zamčená data, včetně transakcí s dříve otevřeným databázovým snímkem. Změna podmínek vyžaduje nový souhrn. Objednávka uchovává neměnnou kopii prodávajícího, nákupní ceny, poplatku, zdrojové a vyhodnocené URL i času pozorování (`supplier_selection`). Administrace objednávky nabízí odkaz na tuto konkrétní nabídku. Opakovaný požadavek na již uloženou objednávku jejího partnera nezmění.
+
+Nejde zatím o výpočet přesné částky poštovného jednotlivých partnerů: nemáme jejich sazby, limity dopravy zdarma ani pravidla rozdělení zásilek. Minimalizuje se počet prodávajících při zachování nákupního rozpočtu, nikoli garantovaný počet balíků nebo úspora v Kč. Zákazníkovi se partnerské poštovné automaticky nepřičítá; platí stávající doprava obchodu.

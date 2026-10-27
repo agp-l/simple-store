@@ -70,20 +70,24 @@ final class PartnerOfferCatalog
         return hash('sha256',self::json([$key,$variant,$partner,$url]));
     }
     /** All current shared identities in a fixed number of queries, without checkout/customer data. */
-    public function snapshots(): array
+    public function snapshots(?array $keys = null, bool $lock = false): array
     {
+        if ($keys === []) return [];
+        $locking = $lock ? ' FOR UPDATE' : '';
+        $filter = $keys === null ? '' : ' AND product_key IN %ls';
+        $args = $keys === null ? [] : [$keys];
         $snapshots=[];
-        foreach ($this->db->query('SELECT product_key,name,language,slug,image_path FROM shop_product_revisions p WHERE active_product_key IS NOT NULL AND NOT EXISTS
+        foreach ($this->db->query('SELECT product_key,name,language,slug,image_path FROM shop_product_revisions p WHERE active_product_key IS NOT NULL' . ($keys === null ? '' : ' AND p.product_key IN %ls') . ' AND NOT EXISTS
             (SELECT 1 FROM shop_product_redirects r WHERE r.language=p.language AND r.source_slug=p.slug AND r.target_key<>p.product_key)
-            ORDER BY (language=%s) DESC,language','cs') as $product) {
+            ORDER BY (language=%s) DESC,language'.$locking, ...array_merge($args,['cs'])) as $product) {
             $snapshots[$product['product_key']]??=['products'=>[$product],'sale'=>null,'variants'=>[],'variantLinks'=>[],'variantSettings'=>null,'links'=>[]];
         }
-        $partners=$this->db->query('SELECT id,partner_key,name,website_url,priority FROM shop_purchase_partners ORDER BY priority,id');
-        foreach ($this->db->query('SELECT product_key,mode,partner_id FROM shop_product_sales') as $row) if (isset($snapshots[$row['product_key']])) $snapshots[$row['product_key']]['sale']=$row;
-        foreach ($this->db->query('SELECT product_key,enabled FROM shop_product_variant_settings') as $row) if (isset($snapshots[$row['product_key']])) $snapshots[$row['product_key']]['variantSettings']=$row;
-        foreach ($this->db->query('SELECT product_key,variant_key,choices_json,enabled FROM shop_product_variants ORDER BY variant_key') as $row) if (isset($snapshots[$row['product_key']])) $snapshots[$row['product_key']]['variants'][]=$row;
-        foreach ($this->db->query('SELECT product_key,id,label,url FROM shop_product_supplier_links ORDER BY id') as $row) if (isset($snapshots[$row['product_key']])) $snapshots[$row['product_key']]['links'][]=$row;
-        foreach ((new ProductVariantSupplierRepository($this->db))->forProducts(array_keys($snapshots)) as $row) $snapshots[$row['product_key']]['variantLinks'][]=$row;
+        $partners=$this->db->query('SELECT id,partner_key,name,website_url,priority FROM shop_purchase_partners ORDER BY priority,id'.$locking);
+        foreach ($this->db->query('SELECT product_key,mode,partner_id FROM shop_product_sales WHERE 1=1'.$filter.$locking,...$args) as $row) if (isset($snapshots[$row['product_key']])) $snapshots[$row['product_key']]['sale']=$row;
+        foreach ($this->db->query('SELECT product_key,enabled FROM shop_product_variant_settings WHERE 1=1'.$filter.$locking,...$args) as $row) if (isset($snapshots[$row['product_key']])) $snapshots[$row['product_key']]['variantSettings']=$row;
+        foreach ($this->db->query('SELECT product_key,variant_key,choices_json,enabled FROM shop_product_variants WHERE 1=1'.$filter.' ORDER BY variant_key'.$locking,...$args) as $row) if (isset($snapshots[$row['product_key']])) $snapshots[$row['product_key']]['variants'][]=$row;
+        foreach ($this->db->query('SELECT product_key,id,label,url FROM shop_product_supplier_links WHERE 1=1'.$filter.' ORDER BY id'.$locking,...$args) as $row) if (isset($snapshots[$row['product_key']])) $snapshots[$row['product_key']]['links'][]=$row;
+        foreach ((new ProductVariantSupplierRepository($this->db))->forProducts(array_keys($snapshots),$lock) as $row) $snapshots[$row['product_key']]['variantLinks'][]=$row;
         foreach ($snapshots as &$snapshot) $snapshot['partners']=$partners;
         unset($snapshot);
         return $snapshots;
@@ -191,9 +195,10 @@ final class PartnerOfferCatalog
         $next=$this->db->queryFirstField('SELECT MIN(next_at) FROM shop_supplier_offer_scans WHERE status=%s','queued');
         return $next===null?null:(int)$next;
     }
-    public function report(): array
+    public function report(?array $keys = null, bool $lock = false): array
     {
-        $snapshots=$this->snapshots(); $offers=$this->installed()?array_column($this->db->query('SELECT * FROM shop_supplier_offers'),null,'offer_key'):[];
+        $locking = $lock ? ' FOR UPDATE' : '';
+        $snapshots=$this->snapshots($keys,$lock); $offers=$this->installed() && $snapshots!==[] ? array_column($this->db->query('SELECT * FROM shop_supplier_offers WHERE product_key IN %ls'.($lock?' FOR UPDATE':''),array_keys($snapshots)),null,'offer_key'):[];
         $products=[];
         foreach ($snapshots as $key=>$snapshot) {
             $fingerprint=self::fingerprint($snapshot);
@@ -214,7 +219,7 @@ final class PartnerOfferCatalog
             }
             $products[]=$product;
         }
-        $partners=$this->db->query('SELECT partner_key,name,website_url FROM shop_purchase_partners ORDER BY priority,id');
+        $partners=$this->db->query('SELECT partner_key,name,website_url FROM shop_purchase_partners ORDER BY priority,id'.$locking);
         return ['format'=>'simple-store.partner-offers.v1','exported_at'=>gmdate('c',$this->now),'valid_for_seconds'=>86400,
             'summary'=>PartnerCoverage::summarize($products,$partners),'products'=>$products,
             'queued_products'=>$this->installed()?(int)$this->db->queryFirstField('SELECT COUNT(*) FROM shop_supplier_offer_scans WHERE status=%s','queued'):0];

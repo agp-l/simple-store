@@ -22,7 +22,8 @@ final class OrderRepository
         private MeekroDB $db,
         private ?BankTransferPayment $bank = null,
         private int $dueDays = 7,
-        private ?ProductStockRepository $stock = null
+        private ?ProductStockRepository $stock = null,
+        private ?CartPartnerPlanner $partners = null
     ) {
         if ($dueDays < 1 || $dueDays > 60) {
             throw new InvalidArgumentException('Splatnost platby musí být mezi 1 a 60 dny.');
@@ -169,6 +170,7 @@ final class OrderRepository
                 $snapshot += AssistedPurchase::snapshot(['mode' => 'assisted',
                     'supplier_price_czk' => $item['supplier_price_czk'] ?? null,
                     'seller' => $item['seller'] ?? null, 'delivery_note' => $item['delivery_note'] ?? ''], $price);
+                if (isset($item['supplier_selection'])) $snapshot['supplier_selection'] = $item['supplier_selection'];
                 if (($item['assistance_fee_czk'] ?? null) !== $snapshot['assistance_fee_czk']) {
                     throw new InvalidArgumentException('Rozpis ceny asistovaného nákupu nesouhlasí.');
                 }
@@ -202,6 +204,7 @@ final class OrderRepository
                 $this->db->commit();
                 return self::hydrate($existing);
             }
+            $this->partners?->assertCurrent($snapshots);
             $now = new DateTimeImmutable('now', new DateTimeZone('UTC'));
             // The payment reference stays stable and immediately visible in new order numbers.
             // Existing orders keep their original numbers and payment references.

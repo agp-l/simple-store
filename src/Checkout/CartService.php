@@ -13,7 +13,7 @@ use SimpleStore\Product\ProductSalesRepository;
 final class CartService
 {
     public function __construct(private ProductRepository $products, private array $languages = ['cs'],
-        private ?ProductSalesRepository $sales = null)
+        private ?ProductSalesRepository $sales = null, private ?CartPartnerPlanner $partners = null)
     {
     }
 
@@ -129,6 +129,10 @@ final class CartService
                 'stock_status' => $product['availability_status'] ?? $product['stock_status'] ?? '',
                 'issue' => $issue,
             ];
+        }
+        if ($this->partners !== null) {
+            $items = $this->partners->plan($items);
+            foreach ($items as $item) if (($item['issue'] ?? null) !== null && !in_array($item['issue'], $issues, true)) $issues[] = $item['issue'];
         }
         if ($issues === [] && $subtotal > 9999999) {
             $issues[] = 'Celková částka přesahuje limit objednávky. Uprav počet kusů v košíku.';

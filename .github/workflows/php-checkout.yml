@@ -71,6 +71,7 @@ jobs:
           python3 tests/supplier-worker.py
       - name: Test checkout and shared views
         run: |
+          php tests/partner-allocation.php
           php tests/assisted-purchase.php
           php tests/checkout-cart.php
           php tests/checkout-render.php
@@ -208,6 +209,7 @@ jobs:
           php tests/product-import-database.php
           php tests/product-import-offers-database.php
           php tests/partner-offers-database.php
+          php tests/cart-partners-database.php
           php tests/content-import-database.php
           php tests/configuration-backup-database.php
           php tests/assisted-purchase-database.php
@@ -275,6 +277,7 @@ jobs:
           php tests/product-import-database.php
           php tests/product-import-offers-database.php
           php tests/partner-offers-database.php
+          php tests/cart-partners-database.php
           php tests/content-import-database.php
           php tests/configuration-backup-database.php
           php tests/assisted-purchase-database.php

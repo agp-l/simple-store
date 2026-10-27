@@ -158,7 +158,8 @@ try {
         $packeta = new PacketaPickupPoint((string) ($checkoutConfig['packeta']['api_key'] ?? ''));
         $ppl = new PplPickupPoint((string) ($checkoutConfig['ppl']['widget_key'] ?? ''));
         $dueDays = $bankSettings['payment_due_days'] ?? 7;
-        $orders = new OrderRepository($db, $bank, $dueDays, $stock);
+        $cartPartners = new \SimpleStore\Checkout\CartPartnerPlanner($db);
+        $orders = new OrderRepository($db, $bank, $dueDays, $stock, $cartPartners);
         $comgate = null;
         $comgateSettings = $checkoutConfig['comgate'] ?? [];
         if (is_array($comgateSettings) &&
@@ -206,7 +207,7 @@ try {
         $mailConfiguration = (new MailSettingsRepository($db))->load((string) ($taxSettings['mail_from'] ?? ''));
         $shared['publicBaseUrl'] = (string) ($mailConfiguration['settings']['public_base_url'] ?? '');
         $controller = new CheckoutController($url, $renderer, $shared, $cart,
-            new CartService(new ProductRepository($db, $site['languages'], null, 50, $productStock), $site['languages'], $productSales),
+            new CartService(new ProductRepository($db, $site['languages'], null, 50, $productStock), $site['languages'], $productSales, $cartPartners),
             $shipping, $orders, $bank, $customerId, (string) ($checkoutConfig['terms_url'] ?? ''),
             $customerProfile, $customerAddresses, $packeta, $ppl, null, null,
             new OrderMailQueue($db), (string) ($taxSettings['mail_from'] ?? ''),
