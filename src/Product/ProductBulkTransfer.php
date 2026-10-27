@@ -92,9 +92,9 @@ final class ProductBulkTransfer
         if (preg_match('/^```(?:json)?\s*\n(.*)\n```$/sD', $json, $match)) $json = $match[1];
         try { $data = json_decode($json, false, 40, JSON_THROW_ON_ERROR); }
         catch (\JsonException $error) { throw new InvalidArgumentException('Neplatný JSON: ' . $error->getMessage()); }
-        if (!$data instanceof \stdClass || !in_array($data->format ?? null, [self::FORMAT, ProductSupplierTransfer::FORMAT, ProductVariantSupplierTransfer::FORMAT, ProductRelationTransfer::FORMAT], true) || !is_array($data->products ?? null) ||
+        if (!$data instanceof \stdClass || !in_array($data->format ?? null, [self::FORMAT, ProductSupplierTransfer::FORMAT, ProductVariantSupplierTransfer::FORMAT, PartnerSourceTransfer::FORMAT, ProductRelationTransfer::FORMAT], true) || !is_array($data->products ?? null) ||
             array_diff(array_keys((array) $data), ['format', 'exported_at', 'products']) !== []) {
-            throw new InvalidArgumentException('Očekávám format simple-store.products.v1 , simple-store.product-suppliers.v1 nebo simple-store.product-relations.v1 nebo simple-store.variant-suppliers.v1 a seznam products.');
+            throw new InvalidArgumentException('Očekávám format simple-store.products.v1 , simple-store.product-suppliers.v1 nebo simple-store.product-relations.v1 nebo simple-store.variant-suppliers.v1 / simple-store.partner-sources.v1 a seznam products.');
         }
         if (count($data->products) < 1 || count($data->products) > self::COUNT_LIMIT) throw new InvalidArgumentException('Dávka musí obsahovat 1 až 10 000 produktů.');
         $format = $data->format;
@@ -105,6 +105,10 @@ final class ProductBulkTransfer
     public function prepare(string $json, bool $restore, bool $includeStock): array
     {
         $documents = self::decode($json, $format);
+        if ($format === PartnerSourceTransfer::FORMAT) {
+            if ($restore || $includeStock) throw new InvalidArgumentException('Zdroje přidávej bez obnovy skladu.');
+            return (new PartnerSourceTransfer($this->db, $this->products, $this->languages))->prepare($documents);
+        }
         if ($format === ProductVariantSupplierTransfer::FORMAT) {
             if ($restore || $includeStock) throw new InvalidArgumentException('Odkazy variant importuj bez obnovy skladu.');
             return (new ProductVariantSupplierTransfer($this->db, $this->products, $this->languages))->prepare($documents);
@@ -219,6 +223,7 @@ final class ProductBulkTransfer
 
     public function import(array $item): array
     {
+        if (($item['kind'] ?? '') === 'partner-sources') return (new PartnerSourceTransfer($this->db, $this->products, $this->languages))->import($item);
         if (($item['kind'] ?? '') === 'relations') return (new ProductRelationTransfer($this->db, $this->products, $this->languages))->import($item);
         if (($item['kind'] ?? '') === 'variant-suppliers') return (new ProductVariantSupplierTransfer($this->db, $this->products, $this->languages))->import($item);
         if (($item['kind'] ?? '') === 'suppliers') return (new ProductSupplierTransfer($this->db, $this->products, $this->languages))->import($item);
