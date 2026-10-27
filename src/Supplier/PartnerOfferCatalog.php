@@ -38,8 +38,8 @@ final class PartnerOfferCatalog
     public function request(string $key): void
     {
         if (!$this->installed()) return;
-        $this->db->query('INSERT INTO shop_supplier_offer_scans (product_key,data_json) VALUES (%s,%s)
-            ON DUPLICATE KEY UPDATE status=%s,next_at=0,fingerprint=%s,data_json=%s',$key,'{}','queued','','{}');
+        $this->db->query('INSERT INTO shop_supplier_offer_scans (product_key,data_json) SELECT %s,%s FROM shop_product_revisions WHERE product_key=%s AND active_product_key IS NOT NULL LIMIT 1
+            ON DUPLICATE KEY UPDATE status=%s,next_at=0,fingerprint=%s,data_json=%s',$key,'{}',$key,'queued','','{}');
     }
     /** A default product is represented by the empty variant key in this evidence layer. */
     public static function candidates(array $snapshot): array

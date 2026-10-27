@@ -132,6 +132,8 @@ jobs:
           php tests/media-catalog.php
           php tests/media-browse.php
           php tests/media-library.php
+          php tests/media-deletion.php
+          php tests/product-removal-render.php
           php tests/content-management.php
           php tests/content-editor.php
           php tests/content-import.php
@@ -201,6 +203,7 @@ jobs:
           php tests/fio-database.php
           php tests/bitcoin-rate-database.php
           php tests/partner-stock-database.php
+          php tests/product-removal-database.php
           php tests/public-discovery-database.php
           php tests/stock-database.php
           php tests/shipping-database.php
@@ -284,6 +287,7 @@ jobs:
           php tests/partner-catalog-database.php
           php tests/bitcoin-rate-database.php
           php tests/partner-stock-database.php
+          php tests/product-removal-database.php
           php tests/public-discovery-database.php
           php tests/supplier-prices-database.php
           php tests/supplier-variant-prices-database.php
@@ -336,6 +340,7 @@ jobs:
           node --test tests/purchase-partners-browser.mjs
           node --test tests/product-partner-assignment-browser.mjs
           node --test tests/supplier-prices-browser.mjs tests/partner-offers-browser.mjs
+          node --test tests/product-removal-browser.mjs
           node --test tests/product-families-browser.mjs
           node --test tests/product-sales-mass-browser.mjs
           node --test tests/checkout-presentation-browser.mjs
@@ -358,6 +363,7 @@ jobs:
             /tmp/partner-link-screenshots/
             /tmp/sale-screenshots/
             /tmp/supplier-screenshots/
+            /tmp/product-removal-screenshots/
             /tmp/assignment-screenshots/
             /tmp/sales-mass-screenshots/
             /tmp/checkout-presentation/

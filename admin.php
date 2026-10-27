@@ -200,8 +200,9 @@ try {
         require __DIR__ . '/src/Admin/inline-content.php';
         exit;
     }
-    if ($method === 'POST' && ($_POST['action'] ?? '') === 'delete-product') {
+    if (($method === 'POST' && ($_POST['action'] ?? '') === 'delete-product') || ($method !== 'POST' && $section === 'product-removal')) {
         require __DIR__ . '/src/Admin/delete-product.php';
+        require __DIR__ . '/view/admin/layout.php';
         exit;
     }
     if ($method === 'POST' && ($_POST['action'] ?? '') === 'delete-content') {

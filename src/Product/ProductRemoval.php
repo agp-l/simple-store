@@ -33,7 +33,7 @@ final class ProductRemoval
         if ($lock) $this->db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s FOR UPDATE',$key);
         $state=[]; $counts=[]; $current=[]; $suffix=$lock?' FOR UPDATE':'';
         foreach (self::TABLES as $table) {
-            $rows=$this->db->query('SELECT * FROM '.$table.' WHERE product_key=%s'.$suffix,$key);
+            $rows=$this->db->query('SELECT '.(in_array($table,self::VOLATILE,true)?'product_key':'*').' FROM '.$table.' WHERE product_key=%s'.$suffix,$key);
             $counts[$table]=count($rows);
             if (!in_array($table,self::VOLATILE,true)) {
                 usort($rows,static fn(array $a,array $b):int=>strcmp(json_encode($a),json_encode($b)));
@@ -49,10 +49,15 @@ final class ProductRemoval
         foreach ($files as $path) $photos[isset($protected[ProductMediaCleanup::token($path)])?'retain':'delete'][]=$path;
         $orders=(int)$this->db->queryFirstField('SELECT COUNT(*) FROM shop_orders WHERE items_json LIKE %s','%'.$key.'%');
         return ['key'=>$key,'language'=>$language,'revision'=>$revision,'name'=>$current[$language]['name'],
-            'current'=>$current,'counts'=>$counts,'photos'=>$photos,'files'=>$files,'orders'=>$orders,
+            'current'=>array_map(static fn(array $p):array=>array_intersect_key($p,array_flip(['language','slug','name','revision_number','published'])),$current),'counts'=>$counts,'photos'=>$photos,'files'=>$files,'orders'=>$orders,
             'hash'=>hash('sha256',json_encode([$state,$files],JSON_THROW_ON_ERROR))];
     }
     public function delete(array $preview): array
+    {
+        // No price worker may enqueue stale snapshots while the identity is being removed.
+        return (new \SimpleStore\Supplier\WorkerLock($this->db))->run(fn():array=>$this->deleteLocked($preview));
+    }
+    private function deleteLocked(array $preview): array
     {
         $key=$preview['key']??'';
         $this->db->startTransaction();

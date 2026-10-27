@@ -72,6 +72,7 @@ final class PageRenderer
         $homepageCandidates = $data['homepageCandidates'] ?? [];
         $homepagePick = (string) ($data['homepagePick'] ?? '');
         $homepageCandidateNext = (string) ($data['homepageCandidateNext'] ?? '');
+        $removedProduct = $data['removedProduct'] ?? null;
         $productDeleted = (bool) ($data['productDeleted'] ?? false);
         $adminCreate = $data['adminCreate'] ?? null;
         $adminPreview = $data['adminPreview'] ?? null;

@@ -15,7 +15,7 @@ $folderOptions = static function (string $selected = '') use ($mediaFolders, $es
   <option value="">Bez vlastní složky</option><?php foreach ($mediaFolders as $id => $label): ?><option value="<?= $escape($id) ?>" <?= $id === $selected ? 'selected' : '' ?>><?= $escape($label) ?></option><?php endforeach;
 };
 ?>
-<div class="panel-intro"><div><p class="panel-eyebrow">Obsah & fotografie</p><h1>Knihovna médií</h1><p>Jedno místo pro fotografie produktů, stránek i blogu. Nahraj, uspořádej a použij obrázek tam, kde ho potřebuješ.</p></div>
+<div class="panel-intro"><div><p class="panel-eyebrow">Obsah & fotografie</p><h1>Knihovna médií</h1><a class="panel-icon-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl.'?section=product-removal') ?>">Úklid odstraněných produktů</a><p>Jedno místo pro fotografie produktů, stránek i blogu. Nahraj, uspořádej a použij obrázek tam, kde ho potřebuješ.</p></div>
   <a class="panel-icon-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=contents') ?>"><?= \SimpleStore\Rendering\Icon::render('document') ?> Stránky a články</a>
 </div>
 <?php if ($mediaError !== ''): ?><p class="panel-error" role="alert"><?= $escape($mediaError) ?></p><?php endif; ?>

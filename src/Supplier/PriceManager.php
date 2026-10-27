@@ -56,9 +56,7 @@ final class PriceManager
     }
     private function locked(callable $run): mixed
     {
-        $name = 'supplier-prices:' . sha1((string)$this->db->queryFirstField('SELECT DATABASE()'));
-        if((int)$this->db->queryFirstField('SELECT GET_LOCK(%s,0)',$name)!==1) throw new WorkerBusy('Právě probíhá jiný krok. Zkus to za chvíli.');
-        try{return $run();}finally{$this->db->query('SELECT RELEASE_LOCK(%s)',$name);}
+        return (new WorkerLock($this->db))->run($run);
     }
     public function configure(bool $weekly, bool $paused): void
     {

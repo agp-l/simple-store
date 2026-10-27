@@ -5,6 +5,8 @@ class MeekroDB
 {
     public function __construct(public array $products = [], public array $documents = []) {}
 
+    public function queryFirstField(string $sql, mixed ...$values): int { return 0; }
+
     public function query(string $sql, mixed ...$values): array
     {
         if (str_contains($sql, 'FROM shop_product_revisions')) {
@@ -84,6 +86,11 @@ try {
     foreach ([$paths[2], MediaPath::variant($paths[2], 'card'), MediaPath::variant($paths[2], 'thumb')] as $file) {
         if (file_exists($temp . '/' . $file)) throw new RuntimeException('Unused image or thumbnail remains on disk.');
     }
+    // Retry handles an already missing original, including leftover generated files.
+    file_put_contents($temp . '/' . MediaPath::variant($paths[2], 'card'), 'orphan derivative');
+    $library->deleteManaged('product', $key, $paths[2], true);
+    $library->deleteManaged('product', $key, $paths[2], true);
+    if (file_exists($temp . '/' . MediaPath::variant($paths[2], 'card'))) throw new RuntimeException('Idempotent cleanup left an orphan derivative.');
     if (!is_file($temp . '/' . $paths[0]) || !is_file($temp . '/' . $paths[1])) {
         throw new RuntimeException('Deleting an unused image touched another file.');
     }
