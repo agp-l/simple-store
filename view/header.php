@@ -1,5 +1,5 @@
   <a class="skip" href="#<?= htmlspecialchars($skipTarget, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">Přejít na obsah</a>
-  <header id="nahoru"<?= $compactHeader ? ' class="compact-header"' : '' ?>>
+  <header id="nahoru"class="<?= $compactHeader ? 'compact-header ' : '' ?><?= in_array($page ?? '', ['blog', 'post'], true) ? 'editorial-header' : '' ?>">
     <div class="brand-row">
       <div class="wrap brand-inner">
         <a class="identity" href="<?= $siteRoot . htmlspecialchars($language, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" aria-label="Dobrodruzi.cz – nahoru">

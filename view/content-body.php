@@ -17,7 +17,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         . ' data-edit-value="' . $escape($value) . '" aria-label="Kliknutím upravit ' . $escape($field) . '"';
 };
 ?>
-  <main class="wrap cms-content<?= $editing ? ' is-editing' : '' ?>" id="produkty">
+  <main class="wrap cms-content<?= $page === 'post' ? ' blog-story' : '' ?><?= $editing ? ' is-editing' : '' ?>" id="produkty">
     <?php require __DIR__ . '/manage/content-panel.php'; ?>
     <nav class="breadcrumbs" aria-label="Drobečková navigace">
       <a href="<?= $siteRoot . $escape($language) ?>">Úvod</a><span aria-hidden="true">/</span>
@@ -27,7 +27,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
       <span><?= $escape($content['title']) ?></span>
     </nav>
     <article class="cms-article">
-      <p class="cms-eyebrow"><?= $page === 'post' ? 'Z blogu' : 'Stránka' ?></p>
+      <?php if ($page === 'post'): ?><div class="blog-meta"><a class="blog-topic-label" href="<?= $escape($basePath.$language.'/blog?topic='.ContentBody::topic($content['body'])) ?>"><?= $escape(\SimpleStore\Content\BlogTopics::LABELS[ContentBody::topic($content['body'])]) ?></a><span><?= \SimpleStore\Rendering\Icon::render('clock') ?> <?= \SimpleStore\Content\BlogTopics::minutes($content['body']) ?> min čtení</span></div><?php else: ?><p class="cms-eyebrow">Stránka</p><?php endif; ?>
       <h1<?= $editable('title', $content['title']) ?>><?= $escape($content['title']) ?></h1>
       <?php if ($editing && $page === 'post'): ?>
         <textarea class="cms-lead inline-summary-editor" data-content-input="summary" maxlength="<?= CardSummary::MAX_CHARACTERS ?>" rows="3" aria-label="Perex článku" aria-describedby="post-summary-hint" placeholder="Krátký úvod…"><?= $escape($content['summary'] ?? '') ?></textarea>
@@ -35,10 +35,13 @@ $editable = static function (string $field, string $value, ?int $index = null, s
       <?php elseif ($editing || ($content['summary'] ?? '') !== ''): ?>
         <p class="cms-lead"<?= $editable('summary', $content['summary'] ?? '') ?>><?= $escape($content['summary'] ?: 'Krátký úvod…') ?></p>
       <?php endif; ?>
+      <?php if ($page === 'post' && !$editing): $toc = array_filter($sections, static fn(array $section): bool => $section['heading'] !== '' && $section['type'] !== 'image'); if (count($toc) >= 3): ?>
+        <details class="blog-toc"><summary>Co se v příběhu dočteš</summary><nav aria-label="Obsah článku"><ol><?php foreach ($toc as $i=>$section): ?><li><a href="#cast-<?= $i ?>"><?= $escape($section['heading']) ?></a></li><?php endforeach; ?></ol></nav></details>
+      <?php endif; endif; ?>
       <div class="cms-text cms-blocks">
         <?php if ($editing): ?><div class="inline-insert"><button type="button" class="inline-small" data-content-action="choose-block">＋ Přidat blok</button><span class="inline-block-types" hidden><?php foreach (ContentBody::TYPES as $type => $label): ?><button type="button" class="inline-tiny" data-content-action="section-add" data-value="<?= $type ?>" data-index="-1"><?= $label ?></button><?php endforeach; ?></span></div><?php endif; ?>
         <?php foreach ($sections as $i => $section): ?>
-          <section class="cms-block" data-section="<?= $i ?>">
+          <section class="cms-block" id="cast-<?= $i ?>" data-section="<?= $i ?>">
             <?php if ($editing): ?><div class="inline-block-controls">
               <label>Typ <select data-content-type data-index="<?= $i ?>"><?php foreach (ContentBody::TYPES as $type => $label): ?><option value="<?= $type ?>" <?= $section['type'] === $type ? 'selected' : '' ?>><?= $label ?></option><?php endforeach; ?></select></label>
               <button type="button" class="inline-tiny" data-content-action="section-up" data-index="<?= $i ?>" <?= $i === 0 ? 'disabled' : '' ?> aria-label="Posunout blok nahoru">↑</button>
@@ -73,6 +76,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
           <?php if ($editing): ?><div class="inline-insert"><button type="button" class="inline-small" data-content-action="choose-block">＋ Přidat blok</button><span class="inline-block-types" hidden><?php foreach (ContentBody::TYPES as $type => $label): ?><button type="button" class="inline-tiny" data-content-action="section-add" data-value="<?= $type ?>" data-index="<?= $i ?>"><?= $label ?></button><?php endforeach; ?></span></div><?php endif; ?>
         <?php endforeach; ?>
       </div>
+      <?php if ($page === 'post' && !$editing): ?><footer class="blog-story-footer"><span>Kam povede tvoje další cesta?</span><a href="<?= $escape($basePath.$language.'/blog') ?>">Všechny příběhy <?= \SimpleStore\Rendering\Icon::render('arrow-right') ?></a></footer><?php endif; ?>
     </article>
     <?php if ($editing && $contentHistory !== []): ?><details class="inline-history"><summary>Historie úprav (<?= count($contentHistory) ?>)</summary><p>Obnovení starší verze vytvoří další revizi. Předchozí verze zůstanou uložené.</p>
       <?php foreach ($contentHistory as $revision): ?><div class="inline-revision"><span>Revize <?= (int) $revision['revision_number'] ?> · <?= $escape($revision['saved_at']) ?> · <?= $escape($revision['title']) ?></span>

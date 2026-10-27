@@ -38,6 +38,13 @@
         </div>
       </section>
       <?php endif; ?>
+      <?php if ($page === 'post'): ?>
+      <label class="inline-settings">Kategorie blogu
+        <select data-content-select="topic" aria-label="Kategorie blogu">
+          <?php foreach (\SimpleStore\Content\BlogTopics::LABELS as $topicKey => $topicLabel): ?><option value="<?= $escape($topicKey) ?>" <?= \SimpleStore\Content\ContentBody::topic($content['body']) === $topicKey ? 'selected' : '' ?>><?= $escape($topicLabel) ?></option><?php endforeach; ?>
+        </select><small>Ukládá se automaticky a přenáší se v JSON exportu.</small>
+      </label>
+      <?php endif; ?>
       <?php if ($page === 'post'): $picked = in_array($content['document_key'], $catalogPostKeys, true); ?>
       <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>" class="inline-settings">
         <input type="hidden" name="action" value="catalog-post"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>"><input type="hidden" name="key" value="<?= $escape($content['document_key']) ?>"><input type="hidden" name="expected" value="<?= $escape(json_encode($catalogPostKeys, JSON_THROW_ON_ERROR)) ?>">

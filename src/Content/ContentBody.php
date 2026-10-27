@@ -46,13 +46,21 @@ final class ContentBody
         return '';
     }
 
-    public static function encode(array $sections, ?string $cover = null): string
+    public static function topic(string $body): string
+    {
+        $data = json_decode($body, true);
+        $topic = is_array($data) && ($data['format'] ?? null) === self::FORMAT ? ($data['topic'] ?? '') : '';
+        return is_string($topic) && isset(BlogTopics::LABELS[$topic]) ? $topic : 'zapisnik';
+    }
+
+    public static function encode(array $sections, ?string $cover = null, string $topic = 'zapisnik'): string
     {
         if ($cover !== null && $cover !== '' && !ProductDetails::imagePath($cover)) {
             throw new InvalidArgumentException('Náhled musí odkazovat na obrázek ve složce images/.');
         }
         $data = ['format' => self::FORMAT, 'sections' => self::validate($sections)];
         if ($cover !== null) $data['cover_path'] = $cover;
+        if (BlogTopics::validate($topic) !== 'zapisnik') $data['topic'] = $topic;
         return json_encode($data,
             JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     }

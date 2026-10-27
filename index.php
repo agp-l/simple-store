@@ -495,14 +495,19 @@ try {
             $renderer->render('not-found', $shared, 400);
             exit;
         }
-        $batch = $hasContent ? $contents->publishedPostsPage($url->getLanguage(), $offset)
+        $blogTopic = $_GET['topic'] ?? null;
+        if ($blogTopic !== null && (!is_string($blogTopic) || !isset(\SimpleStore\Content\BlogTopics::LABELS[$blogTopic]))) {
+            $renderer->render('not-found', $shared, 400); exit;
+        }
+        $blogTopicCounts = $hasContent ? $contents->publishedTopicCounts($url->getLanguage()) : [];
+        $batch = $hasContent ? $contents->publishedPostsPage($url->getLanguage(), $offset, 6, $blogTopic)
             : ['items' => [], 'nextOffset' => null];
         $draftBatch = $managingBlog && $hasContent
             ? $contents->unpublishedPostsPage($url->getLanguage(), $draftOffset, 24)
             : ['items' => [], 'nextOffset' => null];
         $nextUrl = $batch['nextOffset'] === null ? '' : $url->path('blog') . '?' . http_build_query([
             'manage' => $managingBlog ? '1' : null, 'draft_offset' => $managingBlog && $draftOffset > 0 ? $draftOffset : null,
-            'offset' => $batch['nextOffset'],
+            'offset' => $batch['nextOffset'], 'topic' => $blogTopic,
         ]);
         $shared['canManageContent'] = $canEdit;
         $shared['adminCsrf'] = $canEdit ? $auth->token() : '';
@@ -517,8 +522,9 @@ try {
         $renderer->render('blog', $shared + [
             'title' => $managingBlog ? 'Správa blogu — dobrodruzi.cz' : 'Blog — dobrodruzi.cz',
             'posts' => $batch['items'], 'nextUrl' => $nextUrl,
+            'blogTopic' => $blogTopic, 'blogTopicCounts' => $blogTopicCounts,
             'draftPosts' => $draftBatch['items'],
-            'draftNextUrl' => $draftBatch['nextOffset'] === null ? '' : $url->path('blog') . '?manage=1&draft_offset=' . $draftBatch['nextOffset'],
+            'draftNextUrl' => $draftBatch['nextOffset'] === null ? '' : $url->path('blog') . '?' . http_build_query(['manage'=>'1', 'draft_offset'=>$draftBatch['nextOffset'], 'topic'=>$blogTopic]),
             'managingBlog' => $managingBlog, 'privatePage' => $managingBlog,
         ]);
     } elseif ($route['name'] === 'page' || $route['name'] === 'post') {

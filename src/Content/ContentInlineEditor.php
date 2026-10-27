@@ -11,7 +11,7 @@ use SimpleStore\Product\ProductDetails;
 /** Apply a small edit to a complete page or article before saving another revision. */
 final class ContentInlineEditor
 {
-    private const FIELDS = ['title', 'slug', 'summary', 'menu_order', 'published', 'visible_in_menu', 'cover_path'];
+    private const FIELDS = ['title', 'slug', 'summary', 'menu_order', 'published', 'visible_in_menu', 'cover_path', 'topic'];
 
     public static function starter(string $type, string $language): array
     {
@@ -41,6 +41,7 @@ final class ContentInlineEditor
             'summary' => $row['summary'] ?? '',
             'sections' => ContentBody::decode($row['body']),
             'cover_path' => ContentBody::coverSetting($row['body']),
+            'topic' => ContentBody::topic($row['body']),
             'menu_order' => (int) $row['menu_order'],
             'published' => (bool) $row['published'],
             'visible_in_menu' => (bool) $row['visible_in_menu'],
@@ -49,8 +50,8 @@ final class ContentInlineEditor
 
     public static function snapshot(array $form): array
     {
-        $form['body'] = ContentBody::encode($form['sections'], $form['cover_path'] ?? null);
-        unset($form['sections'], $form['cover_path']);
+        $form['body'] = ContentBody::encode($form['sections'], $form['cover_path'] ?? null, $form['topic'] ?? 'zapisnik');
+        unset($form['sections'], $form['cover_path'], $form['topic']);
         return $form;
     }
 
@@ -67,7 +68,10 @@ final class ContentInlineEditor
             return $form;
         }
         if ($operation === 'set' && in_array($field, self::FIELDS, true)) {
-            if ($field === 'cover_path') {
+            if ($field === 'topic') {
+                if ($form['type'] !== 'post') throw new InvalidArgumentException('Kategorie patří pouze článkům.');
+                $form[$field] = BlogTopics::validate($value);
+            } elseif ($field === 'cover_path') {
                 if ($value !== '@auto' && $value !== '' && !ProductDetails::imagePath($value)) {
                     throw new InvalidArgumentException('Vyber náhledový obrázek z knihovny.');
                 }
