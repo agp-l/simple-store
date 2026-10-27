@@ -39,6 +39,8 @@ final class ProductSalesRepository
         if ($partner !== null && PurchasePartnerRepository::missing($partner) !== []) $partner = null;
         if ($partner !== null) $partner = array_intersect_key($partner, PurchasePartnerRepository::FIELDS);
         $row['seller'] = $partner;
+        $pricing = new ProductVariantPricingSettings($this->db);
+        if ($pricing->installed()) $row['variant_pricing'] = $pricing->mode($key);
         return $row;
     }
 
@@ -137,6 +139,7 @@ final class ProductSalesRepository
                 'version' => $expected + 1];
             if ($stored === null) $this->db->insert('shop_product_sales', ['product_key' => $key] + $values);
             else $this->db->update('shop_product_sales', $values, 'product_key=%s', $key);
+            (new ProductVariantPricingSettings($this->db))->save($key,$input,$inventory,$mode,$partnerId);
             $this->db->commit();
         } catch (Throwable $error) { $this->db->rollback(); throw $error; }
     }

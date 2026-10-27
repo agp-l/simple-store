@@ -68,7 +68,17 @@ $partnerAdminUrl = $siteRoot . 'admin/?section=purchase-partners';
             </div>
           </details>
           <?php if ($saleVariants !== []): ?><details class="sale-disclosure sale-variant-prices"><summary>Nákupní ceny variant <span><?= count($saleVariants) ?></span></summary>
-            <div class="sale-disclosure-body"><p class="sale-hint">Všechny varianty mohou přebírat jednu cenu dodavatele výše. Tady vyplň jen odlišné nákupní ceny; prázdné pole se přepočítá i při další změně společné ceny.</p>
+            <div class="sale-disclosure-body">
+              <?php if (isset($saleValues['variant_pricing'])): ?>
+              <input type="hidden" name="variant_pricing_expected" value="<?= $escape($saleValues['variant_pricing_expected'] ?? $saleValues['variant_pricing']) ?>">
+              <label>Cenotvorba variant <select name="variant_pricing">
+                <?php foreach (['inherit'=>'Výchozí — automaticky jen bez vlastních cen','automatic'=>'Automaticky podle ověřených nabídek partnera','manual'=>'Ručně — zachovat vlastní ceny'] as $value=>$label): ?>
+                <option value="<?= $value ?>" <?= $saleValues['variant_pricing']===$value?'selected':'' ?>><?= $label ?></option>
+                <?php endforeach; ?>
+              </select></label>
+              <p class="sale-hint">Automatický režim zařadí kontrolu partnera. Nákupní ceny převezme až po ověření všech nabízených variant; jejich prodejní ceny přepočítá podle nastavení v Cenách dodavatelů. Ruční změna vlastní ceny varianty automatiku vypne. Uloží se tlačítkem „Uložit způsob prodeje“ níže.</p>
+              <?php endif; ?>
+              <p class="sale-hint">Všechny varianty mohou přebírat jednu cenu dodavatele výše. Tady vyplň jen odlišné nákupní ceny; prázdné pole se přepočítá i při další změně společné ceny.</p>
               <button type="submit" name="inherit_variant_prices" value="1" data-sale-inherit-prices class="sale-button sale-button--secondary">Použít společnou nákupní cenu u všech variant</button>
               <div class="sale-variant-table"><table><thead><tr><th>Varianta</th><th>Cena pro zákazníka</th><th>Cena dodavatele Kč</th><th>Odměna</th></tr></thead><tbody>
               <?php foreach ($saleVariants as $saleVariant): $variantPrice = (int) ($saleVariant['price_czk'] ?? $basePrice); ?>
