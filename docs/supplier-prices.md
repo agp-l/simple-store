@@ -1,6 +1,6 @@
 # Ceny dodavatelů
 
-[Upravený plán variantních odkazů](variant-supplier-architecture.md) používá partnery výhradně pro asistovaný nákup. Převzaté společné odkazy se nejdříve přiřadí variantám jako neověřené; volitelné přesné párování popisuje následující oddíl. Pravidla partnerského množství následují samostatně. Následující dokumentace popisuje nasazený cenový automat; variantní odkazy už mají vlastní evidenci a soukromý JSON. Automatické řízení množství podle partnera zatím není aktivní.
+[Upravený plán variantních odkazů](variant-supplier-architecture.md) používá partnery výhradně pro asistovaný nákup. Převzaté společné odkazy se nejdříve přiřadí variantám jako neověřené; volitelné přesné párování popisuje následující oddíl. Pravidla partnerského množství následují samostatně. Následující dokumentace popisuje nasazený cenový automat; variantní odkazy už mají vlastní evidenci a soukromý JSON. U asistovaného nákupu se dostupnost a limit množství řídí ověřenou nabídkou vybraného partnera.
 
 Administrace: `/admin/supplier-prices/`. PHP 8.1+, cURL a stávající MySQL/MariaDB. Před prvním použitím aktualizovat SQL tabulky v Administrace → Databáze. Není potřeba Python, prohlížeč na hostingu ani externí služba.
 
@@ -11,7 +11,7 @@ Administrace: `/admin/supplier-prices/`. PHP 8.1+, cURL a stávající MySQL/Mar
 3. Šetrně: rozestupy 60–90 s na obchod. Zrychleně: 15–23 s. Diagnosticky: 1–2 s. Větší prodleva z robots.txt nebo Retry-After má přednost. Robots a každý krok přesměrování také spotřebují tento limit. Každý worker provede nejvýše jeden vzdálený požadavek; nečeká se pomocí sleep.
 4. Běžná nová kontrola produktu nejdříve 24 hodin od zařazení i dokončení. Pro nevyřešené výsledky existuje níže popsané ruční opakování. Rozpracovaná kontrola se neduplikuje. Tentýž URL se po dobu 24 h sdílí z cache mezi produkty. Limity platí společně pro všechna okna i cron.
 5. Jednoznačná CZK cena vybraného prodávajícího se automaticky uloží do **Cena dodavatele**. Haléře se zaokrouhlí nahoru na celé Kč. Změna přes 30 %, nejasný URL varianty a varianty bez důkazu společné ceny vyžadují kontrolu. Vlastní dodavatelské ceny variant zůstávají zachované. Společná prodejní cena se může přepočítat podle zapnuté cenotvorby; vlastní sklad se nemění. U asistovaného nákupu se samostatně synchronizuje partnerský limit.
-6. Záložní odkaz podle priority se použije až při chybě předchozího. Zjištěná záložní cena je návrh: tlačítko převezme cenu a prodávajícího společně. Vyžaduje dokončený profil nového prodávajícího. U vlastních dodavatelských cen variant je nutná společná úprava v produktu, protože ceny jiného obchodu by nebyly platné.
+6. Záložní odkaz podle priority se použije až při chybě předchozího. Zjištěná záložní cena je návrh: tlačítko převezme cenu a prodávajícího společně. Vyžaduje dokončený profil nového prodávajícího. U ručně řízených dodavatelských cen variant je nutná společná úprava v produktu. Při povolené automatice lze schválit úplný soubor přesných variantních nabídek; staré nákupní ceny jiného obchodu se nepřenášejí.
 7. Při převzetí se ověřuje stáří nabídky, nezměněná data produktu, odkazů, prodávajících a variant. Cena vyšší než nejnižší relevantní prodejní cena je zablokovaná. Historické objednávky se nikdy nepřepisují.
 
 ## Cron
@@ -312,3 +312,12 @@ všech aktivních variant u vybraného partnera; cenové skoky a nejasná identi
 Výchozí režim zachovává původní pravidlo: automatika se sama zapíná jen bez vlastních cen.
 Ruční úprava prodejní ceny varianty automatický režim nadále vypíná. Formulář chrání nastavení
 proti souběžné změně; starší klient bez této volby předvolbu nemění. Vlastní sklad se neaktualizuje.
+### Schválení přesných nabídek záložního partnera
+
+Tlačítko „Použít cenu i prodávajícího“ může převzít celý soubor přesných
+variantních nabídek, pokud má produkt povolenou automatickou cenotvorbu
+(nebo splňuje její výchozí podmínky bez vlastních cen). Před uložením se
+znovu ověří úplnost, stáří a shoda nabídek všech aktivních variant.
+Změna partnera a cen proběhne v jedné transakci; nákupní ceny neaktivních
+variant od původního partnera se nepřenášejí. Dostupnost nového partnera
+se následně obnoví přes frontu. Ručně vypnutá cenotvorba zůstává vypnutá.

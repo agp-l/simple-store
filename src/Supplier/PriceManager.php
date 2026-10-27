@@ -612,18 +612,21 @@ final class PriceManager
             if((int)$result['observed_at']<=$this->now()-86400)throw new InvalidArgumentException('Nabídka je starší než 24 hodin. Spusť novou kontrolu.');
             if(!$manual&&self::reviewReason($snapshot,$result)!=='')throw new InvalidArgumentException('Nabídka vyžaduje ruční kontrolu.');
             if(!empty($snapshot['variantSettings']['enabled'])&&!$variants&&empty($result['uniform_variants'])&&empty($result['variant_offers']))throw new InvalidArgumentException('Potvrď, že cena platí pro varianty se základní cenou.');
-            if($result['fallback']&&!empty(json_decode($snapshot['sale']['variant_prices_json']??'{}',true)))throw new InvalidArgumentException('Produkt má vlastní dodavatelské ceny variant. Změň prodávajícího a tyto ceny společně v detailu produktu.');
+            $exactVariantSource=($snapshot['candidates'][0]['kind']??'')==='variant';
+            $replaceVariantCosts=$manual&&$result['fallback']&&$exactVariantSource&&!empty($result['variant_offers'])&&!empty($snapshot['variantPriceMode']['enabled']);
+            if($result['fallback']&&!$replaceVariantCosts&&!empty(json_decode($snapshot['sale']['variant_prices_json']??'{}',true)))throw new InvalidArgumentException('Produkt má vlastní dodavatelské ceny variant. Změň prodávajícího a tyto ceny společně v detailu produktu.');
             if($result['fallback']){
                 $partner=$this->db->queryFirstRow('SELECT * FROM shop_purchase_partners WHERE id=%i FOR UPDATE',$result['partner_id']);
                 if(!$partner||PurchasePartnerRepository::missing($partner)!==[])throw new InvalidArgumentException('Záložní prodávající nemá dokončený a potvrzený profil. Nejprve jej doplň.');
             }
             $pricing=$this->settings();
-            if(($snapshot['candidates'][0]['kind']??'')==='variant'){
+            if($exactVariantSource){
                 $verified=VariantOfferEvaluation::assemble($snapshot,$data['variant_observations']??[],(int)$result['partner_id'],$this->now(),$pricing);
                 if(($result['canonical_variant_offers']??null)!==$verified['canonical_variant_offers'] || $result['price']!==$verified['price'])
                     throw new InvalidArgumentException('Chybí úplný důkaz přesných nabídek variant. Spusť novou kontrolu.');
             }
-            $enableVariantPricing=!empty($result['enable_variant_pricing'])&&!$result['fallback']&&$this->variantModesInstalled&&PriceEvaluation::mayEnableVariantPricing($snapshot,$pricing);
+            $approvedExactFallback=$manual&&$result['fallback']&&$exactVariantSource;
+            $enableVariantPricing=!empty($result['enable_variant_pricing'])&&(!$result['fallback']||$approvedExactFallback)&&$this->variantModesInstalled&&PriceEvaluation::mayEnableVariantPricing($snapshot,$pricing);
             $newRetail=(int)$pricing['pricing_enabled'] ? PricingPolicy::price($result['price'],$pricing) : null;
             $retail=$newRetail===null?array_map('intval',array_column($snapshot['products'],'price_czk')):[$newRetail];
             if($result['price']>min($retail))throw new InvalidArgumentException('Cena dodavatele je vyšší než prodejní cena. Zapni cenotvorbu nebo uprav cenu produktu.');
@@ -632,7 +635,10 @@ final class PriceManager
             $overrides=json_decode($sale['variant_prices_json']??'{}',true)??[];
             $variantPrices=[];$oldOverrides=$overrides;
             if(!empty($result['variant_offers'])){
-                if((empty($snapshot['variantPriceMode']['enabled'])&&!$enableVariantPricing)||$result['fallback'])throw new InvalidArgumentException('Automatická cenotvorba variant není pro tento produkt povolená.');
+                if((empty($snapshot['variantPriceMode']['enabled'])&&!$enableVariantPricing)||($result['fallback']&&!$approvedExactFallback))throw new InvalidArgumentException('Automatická cenotvorba variant není pro tento produkt povolená. Zapni ji v detailu produktu a znovu ověř nabídku.');
+                // A seller switch replaces the complete verified set; inactive variants
+                // must not keep purchase costs belonging to the previous merchant.
+                if($result['fallback'])$overrides=[];
                 foreach($snapshot['variants']as$v){
                     if(!(int)$v['enabled'])continue;
                     $offer=$result['variant_offers'][$v['variant_key']]??null;
