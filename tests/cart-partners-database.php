@@ -1,6 +1,7 @@
 <?php
 declare(strict_types=1);
 require dirname(__DIR__).'/vendor/autoload.php';
+set_error_handler(static function(int $severity,string $message,string $file,int $line):never { throw new ErrorException($message,0,$severity,$file,$line); },E_WARNING|E_NOTICE);
 use SimpleStore\Database\{ConnectionFactory,SchemaUpdater};
 use SimpleStore\Product\{ProductRepository,ProductSalesRepository,ProductStockRepository,PurchasePartnerRepository};
 use SimpleStore\Checkout\{CartPartnerPlanner,CartService,CartSession,CheckoutReview,AssistedPurchase,OrderRepository,BankTransferPayment};

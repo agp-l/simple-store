@@ -197,6 +197,7 @@ final class PartnerOfferCatalog
     }
     public function report(?array $keys = null, bool $lock = false): array
     {
+        $locking = $lock ? ' FOR UPDATE' : '';
         $snapshots=$this->snapshots($keys,$lock); $offers=$this->installed() && $snapshots!==[] ? array_column($this->db->query('SELECT * FROM shop_supplier_offers WHERE product_key IN %ls'.($lock?' FOR UPDATE':''),array_keys($snapshots)),null,'offer_key'):[];
         $products=[];
         foreach ($snapshots as $key=>$snapshot) {
