@@ -32,6 +32,7 @@
           <dt>Adresa</dt><dd><?= $escape($basePath . $importPreview['language'] . ($importPreview['type'] === 'post' ? '/blog' : '') . '/' . $importPreview['slug']) ?></dd>
           <dt>Viditelnost po uložení</dt><dd><?= $importPreview['published'] ? 'Publikováno – změny budou vidět návštěvníkům' : 'Skrytý koncept' ?></dd>
           <?php if ($importPreview['type'] === 'page'): ?><dt>Horní odkazy</dt><dd><?= $importPreview['visible_in_menu'] ? 'Zobrazovat' : 'Nezobrazovat' ?> · pořadí <?= (int) $importPreview['menu_order'] ?></dd><?php endif; ?>
+          <?php if ($importPreview['type'] === 'post'): ?><dt>Kategorie blogu</dt><dd><?= $escape(\SimpleStore\Content\BlogTopics::LABELS[\SimpleStore\Content\ContentBody::topic($importPreview['body'])]) ?></dd><?php endif; ?>
           <dt>Úvod</dt><dd><?= nl2br($escape($importPreview['summary'])) ?></dd>
         </dl>
         <details open><summary>Obsah dokumentu</summary>

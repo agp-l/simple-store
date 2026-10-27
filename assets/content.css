@@ -401,7 +401,7 @@
 /* Blog: a wide magazine index and a calm, truly centered reading column. */
 .editorial-header .hero { display: none; }
 .blog-layout { width: 100%; }
-.blog-intro { position: relative; padding: 42px 0 38px; border-bottom: 1px solid var(--line); }
+.blog-intro { background: transparent; position: relative; padding: 42px 0 38px; border-bottom: 1px solid var(--line); }
 .blog-intro h1 { max-width: 850px; margin: 0 0 18px; font: 800 clamp(36px, 4.6vw, 62px)/1.08 var(--font-display); letter-spacing: -.045em; }
 .blog-intro > p:not(.cms-eyebrow) { max-width: 640px; margin: 0; font-size: 18px; line-height: 1.7; }
 .blog-intro-note { display: inline-block; margin-top: 24px; padding-left: 14px; border-left: 3px solid var(--amber); color: var(--forest-dark); font-size: 13px; font-weight: 750; }

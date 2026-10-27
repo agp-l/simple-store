@@ -8,7 +8,10 @@ $document=json_decode(file_get_contents(dirname(__DIR__,2).'/content/posts/dva-r
 $fields=ContentImport::fields($document,['cs'],'new');
 $fields['published']=true;
 // Stable local assets keep layout tests independent of the live shop.
-$fields['body']=str_replace('images/media/posts/c9334dc7b76bd753fc5302c9ee29f7cc/1--7a865f22b79c5f4c41d24b6b.webp','images/batoh.webp',$fields['body']);
+$sections=ContentBody::decode($fields['body']);
+foreach($sections as &$section) if($section['type']==='image') $section['body']='images/stan.webp';
+unset($section);
+$fields['body']=ContentBody::encode($sections,null,'spani-venku');
 $row=$fields+['document_key'=>$document['document_key'],'revision_number'=>28,'saved_at'=>'2026-10-27 12:00:00'];
 $mode=$argv[1]??'index';
 $renderer=new SimpleStore\Rendering\PageRenderer(dirname(__DIR__,2).'/view');
