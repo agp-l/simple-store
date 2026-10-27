@@ -303,3 +303,12 @@ Další ověřené katalogové názvy zůstávají omezené na konkrétní model
 - https://gramino.cz/p/sea-to-summit-ultralight-aeros-traveller-pillow
 - https://www.pod7kilo.cz/p/polstar-travelrest-ruzne-barvy/
 - Příslušné veřejné variantové dokumenty v regresním vzorku `tests/fixtures/supplier-label-translations.json`; ceny ve vzorku jsou záměrně syntetické. Testuje se identita, nikoliv cenový seznam.
+# Nastavení automatických cen variant
+
+V editoru produktu → Způsob prodeje → Nákupní ceny variant je volba **Cenotvorba variant**.
+Automatický režim lze výslovně zapnout i pro sloučené nebo importované produkty s vlastními cenami.
+Uložení pouze změní předvolbu a zařadí kontrolu. Ceny se převezmou až po ověření přesných nabídek
+všech aktivních variant u vybraného partnera; cenové skoky a nejasná identita zůstávají ke kontrole.
+Výchozí režim zachovává původní pravidlo: automatika se sama zapíná jen bez vlastních cen.
+Ruční úprava prodejní ceny varianty automatický režim nadále vypíná. Formulář chrání nastavení
+proti souběžné změně; starší klient bez této volby předvolbu nemění. Vlastní sklad se neaktualizuje.

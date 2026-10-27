@@ -62,6 +62,9 @@ test('sale editor: responsive layout, drafts, fees, selected partner and safe su
       assert.equal(await form.locator('[name="partner_name"]').inputValue(), '');
       await form.locator('[name="partner_id"]').selectOption('1');
       await form.locator('.sale-variant-prices summary').click();
+      const pricing = form.getByRole('combobox', { name: 'Cenotvorba variant', exact: true });
+      assert.equal(await pricing.inputValue(), 'manual');
+      await pricing.selectOption('automatic');
       const variant = form.locator('[data-sale-variant]').first();
       await variant.locator('input').fill('1750');
       assert.match(await variant.locator('output').textContent(), /50/);
@@ -83,6 +86,8 @@ test('sale editor: responsive layout, drafts, fees, selected partner and safe su
       assert.equal(submitted.get('supplier_price_czk'), '1700');
       assert.equal(submitted.get('partner_id'), '1');
       assert.equal(submitted.get('mode'), 'assisted');
+      assert.equal(submitted.get('variant_pricing'), 'automatic');
+      assert.equal(submitted.get('variant_pricing_expected'), 'manual');
       assert.ok(Array.from(submitted).filter(([key]) => key.startsWith('variant_price[')).every(([, value]) => value === ''));
       assert.ok(submitted.has('csrf') && submitted.has('version'));
       assert.deepEqual(errors, []);

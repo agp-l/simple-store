@@ -30,6 +30,8 @@ try {
     }
     $form['variant_price'] = is_array($_POST['variant_price'] ?? null)
         ? array_filter($_POST['variant_price'], 'is_string') : [];
+    foreach (['variant_pricing','variant_pricing_expected'] as $field)
+        if (isset($_POST[$field]) && is_string($_POST[$field])) $form[$field] = $_POST[$field];
     $_SESSION['product_sale_errors'][$key . ':' . $language] = ['form' => $form,
         'message' => $error instanceof InvalidArgumentException ? $error->getMessage()
             : 'Uložení se nezdařilo. Údaje zůstaly ve formuláři; zkus jej znovu uložit.'];

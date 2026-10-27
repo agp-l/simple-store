@@ -106,6 +106,38 @@ try{
  $reject(fn()=>$manager->probe((int)$job($own)['id']));
  $manager->configure(false,true);$reject(fn()=>$manager->probe((int)$beforeJob['id']));$manager->configure(false,false);
 
+ // Explicit opt-in repairs imported/manual variant pricing without weakening identity checks.
+ [$managed,$managedUrl,$managedVariants]=$make('explicit-pricing');
+ $responses[PriceParser::requestUrl($managedUrl.'?v_id=blue')]=$response($managedUrl,['blue'=>1000,'red'=>1200]);
+ $db->update('shop_product_variants',['price_czk'=>2500],'product_key=%s',$managed);
+ $db->insert('shop_product_supplier_variant_modes',['product_key'=>$managed,'enabled'=>0]);
+ $sales=new \SimpleStore\Product\ProductSalesRepository($db);
+ $settings=static function(string $key)use($sales):array{
+  $s=$sales->forProduct($key);
+  return ['mode'=>$s['mode'],'version'=>(string)$s['version'],'partner_id'=>(string)$s['partner_id'],
+   'supplier_price_czk'=>(string)$s['supplier_price_czk'],'variant_price'=>$s['variant_prices'],
+   'variant_pricing'=>$s['variant_pricing'],'variant_pricing_expected'=>$s['variant_pricing']];
+ };
+ $optIn=array_replace($settings($managed),['variant_pricing'=>'automatic']);
+ $reject(fn()=>$sales->save($managed,'cs',array_replace($optIn,['mode'=>'own'])));
+ $check($sales->forProduct($managed)['mode']==='assisted','Invalid preference partially saved sale mode.');
+ $sales->save($managed,'cs',$optIn);
+ $check($sales->forProduct($managed)['variant_pricing']==='automatic','Explicit automation preference not saved.');
+ $check((int)$db->queryFirstField('SELECT MIN(price_czk) FROM shop_product_variants WHERE product_key=%s',$managed)===2500,'Preference changed prices before verification.');
+ $check((int)$db->queryFirstField('SELECT COUNT(*) FROM shop_partner_refresh_requests WHERE product_key=%s',$managed)===1,'Opt-in did not schedule verification.');
+ $beforeSale=$sale($managed);
+ $reject(fn()=>$sales->save($managed,'cs',array_replace($settings($managed),['variant_pricing'=>'manual','variant_pricing_expected'=>'manual'])));
+ $check($sale($managed)===$beforeSale,'Stale pricing preference partially changed sale settings.');
+ $run();
+ $check($job($managed)['status']==='applied','Opt-in did not complete automatic exact-variant pricing: '.$job($managed)['message']);
+ $check((int)$db->queryFirstField('SELECT price_czk FROM shop_product_variants WHERE variant_key=%s',$managedVariants['Red'])===1300,'Opt-in lost per-variant retail policy.');
+ $legacy=$settings($managed);unset($legacy['variant_pricing'],$legacy['variant_pricing_expected']);
+ $sales->save($managed,'cs',$legacy);
+ $check($sales->forProduct($managed)['variant_pricing']==='automatic','Legacy save implicitly disabled automation.');
+ $sales->save($managed,'cs',array_replace($settings($managed),['variant_pricing'=>'manual']));
+ $check($sales->forProduct($managed)['variant_pricing']==='manual','Explicit opt-out was ignored.');
+ $sales->save($managed,'cs',array_replace($settings($managed),['variant_pricing'=>'inherit']));
+ $check($sales->forProduct($managed)['variant_pricing']==='inherit','Default policy was not restored.');
  $report=$manager->diagnostics();$check($report['version']===3,'Canonical diagnostic version missing.');
  $replay=PriceEvaluation::replay($report);$check(count($replay['items'])>0,'Read-only replay lost unresolved canonical offers.');
  echo "Exact supplier prices: durable variant collection, atomic apply, cache proof, stale/manual URL guards, own mode and robots/product denial passed.\n";

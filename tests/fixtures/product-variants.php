@@ -48,7 +48,7 @@ $manual = array_replace($exact,['link_key'=>str_repeat('9',32),'variant_key'=>$i
     'supplierLinksReady' => $partnerFixture, 'supplierLinks' => $partnerFixture ? $commonLinks : [],
     'variantSupplierReady' => $partnerFixture, 'variantSupplierLinks' => $partnerFixture ? [$exact,$old,$manual] : [],
     'productSale' => ['mode' => in_array('--own', $argv, true) ? 'own' : 'assisted', 'version'=>1,
-        'partner_id'=>1, 'supplier_price_czk'=>1678, 'delivery_note'=>'Do 5 pracovních dnů', 'variant_prices'=>[]],
+        'partner_id'=>1, 'supplier_price_czk'=>1678, 'delivery_note'=>'Do 5 pracovních dnů', 'variant_prices'=>[], 'variant_pricing'=>'manual'],
     'productSaleError' => in_array('--error', $argv, true) ? 'Zkontroluj cenu dodavatele.' : '',
     'productSaleForm' => in_array('--error', $argv, true) ? ['mode'=>'own', 'partner_id'=>'0', 'partner_name'=>'Nový rozpracovaný partner', 'supplier_price_czk'=>'1801'] : [],
 ]);
