@@ -19,6 +19,8 @@ cp config/database.example.php config/database.php
 
 Pak otevři `config/database.php` a nastav `host`, `port`, `database`, `user` a `password` podle svého MySQL. V příkladu jsou přihlašovací údaje běžné pro místní XAMPP (`root` bez hesla); pokud máš heslo nastavené, doplň ho. **Pokud už máš vlastní `config/database.php` z předchozí verze, nekopíruj příklad znovu:** původní klíč `dsn` aplikace také umí přečíst, stačí zkontrolovat uživatele a heslo. Tento soubor je schválně ignorovaný Gitem, aby se heslo nedostalo na GitHub.
 
+Trvalé odstranění produktu včetně variant, partnerských kontrol a nepotřebných fotografií: [postup a zachování historie](docs/product-removal.md).
+
 ## Spuštění v Apache / XAMPP / LAMPP
 
 1. Nakopíruj celý repozitář do složky, kterou obsluhuje Apache. Web nemá složku `public/`; přístup ke zdrojovým a konfiguračním souborům blokuje `.htaccess`. Apache musí mít povolené `mod_rewrite` a `AllowOverride` pro tuto složku.
@@ -205,7 +207,7 @@ Malými tlačítky mezi bloky vložíš text, seznam, tabulku nebo fotografii; b
 
 Fotografii změníš malým tlačítkem u obrázku. V knihovně můžeš vybrat již nahraný snímek, hromadně nahrát nové fotografie. Nové obrazové odkazy musí být lokální. Umístění záleží na tlačítku, kterým knihovnu otevřeš: hlavní snímek, přidání nebo nahrazení v galerii, případně blok popisu. Při nahrazení hlavní fotografie se původní přesune do galerie; první fotografie úplně nového produktu se stane hlavní i při přidání do galerie. Náhledy mají pevnou velikost a při větším počtu se zalomí do dalších řádků. Kliknutím na hlavní fotografii ji otevřeš přes celou obrazovku; zavřeš ji tlačítkem, kliknutím mimo fotografii nebo klávesou Escape. V textových blocích lze psát `**tučné**` a `[název odkazu](https://example.org)`; po uložení se zobrazí výsledné formátování. Typ bloku **Tabulka** používá na každém řádku zápis `Název | Hodnota`. Pro skutečné kombinace velikostí, barev a dalších vlastností slouží panel **Varianty a sklad**: samostatné kusy, dostupnost, SKU a volitelná cena/fotografie při společném popisu. Dosavadní produkty zůstávají ve společném skladu až do výslovného převodu. [Postup, JSON a převod duplicit](docs/product-variants.md).
 
-V detailu při úpravě je přímý odkaz na fotografie produktu a volba **Odstranit produkt**. Odstranění vyžaduje zaškrtnuté potvrzení a správnou aktuální revizi; smaže všechny jeho revize v daném jazyce. Nahrané soubory zůstanou na disku, aby se nerozbily starší odkazy. Již vytvořené objednávky mají vlastní kopii názvu, ceny a vybraných možností produktu.
+V detailu při úpravě je přímý odkaz na fotografie produktu a volba **Odstranit produkt**. Ta nejdřív připraví náhled; po potvrzení smaže katalogovou identitu ve všech jazycích, varianty, partnerské zdroje i fronty kontrol. Vlastní nepoužívané fotografie a miniatury odstraní opakovatelný úklid. Objednávky, doklady a sdílené či historicky používané fotografie zůstávají. [Podrobný postup a výjimky](docs/product-removal.md).
 
 ### Správce fotografií
 

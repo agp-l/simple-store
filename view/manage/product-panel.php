@@ -50,13 +50,12 @@
   </div>
   <?php if ($editing): ?>
       <details class="inline-delete-product"><summary><?= \SimpleStore\Rendering\Icon::render('delete') ?> Odstranit produkt</summary>
-        <p>Smazání odstraní produkt a všechny jeho revize v tomto jazyce. Nahrané obrázky zůstanou na disku, protože mohou mít zkopírované odkazy.</p>
+        <p>Úplně odstraní produkt ve všech jazycích, varianty, partnerské odkazy a kontroly. Před potvrzením uvidíš náhled a přehled fotografií. Objednávky a doklady zůstanou zachované.</p>
         <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . 'admin/') ?>">
           <input type="hidden" name="action" value="delete-product"><input type="hidden" name="csrf" value="<?= $escape($editToken) ?>">
           <input type="hidden" name="key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
           <input type="hidden" name="revision" value="<?= (int) $product['revision_number'] ?>">
-          <label><input type="checkbox" name="confirm" value="1" required> Rozumím, že revize produktu už nepůjdou obnovit.</label>
-          <button type="submit" class="inline-small"><?= \SimpleStore\Rendering\Icon::render('delete') ?> Smazat produkt</button>
+          <button type="submit" class="inline-small"><?= \SimpleStore\Rendering\Icon::render('delete') ?> Připravit smazání produktu</button>
         </form>
       </details>
   <?php endif; ?>

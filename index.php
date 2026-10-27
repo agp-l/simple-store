@@ -395,6 +395,14 @@ try {
                 exit;
             }
         }
+        if ($item === null) {
+            $removed = (new \SimpleStore\Product\ProductRemoval($db,__DIR__,$site['languages']))->removed($url->getLanguage(),$route['slug']);
+            if ($removed !== null) {
+                header('X-Robots-Tag: noindex');
+                $renderer->render('not-found',$shared+['title'=>'Produkt už není v nabídce — dobrodruzi.cz','removedProduct'=>$removed,'privatePage'=>true],410);
+                exit;
+            }
+        }
         $editMode = $editRequested && $canEdit && $item !== null;
         if ($item !== null) {
             try {

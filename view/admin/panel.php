@@ -7,7 +7,7 @@ $inside = $adminWorkspace;
   <?php if ($inside): ?>
   <div class="panel-shell panel-wrap <?= $screen === 'accounting' ? 'panel-shell--evidence' : '' ?>">
     <?php
-    $panelCurrent = $screen === 'content-import' ? 'product-import' : $screen;
+    $panelCurrent = $screen === 'content-import' ? 'product-import' : ($screen === 'product-removal' ? 'products' : $screen);
     $panelLinks = [
         ['key' => 'editor', 'label' => 'Stránky', 'icon_name' => 'document', 'href' => $adminUrl . '?section=contents'],
         ['key' => 'products', 'label' => 'Produkty', 'icon_name' => 'package', 'href' => $basePath . $site['default_language'] . '?manage=1#produkty'],
@@ -75,6 +75,8 @@ $inside = $adminWorkspace;
       </section>
     <?php elseif ($screen === 'content-import'): ?>
       <?php require __DIR__ . '/content-import.php'; ?>
+    <?php elseif ($screen === 'product-removal'): ?>
+      <?php require __DIR__ . '/product-removal.php'; ?>
     <?php elseif ($screen === 'supplier-prices'): ?>
       <?php require __DIR__ . '/supplier-prices.php'; ?>
     <?php elseif ($screen === 'purchase-partners'): ?>
