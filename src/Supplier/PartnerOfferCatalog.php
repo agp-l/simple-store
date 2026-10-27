@@ -93,11 +93,11 @@ final class PartnerOfferCatalog
     {
         if (!$this->installed()) return 0;
         $count=0;
-        $scans=array_column($this->db->query('SELECT product_key,fingerprint,status,checked_at FROM shop_supplier_offer_scans'),null,'product_key');
+        $scans=array_column($this->db->query('SELECT product_key,fingerprint,status,checked_at,next_at FROM shop_supplier_offer_scans'),null,'product_key');
         foreach ($this->snapshots() as $key=>$snapshot) {
             if (self::candidates($snapshot)===[]) continue;
             $fingerprint=self::fingerprint($snapshot); $scan=$scans[$key]??null;
-            if ($scan!==null && $scan['fingerprint']===$fingerprint && ($scan['status']==='queued'||(int)$scan['checked_at']>$this->now-86400)) continue;
+            if ($scan!==null && $scan['fingerprint']===$fingerprint && ($scan['status']==='queued'||(int)$scan['next_at']>$this->now)) continue;
             $this->db->query('INSERT INTO shop_supplier_offer_scans (product_key,fingerprint,status,next_at,data_json) VALUES (%s,%s,%s,%i,%s)
                 ON DUPLICATE KEY UPDATE fingerprint=VALUES(fingerprint),status=VALUES(status),next_at=VALUES(next_at),data_json=VALUES(data_json)',
                 $key,$fingerprint,'queued',$this->now,'{}'); $count++;
@@ -135,9 +135,7 @@ final class PartnerOfferCatalog
                     $evidence=VariantOfferEvaluation::observe($result['document'],$result['source_url'],$snapshot,$resolved,(int)$result['observed_at']);
                     $observations=$evidence['observations']; $issues=array_column($evidence['issues'],null,'link_key');
                 } else {
-                    $offer=PriceEvaluation::select($result['document'],$result['source_url'],$snapshot);
-                    $expected=SupplierCatalogAliases::name($snapshot['products'][0]['name'],($offer['group_name']??'')?:($offer['product_name']??''),$result['source_url'],$offer);
-                    if (!empty($offer['uncertain']) || !PriceParser::sameProductName($offer,$expected)) throw new \InvalidArgumentException('Model nebo varianta se přesně neshodují.');
+                    $offer=self::defaultOffer($result['document'],$result['source_url'],$snapshot);
                     $observations['']=$offer+['observed_at'=>$result['observed_at']];
                 }
             } catch (\InvalidArgumentException $e) { $result['error']=$e->getMessage(); }
@@ -161,11 +159,31 @@ final class PartnerOfferCatalog
                 ]);
             }
             $done=$index+1>=count($candidates);
+            // A cache reused shortly before expiry must not postpone refresh for a
+            // further day. Errors have their own daily retry time; all observations
+            // retain the original fetch time, never the time of this local scan.
+            $expires=$this->now+86400;
+            foreach($observations as$observation)$expires=min($expires,(int)$observation['observed_at']+86400);
+            $expires=min($expires,(int)($data['expires_at']??$expires));
             $this->db->update('shop_supplier_offer_scans',['fingerprint'=>$fingerprint,'status'=>$done?'complete':'queued',
-                'next_at'=>$this->now,'checked_at'=>$done?$this->now:(int)$scan['checked_at'],'data_json'=>self::json(['index'=>$index+1])],'product_key=%s',$key);
+                'next_at'=>$done?max($this->now+60,$expires):$this->now,'checked_at'=>$done?$this->now:(int)$scan['checked_at'],'data_json'=>self::json(['index'=>$index+1,'expires_at'=>$expires])],'product_key=%s',$key);
             $this->db->commit();
         } catch (\Throwable $e) { $this->db->rollback(); throw $e; }
         return ['state'=>'working','wait'=>1];
+    }
+    public static function defaultOffer(array $document,string $url,array $snapshot): array
+    {
+        $offer=PriceEvaluation::select($document,$url,$snapshot);
+        $expected=SupplierCatalogAliases::name($snapshot['products'][0]['name'],($offer['group_name']??'')?:($offer['product_name']??''),$url,$offer);
+        $scope=$offer['identity_evidence']??[];
+        // A product title may already contain its fixed volume/size. The
+        // explicit group matcher proves that identity more precisely than
+        // comparing the group's bare name with the full local title again.
+        $exactScope=($scope['method']??'')==='exact_local_variant_scope' && count($scope['matched_offers']??[])===1;
+        if (!empty($offer['uncertain']) || (!$exactScope&&!PriceParser::sameProductName($offer,$expected))) throw new \InvalidArgumentException('Model nebo varianta se přesně neshodují.');
+        if (($scope['method']??'')==='exact_local_variant_scope' && !$exactScope) throw new \InvalidArgumentException('Základní produkt odpovídá více variantám partnera. Doplň přesný odkaz.');
+        $offer['url']=$offer['corrected_url']??$offer['url'];
+        return $offer;
     }
     public function nextAt(): ?int
     {

@@ -66,6 +66,8 @@ try {
     $check($report['summary']['multiple_partners']===2 && $report['summary']['variants']===3,'Product and variant denominators mixed.');
     foreach($report['summary']['partners']as$row)$check($row['verified_products']===2 && $row['complete_products']===2 && $row['verified_variants']===3,'Coverage report discarded/multiplied a product.');
     $check($manager->enqueueOffers()===0,'Repeated scan bypassed daily freshness.');
+    $db->update('shop_supplier_offer_scans',['checked_at'=>$now+86000],'1=1'); // a later local cache replay
+    $check((new PartnerOfferCatalog($db,$now+86401))->schedule()===2,'Expired observations were not queued according to their original fetch time.');
     $counts=array_count_values(array_column($requests,0));foreach($counts as$count)$check($count===1,'Shared URL fetched more than once in 24 hours.');
     $expired=(new PartnerOfferCatalog($db,$now+86401))->report();
     foreach($expired['summary']['partners']as$row)$check($row['available_variants']===0,'Expired stock counted as available.');

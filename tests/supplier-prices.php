@@ -322,3 +322,18 @@ $identityUrl='https://gramino.cz/p/identity-model';
 $identityDoc=Parser::document($wrap(['@type'=>'Product','name'=>'Other model','color'=>'Blue','offers'=>['@type'=>'Offer','url'=>$identityUrl,'price'=>1000,'priceCurrency'=>'CZK']]),$identityUrl);
 $identityResult=SimpleStore\Supplier\PriceEvaluation::select($identityDoc,$identityUrl,['products'=>[['name'=>'Expected model']],'variantSettings'=>['enabled'=>1],'variants'=>[['enabled'=>1,'variant_key'=>'v','choices_json'=>'{"Barva":"Modrá"}']]]);
 $check($identityResult['uncertain'],'Legacy structured attributes bypassed model proof.');
+
+// Default products can carry a fixed size in their title. Accept only one proven
+// SKU from that group, and retain the deep link; equal prices are not identity.
+$fixedUrl='https://gramino.cz/p/volume-model';
+$fixedVariants=[];
+foreach([10,15]as$litres)$fixedVariants[]=['@type'=>'Product','name'=>'Volume Model – Blue, '.$litres.' l','color'=>'Blue','size'=>$litres.' l',
+ 'offers'=>['@type'=>'Offer','url'=>$fixedUrl.'?v_id='.$litres,'price'=>1500,'priceCurrency'=>'CZK','availability'=>'https://schema.org/InStock']];
+$fixedDoc=Parser::document($wrap(['@type'=>'ProductGroup','name'=>'Volume Model','url'=>$fixedUrl,'hasVariant'=>$fixedVariants]),$fixedUrl);
+$fixedSnapshot=['products'=>[['name'=>'Volume Model 15 l']],'variants'=>[],'variantSettings'=>['enabled'=>0]];
+$fixed=SimpleStore\Supplier\PartnerOfferCatalog::defaultOffer($fixedDoc,$fixedUrl,$fixedSnapshot);
+$check($fixed['url']===$fixedUrl.'?v_id=15'&&$fixed['price']===1500,'A fixed-size default product lost its proven exact offer.');
+$fixedSnapshot['products'][0]['name']='Volume Model';
+$reject(fn()=>SimpleStore\Supplier\PartnerOfferCatalog::defaultOffer($fixedDoc,$fixedUrl,$fixedSnapshot));
+$fixedSnapshot['products'][0]['name']='Other Model 15 l';
+$reject(fn()=>SimpleStore\Supplier\PartnerOfferCatalog::defaultOffer($fixedDoc,$fixedUrl,$fixedSnapshot));
