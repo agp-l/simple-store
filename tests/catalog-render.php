@@ -38,7 +38,7 @@ if (!str_contains($customHtml, 'Naše výprava &lt;test&gt;') ||
     throw new RuntimeException('Editable shared copy was not safely rendered.');
 }
 
-$product = ['slug' => 'bota', 'product_key' => str_repeat('b', 32),
+$product = ['revision_number' => 1, 'slug' => 'bota', 'product_key' => str_repeat('b', 32),
     'name' => 'Lehká bota', 'brand' => 'Topo',
     'summary' => 'Na hory', 'description' => '', 'published' => 1,
     'details_json' => null, 'category' => 'boty',

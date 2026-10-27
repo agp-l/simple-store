@@ -163,6 +163,10 @@ final class PageRenderer
         $checkoutReady = (bool) ($data['checkoutReady'] ?? false);
         $compactHeader = (bool) ($data['compactHeader'] ?? false);
         $skipTarget = (string) ($data['skipTarget'] ?? 'produkty');
+        $noIndex = $privatePage || $editMode || $contentEditMode || $managingCatalog || $status !== 200 || !empty($data['noIndex']);
+        $canonicalUrl = !$noIndex ? (string) ($data['canonicalUrl'] ?? '') : '';
+        $structuredProduct = !$noIndex && $page === 'product-record' && is_array($product)
+            ? \SimpleStore\Seo\ProductStructuredData::build($product, $canonicalUrl, (string) ($data['publicBaseUrl'] ?? '')) : [];
         require $this->viewPath . '/layout.php';
     }
 

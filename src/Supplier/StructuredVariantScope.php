@@ -26,7 +26,16 @@ final class StructuredVariantScope
             }
         }
         if($single)$values+=Pod7kiloVariantIdentity::specifications($body,$url);
-        return self::attributes($values)??[];
+        $attributes=[];
+        foreach($values as$key=>$value){
+            $normalized=self::attributes([$key=>$value]);
+            if($normalized===null)return [];
+            foreach($normalized as$dimension=>$part){
+                if(isset($attributes[$dimension])&&$attributes[$dimension]!==$part)return [];
+                $attributes[$dimension]=$part;
+            }
+        }
+        return $attributes;
     }
     public static function select(array $document,string $url,array $snapshot):?array
     {

@@ -18,12 +18,12 @@ final class VariantAttributes
             $colors=['černá'=>'black','bílá'=>'white','červená'=>'red','modrá'=>'blue','zelená'=>'green','žlutá'=>'yellow',
                 'oranžová'=>'orange','šedá'=>'grey','gray'=>'grey','stříbrná'=>'silver','fialová'=>'purple','růžová'=>'pink','hnědá'=>'brown',
                 'antracitová'=>'anthracite','béžová'=>'beige','limetková'=>'lime','světle modrá'=>'light blue','světle blue'=>'light blue','tmavě zelená'=>'dark green','tmavě green'=>'dark green',
-                'olivově zelená'=>'olive green','olivově green'=>'olive green','šedozelená'=>'grey green','šedogreen'=>'grey green','navy blue'=>'navy'];
+                'olive'=>'olive green','olivová'=>'olive green','gun metal'=>'gunmetal','olivově zelená'=>'olive green','olivově green'=>'olive green','šedozelená'=>'grey green','šedogreen'=>'grey green','navy blue'=>'navy'];
             if(str_contains($value,'/'))return implode(' ',array_map(static fn(string $part):string=>self::value('color',$part),explode('/',$value)));
             if(preg_match('/^(.+?)\s*\(([^()]+)\)$/uD',$value,$m)&&self::value('color',$m[1])===self::value('color',$m[2]))return self::value('color',$m[1]);
             if(isset($colors[$value]))return $colors[$value];
             // Preserve named shades and qualifiers while translating whole colour words.
-            foreach($colors as$from=>$to)$value=preg_replace('~(?<![\pL])'.preg_quote($from,'~').'(?![\pL])~u',$to,$value);
+            foreach($colors as$from=>$to){if(in_array($from,['olive','gun metal'],true))continue;$value=preg_replace('~(?<![\pL])'.preg_quote($from,'~').'(?![\pL])~u',$to,$value);}
             return $value;
         }
         if($dimension==='size'){

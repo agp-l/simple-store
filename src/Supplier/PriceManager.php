@@ -11,7 +11,7 @@ use Throwable;
 
 final class PriceManager
 {
-    public const EVALUATOR_VERSION = 11;
+    public const EVALUATOR_VERSION = 12;
     private $transport;
     private $clock;
     private ?bool $variantModesInstalled=null;
@@ -491,7 +491,7 @@ final class PriceManager
         $next=$snapshot['candidates'][$data['index']+1]??null;
         if($next===null||(int)$next['partner_id']!==(int)$candidate['partner_id']){
             try{
-                $result=VariantOfferEvaluation::assemble($snapshot,$data['variant_observations']??[],(int)$candidate['partner_id'],$this->now(),$this->variantModesInstalled?$this->settings():[]);
+                $result=VariantOfferEvaluation::assemble($snapshot,$data['variant_observations']??[],(int)$candidate['partner_id'],$this->now(),$this->variantModesInstalled?$this->settings():[],$data['variant_issues']??[]);
                 $result['partner_id']=$candidate['partner_id'];$result['partner_name']=$candidate['name'];
                 $result['source_url']=$result['url'];$result['fallback']=!$candidate['selected'];
                 $result['old_price']=$snapshot['sale']['supplier_price_czk']??null;
@@ -521,7 +521,12 @@ final class PriceManager
     private function failure(array $job,array $data,string $message,bool $temporary=false):void
     {
         $c=$data['snapshot']['candidates'][$data['index']];
-        if(($c['kind']??'')==='variant'){$this->advanceVariant($job,$data,$message,$temporary);return;}
+        if(($c['kind']??'')==='variant'){
+            // Keep transport failures attached to the affected variants. A final
+            // coverage error must not hide the original HTTP/robots/cache reason.
+            foreach($c['links']as$link)$data['variant_issues'][]=$link+['partner_id'=>$c['partner_id'],'url'=>$c['url'],'status'=>'source_error','message'=>$message];
+            $this->advanceVariant($job,$data,$message,$temporary);return;
+        }
         $data['trace'][]=['seller'=>$c['name'],'url'=>$data['redirect']?:$c['url'],'time'=>$this->now(),'message'=>$message];
         $data['temporary']=!empty($data['temporary'])||$temporary;
         $data['index']++;$data['redirect']='';$data['hops']=0;$data['permanent_redirects']=true;

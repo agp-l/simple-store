@@ -29,6 +29,7 @@ final class SupplierCatalogAliases
                 '/p/polstar-nemo-fillo-elite'=>['NEMO Fillo Elite Luxury','Polštář NEMO Fillo Elite'],
                 '/p/prikryvka-cumulus-roamer-150'=>['Cumulus Roamer 150 – M','Přikrývka Cumulus Roamer 150'],
                 '/p/prikryvka-nemo-pulse-20-30-endless-promise-ul-quilt'=>['NEMO Pulse 20/30 Endless Promise UL Quilt – L','Přikrývka NEMO Pulse 20/30 Endless Promise UL Quilt'],
+                '/p/detsky-spaci-pytel-cumulus-junior-500'=>['Cumulus Junior 500','Dětský spací pytel Cumulus Junior 500'],
                 '/p/detsky-spaci-pytel-cumulus-junior-300'=>['Cumulus Junior 300 – M','Dětský spací pytel Cumulus Junior 300'],
             ],
             'gramino.cz'=>[
@@ -87,7 +88,7 @@ final class SupplierCatalogAliases
         // Pod7kilo spells out Cumulus' height bands as well as the manufacturer's
         // size letter. This is a closed size table, never a generic suffix removal.
         if($host==='pod7kilo.cz'&&preg_match('~^/p/spaci-pytel-cumulus-~',$path)&&isset($attributes['size'])){
-            $sizes=['do 170 cm - zkrácený (s)'=>'s','do 183 cm - standardní (m)'=>'m','do 196 cm - prodloužený (l)'=>'l'];
+            $sizes=['do 170 cm - zkrácený (s)'=>'s','do 173 cm - zkrácený (s)'=>'s','do 183 cm - standardní (m)'=>'m','do 188 cm - standardní (m)'=>'m','do 196 cm - prodloužený (l)'=>'l','do 203 cm - prodloužený (l)'=>'l'];
             $attributes['size']=$sizes[$attributes['size']]??$attributes['size'];
         }
         if(!$local&&isset($attributes['color'])){

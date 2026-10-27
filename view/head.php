@@ -5,7 +5,9 @@
   <link rel="icon" type="image/svg+xml" href="<?= $siteRoot ?>assets/favicon.svg">
   <title><?= htmlspecialchars($pageTitle, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></title>
   <meta name="description" content="<?= htmlspecialchars($pageDescription, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>">
-  <?php if ($editMode || $contentEditMode || $privatePage): ?><meta name="robots" content="noindex, nofollow"><?php endif; ?>
+  <?php if ($editMode || $contentEditMode || $privatePage || ($noIndex ?? false)): ?><meta name="robots" content="noindex, nofollow"><?php endif; ?>
+  <?php if (($canonicalUrl ?? '') !== ''): ?><link rel="canonical" href="<?= htmlspecialchars($canonicalUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?php endif; ?>
+  <?php if (!empty($structuredProduct)): ?><script type="application/ld+json"><?= \SimpleStore\Seo\ProductStructuredData::json($structuredProduct) ?></script><?php endif; ?>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">

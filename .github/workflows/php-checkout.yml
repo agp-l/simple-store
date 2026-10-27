@@ -27,7 +27,7 @@ jobs:
       - name: Check application source syntax on PHP 8.0
         run: |
           find src view -name '*.php' -print0 | xargs -0 -n1 php -l
-          for file in index.php admin.php account.php support.php \
+          for file in index.php discovery.php admin.php account.php support.php \
             comgate-callback.php comgate-return.php gopay-callback.php \
             gopay-return.php btcpay-callback.php btcpay-return.php; do
             php -l "$file"
@@ -53,6 +53,7 @@ jobs:
           php -l support.php
           php -l admin.php
           php -l index.php
+          php -l discovery.php
           php -l comgate-callback.php
           php -l comgate-return.php
           php -l gopay-callback.php
@@ -99,6 +100,7 @@ jobs:
           php tests/tax-documents.php
           php tests/evidence-workspace.php
           php tests/catalog-render.php
+          php tests/public-discovery.php
           php tests/footer-legal.php
           php tests/site-copy.php
           php tests/configuration-backup.php
@@ -198,6 +200,7 @@ jobs:
           php tests/fio-database.php
           php tests/bitcoin-rate-database.php
           php tests/partner-stock-database.php
+          php tests/public-discovery-database.php
           php tests/stock-database.php
           php tests/shipping-database.php
           php tests/homepage-database.php
@@ -276,6 +279,7 @@ jobs:
           php tests/partner-catalog-database.php
           php tests/bitcoin-rate-database.php
           php tests/partner-stock-database.php
+          php tests/public-discovery-database.php
           php tests/supplier-prices-database.php
           php tests/supplier-variant-prices-database.php
           php tests/product-families-database.php
