@@ -184,6 +184,7 @@ try {
     }
 
     $adminPreviewActive = $auth->visitorPreviewEnabled();
+    $section = $_GET['section'] ?? '';
 
     $content = new ContentRepository($db, $site['languages'], $site['revision_limit']);
     $screen = 'editor';
@@ -246,7 +247,6 @@ try {
     }
 
     $action = $method === 'POST' ? ($_POST['action'] ?? '') : '';
-    $section = $_GET['section'] ?? '';
     if (in_array($action, ['configuration-preview', 'configuration-apply'], true)) {
         $kind = $_POST['backup_kind'] ?? '';
         if (!in_array($kind, \SimpleStore\Admin\ConfigurationBackup::KINDS, true)) throw new InvalidArgumentException('Neplatná oblast zálohy.');

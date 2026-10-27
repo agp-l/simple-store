@@ -21,4 +21,17 @@ ob_start(); $renderer->render('not-found',['basePath'=>'/shop/','language'=>'cs'
 if (http_response_code()!==410 || !str_contains($html,'Produkt už není v nabídce') || !str_contains($html,'Starý &lt;produkt&gt;') ||
     !str_contains($html,'name="robots" content="noindex') || str_contains($html,'data-add')) throw new RuntimeException('Removed product must render a safe, non-purchasable 410 page.');
 http_response_code(200);
-echo "Product removal preview, consent, retry and public tombstone rendering passed.\n";
+
+
+// The post-delete destination uses the existing authenticated catalog notice.
+ob_start();
+$renderer->render('catalog',['basePath'=>'/shop/','language'=>'cs','canManageCatalog'=>true,
+    'managingCatalog'=>true,'productDeleted'=>true]);
+$html=ob_get_clean();
+if (!str_contains($html,'Produkt byl odstraněn z nabídky i partnerských kontrol.') ||
+    !str_contains($html,'/shop/admin/product-removal/') ||
+    str_contains($html,'Nahrané soubory zůstaly zachované')) {
+    throw new RuntimeException('Catalog return must confirm deletion and link to the actual photo cleanup status.');
+}
+
+echo "Product removal preview, consent, retry, catalog return and public tombstone rendering passed.\n";

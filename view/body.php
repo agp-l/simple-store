@@ -16,7 +16,7 @@ if ($manualCategoryMenu) {
 ?>
   <main class="wrap" id="produkty">
     <?php if ($canManageCatalog): ?><?php require __DIR__ . '/manage/catalog-actions.php'; ?><?php endif; ?>
-    <?php if ($productDeleted): ?><p class="catalog-manage-notice" role="status">Produkt byl odstraněn. Nahrané soubory zůstaly zachované kvůli starším odkazům.</p><?php endif; ?>
+    <?php if ($productDeleted): ?><p class="catalog-manage-notice" role="status">Produkt byl odstraněn z nabídky i partnerských kontrol. <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($basePath . 'admin/?section=product-removal') ?>">Zobrazit výsledek úklidu fotografií</a></p><?php endif; ?>
     <nav class="breadcrumbs" aria-label="Drobečková navigace">
       <a href="<?= $escape($siteRoot . $language) ?>">Úvod</a>
       <?php foreach ($categoryTrail as $i => $crumb): ?>

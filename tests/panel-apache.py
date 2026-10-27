@@ -30,7 +30,7 @@ for attempt in range(60):
     try:
         request(client(), '/admin/')
         break
-    except (urllib.error.URLError, TimeoutError):
+    except (urllib.error.URLError, TimeoutError, ConnectionError):
         time.sleep(.5)
 else:
     raise AssertionError('Apache did not start.')
