@@ -499,6 +499,7 @@ try {
         if ($blogTopic !== null && (!is_string($blogTopic) || !isset(\SimpleStore\Content\BlogTopics::LABELS[$blogTopic]))) {
             $renderer->render('not-found', $shared, 400); exit;
         }
+        if ($blogTopic !== null) $shared['canonicalUrl'] .= (str_contains($shared['canonicalUrl'], '?') ? '&' : '?') . 'topic=' . rawurlencode($blogTopic);
         $blogTopicCounts = $hasContent ? $contents->publishedTopicCounts($url->getLanguage()) : [];
         $batch = $hasContent ? $contents->publishedPostsPage($url->getLanguage(), $offset, 6, $blogTopic)
             : ['items' => [], 'nextOffset' => null];

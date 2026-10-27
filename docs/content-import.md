@@ -40,3 +40,11 @@ Místo `sections` lze použít `body` s prostým textem; vznikne jeden textový 
 Export navíc obsahuje `document_key` a `revision` na nejvyšší úrovni. Při zadání AI požaduj jejich zachování spolu s `format`, `language` a `type`. Pro částečnou aktualizaci stačí v `content` ponechat pole, která se mají změnit. Neznámá pole a typové chyby import odmítá.
 
 Nejsou potřeba změny SQL schématu. Přístup má pouze přihlášený správce, POST kontroluje CSRF a revize se ukládá stávající databázovou transakcí. Kontroly: `php tests/content-import.php`, `php tests/content-import-controller.php` a s testovací MySQL/MariaDB `php tests/content-import-database.php`.
+
+## Kategorie a nový vzhled blogu
+
+Články mají volitelný `content.topic`: `cestopisy`, `spani-venku`, `vybaveni`, `rady-na-cesty`, `zivot-na-cestach` nebo `zapisnik`. Starší články bez této hodnoty patří do Zápisníku. Kategorie se mění v editoru článku, ukládá se automaticky jako další revize a je součástí JSON exportu. Částečná aktualizace bez `topic` zachová dosavadní kategorii. Pole je určené pouze článkům (`type: post`).
+
+Veřejný blog filtruje publikované články podle `?topic=…`, včetně stránkování; koncepty a historické revize se nezapočítávají. První karta má na desktopu šířku dvou sloupců, na mobilu jsou karty pod sebou. Delší článek nabízí obsah sestavený z nadpisů bloků a orientační čas čtení. Kategorie se ukládá do stávajícího JSON těla, bez změny SQL schématu.
+
+Redakční aktualizace článku **Dva roky ve stanu** je v `content/posts/dva-roky-ve-stanu.cs.json`. Jde o aktualizační snímek konkrétního dokumentu: před dalším importem vždy použij aktuální `revision` z nového exportu, aby nebyly přepsány souběžné úpravy.
