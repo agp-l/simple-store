@@ -8,6 +8,7 @@ for folder in "$panel_webroot" "$panel_webroot/shop"; do
   cp .htaccess "$folder/.htaccess"
   cp tests/fixtures/panel-apache.php "$folder/admin.php"
   cp tests/fixtures/panel-apache.php "$folder/account.php"
+  printf "%s" "<?php require '/app/discovery.php';" > "$folder/discovery.php"
   printf '<?php http_response_code(404);' > "$folder/index.php"
 done
 php -r 'echo password_hash("test-password-123", PASSWORD_DEFAULT);' > "$panel_webroot/password-hash.txt"

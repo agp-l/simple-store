@@ -36,6 +36,12 @@ else:
     raise AssertionError('Apache did not start.')
 
 for base in ['/', '/shop/']:
+    status, headers, body = request(client(), base + 'robots.txt')
+    assert status == 200 and 'text/plain' in headers['Content-Type']
+    assert 'Disallow: ' + base + 'admin' in body and 'Set-Cookie' not in headers
+    status, headers, body = request(client(), base + 'sitemap.xml')
+    assert status == 503 and headers['Retry-After'] == '300' and 'Set-Cookie' not in headers
+    assert not body.strip(), 'Discovery failure leaked diagnostic/configuration details.'
     for area in ['admin', 'account']:
         opener = client()
         old = base + area + '.php'

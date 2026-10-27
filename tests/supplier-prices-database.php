@@ -193,13 +193,13 @@ try{
  $check(count($requests)===$before&&$job($legacy)['status']==='queued'&&(int)$job($legacy)['next_at']>=(int)$data['fetched_at']+900,'Parser maintenance ignored the actual request cooldown.');
  $check($manager->retry('one','rapid',true,(int)$job($legacy)['id'])['added']===0,'Scheduled refresh was duplicated.');
  $body=json_decode(substr($responses[\SimpleStore\Supplier\PriceParser::requestUrl($legacyUrl)]['body'],strlen('<script type="application/ld+json">'),-strlen('</script>')),true);
- $body['color']='Green';
+ $body['color']='Green';$body['name']='Product legacy-attributes';
  $responses[\SimpleStore\Supplier\PriceParser::requestUrl($legacyUrl)]['body']='<script type="application/ld+json">'.json_encode($body).'</script>';
  $now+=901;$run(4,100);
  $check($job($legacy)['status']==='applied','Scheduled legacy refresh did not apply the exact new attributes.');
  $afterMaintenance=count($requests);$run(3,1);$check(count($requests)===$afterMaintenance,'Parser maintenance repeated a completed fetch.');
  // With global pricing on, blank inherited variant prices can adopt individually proven costs.
- $inherited=$make('inherited-prices',1000);$inheritedUrl='https://gramino.cz/p/inherited-prices';
+ $inherited=$make('inherited-prices',1000);$db->update('shop_product_revisions',['name'=>'Inherited model'],'product_key=%s',$inherited);$inheritedUrl='https://gramino.cz/p/inherited-prices';
  $db->update('shop_product_sales',['partner_id'=>$gramino],'product_key=%s',$inherited);
  $db->update('shop_product_supplier_links',['url'=>$inheritedUrl],'product_key=%s',$inherited);
  $db->insert('shop_product_variant_settings',['product_key'=>$inherited,'enabled'=>1]);

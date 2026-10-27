@@ -11,7 +11,7 @@ final class SupplierCatalogAliases
         if(in_array($host,['pod7kilo.cz','hudy.cz'],true)){
             // A category prefix is not part of the manufacturer's model name. Do not remove
             // brands, years, gender, capacities or any other suffix/word from the model.
-            $prefix='/^(?:batoh|spacák|ponožky|boty|přikrývka|karimatka|polštář)\s+/ui';
+            $prefix='/^(?:batoh(?:\/(?:taška|kabelka))?|(?:sbalitelný|kabinový|cestovatelský) batoh|spací pytel|bivakovací vak|pončo \/ přístřešek|spacák|ponožky|boty|přikrývka|karimatka|polštář)\s+/ui';
             $local=preg_replace($prefix,'',$name);$remote=preg_replace($prefix,'',$group);
             if(($local!==$name||$remote!==$group)&&PriceParser::sameProductName(['product_name'=>$remote],$local))return $group;
         }
@@ -29,10 +29,13 @@ final class SupplierCatalogAliases
                 '/p/polstar-nemo-fillo-elite'=>['NEMO Fillo Elite Luxury','Polštář NEMO Fillo Elite'],
                 '/p/prikryvka-cumulus-roamer-150'=>['Cumulus Roamer 150 – M','Přikrývka Cumulus Roamer 150'],
                 '/p/prikryvka-nemo-pulse-20-30-endless-promise-ul-quilt'=>['NEMO Pulse 20/30 Endless Promise UL Quilt – L','Přikrývka NEMO Pulse 20/30 Endless Promise UL Quilt'],
+                '/p/polstar-travelrest-ruzne-barvy'=>['TravelRest cestovní polštář','Polštář TravelRest (různé barvy)'],
+                '/p/detsky-spaci-pytel-cumulus-junior-500'=>['Cumulus Junior 500','Dětský spací pytel Cumulus Junior 500'],
                 '/p/detsky-spaci-pytel-cumulus-junior-300'=>['Cumulus Junior 300 – M','Dětský spací pytel Cumulus Junior 300'],
             ],
             'gramino.cz'=>[
                 '/p/enlightened-equipment-enigma-quilt-40f-5c'=>['Enlightened Equipment Enigma Quilt 40°F – Long/Wide','Enlightened Equipment Enigma Quilt 40°F (5°C)'],
+                '/p/sea-to-summit-ultralight-aeros-traveller-pillow'=>['Sea to Summit Aeros Ultralight Traveller','Sea To Summit Ultralight Aeros Traveller Pillow'],
                 '/p/cumulus-junior-300'=>['Cumulus Junior 300 – M','Cumulus Junior 300'],
             ],
         ];
@@ -40,7 +43,11 @@ final class SupplierCatalogAliases
             if(($path===$modelPath||($host==='pod7kilo.cz'&&str_starts_with($path,$modelPath.'/')))&&
                 PriceParser::sameProductName(['product_name'=>$name],$local)&&PriceParser::sameProductName(['product_name'=>$group],$remote))return $group;
         }
-        if($host==='gramino.cz'&&in_array($path,['/p/big-agnes-tiger-wall-ul2','/p/big-agnes-tiger-wall-ul3'],true)&&
+        if($host==='pod7kilo.cz'&&($path==='/p/batoh-aevor-trip-pack'||str_starts_with($path,'/p/batoh-aevor-trip-pack/'))&&
+            PriceParser::sameProductName(['product_name'=>$name],'Aevor Trip Pack Proof')&&
+            PriceParser::sameProductName(['product_name'=>$group],'Batoh Aevor Trip Pack')&&
+            preg_match('/\bproof\b/u',VariantAttributes::value('color',$evidence['attributes']['color']??'')))return $group;
+        if($host==='gramino.cz'&&preg_match('~^/p/big-agnes-(?:tiger-wall-ul[23]|copper-spur-ul[1-4](?:-xl)?)$~D',$path)&&
             in_array('HyperBead',$evidence['model_features']??[],true)&&PriceParser::sameProductName(['product_name'=>$name],$group.' HyperBead'))return $group;
         // Size tables: https://gramino.cz/p/nemo-tensor-elite,
         // /p/nemo-tensor-all-season, /p/therm-a-rest-neoair-xlite-nxt.
@@ -84,6 +91,13 @@ final class SupplierCatalogAliases
         $path=rtrim((string)parse_url($url,PHP_URL_PATH),'/');
         if($host==='pod7kilo.cz'&&($path==='/p/polstar-nemo-fillo-elite'||str_starts_with($path,'/p/polstar-nemo-fillo-elite/'))&&
             $local&&PriceParser::sameProductName(['product_name'=>$name],'NEMO Fillo Elite Luxury'))$attributes['version']='rozšířený';
+        // Pod7kilo spells out Cumulus' height bands as well as the manufacturer's
+        // size letter. This is a closed size table, never a generic suffix removal.
+        if($host==='pod7kilo.cz'&&preg_match('~^/p/spaci-pytel-cumulus-~',$path)&&isset($attributes['size'])){
+            $sizes=['do 178 cm - zkrácený (s)'=>'s','do 185 cm - standardní (m)'=>'m','do 198 cm - prodloužený (l)'=>'l','do 170 cm - zkrácený (s)'=>'s','do 173 cm - zkrácený (s)'=>'s','do 183 cm - standardní (m)'=>'m','do 188 cm - standardní (m)'=>'m','do 196 cm - prodloužený (l)'=>'l','do 203 cm - prodloužený (l)'=>'l'];
+            $attributes['size']=$sizes[$attributes['size']]??$attributes['size'];
+        }
+        if($host==='pod7kilo.cz'&&str_starts_with($path,'/p/batoh-hyperlite-mountain-gear-')&&($attributes['size']??'')==='t')$attributes['size']='tall';
         if(!$local&&isset($attributes['color'])){
             $maps=[
                 'hudy.cz'=>[
@@ -93,10 +107,17 @@ final class SupplierCatalogAliases
                 ],
                 'gramino.cz'=>[
                     '/p/big-agnes-tiger-wall-ul2'=>['grey / green'=>'green'],
+                    '/p/big-agnes-copper-spur-ul2'=>['tangelo red'=>'tangelo'],
+                    '/p/big-agnes-copper-spur-ul3'=>['tangelo red'=>'tangelo'],
+                    '/p/big-agnes-copper-spur-ul3-xl'=>['tangelo red'=>'tangelo'],
+                    '/p/liteway-pokkie-pack'=>['ultra grid avocado'=>'ultragrid avocado'],
+                    '/p/sea-to-summit-ultralight-aeros-traveller-pillow'=>['aqua blue'=>'aqua'],
                     '/p/big-agnes-tiger-wall-ul3'=>['grey / green'=>'green'],
                 ],
             ];
-            $attributes['color']=$maps[$host][$path][$attributes['color']]??$attributes['color'];
+            foreach($maps[$host][$path]??[]as$from=>$to)if(VariantAttributes::value('color',$from)===$attributes['color']){
+                $attributes['color']=VariantAttributes::value('color',$to);break;
+            }
         }
         return $attributes;
     }

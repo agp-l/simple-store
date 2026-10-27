@@ -26,7 +26,7 @@ final class VariantOfferEvaluation
                 $match = ['status'=>'variant_identity', 'message'=>'Ručně uložený odkaz nevede na odpovídající variantu. Oprav jeho adresu.'];
             }
             if ($match['status'] !== 'exact') {
-                $issues[] = $link + ['url'=>$candidate['url'], 'status'=>$match['status'], 'message'=>$match['message']];
+                $issues[] = $link + ['partner_id'=>$candidate['partner_id'], 'url'=>$candidate['url'], 'status'=>$match['status'], 'message'=>$match['message']];
                 continue;
             }
             $offer = $match['offer'];
@@ -41,7 +41,7 @@ final class VariantOfferEvaluation
         return compact('observations', 'issues');
     }
 
-    public static function assemble(array $snapshot, array $observations, int $partnerId, int $now, array $pricing): array
+    public static function assemble(array $snapshot, array $observations, int $partnerId, int $now, array $pricing, array $issues = []): array
     {
         $variants = VariantOfferPlan::activeVariants($snapshot);
         if ($variants === []) throw new InvalidArgumentException('Produkt nemá aktivní varianty.');
@@ -49,7 +49,11 @@ final class VariantOfferEvaluation
         foreach ($variants as $key => $variant) {
             $found = array_values(array_filter($observations, static fn(array $o): bool =>
                 (int) $o['partner_id'] === $partnerId && $o['variant_key'] === $key));
-            if ($found === []) throw new InvalidArgumentException('Chybí přesná nabídka varianty: ' . self::label($variant) . '. Ceny zůstaly beze změny.');
+            if ($found === []) {
+                $reasons=[];
+                foreach($issues as$issue)if((int)($issue['partner_id']??0)===$partnerId&&($issue['variant_key']??'')===$key)$reasons[]=$issue['message'];
+                throw new InvalidArgumentException('Chybí přesná nabídka varianty: ' . self::label($variant) . '. '.implode(' ',array_slice(array_unique($reasons),0,2)).' Ceny zůstaly beze změny.');
+            }
             $first = $found[0];
             foreach ($found as $offer) {
                 if ($offer['amount'] !== $first['amount'] || !PriceParser::sameOfferUrl($offer['url'], $first['url'])) {

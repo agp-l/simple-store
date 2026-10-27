@@ -7,7 +7,7 @@ use InvalidArgumentException;
 /** Reads explicit offers, never guesses a price from arbitrary visible numbers. */
 final class PriceParser
 {
-    public const VERSION = 7;
+    public const VERSION = 8;
     /** Gramino advertises this public mirror in /.well-known/ai-catalog.json and /openapi.json. */
     public static function requestUrl(string $url):string
     {
@@ -116,6 +116,9 @@ final class PriceParser
     {
         $value=str_replace(['™','®','’','‘'],['','','\'','\''],$value);
         $value=str_replace(['—','–','−'], '-', $value);
+        // Brackets around the same year and spaces before SI units do not change identity.
+        $value=preg_replace('/\((20\d{2})\)/u','$1',$value);
+        $value=preg_replace('/(?<=\d)\s+(?=(?:l|ml|cm|g)\b)/ui','',$value);
         $value=preg_replace('/\s*-\s*/u','-',trim($value));
         $value=preg_replace('/\s+/u',' ',$value);
         return function_exists('mb_strtolower')?mb_strtolower($value,'UTF-8'):strtolower($value);

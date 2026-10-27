@@ -45,3 +45,12 @@ $legacy=$snapshot;$legacy['variantLinks']=[];$check(Plan::candidates($legacy)===
 $disabled=$snapshot;$disabled['variants'][1]['enabled']=0;
 $check(count(Plan::candidates($disabled))===1,'Disabled size entered price queue.');
 echo "Variant offer planning: exact links, coverage, conflicts, freshness, merchant isolation and tombstones passed.\n";
+try{
+ Evaluation::assemble($snapshot,[],1,$now,[],[
+  ['partner_id'=>2,'variant_key'=>'blue','message'=>'Wrong merchant'],
+  ['partner_id'=>1,'variant_key'=>'blue','message'=>'Dodavatel odpověděl HTTP 403.']]);
+ throw new RuntimeException('Missing offers accepted.');
+}catch(InvalidArgumentException $error){
+ $check(str_contains($error->getMessage(),'HTTP 403')&&!str_contains($error->getMessage(),'Wrong merchant'),'Transport failure hidden or mixed across merchants.');
+ $check(SimpleStore\Supplier\PriceEvaluation::issue('failed',$error->getMessage())==='access_denied','HTTP failure misclassified as variant coverage.');
+}

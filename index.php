@@ -54,6 +54,12 @@ try {
 
 $shared = ['language' => $url->getLanguage(), 'basePath' => $url->getBasePath(), 'showErrors' => $site['debug']];
 $route = $url->route();
+$shared['publicBaseUrl'] = \SimpleStore\Seo\PublicSite::base($site['public_base_url'] ?? '', $url->getBasePath());
+if (in_array($route['name'], ['catalog','category','product','page','blog','post'], true)) {
+    $shared['canonicalUrl'] = \SimpleStore\Seo\PublicSite::absolute($shared['publicBaseUrl'], $url->path(implode('/', $url->getSegments())), $url->getBasePath());
+    if (in_array($route['name'], ['catalog','category','blog'], true) && isset($_GET['offset']) && is_string($_GET['offset']) && ctype_digit($_GET['offset']) && (int) $_GET['offset'] > 0) $shared['canonicalUrl'] .= '?offset=' . (int) $_GET['offset'];
+}
+$shared['noIndex'] = isset($_GET['manage']) || isset($_GET['edit']) || isset($_GET['preview']) || isset($_GET['search']) || isset($_GET['sort']) || isset($_GET['max_weight']) || isset($_GET['homepage_edit']);
 $databaseFile = __DIR__ . '/config/database.php';
 $missing = [];
 if (!is_file(__DIR__ . '/vendor/autoload.php')) {

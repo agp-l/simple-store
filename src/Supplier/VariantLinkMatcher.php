@@ -5,7 +5,7 @@ namespace SimpleStore\Supplier;
 /** Maps one local combination to one explicit offer. Equal prices never prove identity. */
 final class VariantLinkMatcher
 {
-    public const VERSION = 1;
+    public const VERSION = 2;
 
     public static function match(array $document, string $source, string $name, array $variant, ?string $exactUrl = null): array
     {
@@ -34,7 +34,8 @@ final class VariantLinkMatcher
             $result = StructuredVariantScope::select($document, $source, $scope);
             if ($result !== null && !PriceParser::sameProductName($result, SupplierCatalogAliases::name($name, ($result['group_name']??'')?:($result['product_name']??''), $source, $result))) $result = null;
         }
-        if ($result === null || empty($result['variant_offers'][$id])) return $none;
+        if ($result === null || empty($result['variant_offers'][$id])) return ['status'=>'no_match',
+            'message'=>VariantIdentityDiagnostic::message($document,$source,$name,$choices)];
         $urls = $result['variant_offers'][$id]['urls'];
         if (count($urls) !== 1 || count($result['identity_evidence']['matched_offers'] ?? []) !== 1) return ['status' => 'ambiguous', 'message' => 'Kombinaci odpovídá více nabídek. Přesný odkaz vyžaduje kontrolu.'];
         $target = $urls[0];

@@ -23,6 +23,12 @@ final class GraminoVariantScope
             // Gramino's full variant name explicitly lists colour, size; retain this evidence in old caches too.
             $dimensions=$tail===null?null:self::sourceDimensions($tail);
             if($dimensions===null)return null;
+            // The title may omit an axis (for example size); typed JSON-LD is
+            // independent evidence. Never let either source overwrite a conflict.
+            foreach(VariantAttributes::offer($offer,'gramino.cz')as$key=>$value){
+                if(isset($dimensions[$key])&&$dimensions[$key]!==$value)return null;
+                $dimensions[$key]=$value;
+            }
             $parsed[$i]=$dimensions;
         }
         $variants=!empty($snapshot['variantSettings']['enabled'])?array_values(array_filter($snapshot['variants']??[],static fn(array $v):bool=>!empty($v['enabled']))):[['choices_json'=>'{}']];
@@ -106,23 +112,11 @@ final class GraminoVariantScope
     private static function size(string $value):bool
     {return (bool)preg_match('/^(?:[2-5]?x{0,3}[sml]|small|medium|large|short|regular|long|tall|wide|long[ \/]wide|regular[ \/](?:regular|wide|short|mummy)|\d+(?:\s*[x×]\s*\d+)?(?:\.\d+)?\s*(?:cm|l|ml))$/uD',self::normalize($value));}
     private static function sizeValue(string $value):string
-    {
-        $value=self::normalize($value);$value=preg_replace('/\s*[x×]\s*/u','x',$value);
-        $value=str_replace('/',' ',$value);
-        return ['small'=>'s','medium'=>'m','large'=>'l'][$value]??preg_replace('/(?<=\d)\s+(?=cm$|ml$|l$)/','',$value);
-    }
+    {return VariantAttributes::value('size',$value);}
     private static function zip(string $value):?string
-    {return match(self::normalize($value)){'levá strana','levý','levá','left'=>'left','pravá strana','pravý','pravá','right'=>'right',default=>null};}
+    {$value=VariantAttributes::value('zip',$value);return in_array($value,['left','right'],true)?$value:null;}
     private static function color(string $value):string
-    {
-        $value=self::normalize($value);
-        if(preg_match('/^(.+?)\s*\(([^()]+)\)$/uD',$value,$parts)&&self::color($parts[1])===self::color($parts[2]))$value=self::color($parts[1]);
-        $value=str_replace('hi-vis','hi vis',$value);
-        if(str_contains($value,'/'))return implode(' ',array_map([self::class,'color'],explode('/',$value)));
-        return ['červená'=>'red','modrá'=>'blue','zelená'=>'green','žlutá'=>'yellow','černá'=>'black','bílá'=>'white',
-            'šedá'=>'grey','gray'=>'grey','stříbrná'=>'silver','oranžová'=>'orange','fialová'=>'purple','růžová'=>'pink',
-            'hnědá'=>'brown','antracitová'=>'anthracite'][$value]??$value;
-    }
+    {return VariantAttributes::value('color',$value);}
     private static function sourceDimensions(string $tail):?array
     {
         if($tail==='')return null;

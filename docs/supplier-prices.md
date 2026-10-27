@@ -156,8 +156,8 @@ ceny variant ani uložené vypnutí variantové automatiky, lze při přesném d
 založit samostatné automatické ceny. Každá kombinace dostane svoji cenu dodavatele a svůj přepočet;
 povolení automatiky se uloží v téže transakci. Ruční ceny ani výslovné vypnutí se nepřepisují.
 
-Ověřená cena vyprodaného zboží se může aktualizovat. Dostupnost dodavatele zůstává informací;
-sklad, publikování produktu ani zákaznické objednávky se nemění. Rozdílný prodávající, neznámá
+Ověřená cena vyprodaného zboží se může aktualizovat. Dostupnost přesně ověřené nabídky vybraného partnera samostatně aktualizuje limit asistovaného nákupu;
+vlastní sklad, publikování produktu ani zákaznické objednávky se nemění. Rozdílný prodávající, neznámá
 varianta, skok přes 30 % a prodej pod náklady mají stále své kontroly.
 
 Převody názvů rozměrů jsou omezené na konkrétní model a dodavatelskou URL. Podklady:
@@ -172,7 +172,7 @@ Převody názvů rozměrů jsou omezené na konkrétní model a dodavatelskou UR
 Workflow `Supplier price worker` běží každých 5 minut a po úspěšném nasazení. GitHub může
 naplánovaný běh opozdit; nejde o záruku přesného času. Každý běh zpracovává frontu nejvýše
 4 minuty, čeká podle odpovědí workeru a používá stejné databázové zámky a prodlevy jako
-administrace. Týdenní zařazování a pozastavení se dál řídí uloženým nastavením obchodu.
+administrace. Denní ověření a požadavky po objednávkách se řídí společnou frontou; pozastavení platí i pro cron.
 
 Workflow využije stávající připojení pro nasazení. Při prvním běhu vytvoří samostatný náhodný
 klíč v chráněném `config/supplier-worker.php`; existující klíč nikdy nepřepíše. Klíč není v repozitáři,
@@ -183,7 +183,7 @@ cron s uloženým SHA-256 klíčem dál funguje. Samostatný klíč lze zneplatn
 a vypnutím tohoto workflow, aby jej další běh znovu nevytvořil.
 
 Administrace a JSON rozlišují poslední krok z prohlížeče a skutečný běh cronu/CLI.
-Samotné zapnutí týdenního plánování už nelze zaměnit za důkaz běžícího workeru.
+Pravidelné plánování samo o sobě není důkaz běžícího workeru; rozhoduje zaznamenaný heartbeat cronu.
 
 ## Přesné partnerské odkazy variant (etapa C)
 
@@ -288,3 +288,18 @@ Successful or failed fetches replace the legacy document, preventing refresh loo
 ## Kurz BTC
 
 `BitcoinRateRepository` sdílí kurz v databázi a zamyká aktualizaci napříč procesy. Za běžného provozu provede nejvýše jeden dotaz za 15 minut za instalaci (96/24 h). Termín dalšího pokusu uloží **před HTTP**. Chyby mají exponenciální prodlevu od 15 minut do dne; HTTP 429 alespoň hodinu, 401/403 alespoň den, delší `Retry-After` má přednost. Časová prodleva funguje i bez dosud uloženého kurzu. Platný starší kurz lze zobrazit nejvýše 2 hodiny od času zdroje, potom zůstane pouze Kč. Testy používají falešný transport, poskytovatele nezatěžují.
+
+## Normalizace identity a diagnostika (27. 10. 2026)
+
+`VariantAttributes` sjednocuje oddělené i starší složené názvy vlastností, včetně „Barva a velikost“, „Velikost a barva“ a „Varianta“. Vnitřní zápis S/M zůstává jednou velikostí. Překládají se celé barevné výrazy; odstín, materiál, model a rok se nezahazují. Typované vlastnosti JSON-LD doplňují neúplný název SKU, rozpory vedou k odmítnutí. Tabulka výškových pásem Cumulus platí pouze na příslušných adresách Pod 7 kilo.
+
+Parser 8 zachovává také shodnou vlastnost opakovanou v JSON-LD a specifikaci jediného SKU; rozporné hodnoty dál odmítá. Staré neúplné dokumenty se jednorázově obnoví s běžnými prodlevami. Vyhodnocovač 12 znovu posoudí starší nevyřešené kontroly; párovač 2 obnoví průchod odkazy. Stále platí cache, robots, prodlevy a ochrana ručně uložených odkazů. `VariantIdentityDiagnostic` popisuje chybějící údaje a rozdílné hodnoty. HTTP/robots chyby zůstávají připojené ke konkrétním variantám a neztratí se za obecným hlášením neúplnosti. Záložní obchod vyžaduje vědomé převzetí prodávajícího. Nedoloženou kombinaci nelze automaticky převést na jinou barvu, materiál či ročník.
+
+Další ověřené katalogové názvy zůstávají omezené na konkrétní modely a cesty: TravelRest (český název cestovního polštáře), Sea to Summit Aeros Ultralight Traveller (pořadí názvu a označení Pillow), Copper Spur (Tangelo / Tangelo Red), Liteway Pokkie (UltraGrid / Ultra Grid), Hyperlite (T / Tall). Aevor Trip Pack Proof navíc vyžaduje slovo Proof ve vlastnostech příslušné nabídky; samotný obecný model Trip Pack nestačí. Technické označení HyperBead musí být stále doložené u nabídky. Podklady ověřené 27. 10. 2026:
+
+- https://www.bigagnes.com/collections/hyperbead-tents/products/copper-spur-ul-three
+- https://gramino.cz/p/big-agnes-copper-spur-ul3
+- https://gramino.cz/p/big-agnes-copper-spur-ul3-xl
+- https://gramino.cz/p/sea-to-summit-ultralight-aeros-traveller-pillow
+- https://www.pod7kilo.cz/p/polstar-travelrest-ruzne-barvy/
+- Příslušné veřejné variantové dokumenty v regresním vzorku `tests/fixtures/supplier-label-translations.json`; ceny ve vzorku jsou záměrně syntetické. Testuje se identita, nikoliv cenový seznam.
