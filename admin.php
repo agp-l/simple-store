@@ -361,10 +361,11 @@ try {
         ($exception instanceof RuntimeException && str_contains($exception->getMessage(), 'mezi')));
     $knownStockError = $changingStock && ($exception instanceof InvalidArgumentException ||
         ($exception instanceof RuntimeException && str_contains($exception->getMessage(), 'mezi')));
-    http_response_code($knownDeleteError || $knownStockError
+    $knownBlogPlacementError = $method === 'POST' && ($_POST['action'] ?? '') === 'blog-placement' && $exception instanceof InvalidArgumentException;
+    http_response_code($knownDeleteError || $knownStockError || $knownBlogPlacementError
         ? ($exception instanceof InvalidArgumentException ? 422 : 409) : 500);
     $screen = 'error';
-    $error = ($knownDeleteError || $knownStockError) ? $exception->getMessage() :
+    $error = ($knownDeleteError || $knownStockError || $knownBlogPlacementError) ? $exception->getMessage() :
         ($site['debug'] ? (string) $exception : 'Administraci se nepodařilo načíst.');
 }
 
