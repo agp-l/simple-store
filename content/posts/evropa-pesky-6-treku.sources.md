@@ -1,0 +1,18 @@
+# Redakční podklady: Evropa pěšky
+
+Ověřeno 27. října 2026. Původní redakční článek, bez tvrzení, že autor všechny trasy osobně prošel. Podnětem bylo téma kratších evropských treků z článku Gramino; text, pořadí, výběr a praktické zpracování jsou vlastní. Fotografie z cizích webů nepřebíráme.
+
+Importní soubor `evropa-pesky-6-treku.cs.json` je připravený pro **nový koncept**. Samotný deployment ho do databáze neimportuje. Po vytvoření konceptu se publikuje v editoru. Při jakékoli další úpravě použít nový export s aktuálním klíčem a revizí, nikoli znovu importovat jako nový článek.
+
+## Kontrolované údaje
+
+| Trasa | Podklad a ověření |
+| --- | --- |
+| Mullerthal | Přibližně 112 km dohromady ve třech okruzích. [Route 3](https://www.visitluxembourg.com/tour/stage-trail-mullerthal-trail-route-3), [Route 2](https://www.visitluxembourg.com/tour/stage-trail-mullerthal-trail-route-2): Kuelscheier, obchůzka, světlo, mokré skály a doprava. Rozdělení kolem šesti dnů je orientační plán. |
+| Gendarmstien | [84 km a pět etap](https://www.gendarmsti.dk/en/oplev-ruten-2). [První etapa](https://www.gendarmsti.dk/en/oplev-ruten-2/etape-1), [poslední etapa](https://www.gendarmsti.dk/en/oplev-ruten-2/etape-5). [Doprava](https://www.gendarmsti.dk/en/det-praktiske-3/sadan-kommer-du-hertil), [pravidla konkrétních noclehů](https://www.gendarmsti.dk/en/hvil-ud-2/overnatning), [voda a možné zaplavení pobřeží](https://www.gendarmsti.dk/en/det-praktiske-3/vaerd-at-vide-hjemmefra). |
+| Lechweg | [Füssen](https://www.fuessen.de/en/lechweg/): 125 km, šest sportovních etap nebo osm a více pomalejších, sezonní přístup. [Lech Zürs](https://www.lechzuers.com/en/summer/activities/hiking/the-lechweg-trail): turistický autobus k Formarinsee. Článek neslibuje průchodnost v konkrétním termínu. |
+| Dingle Way | [Správce trasy](https://thedingleway.ie/the-dingle-way-walking-route-guide-sections-overview.html) má osm etap. Jejich zveřejněné délky byly 18 + 17 + 23 + 20 + 20 + 24 + 29 + 27 = 178 km. V článku uvádíme přibližně 180 km, nikoli zdánlivě přesných 162/176/179 km z různých přehledů. [Feothanach–Cloghane](https://thedingleway.ie/the-dingle-way-walking-route-guide-sections-overview/feothanach-to-cloghane-an-fheothanach-an-clochan.html): 24 km, 655 m výstupu, upozornění na špatnou viditelnost. [Cloghane–Castlegregory](https://thedingleway.ie/the-dingle-way-walking-route-guide-sections-overview/cloghane-to-castlegregory-an-clochan-caislean-ghriaire.html): 29 km, pokyny k přílivu. |
+| Höga Kustenleden | [Regionální turistický web](https://www.hogakusten.com/en/highcoasttrail): 135 km, nyní devět etap, doprava, voda. [Švédská verze](https://www.hogakusten.com/sv/hogakustenleden) uvádí 7–9 dnů. [Správa Skuleskogenu](https://www.sverigesnationalparker.se/en/parks/skuleskogen-national-park/visit-the-park/staying-in-the-park): 1. 5.–30. 9. stanování jen na vyhrazených místech, chaty bez rezervace. Nepřenášet toto místní pravidlo na celé Švédsko. |
+| Affric Kintail Way | [Web správce](https://www.affrickintailway.com/): přibližně 44 mil, Drumnadrochit–Morvich. Přímé načtení vracelo 403; základní informace dostupné v indexu. [Regionální přehled](https://invernessthingstodo.com/things-to-do/activity/affric-kintail-way/) potvrzuje čtyři části. [Přímo provozovatel hostelu](https://www.hostellingscotland.org.uk/hostels/glen-affric/) uvádí sezonu duben–září, omezené zásoby, vlastní spacák a absenci signálu. Článek neslibuje každodenní zásobování ani místa bez rezervace. |
+
+Odhady dní a doporučení výběru jsou redakční, nikoli garance. Výdaje bez konkrétního data a rezervací nečíslujeme. U všech tras má přednost aktuální značení, omezení a pravidla provozovatele nebo správce území. Odkazy k ověření jsou součástí zveřejněného článku.
