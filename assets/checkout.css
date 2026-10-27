@@ -998,3 +998,22 @@
     gap: 3px;
   }
 }
+
+/* Partner allocation is visible before the customer chooses shipping/payment. */
+.checkout-partners { margin: 24px 0; padding: 22px; border: 1px solid #cddacb; border-radius: 16px; background: #f5f8f2; color: #31432f; }
+.checkout-partners-heading { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.checkout-partners-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: #e3ebdd; font-size: 24px; }
+.checkout-partners-heading h2 { margin: 2px 0 0; font-size: 21px; }
+.checkout-partners-count { margin-left: auto; border: 1px solid #c4d4be; border-radius: 20px; padding: 6px 11px; font-size: 12px; font-weight: 600; }
+.checkout-partners > p { font-size: 13px; line-height: 1.65; max-width: 80ch; }
+.checkout-partner-groups { display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,270px),1fr)); gap: 12px; }
+.checkout-partner-group { background: #fff; border: 1px solid #dbe3d6; border-radius: 10px; padding: 15px; min-width: 0; }
+.checkout-partner-group h3 { margin: 0 0 10px; font-size: 15px; overflow-wrap: anywhere; }
+.checkout-partner-group ul { list-style: none; padding: 0; margin: 0; }
+.checkout-partner-group li { display: flex; justify-content: space-between; gap: 15px; font-size: 13px; padding: 6px 0; }
+.checkout-partner-group li + li { border-top: 1px solid #edf0e9; }
+.checkout-partner-group li span { min-width: 0; overflow-wrap: anywhere; }
+.checkout-partner-group li strong { flex-shrink: 0; font-weight: 500; }
+.checkout-partner-group small { display: block; color: #647160; margin-top: 3px; }
+.checkout-partners .checkout-partners-note { margin-bottom: 0; color: #596953; font-size: 12px; }
+@media (max-width: 600px) { .checkout-partners { padding: 16px; } .checkout-partners-count { margin-left: 52px; } }

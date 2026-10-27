@@ -5,6 +5,7 @@ require __DIR__ . '/common.php';
 <main class="wrap checkout-page" id="produkty">
   <div class="checkout-heading"><span class="checkout-eyebrow">Vaše objednávka</span><h1>Košík</h1><p>Zkontrolujte produkty a počet kusů před pokračováním.</p></div>
   <?php require __DIR__ . '/steps.php'; ?>
+  <?php require __DIR__ . '/partner-groups.php'; ?>
   <?php if ($error !== ''): ?><p class="checkout-alert" role="alert"><?= $checkoutEscape($error) ?></p><?php endif; ?>
   <?php foreach ($checkoutOtherIssues as $issue): ?><p class="checkout-alert" role="alert"><?= $checkoutEscape($issue) ?></p><?php endforeach; ?>
   <?php if ($checkoutItems === []): ?>
