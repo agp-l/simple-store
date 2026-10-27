@@ -100,7 +100,17 @@ final class CartPartnerPlanner
         $keys=array_keys($keys); sort($keys,SORT_STRING);
         $stockKeys=array_values(array_unique(array_column($items,'product_key'))); sort($stockKeys,SORT_STRING);
         foreach ($stockKeys as $key) $this->db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s FOR UPDATE',$key);
-        $this->db->query('SELECT product_key FROM shop_product_revisions WHERE product_key IN %ls AND active_product_key IS NOT NULL ORDER BY product_key,language FOR UPDATE',$keys);
+        $published=[];
+        foreach ($this->db->query('SELECT product_key,language,published,price_czk,stock_status FROM shop_product_revisions WHERE product_key IN %ls AND active_product_key IS NOT NULL ORDER BY product_key,language FOR UPDATE',$keys) as $product) $published[$product['product_key'].':'.$product['language']]=$product;
+        foreach ($items as $item) {
+            if (($item['sale_mode']??'own')!=='assisted') continue;
+            $product=$published[$item['product_key'].':'.$item['language']]??null;
+            // Variant prices/options get their own locking validation in stock.reserve.
+            if ($product===null || !(int)$product['published'] || (($item['variant_key']??'')==='' &&
+                ((int)$product['price_czk']!==$item['unit_price_czk'] || $product['stock_status']==='out_of_stock'))) {
+                throw new InvalidArgumentException('Produkt nebo jeho cena se mezitím změnily. Obnovte košík.');
+            }
+        }
         $this->db->query('SELECT product_key FROM shop_product_sales WHERE product_key IN %ls ORDER BY product_key FOR UPDATE',$keys);
         $this->db->query('SELECT id FROM shop_purchase_partners ORDER BY id FOR UPDATE');
         $this->db->query('SELECT offer_key FROM shop_supplier_offers WHERE product_key IN %ls ORDER BY offer_key FOR UPDATE',$keys);

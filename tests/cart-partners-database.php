@@ -80,7 +80,12 @@ try {
     $other=ConnectionFactory::create(array_replace($config,['database'=>$database]));
     $db->startTransaction(); $db->queryFirstField('SELECT price_czk FROM shop_supplier_offers WHERE offer_key=%s',$offerA);
     $other->update('shop_supplier_offers',['price_czk'=>48,'amount'=>48],'offer_key=%s',$offerA);
-    $reject(fn()=>$planner->assertCurrent($original['items'])); $db->rollback(); $other->disconnect();
+    $reject(fn()=>$planner->assertCurrent($original['items'])); $db->rollback();
+    $write('a');
+    $db->startTransaction(); $db->queryFirstField('SELECT price_czk FROM shop_product_revisions WHERE product_key=%s',$keys['a']);
+    $other->update('shop_product_revisions',['price_czk'=>101],'product_key=%s',$keys['a']);
+    $reject(fn()=>$planner->assertCurrent($original['items'])); $db->rollback();
+    $other->update('shop_product_revisions',['price_czk'=>100],'product_key=%s',$keys['a']); $other->disconnect();
     $write('a');
     // Conflicting active sources must not manufacture a usable price.
     $db->insert('shop_product_supplier_links',['product_key'=>$keys['a'],'label'=>'Duplicate','url'=>'https://c.test/second']);
