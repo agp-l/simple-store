@@ -68,3 +68,21 @@ $check(Matcher::match($doc,$url,'Cumulus Mysterious Traveller 500 – L',$v)['st
 $doc['offers'][0]['attributes']['zip']='right';
 $check(Matcher::match($doc,$url,'Cumulus Mysterious Traveller 500 – M',$v)['status']==='no_match','Conflicting title and typed zipper side accepted.');
 echo "Variant links: composite labels, typed axes, translated colours and conflicting evidence passed.\n";
+$labels=json_decode(file_get_contents(__DIR__.'/fixtures/supplier-label-translations.json'),true,64,JSON_THROW_ON_ERROR);
+foreach($labels as$case){
+ foreach($case['choices']as$choices){
+  $v=['variant_key'=>str_repeat('e',32),'enabled'=>1,'choices_json'=>json_encode($choices)];
+  $check(Matcher::match($case['document'],$case['source'],$case['name'],$v)['status']==='exact','Verified catalog convention failed: '.$case['name'].' '.json_encode($choices));
+  $check(Matcher::match($case['document'],$case['source'],$case['name'].' 2030',$v)['status']!=='exact','Translation discarded a new model year.');
+ }
+ if($case['name']==='Aevor Trip Pack Proof'){
+  $doc=$case['document'];foreach($doc['offers']as&$o){$o['attributes']['color']='tropical lily';$o['product_name']=$o['group_name'].' Tropical Lily';}unset($o);
+  $v['choices_json']='{"Barva":"tropical lily"}';
+  $check(Matcher::match($doc,$case['source'],$case['name'],$v)['status']!=='exact','Proof construction accepted without variant evidence.');
+ }
+ if(str_contains($case['name'],'HyperBead')){
+  $doc=$case['document'];foreach($doc['offers']as&$o)$o['model_features']=[];unset($o);
+  $check(Matcher::match($doc,$case['source'],$case['name'],$v)['status']!=='exact','Tangelo alias erased HyperBead construction evidence.');
+ }
+}
+echo "Variant links: supplier catalog conventions preserve model years and construction evidence.\n";

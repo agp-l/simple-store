@@ -1,0 +1,706 @@
+[
+  {
+    "name": "Big Agnes Copper Spur UL3 XL HyperBead",
+    "source": "https://gramino.cz/p/big-agnes-copper-spur-ul3-xl",
+    "choices": [
+      {
+        "Barva": "Tangelo"
+      },
+      {
+        "Barva": "Lichen Green"
+      }
+    ],
+    "document": {
+      "parser_version": 8,
+      "single_offers": true,
+      "product_count": 2,
+      "offers": [
+        {
+          "url": "https://gramino.cz/p/big-agnes-copper-spur-ul3-xl?v_id=variant_01KWHW6J9ARP2J00XRHGZM9MJS",
+          "attributes": {
+            "color": "lichen green"
+          },
+          "model_features": [
+            "HyperBead"
+          ],
+          "product_name": "Big Agnes Copper Spur UL3 XL – Lichen Green",
+          "group_url": "https://gramino.cz/p/big-agnes-copper-spur-ul3-xl",
+          "group_name": "Big Agnes Copper Spur UL3 XL",
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://gramino.cz/p/big-agnes-copper-spur-ul3-xl?v_id=variant_01KXGARVMJKQ4J76ZV1WN5Q33C",
+          "attributes": {
+            "color": "tangelo red"
+          },
+          "model_features": [
+            "HyperBead"
+          ],
+          "product_name": "Big Agnes Copper Spur UL3 XL – Tangelo Red",
+          "group_url": "https://gramino.cz/p/big-agnes-copper-spur-ul3-xl",
+          "group_name": "Big Agnes Copper Spur UL3 XL",
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        }
+      ]
+    }
+  },
+  {
+    "name": "Liteway Pokkie Pack",
+    "source": "https://gramino.cz/p/liteway-pokkie-pack",
+    "choices": [
+      {
+        "Barva": "UltraGrid Avocado"
+      },
+      {
+        "Barva": "Black"
+      }
+    ],
+    "document": {
+      "parser_version": 8,
+      "single_offers": true,
+      "product_count": 10,
+      "offers": [
+        {
+          "url": "https://gramino.cz/p/liteway-pokkie-pack?v_id=variant_01KWHW2BT53562XD4AHK8MMK0H",
+          "attributes": {
+            "color": "fuchsia"
+          },
+          "model_features": [],
+          "product_name": "Liteway Pokkie Pack – Fuchsia",
+          "group_url": "https://gramino.cz/p/liteway-pokkie-pack",
+          "group_name": "Liteway Pokkie Pack",
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://gramino.cz/p/liteway-pokkie-pack?v_id=variant_01KWHW2BT57GFTEGCEAMP4QP8R",
+          "attributes": {
+            "color": "hot orange"
+          },
+          "model_features": [],
+          "product_name": "Liteway Pokkie Pack – Hot Orange",
+          "group_url": "https://gramino.cz/p/liteway-pokkie-pack",
+          "group_name": "Liteway Pokkie Pack",
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://gramino.cz/p/liteway-pokkie-pack?v_id=variant_01KWHW2BT57T9H371C2N4XRFA2",
+          "attributes": {
+            "color": "slate grey"
+          },
+          "model_features": [],
+          "product_name": "Liteway Pokkie Pack – Slate Gray",
+          "group_url": "https://gramino.cz/p/liteway-pokkie-pack",
+          "group_name": "Liteway Pokkie Pack",
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://gramino.cz/p/liteway-pokkie-pack?v_id=variant_01KWHW2BT5G4RSHPMQFX7Z14YH",
+          "attributes": {
+            "color": "coyote brown"
+          },
+          "model_features": [],
+          "product_name": "Liteway Pokkie Pack – Coyote Brown",
+          "group_url": "https://gramino.cz/p/liteway-pokkie-pack",
+          "group_name": "Liteway Pokkie Pack",
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://gramino.cz/p/liteway-pokkie-pack?v_id=variant_01KWHW2BT5T6MHJTHNKH5XRDAR",
+          "attributes": {
+            "color": "golden dazy"
+          },
+          "model_features": [],
+          "product_name": "Liteway Pokkie Pack – Golden Dazy",
+          "group_url": "https://gramino.cz/p/liteway-pokkie-pack",
+          "group_name": "Liteway Pokkie Pack",
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://gramino.cz/p/liteway-pokkie-pack?v_id=variant_01KWHW2BT5J4FT49XEBW7J5EDQ",
+          "attributes": {
+            "color": "ocean blue"
+          },
+          "model_features": [],
+          "product_name": "Liteway Pokkie Pack – Ocean Blue",
+          "group_url": "https://gramino.cz/p/liteway-pokkie-pack",
+          "group_name": "Liteway Pokkie Pack",
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://gramino.cz/p/liteway-pokkie-pack?v_id=variant_01KWHW2BT5J35A99YQYP17NZXH",
+          "attributes": {
+            "color": "olive green"
+          },
+          "model_features": [],
+          "product_name": "Liteway Pokkie Pack – Olive Green",
+          "group_url": "https://gramino.cz/p/liteway-pokkie-pack",
+          "group_name": "Liteway Pokkie Pack",
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://gramino.cz/p/liteway-pokkie-pack?v_id=variant_01KWHW2BT5G2BQQECG5B20V4AE",
+          "attributes": {
+            "color": "black"
+          },
+          "model_features": [],
+          "product_name": "Liteway Pokkie Pack – Black",
+          "group_url": "https://gramino.cz/p/liteway-pokkie-pack",
+          "group_name": "Liteway Pokkie Pack",
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://gramino.cz/p/liteway-pokkie-pack?v_id=variant_01KWHW2BT5X75RC88CZH1W4MSY",
+          "attributes": {
+            "color": "ultra grid avocado"
+          },
+          "model_features": [],
+          "product_name": "Liteway Pokkie Pack – Ultra Grid Avocado",
+          "group_url": "https://gramino.cz/p/liteway-pokkie-pack",
+          "group_name": "Liteway Pokkie Pack",
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://gramino.cz/p/liteway-pokkie-pack?v_id=variant_01KWHW2BT5YZ8JKXZNB757FVPN",
+          "attributes": {
+            "color": "teal"
+          },
+          "model_features": [],
+          "product_name": "Liteway Pokkie Pack – Teal",
+          "group_url": "https://gramino.cz/p/liteway-pokkie-pack",
+          "group_name": "Liteway Pokkie Pack",
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        }
+      ]
+    }
+  },
+  {
+    "name": "Sea to Summit Aeros Ultralight Traveller",
+    "source": "https://gramino.cz/p/sea-to-summit-ultralight-aeros-traveller-pillow",
+    "choices": [
+      {
+        "Barva": "Grey"
+      }
+    ],
+    "document": {
+      "parser_version": 8,
+      "single_offers": true,
+      "product_count": 2,
+      "offers": [
+        {
+          "url": "https://gramino.cz/p/sea-to-summit-ultralight-aeros-traveller-pillow?v_id=variant_01KWHVZC31YQEFGWKM12NGS4YZ",
+          "attributes": {
+            "color": "aqua blue"
+          },
+          "model_features": [],
+          "product_name": "Sea To Summit Ultralight Aeros Traveller Pillow – Aqua Blue",
+          "group_url": "https://gramino.cz/p/sea-to-summit-ultralight-aeros-traveller-pillow",
+          "group_name": "Sea To Summit Ultralight Aeros Traveller Pillow",
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://gramino.cz/p/sea-to-summit-ultralight-aeros-traveller-pillow?v_id=variant_01KWHVZC31H4TC0PFN89G9T9GH",
+          "attributes": {
+            "color": "grey"
+          },
+          "model_features": [],
+          "product_name": "Sea To Summit Ultralight Aeros Traveller Pillow – Grey",
+          "group_url": "https://gramino.cz/p/sea-to-summit-ultralight-aeros-traveller-pillow",
+          "group_name": "Sea To Summit Ultralight Aeros Traveller Pillow",
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        }
+      ]
+    }
+  },
+  {
+    "name": "Aevor Trip Pack Proof",
+    "source": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/",
+    "choices": [
+      {
+        "Barva": "phantom purple proof (voděodolný)"
+      },
+      {
+        "Barva": "dual dip aqua drift proof (voděodolný)"
+      },
+      {
+        "Barva": "petrol proof (voděodolný)"
+      },
+      {
+        "Barva": "černá proof (voděodolný)"
+      },
+      {
+        "Barva": "retro blue proof (voděodolný)"
+      }
+    ],
+    "document": {
+      "parser_version": 8,
+      "single_offers": true,
+      "product_count": 9,
+      "offers": [
+        {
+          "url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-tropical-lily/",
+          "product_name": "Batoh Aevor Trip Pack Barva (vzor): tropical lily",
+          "group_name": "Batoh Aevor Trip Pack",
+          "group_url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/",
+          "attributes": {
+            "color": "tropical lily"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-vintage-teal/",
+          "product_name": "Batoh Aevor Trip Pack Barva (vzor): vintage teal",
+          "group_name": "Batoh Aevor Trip Pack",
+          "group_url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/",
+          "attributes": {
+            "color": "vintage teal"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-proof-evergreen/",
+          "product_name": "Batoh Aevor Trip Pack Barva (vzor): evergreen proof (voděodolný)",
+          "group_name": "Batoh Aevor Trip Pack",
+          "group_url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/",
+          "attributes": {
+            "color": "evergreen proof (voděodolný)"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-proof-retro-blue/",
+          "product_name": "Batoh Aevor Trip Pack Barva (vzor): retro blue proof (voděodolný)",
+          "group_name": "Batoh Aevor Trip Pack",
+          "group_url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/",
+          "attributes": {
+            "color": "retro blue proof (voděodolný)"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-proof-dual-dip-aqua-drift/",
+          "product_name": "Batoh Aevor Trip Pack Barva (vzor): dual dip aqua drift proof (voděodolný)",
+          "group_name": "Batoh Aevor Trip Pack",
+          "group_url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/",
+          "attributes": {
+            "color": "dual dip aqua drift proof (voděodolný)"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-proof-phantom-purple/",
+          "product_name": "Batoh Aevor Trip Pack Barva (vzor): phantom purple proof (voděodolný)",
+          "group_name": "Batoh Aevor Trip Pack",
+          "group_url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/",
+          "attributes": {
+            "color": "phantom purple proof (voděodolný)"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-proof-dual-dip-violet-rush/",
+          "product_name": "Batoh Aevor Trip Pack Barva (vzor): dual dip violet rush proof (voděodolný)",
+          "group_name": "Batoh Aevor Trip Pack",
+          "group_url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/",
+          "attributes": {
+            "color": "dual dip violet rush proof (voděodolný)"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-proof-black/",
+          "product_name": "Batoh Aevor Trip Pack Barva (vzor): černá proof (voděodolný)",
+          "group_name": "Batoh Aevor Trip Pack",
+          "group_url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/",
+          "attributes": {
+            "color": "black proof (voděodolný)"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/batoh-aevor-trip-pack-proof-petrol/",
+          "product_name": "Batoh Aevor Trip Pack Barva (vzor): petrol proof (voděodolný)",
+          "group_name": "Batoh Aevor Trip Pack",
+          "group_url": "https://www.pod7kilo.cz/p/batoh-aevor-trip-pack/",
+          "attributes": {
+            "color": "petrol proof (voděodolný)"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        }
+      ]
+    }
+  },
+  {
+    "name": "Cumulus Panyam 600",
+    "source": "https://www.pod7kilo.cz/p/spaci-pytel-cumulus-panyam-600/",
+    "choices": [
+      {
+        "Velikost": "M",
+        "Zip": "pravý (R)"
+      },
+      {
+        "Velikost": "L",
+        "Zip": "levý (L)"
+      },
+      {
+        "Velikost": "M",
+        "Zip": "levý (L)"
+      },
+      {
+        "Velikost": "L",
+        "Zip": "pravý (R)"
+      }
+    ],
+    "document": {
+      "parser_version": 8,
+      "single_offers": true,
+      "product_count": 6,
+      "offers": [
+        {
+          "url": "https://www.pod7kilo.cz/p/spaci-pytel-cumulus-panyam-600/spaci-pytel-cumulus-panyam-600-l-oranzovy-lz/",
+          "product_name": "Spací pytel Cumulus Panyam 600 Výška postavy: do 198 cm - prodloužený (L) / Pozice zipu: levý (L)",
+          "group_name": "Spací pytel Cumulus Panyam 600",
+          "group_url": "https://www.pod7kilo.cz/p/spaci-pytel-cumulus-panyam-600/",
+          "attributes": {
+            "size": "do 198 cm - prodloužený (l)",
+            "zip": "left"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/spaci-pytel-cumulus-panyam-600/spaci-pytel-cumulus-panyam-600-l-oranzovy-pz/",
+          "product_name": "Spací pytel Cumulus Panyam 600 Výška postavy: do 198 cm - prodloužený (L) / Pozice zipu: pravý (R)",
+          "group_name": "Spací pytel Cumulus Panyam 600",
+          "group_url": "https://www.pod7kilo.cz/p/spaci-pytel-cumulus-panyam-600/",
+          "attributes": {
+            "size": "do 198 cm - prodloužený (l)",
+            "zip": "right"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/spaci-pytel-cumulus-panyam-600/spaci-pytel-cumulus-panyam-600-m-oranzovy-lz/",
+          "product_name": "Spací pytel Cumulus Panyam 600 Výška postavy: do 188 cm - standardní (M) / Pozice zipu: levý (L)",
+          "group_name": "Spací pytel Cumulus Panyam 600",
+          "group_url": "https://www.pod7kilo.cz/p/spaci-pytel-cumulus-panyam-600/",
+          "attributes": {
+            "size": "do 188 cm - standardní (m)",
+            "zip": "left"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/spaci-pytel-cumulus-panyam-600/spaci-pytel-cumulus-panyam-600-m-oranzovy-pz/",
+          "product_name": "Spací pytel Cumulus Panyam 600 Výška postavy: do 188 cm - standardní (M) / Pozice zipu: pravý (R)",
+          "group_name": "Spací pytel Cumulus Panyam 600",
+          "group_url": "https://www.pod7kilo.cz/p/spaci-pytel-cumulus-panyam-600/",
+          "attributes": {
+            "size": "do 188 cm - standardní (m)",
+            "zip": "right"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/spaci-pytel-cumulus-panyam-600/spaci-pytel-cumulus-panyam-600-s-oranzovy-lz/",
+          "product_name": "Spací pytel Cumulus Panyam 600 Výška postavy: do 178 cm - zkrácený (S) / Pozice zipu: levý (L)",
+          "group_name": "Spací pytel Cumulus Panyam 600",
+          "group_url": "https://www.pod7kilo.cz/p/spaci-pytel-cumulus-panyam-600/",
+          "attributes": {
+            "size": "do 178 cm - zkrácený (s)",
+            "zip": "left"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/spaci-pytel-cumulus-panyam-600/spaci-pytel-cumulus-panyam-600-s-oranzovy-pz/",
+          "product_name": "Spací pytel Cumulus Panyam 600 Výška postavy: do 178 cm - zkrácený (S) / Pozice zipu: pravý (R)",
+          "group_name": "Spací pytel Cumulus Panyam 600",
+          "group_url": "https://www.pod7kilo.cz/p/spaci-pytel-cumulus-panyam-600/",
+          "attributes": {
+            "size": "do 178 cm - zkrácený (s)",
+            "zip": "right"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        }
+      ]
+    }
+  },
+  {
+    "name": "Hyperlite Mountain Gear Southwest 55",
+    "source": "https://www.pod7kilo.cz/p/batoh-hyperlite-mountain-gear-southwest-55/",
+    "choices": [
+      {
+        "Velikost a barva": "Small – černá"
+      },
+      {
+        "Velikost a barva": "Tall – bílá"
+      }
+    ],
+    "document": {
+      "parser_version": 8,
+      "single_offers": true,
+      "product_count": 8,
+      "offers": [
+        {
+          "url": "https://www.pod7kilo.cz/p/batoh-hyperlite-mountain-gear-southwest-55/batoh-hyperlite-mountain-gear-southwest-55-s-white/",
+          "product_name": "Batoh Hyperlite Mountain Gear Southwest 55 Velikost: S / Barva (vzor): bílá",
+          "group_name": "Batoh Hyperlite Mountain Gear Southwest 55",
+          "group_url": "https://www.pod7kilo.cz/p/batoh-hyperlite-mountain-gear-southwest-55/",
+          "attributes": {
+            "size": "s",
+            "color": "white"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/batoh-hyperlite-mountain-gear-southwest-55/batoh-hyperlite-mountain-gear-southwest-55-m-white/",
+          "product_name": "Batoh Hyperlite Mountain Gear Southwest 55 Velikost: M / Barva: bílá",
+          "group_name": "Batoh Hyperlite Mountain Gear Southwest 55",
+          "group_url": "https://www.pod7kilo.cz/p/batoh-hyperlite-mountain-gear-southwest-55/",
+          "attributes": {
+            "size": "m",
+            "color": "white"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/batoh-hyperlite-mountain-gear-southwest-55/batoh-hyperlite-mountain-gear-southwest-55-l-white/",
+          "product_name": "Batoh Hyperlite Mountain Gear Southwest 55 Velikost: L / Barva: bílá",
+          "group_name": "Batoh Hyperlite Mountain Gear Southwest 55",
+          "group_url": "https://www.pod7kilo.cz/p/batoh-hyperlite-mountain-gear-southwest-55/",
+          "attributes": {
+            "size": "l",
+            "color": "white"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/batoh-hyperlite-mountain-gear-southwest-55/batoh-hyperlite-mountain-gear-southwest-55-t-white/",
+          "product_name": "Batoh Hyperlite Mountain Gear Southwest 55 Velikost: T / Barva: bílá",
+          "group_name": "Batoh Hyperlite Mountain Gear Southwest 55",
+          "group_url": "https://www.pod7kilo.cz/p/batoh-hyperlite-mountain-gear-southwest-55/",
+          "attributes": {
+            "size": "t",
+            "color": "white"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/batoh-hyperlite-mountain-gear-southwest-55/batoh-hyperlite-mountain-gear-southwest-55-s-black/",
+          "product_name": "Batoh Hyperlite Mountain Gear Southwest 55 Velikost: S / Barva: černá",
+          "group_name": "Batoh Hyperlite Mountain Gear Southwest 55",
+          "group_url": "https://www.pod7kilo.cz/p/batoh-hyperlite-mountain-gear-southwest-55/",
+          "attributes": {
+            "size": "s",
+            "color": "black"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/batoh-hyperlite-mountain-gear-southwest-55/batoh-hyperlite-mountain-gear-southwest-55-m-black/",
+          "product_name": "Batoh Hyperlite Mountain Gear Southwest 55 Velikost: M / Barva: černá",
+          "group_name": "Batoh Hyperlite Mountain Gear Southwest 55",
+          "group_url": "https://www.pod7kilo.cz/p/batoh-hyperlite-mountain-gear-southwest-55/",
+          "attributes": {
+            "size": "m",
+            "color": "black"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/batoh-hyperlite-mountain-gear-southwest-55/batoh-hyperlite-mountain-gear-southwest-55-l-black/",
+          "product_name": "Batoh Hyperlite Mountain Gear Southwest 55 Velikost: L / Barva: černá",
+          "group_name": "Batoh Hyperlite Mountain Gear Southwest 55",
+          "group_url": "https://www.pod7kilo.cz/p/batoh-hyperlite-mountain-gear-southwest-55/",
+          "attributes": {
+            "size": "l",
+            "color": "black"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/batoh-hyperlite-mountain-gear-southwest-55/batoh-hyperlite-mountain-gear-southwest-55-t-black/",
+          "product_name": "Batoh Hyperlite Mountain Gear Southwest 55 Velikost: T / Barva: černá",
+          "group_name": "Batoh Hyperlite Mountain Gear Southwest 55",
+          "group_url": "https://www.pod7kilo.cz/p/batoh-hyperlite-mountain-gear-southwest-55/",
+          "attributes": {
+            "size": "t",
+            "color": "black"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        }
+      ]
+    }
+  },
+  {
+    "name": "TravelRest cestovní polštář",
+    "source": "https://www.pod7kilo.cz/p/polstar-travelrest-ruzne-barvy/",
+    "choices": [
+      {
+        "Barva": "modrá"
+      },
+      {
+        "Barva": "červená"
+      },
+      {
+        "Barva": "šedá"
+      }
+    ],
+    "document": {
+      "parser_version": 8,
+      "single_offers": true,
+      "product_count": 3,
+      "offers": [
+        {
+          "url": "https://www.pod7kilo.cz/p/polstar-travelrest-ruzne-barvy/polstar-travelrest-sedy/",
+          "product_name": "Polštář TravelRest (různé barvy) Barva: šedá",
+          "group_name": "Polštář TravelRest (různé barvy)",
+          "group_url": "https://www.pod7kilo.cz/p/polstar-travelrest-ruzne-barvy/",
+          "attributes": {
+            "color": "grey"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/polstar-travelrest-ruzne-barvy/polstar-travelrest-modry/",
+          "product_name": "Polštář TravelRest (různé barvy) Barva: modrá",
+          "group_name": "Polštář TravelRest (různé barvy)",
+          "group_url": "https://www.pod7kilo.cz/p/polstar-travelrest-ruzne-barvy/",
+          "attributes": {
+            "color": "blue"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        },
+        {
+          "url": "https://www.pod7kilo.cz/p/polstar-travelrest-ruzne-barvy/polstar-travelrest-cerveny/",
+          "product_name": "Polštář TravelRest (různé barvy) Barva: červená",
+          "group_name": "Polštář TravelRest (různé barvy)",
+          "group_url": "https://www.pod7kilo.cz/p/polstar-travelrest-ruzne-barvy/",
+          "attributes": {
+            "color": "red"
+          },
+          "price": 1000,
+          "amount": "1000.00",
+          "availability": "in_stock",
+          "identity_evidence": null
+        }
+      ]
+    }
+  }
+]

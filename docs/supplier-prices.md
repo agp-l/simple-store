@@ -294,3 +294,12 @@ Successful or failed fetches replace the legacy document, preventing refresh loo
 `VariantAttributes` sjednocuje oddělené i starší složené názvy vlastností, včetně „Barva a velikost“, „Velikost a barva“ a „Varianta“. Vnitřní zápis S/M zůstává jednou velikostí. Překládají se celé barevné výrazy; odstín, materiál, model a rok se nezahazují. Typované vlastnosti JSON-LD doplňují neúplný název SKU, rozpory vedou k odmítnutí. Tabulka výškových pásem Cumulus platí pouze na příslušných adresách Pod 7 kilo.
 
 Parser 8 zachovává také shodnou vlastnost opakovanou v JSON-LD a specifikaci jediného SKU; rozporné hodnoty dál odmítá. Staré neúplné dokumenty se jednorázově obnoví s běžnými prodlevami. Vyhodnocovač 12 znovu posoudí starší nevyřešené kontroly; párovač 2 obnoví průchod odkazy. Stále platí cache, robots, prodlevy a ochrana ručně uložených odkazů. `VariantIdentityDiagnostic` popisuje chybějící údaje a rozdílné hodnoty. HTTP/robots chyby zůstávají připojené ke konkrétním variantám a neztratí se za obecným hlášením neúplnosti. Záložní obchod vyžaduje vědomé převzetí prodávajícího. Nedoloženou kombinaci nelze automaticky převést na jinou barvu, materiál či ročník.
+
+Další ověřené katalogové názvy zůstávají omezené na konkrétní modely a cesty: TravelRest (český název cestovního polštáře), Sea to Summit Aeros Ultralight Traveller (pořadí názvu a označení Pillow), Copper Spur (Tangelo / Tangelo Red), Liteway Pokkie (UltraGrid / Ultra Grid), Hyperlite (T / Tall). Aevor Trip Pack Proof navíc vyžaduje slovo Proof ve vlastnostech příslušné nabídky; samotný obecný model Trip Pack nestačí. Technické označení HyperBead musí být stále doložené u nabídky. Podklady ověřené 27. 10. 2026:
+
+- https://www.bigagnes.com/collections/hyperbead-tents/products/copper-spur-ul-three
+- https://gramino.cz/p/big-agnes-copper-spur-ul3
+- https://gramino.cz/p/big-agnes-copper-spur-ul3-xl
+- https://gramino.cz/p/sea-to-summit-ultralight-aeros-traveller-pillow
+- https://www.pod7kilo.cz/p/polstar-travelrest-ruzne-barvy/
+- Příslušné veřejné variantové dokumenty v regresním vzorku `tests/fixtures/supplier-label-translations.json`; ceny ve vzorku jsou záměrně syntetické. Testuje se identita, nikoliv cenový seznam.
