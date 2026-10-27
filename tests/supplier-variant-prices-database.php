@@ -141,10 +141,10 @@ try{
 
  // Explicit approval may switch a whole exact-variant set, never individual prices
  // or an incomplete set; the background worker still requires this approval.
- $backupId=$partners->save(0,['name'=>'Backup','ico'=>'24295825','address'=>'Test','email'=>'test@backup.test','terms_url'=>'https://backup.test/terms','website_url'=>'https://backup.test','priority'=>'20','confirmed'=>'1']);
+ $backupId=$partners->save(0,['name'=>'Backup','ico'=>'24295825','address'=>'Test','email'=>'test@backup.test','terms_url'=>'https://www.pod7kilo.cz/terms','website_url'=>'https://www.pod7kilo.cz','priority'=>'20','confirmed'=>'1']);
  $backup=$partners->find($backupId);
  $fallbackCase=static function(string $path,?int $mode)use($make,$db,$links,$backup,&$responses):array{
-  [$k,$unused,$vs]=$make($path);$bu='https://backup.test/'.$path;
+  [$k,$unused,$vs]=$make($path);$bu='https://www.pod7kilo.cz/p/'.$path;
   if($mode!==null)$db->insert('shop_product_supplier_variant_modes',['product_key'=>$k,'enabled'=>$mode]);
   $offers=[];
   foreach(['Blue'=>1000,'Red'=>1200]as$color=>$price){
@@ -162,7 +162,7 @@ try{
  $db->update('shop_product_sales',['variant_prices_json'=>json_encode([$sv['Blue']=>900,$sv['Red']=>1000,$inactive=>800])],'product_key=%s',$switched);
  $db->insert('shop_partner_stock_state',['product_key'=>$switched,'partner_id'=>$partnerId,'observed_at'=>$now]);
  $beforeSale=$sale($switched);$manager->enqueue('one','rapid',$switched);$run(20);
- $check($job($switched)['status']==='review'&&$sale($switched)===$beforeSale,'Fallback changed seller before explicit approval.');
+ $check($job($switched)['status']==='review'&&$sale($switched)===$beforeSale,'Fallback did not wait for approval: '.$job($switched)['status'].' / '.$job($switched)['message']);
  $manager->apply((int)$job($switched)['id'],false);
  $switchedCosts=json_decode($sale($switched)['variant_prices_json'],true);
  $check((int)$sale($switched)['partner_id']===$backupId&&count($switchedCosts)===2&&$switchedCosts[$sv['Blue']]===1000&&$switchedCosts[$sv['Red']]===1200,'Approved fallback did not replace exact costs atomically.');
