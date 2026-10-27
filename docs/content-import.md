@@ -48,3 +48,5 @@ Nejsou potřeba změny SQL schématu. Přístup má pouze přihlášený správc
 Veřejný blog filtruje publikované články podle `?topic=…`, včetně stránkování; koncepty a historické revize se nezapočítávají. První karta má na desktopu šířku dvou sloupců, na mobilu jsou karty pod sebou. Delší článek nabízí obsah sestavený z nadpisů bloků a orientační čas čtení. Kategorie se ukládá do stávajícího JSON těla, bez změny SQL schématu.
 
 Redakční aktualizace článku **Dva roky ve stanu** je v `content/posts/dva-roky-ve-stanu.cs.json`. Jde o aktualizační snímek konkrétního dokumentu: před dalším importem vždy použij aktuální `revision` z nového exportu, aby nebyly přepsány souběžné úpravy.
+
+Stejný postup platí pro redakční snímek **Tři měsíce v Jižní Americe** v `content/posts/tri-mesice-v-jizni-americe.cs.json`. Kapitoly mají vlastní textové bloky a nadpisy; tři původní fotografie jsou vložené mezi kapitoly. Import zachovává adresu článku, kategorii Cestopisy i historii dokumentu. Soubory v `content/posts/` jsou podklady pro řízený import, nasazení kódu je samo nepublikuje.
