@@ -1,10 +1,10 @@
-Připrav podklady pro import do Simple Store. Zpracuji seznam produktů / URL, který doplním za toto zadání. Neprováděj SQL. Nevymýšlej parametry, skladové kusy, cenu ani zkušenosti s testováním výrobku. Napiš vlastní český text podle ověřených zdrojů, nekopíruj cizí marketingové odstavce. Pokud chybí cena nebo kategorie, vyžádej si je; cenu z cizího obchodu použij pouze jako výslovně označenou referenční cenu do konceptu. Zdrojové odkazy ukládej soukromě do suppliers, nikoli do veřejného popisu.
+Připrav podklady pro import do Simple Store. Zpracuji seznam produktů / URL, který doplním za toto zadání. Neprováděj SQL. Nevymýšlej parametry, skladové kusy, cenu ani zkušenosti s testováním výrobku. Napiš vlastní český text podle ověřených zdrojů, nekopíruj cizí marketingové odstavce. Pokud chybí cena nebo kategorie, vyžádej si je; cenu z cizího obchodu použij pouze jako výslovně označenou referenční cenu do konceptu. Zdrojové odkazy ukládej soukromě do suppliers příslušné varianty (u produktu bez voleb do product.suppliers), nikoli do veřejného popisu.
 
 VÝSTUP:
 A) Pokud chci jeden JSON: vrať jeden JSON objekt, bez komentářů. Bez fotografií vynech image_path a gallery; nahraji je později. Nevkládej URL fotografie.
 B) Pokud chci ZIP: vytvoř skutečný soubor ZIP. V jeho kořeni budou přímo složky produktů, bez společné nadřazené složky. Každý produkt: jeho-nazev/product.json a jeho-nazev/images/01-hlavni.jpg, 02-detail.webp atd. Povoleny JPG/JPEG, PNG, WebP. Použij originální fotografie daného výrobku, které smím používat, nikoli AI napodobeniny nebo screenshot stránky. Pokud fotografii nelze získat, nevymýšlej soubor ani URL; připrav produkt bez fotek a mimo ZIP vysvětli, co chybí. Názvy obrázků: písmena A–Z, číslice, pomlčka nebo podtržítko, bez mezer a diakritiky. Žádné další soubory uvnitř složky produktu. ZIP bez hesla, symlinků, vnořených archivů a cest ../. V product.json jsou cesty relativní k produktu: images/01-hlavni.jpg, nikoli název-produktu/images/… ani absolutní URL. Každá uvedená fotografie musí být skutečně přibalena.
 
-FORMÁT (příklad, hodnoty nahraď skutečnými):
+FORMÁT BEZ VARIANT (pouze schéma; ceny, názvy, adresy i parametry v příkladu jsou fiktivní a musíš je nahradit ověřenými údaji):
 {
   "format": "simple-store.product.v1",
   "language": "cs",
@@ -20,7 +20,7 @@ FORMÁT (příklad, hodnoty nahraď skutečnými):
     "description": "Úvodní popis výrobku.",
     "image_path": "images/01-hlavni.jpg",
     "gallery": ["images/02-detail.webp"],
-    "options": [{"name": "Velikost", "values": ["42 EU", "43 EU"]}],
+    "options": [],
     "specifications": [{"name": "Hmotnost", "value": "145 g"}],
     "sections": [
       {"type": "text", "heading": "Pro koho je výrobek", "body": "První odstavec s **tučným důrazem**.\n\nDruhý odstavec."},
@@ -28,7 +28,7 @@ FORMÁT (příklad, hodnoty nahraď skutečnými):
       {"type": "table", "heading": "Technické údaje", "body": "Vlastnost | Hodnota\nMateriál | Skutečný materiál"},
       {"type": "image", "heading": "Popis záběru", "body": "images/02-detail.webp"}
     ],
-    "suppliers": [{"label": "Gramino", "url": "https://gramino.cz/produkt/topo-athletic-pursuit-3-mens/"}]
+    "suppliers": [{"label": "Partner – ukázková adresa", "url": "https://shop.example.com/nazev-vyrobku"}]
   }
 }
 
@@ -46,11 +46,11 @@ PRAVIDLA A LIMITY:
 - table: každý řádek přesně dvě buňky oddělené jedním |; bez oddělovacího řádku --- a bez okrajových |.
 - image: body je cesta souboru, heading popis fotografie. Žádné HTTPS obrázky, data URI, SVG ani HTML img.
 - gallery nemá limit 12 obrázků. V ZIP bez image_path se u nového produktu první fotografie podle názvu použije jako hlavní. Bez gallery se zbývající přibalené fotografie vloží do galerie. Explicitní gallery určuje pořadí; [] galerii vyprázdní. Každá fotografie do 12 MiB a 20 megapixelů. Server vytvoří vlastní hlavní soubor 1800 px a varianty 960 a 240 px.
-- suppliers jsou soukromé dodavatelské/zdrojové odkazy. Každý má neprázdné label do 120 znaků a url HTTP/HTTPS do 1000 bajtů bez přihlašovacích údajů. Nevkládej sem URL obrázků, ale detail produktu u dodavatele. Podporováno více dodavatelů.
+- product.suppliers jsou soukromé dodavatelské/zdrojové odkazy produktu bez výběru variant. U variantního produktu používej variants.items[].suppliers; společný odkaz nenahrazuje přesnou nabídku barvy a velikosti. Každý má neprázdné label do 120 znaků a url HTTP/HTTPS do 1000 bajtů bez přihlašovacích údajů. Nevkládej sem URL obrázků, ale detail produktu u dodavatele. Podporováno více dodavatelů.
 - JSON nejvýše 1 MiB na produkt; ZIP nejvýše 128 MiB, rozbalená data 512 MiB, 200 produktů, 5000 souborů. To jsou ochranné limity balíčku, nikoli limit délky galerie. Hosting může mít nižší limit nahrávání; rozděl pak produkty do více ZIPů.
 
 ÚPRAVA EXISTUJÍCÍHO PRODUKTU:
-Dostaneš export z tlačítka JSON pro AI. Zachovej kořenové product_key, revision a language. Do product dej pouze změněná pole. Bez těchto identifikátorů vzniká nový produkt, ne aktualizace podle názvu. Vynechaná pole se nemění; dodané seznamy gallery/options/specifications/sections/suppliers se nahrazují celé, [] je vyprázdní. Dodavatelé jsou společné údaje napříč jazyky produktu. Při ZIP aktualizaci vynech nezměněná obrazová pole; každá uvedená cesta fotografie musí odpovídat souboru v tomto ZIP. Nelze odkazovat na externí obrázky. Neodhaduj číslo revize.
+Dostaneš export z tlačítka JSON pro AI. Zachovej kořenové product_key, revision a language. Do product dej pouze změněná pole. Bez těchto identifikátorů vzniká nový produkt, ne aktualizace podle názvu. Vynechaná pole se nemění; dodané seznamy gallery/options/specifications/sections/suppliers se nahrazují celé, [] je vyprázdní. Dodavatelé jsou společné údaje napříč jazyky produktu. Export obsahuje product.suppliers_expected: zachovej jej spolu se společnými suppliers; při úpravě pouze textů vynech obě pole. Nový produkt otisk nepotřebuje a AI si jej nevymýšlí. Při ZIP aktualizaci vynech nezměněná obrazová pole; každá uvedená cesta fotografie musí odpovídat souboru v tomto ZIP. Nelze odkazovat na externí obrázky. Neodhaduj číslo revize.
 
 PŘED ODEVZDÁNÍM:
 Ověř JSON parserem, že soubory jsou platné UTF-8 JSON, názvy cest a velikosti souborů sedí, všechny obrázky jdou skutečně otevřít, summary není delší než 180 znaků, cena i kategorie odpovídají zadání a text obsahuje jen doložené informace. Upozorni mimo importovaná data na neověřené informace. Nevkládej tento prompt ani README do složek produktů.
@@ -73,7 +73,7 @@ ZIP A EXISTUJÍCÍ PRODUKTY:
 
 
 AKTUALIZACE POUZE DODAVATELŮ / STRUČNÝ PŘEHLED
-Pro doplnění dodavatelů použij export „Přehled pro AI a dodavatelé — stručný JSON“.
+Tento starší stručný formát slouží pouze společným odkazům, zejména u produktů bez variant. Pro barvy a velikosti použij úplný JSON s variants.items[].suppliers nebo samostatný export Partnerské odkazy variant; stručný přehled přesné variantní nabídky neobsahuje.
 Vrať {"format":"simple-store.product-suppliers.v1","products":[{"product_key":"KLÍČ Z EXPORTU","language":"cs","suppliers":[{"label":"Obchod","url":"https://example.com/produkt"}]}]}.
 Nikdy si nevymýšlej product_key ani id. Existující id odkazu ponech, pokud měníš jeho URL nebo název. Nové odkazy přidej bez id. Shodná URL se neduplikuje; ostatní existující odkazy se nemažou. Prázdné suppliers nic nesmaže. product_key, language a suppliers stačí; name, url, category_path a published jsou jen informativní. Tento formát neupravuje jiné údaje produktu a nepotřebuje revision, popisy ani obrázky. Dodavatelé jsou společné pro všechny překlady, produkt uváděj jen jednou. Odkazy musí být ověřené adresy produktů dodavatele, ne vymyšlené URL.
 
@@ -83,11 +83,47 @@ Pro samotné propojení existujících produktů vrať {"format":"simple-store.p
 Vazba je obousměrná: stejnou dvojici uváděj pouze jednou. Nevymýšlej klíče ani kompatibilitu. note má nejvýše 500 znaků a zobrazuje se u obou produktů, proto ji piš srozumitelně pro obě strany. Popisy, sklad, ceny a další vazby se nezmění. Není potřeba revision. Prázdné related nic nesmaže. Kompatibilitu ověřuj u výrobce pro konkrétní modely a varianty.
 
 
-VARIANTY SE SAMOSTATNÝM SKLADEM
-Pokud zadání požaduje vlastní sklad velikostí/barev, použij product.variants místo společných options:
-{"enabled":true,"items":[{"choices":{"Velikost":"S","Barva":"Modrá"},"quantity":0,"stock_status":"in_stock","sku":"","price_czk":null,"image_path":"","enabled":true}]}
-- Nejvýše 1000 skutečných kombinací, každá 1–8 vlastností. Všechny nabízené varianty mají stejné názvy vlastností. Názvy do 80 bajtů, hodnoty do 120 bajtů; žádná duplicitní kombinace. SKU do 100 bajtů. quantity celé číslo 0–1000000. Cenu ani sklad si nevymýšlej. Bez potvrzené inventury používej quantity:0. on_order umožňuje objednání bez skladu pouze na výslovné zadání správce.
-- price_czk:null přebírá cenu produktu; jinak celé koruny 1–10000000. image_path:"" přebírá hlavní foto, jinak lokální cesta; v ZIP musí být obrázek přibalený.
-- Nová varianta nemá id, nový produkt nepotřebuje variants.expected. Při aktualizaci zachovej id a expected z čerstvého exportu. ID je stabilní a jeho choices se nemění; jinou kombinaci vytvoř bez id a původní vyřaď enabled:false. Ostatní varianty v seznamu zachovej. expected nikdy neodhaduj.
-- Pokud upravuješ jen společné popisy, vynech celé variants. Jeho uvedení mění definice a u jednotlivého JSON/ZIP i sklad. U hromadného JSON se počty mění pouze s volbou správce Přepsat také skladové počty; jinak zůstávají zachované, nová kombinace začíná nulou.
-- Legacy options jsou jen možnosti výběru se společným skladem. variants.enabled:true má při nákupu přednost. Při prvním přepnutí se dosavadní společný počet vynuluje, nikdy se automaticky nerozděluje mezi kombinace.
+VARIANTY A PŘESNÉ PARTNERSKÉ NABÍDKY
+- Pro barvy, velikosti, délky a jiné skutečné zákaznické volby používej product.variants s enabled:true. Platí i pro Asistovaný nákup, nejen vlastní sklad. options nech prázdné; samotné options nevytvoří samostatné nabídky variant.
+- Bez zákaznických voleb vynech variants a použij product.suppliers. Nevytvářej umělou vlastnost „Výchozí“ ani smyšlenou barvu. Jedinou skutečnou kombinaci lze uložit jako jediný prvek variants.items. Pevné vlastnosti společné celému výrobku patří do specifications.
+- Nový produkt může obsahovat popisy, fotografie, všechny skutečné varianty a jejich odkazy v JEDNOM JSON nebo ZIP. Produkt, varianty i odkazy se ukládají společně; chybný odkaz nesmí zanechat část produktu uloženou.
+
+UKÁZKA product.variants (fiktivní model a adresy, struktura je platná):
+{
+  "enabled": true,
+  "items": [
+    {"choices":{"Barva":"Navy","Velikost":"S"},"quantity":0,"stock_status":"out_of_stock","price_czk":null,"enabled":true,
+     "suppliers":[{"label":"Partner A","url":"https://shop.example.com/model?variant=navy&size=s"},{"label":"Partner B","url":"https://other.example.com/model?v_id=navy-s"}]},
+    {"choices":{"Barva":"Navy","Velikost":"M"},"quantity":0,"stock_status":"out_of_stock","price_czk":null,"enabled":true,
+     "suppliers":[{"label":"Partner A","url":"https://shop.example.com/model?variant=navy&size=m"}]}
+  ]
+}
+
+JAK OVĚŘIT SPRÁVNOU VARIANTU
+1. Ověř přesný model, generaci, materiál a určení. Podobný název neznamená stejný výrobek (např. X-Pac není Ecopak, GTX není běžná verze). Parametry popisu musí odpovídat uvedené nabídce.
+2. Zapiš pouze existující kombinace. Negeneruj automaticky všechny kombinace barev × velikostí. U více partnerů přidávej odkazy pouze na stejnou kombinaci, ne na náhradu.
+3. Použij srozumitelné a konzistentní názvy vlastností Barva, Velikost, Objem atd. Zachovej přesné hodnoty a jednotky partnera; neodhaduj převod EU/US, nekombinuj pánské/dámské číslování. Původní pojmenování odstínu bývá přesnější než volný překlad. Dvě různé zelené neslučuj do jedné „Zelené“.
+4. Na stránce partnera vyber konkrétní barvu i velikost a ověř, že zkopírovaná URL po otevření skutečně vede na tuto kombinaci. Zachovej významové query parametry a fragment (#barva): např. ?variant=…&size=… nebo ?v_id=…. Nikdy nevymýšlej jejich hodnoty. Parametr v URL sám není důkaz shody.
+5. Pokud partner nemá adresu konkrétní varianty, lze uložit ověřený odkaz na model jako výchozí zdroj, ale napiš mimo JSON, které kombinace chybí ověřit. Netvrď, že cena nebo dostupnost celého modelu platí pro každou velikost. Nevkládej vymyšlenou variantní URL jen proto, aby kontrola prošla.
+6. Každé barvě přiřaď její skutečnou fotografii přes image_path příslušných variant; velikosti stejné barvy mohou sdílet stejný soubor. Nepřiřazuj fotografii odhadem jen podle názvu odstínu. Bez jistoty image_path vynech a uveď chybějící ověření mimo JSON.
+
+LIMITY A IDENTITA VARIANT
+- Nejvýše 1000 skutečných kombinací, každá 1–8 vlastností. Všechny aktivní varianty mají stejné názvy vlastností. Názvy do 80 bajtů, hodnoty do 120 bajtů, SKU do 100 bajtů; žádné duplicitní kombinace. SKU je nepovinné, GTIN/EAN ani výrobní kód nejsou pro import vyžadovány a nepatří do neznámých polí.
+- Nová varianta nemá id, nový produkt nepotřebuje variants.expected. Při aktualizaci zachovej id a expected z čerstvého exportu. ID je stabilní a jeho choices se nemění; jinou kombinaci vytvoř bez id a původní vyřaď enabled:false. Ostatní varianty zachovej. expected nikdy neodhaduj. Vynechané varianty se vyřadí z nabídky, historické záznamy se nemažou.
+- quantity je celé číslo 0–1000000. Bez potvrzené inventury používej u nového produktu quantity:0 a stock_status:out_of_stock. on_order použij pouze na výslovné zadání správce. price_czk:null přebírá cenu produktu; vlastní cena je celé číslo 1–10000000 a může omezit automatické přeceňování. Cena u partnera není automaticky vlastní prodejní cena.
+- image_path:"" přebírá hlavní foto; jinak musí být lokální cesta, v ZIP přibalený soubor. Názvy souborů a cesty zachovej přesně.
+- Pokud upravuješ jen popisy, vynech celé variants. Jeho uvedení mění definice a u jednotlivého JSON/ZIP i sklad. U hromadného JSON se počty mění pouze s volbou správce Přepsat také skladové počty; jinak se zachovají, nová kombinace začíná nulou. Přepnutí společného skladu na variantní vynuluje společný počet, nerozdělí jej mezi kombinace.
+
+PRAVIDLA ODKAZŮ variants.items[].suppliers
+- Každá varianta může mít více partnerů. Pro nový odkaz stačí label a url (stejné limity jako product.suppliers). Nemusíš znát klíče partnerů: import spáruje jednoznačně známý web partnera podle domény. Neznámý nebo nejednoznačný partner zůstane k přiřazení správcem; nový profil ani zvolený prodávající se automaticky nezakládá.
+- Upravovaný odkaz ponechá link_key a version z čerstvého exportu. partner_key také zachovej; nevymýšlej jej. Při přesunu na jiný web použij klíč odpovídajícího partnera z exportu nebo založ nový odkaz bez identity. Stará verze se odmítne i tehdy, když se popis produktu nezměnil.
+- Import odkazů uvnitř variant je DOPLŇUJÍCÍ: neuvedené odkazy ani suppliers:[] nic nemažou. Stejná URL u stejné varianty se neduplikuje. Změna existujícího odkazu vyžaduje jeho link_key a version. Odebrání provádí správce v editoru. To se liší od staršího product.suppliers, který nahrazuje celý společný seznam.
+- Úplný JSON export obsahuje společné odkazy i přesné variantní odkazy včetně jejich identit a verzí. Při doplňování odkazů nevytvářej druhý společný seznam týchž variantních URL.
+- Do JSON nevkládej verification, checked_at, result, načtenou nákupní cenu ani tvrzení o ověřeném skladu. Důkazy zjišťuje server znovu. Import nevybírá prodávajícího, nemění Prodáváme my / Asistovaný nákup a nenahrazuje kontrolu dodavatele. Po vytvoření konceptu správce zkontroluje fotografie, prodejní cenu, zvolí režim a partnera a spustí Ceny dodavatelů.
+- U Asistovaného nákupu nejsou partnerovy zásoby vlastním skladem. Ověřovací jádro podle potvrzené nabídky aktualizuje dostupnost; obecné „skladem“ používá interní limit nejvýše 3, poslední 1 kus nenabízí. AI tato čísla nemá simulovat importem. U Prodáváme my upravuj počty pouze podle skutečné inventury.
+
+SAMOSTATNÝ EXPORT ODKAZŮ VARIANT
+Pro hromadné úpravy pouze odkazů již existujících variant lze dál použít simple-store.variant-suppliers.v1. Zachovej strukturu z exportu: products[].product_key, language, variants[].variant_key a links[]. Nové odkazy bez link_key/version; měněné s jejich aktuální identitou a verzí. Tento formát nezakládá produkt ani varianty. Pro nový produkt použij úplný simple-store.product.v1 s vloženými suppliers.
+
+ZÁVĚREČNÁ KONTROLA VARIANT
+Ověř každou kombinaci, úplnost významových URL parametrů, přiřazení fotografií a shodu modelů u všech partnerů. Chybějící nebo nejisté informace sepiš mimo importovaná data; nevytvářej náhradní údaje pro umlčení kontroly. Před odevzdáním parsuj JSON a ověř, že neobsahuje duplicitní kombinace, URL stejné varianty ani nepodporovaná pole.

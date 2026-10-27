@@ -138,7 +138,8 @@ try {
     $variantDoc = $data;
     $variantDoc['product']['slug'] = $slug . '-variants';
     $variantDoc['product']['variants'] = ['enabled' => true, 'items' => [
-        ['choices' => ['Velikost' => 'M'], 'quantity' => 4, 'image_path' => 'images/blue.png'],
+        ['choices' => ['Velikost' => 'M'], 'quantity' => 4, 'image_path' => 'images/blue.png',
+         'suppliers'=>[['label'=>'Exact M', 'url'=>'https://example.com/model?size=M#blue']]],
     ]];
     $variantZip = $root . '/variants.zip';
     $zip = new ZipArchive(); $zip->open($variantZip, ZipArchive::CREATE);
@@ -149,7 +150,9 @@ try {
     $variantRow = $products->current($variantKey, 'cs');
     $check($variantRow['variant_inventory']['items'][0]['quantity'] === 4 &&
         is_file($root . '/' . $variantRow['variant_inventory']['items'][0]['image_path']), 'Variant ZIP lost image or stock.');
-    $variantDoc = ProductImport::decode(ProductImport::export($variantRow));
+    $variantLinks = (new \SimpleStore\Product\ProductVariantSupplierRepository($db))->forProduct($variantKey);
+    $check(count($variantLinks)===1 && $variantLinks[0]['url']==='https://example.com/model?size=M#blue', 'ZIP lost exact variant offer.');
+    $variantDoc = ProductImport::decode(ProductImport::export($variantRow, null, $variantLinks));
     $variantDoc['product']['image_path'] = 'images/blue.png';
     $variantDoc['product']['variants']['items'][0]['image_path'] = 'images/blue.png';
     $copyZip = $root . '/variant-copy.zip';
@@ -160,9 +163,13 @@ try {
     $importer->import(new ProductZipArchive($copyZip), 'product', $copyKey, 'copy');
     $copyRow = $products->current($copyKey, 'cs');
     $check($copyRow['variant_inventory']['items'][0]['quantity'] === 0 && !(bool) $copyRow['published'], 'ZIP copy duplicated stock or publication.');
+    $copyLinks = (new \SimpleStore\Product\ProductVariantSupplierRepository($db))->forProduct($copyKey);
+    $check(count($copyLinks)===1 && $copyLinks[0]['link_key']!==$variantLinks[0]['link_key'] && $copyLinks[0]['url']===$variantLinks[0]['url'], 'ZIP copy lost links or reused original identity.');
 } finally {
     foreach ($jobs as $job) $job->remove();
     foreach ($keys as $key) {
+        $db->query('DELETE FROM shop_product_variant_supplier_links WHERE product_key=%s', $key);
+        $db->query('DELETE FROM shop_partner_refresh_requests WHERE product_key=%s', $key);
         $db->query('DELETE FROM shop_product_supplier_links WHERE product_key=%s', $key);
         $db->query('DELETE FROM shop_product_revisions WHERE product_key=%s', $key);
         $db->query('DELETE FROM shop_product_inventory WHERE product_key=%s', $key);

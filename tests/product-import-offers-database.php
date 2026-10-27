@@ -84,6 +84,21 @@ try {
     $transfer->import($restore[0]);
     $restored=$links->forProduct($key);
     $check(count($restored)===3 && array_column($restored,'url')===array_column($offers,'url'), 'Restore lost original URLs.');
+    // Single-variant-free products retain their source identities and reject stale full exports.
+    $plain=$data; unset($plain['product']['variants']); $plain['product']['slug']='plain-offers-test';
+    $plain['product']['suppliers']=[['label'=>'Plain partner','url'=>'https://partner.test/plain']];
+    $plainKey=$products->saveRevision(ProductImport::fields($plain),null,null,ProductImport::suppliers($plain))['product_key'];
+    $sources=new \SimpleStore\Product\ProductSupplierLinkRepository($db);
+    $before=$sources->forProduct($plainKey);
+    $plainRow=$products->current($plainKey,'cs');
+    $plainDoc=ProductImport::decode(ProductImport::export($plainRow,$before));
+    $products->saveRevision(ProductImport::fields($plainDoc,$plainRow),$plainKey,$plainDoc['revision'],ProductImport::suppliers($plainDoc));
+    $check($sources->forProduct($plainKey)===$before, 'Unchanged default-product export replaced source identities.');
+    $plainRow=$products->current($plainKey,'cs');
+    $plainDoc=ProductImport::decode(ProductImport::export($plainRow,$before));
+    $sources->save($plainKey,(int)$before[0]['id'],'Changed','https://partner.test/new-plain');
+    $reject(fn()=>$products->saveRevision(ProductImport::fields($plainDoc,$plainRow),$plainKey,$plainDoc['revision'],ProductImport::suppliers($plainDoc)));
+    $check($sources->forProduct($plainKey)[0]['url']==='https://partner.test/new-plain' && $products->current($plainKey,'cs')===$plainRow, 'Stale full export resurrected old default-product source.');
     echo "Product JSON offers: atomic create, multi-partner round trip, stale rollback, stock protection, copy, host validation and restore passed.\n";
 } finally {
     $db->disconnect();

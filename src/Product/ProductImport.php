@@ -60,7 +60,13 @@ final class ProductImport
             'spec_name' => [], 'spec_value' => [], 'section_type' => [], 'section_heading' => [], 'section_body' => [],
         ] : ProductInlineEditor::fromRevision($current);
         $product = $data['product'];
-        self::keys($product, array_merge(self::TEXT, ['price_czk', 'published', 'gallery', 'options', 'specifications', 'sections', 'suppliers', 'variants']));
+        self::keys($product, array_merge(self::TEXT, ['price_czk', 'published', 'gallery', 'options', 'specifications', 'sections', 'suppliers', 'suppliers_expected', 'variants']));
+        if (array_key_exists('suppliers_expected', $product)) {
+            if (!array_key_exists('suppliers', $product) || !is_string($product['suppliers_expected']) || preg_match('/^[a-f0-9]{64}$/D', $product['suppliers_expected']) !== 1) {
+                throw new InvalidArgumentException('suppliers_expected musí být otisk z exportu společně se suppliers.');
+            }
+            $fields['supplier_links_expected'] = $product['suppliers_expected'];
+        }
         foreach (self::TEXT as $field) {
             if (!array_key_exists($field, $product)) continue;
             if (!is_string($product[$field])) throw new InvalidArgumentException($field . ' musí být text.');
@@ -166,7 +172,10 @@ final class ProductImport
                 unset($variant);
             }
         }
-        if ($suppliers !== null) $product['suppliers'] = array_map(static fn (array $link): array => ['label' => $link['label'], 'url' => $link['url']], $suppliers);
+        if ($suppliers !== null) {
+            $product['suppliers'] = array_map(static fn (array $link): array => ['label' => $link['label'], 'url' => $link['url']], $suppliers);
+            $product['suppliers_expected'] = ProductSupplierLinkRepository::fingerprint($suppliers);
+        }
         return json_encode(['format' => self::FORMAT, 'product_key' => $row['product_key'],
             'revision' => (int) $row['revision_number'], 'language' => $row['language'], 'product' => $product],
             JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR);

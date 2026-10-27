@@ -117,7 +117,7 @@ final class ProductBulkTransfer
             if ($restore || $includeStock) throw new InvalidArgumentException('JSON dodavatelů použij v běžném režimu aktualizace bez přepisu skladu.');
             return (new ProductSupplierTransfer($this->db, $this->products, $this->languages))->prepare($documents);
         }
-        $items = []; $seen = []; $stockValues = []; $variantValues = [];
+        $items = []; $seen = []; $stockValues = []; $variantValues = []; $supplierValues = [];
         foreach ($documents as $index => $document) {
             $item = ['folder' => 'Položka ' . ($index + 1), 'status' => 'pending', 'message' => '', 'new_key' => bin2hex(random_bytes(16))];
             try {
@@ -147,6 +147,18 @@ final class ProductBulkTransfer
                     }
                 }
                 $stockKey = $key ?? $item['new_key'];
+                if ($restore && array_key_exists('suppliers_expected', $data['product'])) {
+                    $data['product']['suppliers_expected'] = ProductSupplierLinkRepository::fingerprint(
+                        (new ProductSupplierLinkRepository($this->db))->forProduct($stockKey));
+                }
+                $supplierSignature = null;
+                if (array_key_exists('suppliers', $data['product'])) {
+                    $supplierSignature = json_encode([$data['product']['suppliers'], $data['product']['suppliers_expected'] ?? null], JSON_THROW_ON_ERROR);
+                    if (isset($supplierValues[$stockKey])) {
+                        if ($supplierValues[$stockKey] !== $supplierSignature) throw new InvalidArgumentException('Překlady jednoho produktu mají rozdílné společné odkazy.');
+                        unset($data['product']['suppliers'], $data['product']['suppliers_expected']);
+                    }
+                }
                 $variantState = (new ProductVariantRepository($this->db))->snapshot($stockKey);
                 if (isset($data['product']['variants'])) {
                     // Stock restoration is opt-in, including quantities nested in variants.
@@ -196,6 +208,7 @@ final class ProductBulkTransfer
                     }
                 }
                 if (isset($fields['variant_inventory'])) $variantValues[$stockKey] = $signature;
+                if ($supplierSignature !== null) $supplierValues[$stockKey] = $supplierSignature;
             } catch (InvalidArgumentException $error) {
                 $item['status'] = 'error'; $item['message'] = $error->getMessage(); unset($item['data']);
             }

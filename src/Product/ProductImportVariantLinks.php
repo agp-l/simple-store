@@ -86,6 +86,7 @@ final class ProductImportVariantLinks
     /** Copies keep URLs, never the identity/version of the original product's offers. */
     public static function forCopy(array $data): array
     {
+        unset($data['product']['suppliers_expected']);
         foreach ($data['product']['variants']['items'] ?? [] as $i => $variant) {
             if (!is_array($variant) || !is_array($variant['suppliers'] ?? null)) continue;
             foreach ($variant['suppliers'] ?? [] as $j => $link) {

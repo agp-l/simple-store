@@ -29,22 +29,38 @@
 <dt>Perex</dt><dd><?= $escape($importPreview['summary']) ?></dd>
 <dt>Popis</dt><dd><?= nl2br($escape($importPreview['description'])) ?></dd></dl>
 <details><summary>Všechny výsledné údaje</summary><pre style="white-space:pre-wrap;overflow-wrap:anywhere"><?= $escape(json_encode($importPreview, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)) ?></pre></details>
-<p>Uložení vytvoří novou revizi. Uvedené variants mění i jejich sklad; bez variants se sklad nemění. Dodavatelské odkazy se změní pouze při uvedení suppliers v JSON.</p>
+<p>Uložení vytvoří novou revizi. Uvedené variants mění i jejich sklad; bez variants se sklad nemění. product.suppliers nahrazuje společné odkazy. suppliers uvnitř jednotlivých variant odkazy doplňuje nebo aktualizuje; vynechané odkazy zachová. Odkazy se ukládají společně s produktem, jejich cena a dostupnost se ověřují zvlášť.</p>
 <button class="panel-button panel-action" name="action" value="product-import-save"><?= \SimpleStore\Rendering\Icon::render('save') ?> <?= isset($importData['product_key']) ? 'Uložit úpravy produktu' : 'Vytvořit produkt' ?></button>
 <?php endif; ?>
 </form></section>
 <?php endif; ?>
-<?php if ($importTab === 'help'): ?><section class="panel-panel product-prompt-panel"><h2>Zadání pro AI</h2><p>Pro doplňování pouze dodavatelů exportuj stručný JSON. Požádej AI, aby zachovala product_key a language, doplnila suppliers s label a url a ponechala format simple-store.product-suppliers.v1. Existující id odkazu slouží pro jeho úpravu; nový odkaz přidej bez id. Výsledek nahraj přes Hromadný JSON. Ostatní údaje produktu se nezmění.</p>
-<p>Uprav pravidla, podle kterých má AI připravovat produkty. Uložené zadání je společné pro všechny jazyky a zůstane zachované i při aktualizaci webu.</p>
+<?php if ($importTab === 'help'):
+$categoryPrompt = '';
+foreach ($importCategories as $row) if ($categories->findForAdmin($language, $row['path']) !== null) $categoryPrompt .= $row['path'] . ' — ' . $row['title'] . "\n";
+$completePrompt = \SimpleStore\Product\ProductImportPromptRepository::instructions($aiPrompt, $categoryPrompt);
+?><section class="panel-panel product-prompt-panel"><h2>Zadání pro AI</h2>
+<p>Jeden JSON může založit produkt včetně barev, velikostí, fotografií a více partnerských odkazů pro každou variantu. Pro úpravu existujícího produktu předej AI také jeho čerstvý <strong>úplný JSON export</strong>.</p>
+<div class="product-prompt-current">
+<h3>1. Zkopírovat aktuální zadání</h3>
+<p>Obsahuje aktuální pravidla importu, vaše uložené pokyny a platné kategorie. Technická pravidla se aktualizují s webem.</p>
+<label for="ai-product-instructions">Kompletní zadání pro AI</label>
+<textarea id="ai-product-instructions" rows="14" readonly spellcheck="false"><?= $escape($completePrompt) ?></textarea>
+<div class="product-transfer-actions"><button type="button" class="panel-button panel-action" data-copy-product-prompt><?= \SimpleStore\Rendering\Icon::render('document') ?> Zkopírovat celé zadání</button><span role="status" data-copy-product-status></span></div>
+<p class="panel-help">Doplň konkrétní produkty nebo adresy partnerů. Pro varianty používej suppliers přímo u každé kombinace; stručný přehled společných odkazů nestačí.</p>
+</div>
+<p><a class="panel-icon-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=product-import&example=variants') ?>"><?= \SimpleStore\Rendering\Icon::render('package') ?> Otevřít ukázkový JSON: dvě varianty, dva partneři</a> — fiktivní data k nahrazení skutečnými údaji.</p>
+<h3>2. Vlastní pokyny pro psaní produktů</h3>
+<p>Vlastní text zůstává uložený i po aktualizaci webu. Uprav například styl popisu; platný technický formát se vždy přidá do kompletního zadání výše.</p>
 <?php if ($promptError !== ''): ?><p class="panel-error" role="alert"><?= $escape($promptError) ?></p><?php endif; ?>
 <?php if (($_GET['prompt_saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Zadání pro AI bylo uloženo.</p><?php endif; ?>
 <form class="panel-form product-prompt-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=product-import&tab=help&language=' . $language) ?>">
 <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="product-prompt-save">
-<label for="ai-product-prompt">Text zadání</label>
-<textarea id="ai-product-prompt" name="ai_prompt" rows="26" spellcheck="false" required aria-describedby="ai-product-prompt-help"><?= $escape($aiPrompt) ?></textarea>
-<p class="panel-help" id="ai-product-prompt-help">Zkopíruj celé zadání do AI a doplň seznam produktů. Můžeš upravit například styl popisu nebo pravidla cen; zachovej popis JSON a ZIP formátu, aby šel výsledek importovat. Nejvýše 128 KiB.</p>
+<label for="ai-product-prompt">Uložené vlastní zadání</label>
+<textarea id="ai-product-prompt" name="ai_prompt" rows="10" spellcheck="false" required aria-describedby="ai-product-prompt-help"><?= $escape($aiPrompt) ?></textarea>
+<p class="panel-help" id="ai-product-prompt-help">Po úpravě nejprve ulož. Pak kopíruj kompletní zadání nahoře, aby AI dostala i aktuální pravidla a kategorie. Nejvýše 128 KiB vlastního textu.</p>
 <div class="panel-form-actions"><button class="panel-button panel-action"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit zadání</button></div>
 </form>
+<script defer src="<?= $escape($basePath . 'assets/product-prompt.js?v=' . filemtime(__DIR__ . '/../../assets/product-prompt.js')) ?>"></script>
 </section>
 <section class="panel-panel product-prompt-panel"><h2>Platné kategorie (<?= $escape($language) ?>)</h2>
 <p>AI předej i tento seznam. Cesty si nesmí vymýšlet; seznam se vytváří z aktuálních kategorií obchodu.</p>

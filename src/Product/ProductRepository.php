@@ -442,7 +442,7 @@ final class ProductRepository
                 }
                 $this->db->query('UPDATE shop_product_inventory SET available_quantity=%i WHERE product_key=%s', $quantity, $key);
             }
-            if ($suppliers !== null) (new ProductSupplierLinkRepository($this->db))->replace($key, $suppliers);
+            if ($suppliers !== null) (new ProductSupplierLinkRepository($this->db))->replace($key, $suppliers, $fields['supplier_links_expected'] ?? null);
             if (isset($fields['variant_supplier_links'])) ProductImportVariantLinks::apply($this->db, $key, $fields['variant_supplier_links']);
             if ($revision > $this->revisionLimit) {
                 $this->db->query(

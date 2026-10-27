@@ -114,3 +114,7 @@ foreach ([null, ['not-a-list'=>'x'], [['label'=>'Bad', 'url'=>'javascript:bad']]
 $prompt=\SimpleStore\Product\ProductImportPromptRepository::instructions('Vlastní český styl.', 'batohy — Batohy');
 $check(str_contains($prompt,'Vlastní český styl.') && str_contains($prompt,'batohy — Batohy') && str_contains($prompt,'suppliers'), 'Current contract, custom instructions or categories missing.');
 echo "Inline variant suppliers: exact URL preservation, strict validation and current AI instructions passed.\n";
+
+$sample = ProductImport::decode(file_get_contents(dirname(__DIR__) . '/src/Product/examples/variants.json'));
+$sampleFields=ProductImport::fields($sample);
+$check(count($sampleFields['variant_inventory']['items'])===2 && count($sampleFields['variant_supplier_links'])===2, 'AI variant example is not importable.');
