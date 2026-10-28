@@ -15,7 +15,7 @@ $settingsTabs = ['overview', 'accounts', 'products', 'appearance', 'delivery', '
 $requestedTab = $_POST['tab'] ?? $_GET['tab'] ?? 'overview';
 $settingsTab = is_string($requestedTab) && in_array($requestedTab, $settingsTabs, true)
     ? $requestedTab : 'overview';
-if ($settingsTab === 'installation') { $form = []; return; }
+if ($settingsTab === 'installation') { require __DIR__ . '/settings-installation.php'; return; }
 if ($settingsTab === 'accounts') { require __DIR__.'/settings-google.php'; return; }
 if ($settingsTab === 'products') {
     require __DIR__ . '/settings-products.php';

@@ -1,6 +1,7 @@
 /vendor/
 /config/database.php
 /config/installation.json
+/config/.installation*
 /config/checkout.php
 /config/mail-cron.php
 /config/supplier-worker.php

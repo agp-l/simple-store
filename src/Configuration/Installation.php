@@ -26,10 +26,14 @@ final class Installation
 
     public static function current(): self
     {
+        return self::fromFile(self::configurationFile());
+    }
+
+    public static function configurationFile(): string
+    {
         // Isolated CLI/browser tests may select a different configuration FILE.
         $file = getenv('SIMPLE_STORE_INSTALLATION_FILE');
-        return self::fromFile(is_string($file) && $file !== '' ? $file :
-            dirname(__DIR__, 2) . '/config/installation.json');
+        return is_string($file) && $file !== '' ? $file : dirname(__DIR__, 2) . '/config/installation.json';
     }
 
     public static function fromFile(string $file): self

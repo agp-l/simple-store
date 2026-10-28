@@ -73,6 +73,7 @@ jobs:
       - name: Test checkout and shared views
         run: |
           php tests/installation.php
+          php tests/installation-write.php
           php tests/assisted-purchase.php
           php tests/checkout-cart.php
           php tests/checkout-render.php
