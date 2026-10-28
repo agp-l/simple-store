@@ -424,3 +424,7 @@ Umístění je uložené podle jazyka a stabilního `document_key` v `shop_blog_
 **Nastavení → Texty webu → Úvod blogu** upravuje krátký nadpis, hlavní nadpis, úvod a motto pro každý jazyk. Znění se přenáší také v JSON záloze textů webu. Starší uložené texty dostanou výchozí hodnoty blogu; starší částečné zálohy nové texty nepřepisují.
 
 Kontroly: `php tests/site-copy.php`, `php tests/configuration-backup.php`, `php tests/blog-placement-database.php` (MySQL/MariaDB), `node --test tests/blog-browser.mjs` (veřejný výpis, administrace i editor na desktopu a mobilu).
+
+### Google účet zákazníka
+
+Volitelné přihlášení a registrace přes Google, připojení/odpojení a nastavení klasického hesla: [nastavení a bezpečnost toku](docs/google-login.md). Správce nejprve doplní vlastní OAuth údaje v Nastavení → Přihlášení; bez nich je funkce vypnutá.

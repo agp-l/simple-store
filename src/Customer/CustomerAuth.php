@@ -13,6 +13,15 @@ final class CustomerAuth extends RoleAuth
         parent::__construct($cookiePath, 'simple_store_customer', 'customer');
     }
 
+    /** The caller must have resolved an identity from Google's server-side code exchange. */
+    public function signInGoogle(int $id): void
+    {
+        $user=$this->customers->byId($id);
+        if($user===null) throw new \InvalidArgumentException('Účet není dostupný.');
+        $this->establishSession($user);
+        $_SESSION['google_verified']=['at'=>time(),'binding'=>GoogleOAuth::binding($user)];
+    }
+
     protected function byName(string $name): ?array
     {
         return $this->customers->byEmail($name);

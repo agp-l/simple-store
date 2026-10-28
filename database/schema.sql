@@ -1631,3 +1631,17 @@ CREATE TABLE IF NOT EXISTS shop_blog_placements (
   language CHAR(2) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
   placement_json TEXT NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Google login is opt-in; no access or refresh tokens are persisted.
+CREATE TABLE IF NOT EXISTS shop_google_login_settings (
+  id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+  settings_json TEXT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS shop_customer_google (
+  user_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+  google_sub VARCHAR(255) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  google_email VARCHAR(254) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+  linked_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY customer_google_sub (google_sub),
+  CONSTRAINT customer_google_user_fk FOREIGN KEY (user_id) REFERENCES shop_users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

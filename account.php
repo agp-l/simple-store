@@ -47,6 +47,8 @@ $orderOffset = filter_var($_GET['offset'] ?? '0', FILTER_VALIDATE_INT,
     ['options' => ['min_range' => 0, 'max_range' => 100000]]);
 if ($orderOffset === false) $orderOffset = 0;
 $editAddress = null;
+$googleReady = false;
+$googleLinked = null;
 $registrationAllowed = (bool) ($site['customer_registration'] ?? true);
 $section = $_GET['section'] ?? 'overview';
 if (!is_string($section) || !in_array($section, ['overview', 'orders', 'returns', 'addresses', 'payments', 'settings'], true)) {
@@ -100,6 +102,21 @@ try {
         exit;
     };
 
+    $googleStore = new \SimpleStore\Customer\GoogleLoginSettings($db);
+    $googleSettings = $googleStore->load();
+    $googleReady = \SimpleStore\Customer\GoogleLoginSettings::ready($googleSettings);
+    $googleIdentities = new \SimpleStore\Customer\GoogleIdentityRepository($db);
+    $googleOAuth = new \SimpleStore\Customer\GoogleOAuth($googleSettings);
+    if (($_GET['google'] ?? '') === 'callback') {
+        try {
+            $result=$googleOAuth->finish($_SESSION,$_GET,$user);
+            $id=$googleIdentities->resolve($result['claims'],$result['target_id'],$registrationAllowed,$result['binding']);
+            $auth->signInGoogle($id);
+            $redirect($result['target_id']!==null ? $accountUrl.'?section=settings&saved=1' : ($result['checkout'] ? $basePath.$site['default_language'].'/pokladna?step=shipping' : $accountUrl));
+        } catch (InvalidArgumentException $exception) { $error=$exception->getMessage(); }
+        catch (Throwable $exception) { error_log('Google login failed (no token logged).'); $error='Přihlášení přes Google nyní není dostupné. Zkus to znovu nebo se přihlas heslem.'; }
+    }
+
     if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
         if (!$auth->validToken($_POST['csrf'] ?? null)) {
             http_response_code(403);
@@ -107,6 +124,11 @@ try {
         }
         $action = $input('action');
         try {
+            if ($action === 'google-start') {
+                if($user!==null && $user['password_hash']!=='' && !password_verify($input('current_password'),$user['password_hash'])) throw new InvalidArgumentException('Pro připojení Google potvrď své současné heslo.');
+                $destination=$googleOAuth->begin($_SESSION,$user,$checkoutReturn!==$accountUrl);
+                header('Location: '.$destination,true,303); exit;
+            }
             if ($action === 'reset-request' && $user === null) {
                 $entryUrl = 'https://' . ($_SERVER['HTTP_HOST'] ?? '') . $accountUrl;
                 (new PasswordResetService($db))->request('customer', $input('email'), 'account.php', $entryUrl);
@@ -144,6 +166,26 @@ try {
                 throw new InvalidArgumentException('Přihlas se ke svému účtu.');
             }
             $userId = (int) $user['id'];
+            if ($action === 'google-recovery' && $user['password_hash'] === '') {
+                (new PasswordResetService($db))->request('customer',$user['email'],'account.php');
+                $auth->signOut();
+                $redirect($accountUrl.'?mode=forgot&sent=1');
+            }
+            if ($action === 'google-unlink') {
+                $password=$input('current_password');
+                $googleIdentities->unlink($userId,$password);
+                $auth->signIn($user['email'],$password);
+                $redirect($accountUrl.'?section=settings&saved=1');
+            }
+            if ($action === 'google-password') {
+                $proof=$_SESSION['google_verified']??[];
+                if(!is_int($proof['at']??null) || $proof['at']<time()-300 || !is_string($proof['binding']??null) || !hash_equals($proof['binding'],\SimpleStore\Customer\GoogleOAuth::binding($user))) throw new InvalidArgumentException('Nejdřív znovu potvrď svůj Google účet tlačítkem níže a potom nastav heslo.');
+                $password=$input('new_password');
+                if($password!==$input('password_confirm')) throw new InvalidArgumentException('Hesla se neshodují.');
+                $googleIdentities->firstPassword($userId,$password);
+                $auth->signIn($user['email'],$password);
+                $redirect($accountUrl.'?section=settings&saved=1');
+            }
             if ($action === 'profile') {
                 $customers->updateProfile($userId, $input('display_name'), $input('phone'));
                 $redirect($accountUrl . '?section=settings&saved=1');
@@ -204,6 +246,7 @@ try {
 
     if ($user !== null) {
         $screen = 'account';
+        if ($googleStore->installed()) $googleLinked=$googleIdentities->linked((int)$user['id']);
         $user = $auth->user();
         if ($section === 'returns') {
             $cases = new CaseRepository($db);

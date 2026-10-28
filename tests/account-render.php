@@ -85,4 +85,16 @@ if (!str_contains($html, 'name="action" value="email"') ||
     !str_contains($html, 'name="action" value="password"')) {
     throw new RuntimeException('Customer email or password settings are missing.');
 }
+$googleReady=true; $googleLinked=['google_email'=>'google@example.org']; $user['password_hash']='';
+ob_start(); require dirname(__DIR__).'/view/account/layout.php'; $html=ob_get_clean();
+if(!str_contains($html,'value="google-password"') || !str_contains($html,'value="google-recovery"') || str_contains($html,'value="google-unlink"') || str_contains($html,'value="password"')) throw new RuntimeException('Google-only account must offer first-password setup and prevent unlink.');
+$user['password_hash']='hash';
+ob_start(); require dirname(__DIR__).'/view/account/layout.php'; $html=ob_get_clean();
+if(!str_contains($html,'value="google-unlink"') || !str_contains($html,'value="password"')) throw new RuntimeException('Linked account must retain password login and unlink.');
+$screen='login'; $user=null;
+ob_start(); require dirname(__DIR__).'/view/account/layout.php'; $html=ob_get_clean();
+if(!str_contains($html,'value="google-start"') || !str_contains($html,'value="login"') || !str_contains($html,'action="/simple-store/account/?checkout=1"')) throw new RuntimeException('Google and password login must coexist and retain checkout.');
+$googleReady=false;
+ob_start(); require dirname(__DIR__).'/view/account/layout.php'; $html=ob_get_clean();
+if(str_contains($html,'value="google-start"')) throw new RuntimeException('Unconfigured Google must stay hidden.');
 echo "Customer rendering tests passed.\n";

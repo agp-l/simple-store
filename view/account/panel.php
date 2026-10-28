@@ -116,8 +116,11 @@ $checkoutReturn = $checkoutReturn ?? $accountUrl;
         <?php elseif ($section === 'settings'): ?>
           <div class="panel-grid panel-grid-catalog">
             <section class="panel-panel"><h2>Osobní údaje</h2><form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($accountUrl . '?section=settings') ?>"><input type="hidden" name="action" value="profile"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><label>Jméno <input name="display_name" maxlength="120" autocomplete="name" required value="<?= $escape($user['display_name']) ?>"></label><label>Telefon (volitelný) <input name="phone" type="tel" maxlength="40" autocomplete="tel" value="<?= $escape($user['phone']) ?>"></label><button class="panel-button" type="submit">Uložit profil</button></form></section>
+            <?php require __DIR__.'/google.php'; ?>
+            <?php if (($user['password_hash'] ?? 'unavailable') !== ''): ?>
             <section class="panel-panel"><h2>Změnit e-mail</h2><p>Současný přihlašovací e-mail: <strong><?= $escape($user['email']) ?></strong>. Novou adresu napiš dvakrát a potvrď heslem účtu.</p><form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($accountUrl . '?section=settings') ?>"><input type="hidden" name="action" value="email"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><label>Nový e-mail <input type="email" name="new_email" maxlength="254" autocomplete="email" required></label><label>Potvrdit nový e-mail <input type="email" name="email_confirm" maxlength="254" required></label><label>Současné heslo <input type="password" name="current_password" autocomplete="current-password" required></label><button class="panel-button" type="submit">Změnit e-mail</button></form></section>
             <section class="panel-panel"><h2>Změnit heslo</h2><form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($accountUrl . '?section=settings') ?>"><input type="hidden" name="action" value="password"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><label>Současné heslo <input type="password" name="current_password" autocomplete="current-password" required></label><label>Nové heslo <input type="password" name="new_password" minlength="10" autocomplete="new-password" required></label><label>Potvrdit nové heslo <input type="password" name="password_confirm" minlength="10" autocomplete="new-password" required></label><button class="panel-button" type="submit">Změnit heslo</button></form></section>
+            <?php endif; ?>
           </div>
         <?php endif; ?>
       </main>
@@ -146,6 +149,7 @@ $checkoutReturn = $checkoutReturn ?? $accountUrl;
       <?php else: ?>
         <p class="panel-eyebrow">Dobrodruzi / účet</p><h1><?= $screen === 'register' ? 'Vytvořit účet' : 'Přihlášení' ?></h1>
         <?php if ($error !== ''): ?><p class="panel-error" role="alert"><?= $escape($error) ?></p><?php endif; ?>
+        <?php require __DIR__.'/google.php'; ?>
         <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($accountUrl . ($screen === 'register' ? '?mode=register' : '') . (($checkoutReturn !== $accountUrl) ? ($screen === 'register' ? '&' : '?') . 'checkout=1' : '')) ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="<?= $screen === 'register' ? 'register' : 'login' ?>">
           <?php if ($screen === 'register'): ?><label>Jméno <input name="display_name" maxlength="120" autocomplete="name" required></label><?php endif; ?>
           <label>E-mail <input type="email" name="email" maxlength="254" autocomplete="email" required autofocus></label>
