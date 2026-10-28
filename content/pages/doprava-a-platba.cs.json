@@ -1,0 +1,48 @@
+{
+  "format": "simple-store.content.v1",
+  "document_key": "556d220ae7ddee664603acda64e401aa",
+  "revision": 15,
+  "language": "cs",
+  "type": "page",
+  "content": {
+    "title": "Doprava a platba",
+    "slug": "doprava-a-platba",
+    "summary": "Doručení po České republice, aktuální nabídka dopravců a bankovní převod. Vysvětlení lhůt u přímého i asistovaného nákupu.",
+    "published": true,
+    "visible_in_menu": false,
+    "cover_path": null,
+    "menu_order": 0,
+    "sections": [
+      {
+        "type": "text",
+        "heading": "Kam doručujeme a kde zjistíte konečnou cenu",
+        "body": "Doručujeme po **České republice** na adresu nebo na nabízená výdejní místa a do boxů. Dostupné možnosti pro konkrétní košík a jejich konečnou cenu uvidíte před závazným objednáním. Osobní odběr ani dopravu do zahraničí nyní jako běžnou možnost nenabízíme."
+      },
+      {
+        "type": "table",
+        "heading": "Doprava — aktuální ceník",
+        "body": "Způsob doručení | Cena\nPPL – výdejní místo nebo box | 90 Kč\nZásilkovna – výdejní místo | 90 Kč\nGLS – ParcelShop | 90 Kč\nBalíkovna – výdejní místo nebo box | 90 Kč\nGLS – na adresu | 90 Kč\nPPL – na adresu | 90 Kč\nZásilkovna domů HD | 90 Kč"
+      },
+      {
+        "type": "text",
+        "heading": "Jedna objednávka, přehledné náklady",
+        "body": "Ceník je platný od **28. října 2026**. Pro konkrétní objednávku platí částka zobrazená v jejím souhrnu; bez vašeho souhlasu ji následně nezvýšíme. U asistovaného nákupu může být objednávka rozdělena mezi více prodávajících a zásilek. Samotné rozdělení pro vás neznamená další dopravné nad odsouhlasenou cenu.\n\nVýdejní místo vyberte v pokladně pomocí dostupného výběru nebo podle uvedených pokynů. Používejte adresu skutečného výdejního místa; adresu boxu nezadávejte jako běžnou soukromou doručovací adresu."
+      },
+      {
+        "type": "text",
+        "heading": "Kdy zboží dorazí",
+        "body": "U zboží skladem zobrazujeme odhad **doručení k vám**, nikoli jen odeslání. Základní nastavení nyní počítá se **3–4 pracovními dny** při objednání a zaplacení; po denní uzávěrce ve 12:00, o víkendu nebo svátku se počátek posouvá. Proto může konkrétní zobrazený odhad vycházet později. Rozhodující informace o daném zboží a dodání jsou uvedeny u nabídky a před objednáním.\n\n**U asistovaného nákupu je pro rychlé zahájení potřeba vaše samostatná výslovná žádost v objednávce.** Bez ní začneme službu poskytovat až po uplynutí 14 dnů od uzavření smlouvy; o tuto dobu se posouvá i navazující nákup a doručení. Počítáme rovněž s přijetím platby. Stav „Skladem u partnera“ znamená dostupnost u partnerského prodávajícího uvedeného v objednávce, nikoli náš vlastní sklad.\n\nPři zjištěném zpoždění nebo nedostupnosti vás kontaktujeme. Sjednanou cenu, variantu ani prodávajícího nezměníme bez vašeho souhlasu. U našeho přímého prodeje dodáme zboží v dohodnutém termínu; není-li sjednán, bez zbytečného odkladu, nejpozději do 30 dnů. Práva při prodlení popisují obchodní podmínky. U partnerského zboží se dodání řídí kupní smlouvou s partnerem."
+      },
+      {
+        "type": "text",
+        "heading": "Jak zaplatit",
+        "body": "Aktuálně přijímáme **bankovní převod v Kč**, včetně úhrady pomocí QR kódu. Účet, částku, variabilní symbol a konkrétní datum splatnosti uvidíte po objednání a v potvrzení. Splatnost převodu je nastavena na **2 dny**; řiďte se datem u své objednávky. Za bankovní převod si neúčtujeme vlastní příplatek. Případné poplatky vaší banky se řídí jejím ceníkem.\n\nQR kód je pouze pomůcka k předvyplnění převodu. Platba je přijatá připsáním na účet; pokud se nespáruje, napište nám číslo objednávky a potřebné údaje o převodu. Orientační cena v BTC u produktu sama neznamená dostupnost platby bitcoinem. Karta, dobírka ani bitcoin nyní nejsou nabízenou platební metodou.\n\nU asistované položky je odměna za službu již zahrnuta v uvedené ceně. Rozpis částky určené na zboží a na asistenci se zobrazí před objednáním; odměnu v pokladně nepřičítáme podruhé."
+      },
+      {
+        "type": "text",
+        "heading": "Převzetí, poškozená zásilka a pomoc",
+        "body": "Zkontrolujte podle možností obal a při viditelném poškození požádejte dopravce o záznam; pomohou i fotografie. Nepořízení záznamu ani okamžité nenahlášení poškození vás nezbavují zákonných práv. Pokud je zboží vadné nebo chybí, obraťte se na příslušného prodávajícího; u našeho zboží použijte [Reklamační řád](https://eshop.dobrodruzi.cz/cs/reklamacni-rad).\n\nStav objednávky je dostupný přes soukromý odkaz v potvrzení a u propojené objednávky v zákaznickém účtu. Sledovací údaje dopravce předáme, jakmile jsou k dispozici. Potřebujete pomoci? **info@dobrodruzi.cz** — [Kontakt](https://eshop.dobrodruzi.cz/cs/kontakt).\n\nSouvisející pravidla: [Obchodní podmínky](https://eshop.dobrodruzi.cz/cs/obchodni-podminky), [Podmínky asistovaného nákupu](https://eshop.dobrodruzi.cz/cs/obchodni-podminky-asistovaneho-nakupu) a [Výměna a vrácení zboží](https://eshop.dobrodruzi.cz/cs/vymena-a-vraceni-zbozi)."
+      }
+    ]
+  }
+}

@@ -8,9 +8,7 @@
   <?php if ($editMode || $contentEditMode || $privatePage || ($noIndex ?? false)): ?><meta name="robots" content="noindex, nofollow"><?php endif; ?>
   <?php if (($canonicalUrl ?? '') !== ''): ?><link rel="canonical" href="<?= htmlspecialchars($canonicalUrl, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>"><?php endif; ?>
   <?php if (!empty($structuredProduct)): ?><script type="application/ld+json"><?= \SimpleStore\Seo\ProductStructuredData::json($structuredProduct) ?></script><?php endif; ?>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="<?= $siteRoot ?>assets/fonts.css?v=<?= filemtime(__DIR__ . '/../assets/fonts.css') ?>">
   <link rel="stylesheet" href="<?= $siteRoot ?>style.css?v=<?= filemtime(__DIR__ . '/../style.css') ?>">
   <link rel="stylesheet" href="<?= $siteRoot ?>assets/product-detail.css?v=<?= filemtime(__DIR__ . '/../assets/product-detail.css') ?>">
   <link rel="stylesheet" href="<?= $siteRoot ?>assets/inline-edit.css?v=<?= filemtime(__DIR__ . '/../assets/inline-edit.css') ?>">

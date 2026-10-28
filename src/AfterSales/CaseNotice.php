@@ -15,8 +15,7 @@ final class CaseNotice
     {
         $copy = MailContent::resolvedCopy($configuration);
         $withdrawal = $case['kind'] === 'withdrawal';
-        $caseOptions = json_decode((string) ($case['item_options_json'] ?? '{}'), true);
-        $service = ($caseOptions['Plnění'] ?? '') === 'Služba asistovaného nákupu';
+        $service = self::isAssistedService($case);
         $statement = $copy[$service ? ($withdrawal ? 'case_service_withdrawal' : 'case_service_complaint')
             : ($withdrawal ? 'case_withdrawal_statement' : 'case_complaint_statement')];
         $message = MailContent::template($withdrawal ? 'withdrawal_receipt' : 'case_receipt', $configuration, self::variables($case, $copy));
@@ -63,6 +62,12 @@ final class CaseNotice
             EmailLayout::actions([[$copy['button_case'], $url]]);
         if (EmailLayout::safeUrl($url) !== '') $lines[] = $copy['button_case'] . ': ' . $url;
         return EmailLayout::message($template['subject'], $template['subject'], $template['message'], $html, $lines, $configuration);
+    }
+
+    public static function isAssistedService(array $case): bool
+    {
+        $options = json_decode((string) ($case['item_options_json'] ?? '{}'), true);
+        return is_array($options) && ($options['Plnění'] ?? '') === 'Služba asistovaného nákupu';
     }
 
     private static function variables(array $case, array $copy): array

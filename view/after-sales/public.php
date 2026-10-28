@@ -7,6 +7,7 @@ use SimpleStore\AfterSales\CaseRepository;
 $e = static fn (mixed $value): string => htmlspecialchars((string) $value,
     ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 $isWithdraw = ($preview['kind'] ?? '') === 'withdrawal';
+$isServiceCase = $case !== null && CaseNotice::isAssistedService($case);
 ?>
 <main class="panel-area" id="obsah"><div class="panel-wrap" style="max-width:850px;padding-block:32px 60px">
   <section class="panel-panel">
@@ -27,10 +28,10 @@ $isWithdraw = ($preview['kind'] ?? '') === 'withdrawal';
         <div><dt>Datum a čas podání</dt><dd><?= $e(CaseNotice::time((string) $case['submitted_at'])) ?></dd></div>
         <?php $seller = json_decode((string) ($case['seller_json'] ?? ''), true); ?>
         <?php if (is_array($seller) && !empty($seller['name'])): ?><div><dt>Prodávající</dt><dd><?= $e($seller['name']) ?><?= empty($seller['ico']) ? '' : ' · IČO ' . $e($seller['ico']) ?><br><?= $e(trim((string) ($seller['street'] ?? '') . ', ' . (string) ($seller['postal_code'] ?? '') . ' ' . (string) ($seller['city'] ?? ''), ', ')) ?><?= empty($seller['email']) ? '' : ' · ' . $e($seller['email']) ?></dd></div><?php endif; ?>
-        <div><dt>Zboží</dt><dd><?= $e($case['quantity']) ?> × <?= $e(CaseNotice::itemLabel($case)) ?> · <?= $e(number_format((int) $case['unit_price_czk'], 0, ',', ' ')) ?> Kč/ks</dd></div>
+        <div><dt><?= $isServiceCase ? 'Služba k položce' : 'Zboží' ?></dt><dd><?= $e($case['quantity']) ?> × <?= $e(CaseNotice::itemLabel($case)) ?> · <?= $e(number_format((int) $case['unit_price_czk'], 0, ',', ' ')) ?> Kč/ks</dd></div>
         <div><dt>Jméno a kontakt</dt><dd><?= $e($case['customer_name']) ?><?= $case['customer_company'] === '' ? '' : ' · ' . $e($case['customer_company']) ?><br><?= $e($case['customer_email']) ?><?= $case['customer_phone'] === '' ? '' : ' · ' . $e($case['customer_phone']) ?></dd></div>
         <?php if ($case['delivered_on'] !== null): ?><div><dt>Datum převzetí podle zákazníka</dt><dd><?= $e($case['delivered_on']) ?></dd></div><?php endif; ?>
-        <div><dt><?= $case['kind'] === 'withdrawal' ? 'Prohlášení' : 'Popis vady' ?></dt><dd><?= $case['kind'] === 'withdrawal' ? 'Odstupuji od kupní smlouvy pro uvedené zboží a množství. ' : '' ?><?= nl2br($e($case['description'])) ?></dd></div>
+        <div><dt><?= $case['kind'] === 'withdrawal' ? 'Prohlášení' : 'Popis vady' ?></dt><dd><?= $case['kind'] === 'withdrawal' ? ($isServiceCase ? 'Odstupuji od smlouvy o službě asistovaného nákupu v uvedeném rozsahu. ' : 'Odstupuji od kupní smlouvy pro uvedené zboží a množství. ') : '' ?><?= nl2br($e($case['description'])) ?></dd></div>
         <div><dt>Požadované řešení</dt><dd><?= $e(CaseRepository::REMEDIES[$case['requested_solution']] ?? $case['requested_solution']) ?></dd></div>
         <?php if ($case['received_at'] !== null): ?><div><dt>Zboží převzato</dt><dd><?= $e(CaseNotice::time((string) $case['received_at'])) ?></dd></div><?php endif; ?>
         <?php if ($case['resolved_at'] !== null): ?><div><dt>Písemné vyřízení</dt><dd><?= $e(CaseNotice::time((string) $case['resolved_at'])) ?> · <?= $e(CaseRepository::REMEDIES[$case['resolution_type']] ?? $case['status']) ?><br><?= nl2br($e($case['resolution_text'])) ?><?= empty($case['repair_duration']) ? '' : '<br>Doba opravy: ' . $e($case['repair_duration']) ?></dd></div><?php endif; ?>
@@ -81,7 +82,7 @@ $isWithdraw = ($preview['kind'] ?? '') === 'withdrawal';
             </form>
           </section>
           <section class="panel-panel" id="odstoupeni"><h3>Odstoupení od smlouvy</h3>
-            <p class="panel-help">Odstoupení od smlouvy můžete podat bez uvedení důvodu. Standardní lhůta je 14 dní od převzetí; výjimky a další postup uvádí stránka Výměna a vrácení zboží.</p>
+            <p class="panel-help">Odstoupení od smlouvy můžete podat bez uvedení důvodu. U našeho zboží se standardní lhůta 14 dní počítá od převzetí, u služby asistovaného nákupu od uzavření smlouvy. Výjimky a další postup uvádějí příslušné obchodní podmínky a stránka Výměna a vrácení zboží.</p>
             <form class="panel-form" method="post" action="<?= $e($supportUrl) ?>">
               <input type="hidden" name="csrf" value="<?= $e($csrf) ?>"><input type="hidden" name="action" value="review-withdrawal"><input type="hidden" name="order_token" value="<?= $e($orderToken) ?>"><input type="hidden" name="request_key" value="<?= $e(bin2hex(random_bytes(32))) ?>">
               <label>Zboží <select name="item_line" required><?php foreach ($order['items'] as $index => $item): ?><option value="<?= $index + 1 ?>"><?= $e($item['name'] ?? 'Položka') ?> · <?= (int) ($item['quantity'] ?? 0) ?> ks</option><?php endforeach; ?></select></label>

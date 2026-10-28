@@ -1,0 +1,48 @@
+{
+  "format": "simple-store.content.v1",
+  "document_key": "2606a305d5e4238442401630b97def89",
+  "revision": 50,
+  "language": "cs",
+  "type": "page",
+  "content": {
+    "title": "Kontakt",
+    "slug": "kontakt",
+    "summary": "Pomoc s výběrem, objednávkou, vrácením i reklamací. Kontakty provozovatele a přehled správného postupu.",
+    "published": true,
+    "visible_in_menu": true,
+    "cover_path": null,
+    "menu_order": 35,
+    "sections": [
+      {
+        "type": "text",
+        "heading": "Zákaznická podpora",
+        "body": "Napište nám na **info@dobrodruzi.cz**. Pomůžeme s výběrem vybavení, stavem objednávky i dalším postupem při vrácení nebo reklamaci.\n\nTelefon: **[doplnit telefon]**.\nDoba, kdy jsme k dispozici: **[doplnit kontaktní dobu]**.\n\nU již vytvořené objednávky připište její číslo. Hesla, údaje o platební kartě ani jiná nepotřebná citlivá data neposílejte."
+      },
+      {
+        "type": "text",
+        "heading": "Provozovatel e-shopu",
+        "body": "**Petr Lízal, IČO 14305631**, sídlo **[doplnit adresu sídla]**. Zápis v příslušné evidenci: **[doplnit údaj o zápisu]**. E-mail: **info@dobrodruzi.cz**. Telefon: **[doplnit telefon]**.\n\nWeb: https://eshop.dobrodruzi.cz.\nAdresa pro doručování písemností: **[doplnit adresu pro písemnosti]**.\nDIČ, je-li přiděleno: **[doplnit DIČ, nebo tento řádek odstranit]**."
+      },
+      {
+        "type": "text",
+        "heading": "Vrácení a reklamace",
+        "body": "Adresa pro vrácení našeho zboží: **[doplnit adresu pro vrácení zboží]**.\nAdresa pro reklamace našeho zboží: **[doplnit adresu pro reklamace]**.\n\nU asistovaného nákupu je prodávajícím zboží partner uvedený v objednávce. Jeho zásilku neposílejte automaticky na naši adresu; pomůžeme vám dohledat správný kontakt. Reklamaci naší vlastní služby řešíme my.\n\nKontaktní adresa sama o sobě neznamená kamennou prodejnu nebo místo osobního odběru. Případnou osobní návštěvu předem domluvte; tím nejsou omezena zákonná místa pro uplatnění reklamace."
+      },
+      {
+        "type": "list",
+        "heading": "Co právě potřebujete?",
+        "body": "[Doprava a platba](https://eshop.dobrodruzi.cz/cs/doprava-a-platba) — doručení a platební pokyny.\n[Výměna a vrácení zboží](https://eshop.dobrodruzi.cz/cs/vymena-a-vraceni-zbozi) — lhůty, postup a vzor odstoupení.\n[Reklamační řád](https://eshop.dobrodruzi.cz/cs/reklamacni-rad) — problém se zbožím nebo naší asistencí.\n[Obchodní podmínky](https://eshop.dobrodruzi.cz/cs/obchodni-podminky) a [Podmínky asistovaného nákupu](https://eshop.dobrodruzi.cz/cs/obchodni-podminky-asistovaneho-nakupu) — kdo uzavírá kterou smlouvu.\n[Ochrana osobních údajů](https://eshop.dobrodruzi.cz/cs/ochrana-osobnich-udaju) — dotazy k soukromí a uplatnění práv."
+      },
+      {
+        "type": "text",
+        "heading": "Pokud narazíte na překážku na webu",
+        "body": "Nedaří-li se vám přečíst obsah, ovládat formulář nebo dokončit běžný krok nákupu, popište nám problém na info@dobrodruzi.cz. Přidejte odkaz na stránku a podle možností typ zařízení či prohlížeče. Pomůžeme vám získat informace a najít dostupný postup. Zákonnou reklamaci nebo odstoupení lze oznámit i e-mailem bez použití webového formuláře."
+      },
+      {
+        "type": "text",
+        "heading": "Stížnosti a řešení sporů",
+        "body": "Pokud se spor nepodaří vyřešit přímo s námi, může spotřebitel podat návrh na mimosoudní řešení u **České obchodní inspekce**, oddělení ADR, Štěpánská 567/15, 120 00 Praha 2. Postup a formulář: [Mimosoudní řešení sporů u ČOI](https://coi.gov.cz/informace-o-adr/). Návrh lze podat nejpozději do jednoho roku od prvního uplatnění sporného práva u nás. ADR směřuje k dohodě stran; právo obrátit se na soud zůstává zachováno."
+      }
+    ]
+  }
+}
