@@ -32,5 +32,11 @@ if($screen==='menus') {
     $pageRows=[['document_key'=>str_repeat('1',32),'revision_number'=>1,'title'=>'O nás','slug'=>'o-nas','published'=>1,'visible_in_menu'=>1,'menu_order'=>10],
         ['document_key'=>str_repeat('2',32),'revision_number'=>1,'title'=>'Kontakt','slug'=>'kontakt','published'=>0,'visible_in_menu'=>0,'menu_order'=>20]];
     $menuPreviewLinks=[['label'=>'Spaní','href'=>'/cs/kategorie-produktu/spani','children'=>[['label'=>'Spacáky','href'=>'/cs/kategorie-produktu/spani/spacaky','children'=>[]]]],['label'=>'Batohy','href'=>'/cs/kategorie-produktu/batohy','children'=>[]]];
+    if($slot==='utility'){
+        $activeSlot['blog_order']=20;
+        $menuPreviewLinks=[['label'=>'O nás','href'=>'/cs/o-nas','sort_order'=>10,'children'=>[]],
+            ['label'=>'Blog','href'=>'/cs/blog','sort_order'=>20,'children'=>[]],
+            ['label'=>'Partnerský obchod','href'=>'https://example.com/outdoor','sort_order'=>30,'children'=>[]]];
+    }
 }
 require dirname(__DIR__,2).'/view/admin/layout.php';

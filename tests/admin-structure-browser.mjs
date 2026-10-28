@@ -28,6 +28,17 @@ test('category ordering, menu choices and backup review on desktop and touch',as
       await source.locator('[name="source"]').selectOption('content');
       assert.equal(await source.locator('[data-source-fields="content"]').isVisible(),true);
       assert.equal(await source.locator('[data-source-fields="categories"]').isVisible(),false);
+      assert.equal(await source.getByLabel('Pořadí Blogu',{exact:true}).inputValue(),'0');
+      await page.goto(url('content'));
+      assert.equal(await page.getByLabel('Pořadí Blogu',{exact:true}).inputValue(),'20');
+      assert.deepEqual(await page.locator('.structure-menu-preview .structure-badge').allTextContents(),['Pořadí 10','Pořadí 20','Pořadí 30']);
+      await page.getByLabel('Pořadí Blogu',{exact:true}).fill('40');
+      let menuPost;
+      await page.route('**/admin/menus/**',async r=>{menuPost=new URLSearchParams(r.request().postData());await r.fulfill({contentType:'text/html',body:'<p>Saved menu fixture</p>'});});
+      await page.getByRole('button',{name:'Uložit nastavení menu',exact:true}).click();await page.getByText('Saved menu fixture').waitFor();
+      assert.equal(menuPost.get('blog_order'),'40');assert.equal(menuPost.get('include_blog'),'1');
+      await page.unroute('**/admin/menus/**');
+      await page.goto(url('menus'));
       const destination=page.locator('[data-menu-destination]');
       assert.equal(await destination.locator('[name="parent_id"] option').count(),2,'Self and descendants are excluded.');
       await destination.locator('[name="destination_type"]').selectOption('external');

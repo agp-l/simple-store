@@ -42,7 +42,14 @@ if ($method === 'POST' && !in_array($_POST['action'] ?? '', ['configuration-prev
             }
             $title = $_POST['title'] ?? null;
             if ($title !== null && !is_string($title)) throw new InvalidArgumentException('Neplatný nadpis menu.');
-            $definitions->saveSlot($language, $slot, $source, $parent, isset($_POST['include_blog']), $title);
+            $blogOrder = null;
+            if (array_key_exists('blog_order', $_POST)) {
+                $blogOrder = filter_var($_POST['blog_order'], FILTER_VALIDATE_INT);
+                if ($blogOrder === false || $blogOrder < 0 || $blogOrder > 65535) {
+                    throw new InvalidArgumentException('Pořadí Blogu musí být celé číslo od 0 do 65535.');
+                }
+            }
+            $definitions->saveSlot($language, $slot, $source, $parent, isset($_POST['include_blog']), $title, $blogOrder);
         } elseif ($action === 'menu-item-save') {
             if (!$menuReady) throw new InvalidArgumentException('Nejdřív aktualizuj SQL tabulky v sekci Databáze.');
             $id = $_POST['id'] ?? '';

@@ -112,7 +112,7 @@ final class ContentRepository
     public function menuPages(string $language): array
     {
         return $this->db->query(
-            'SELECT slug, title FROM shop_content_revisions WHERE type=%s AND language=%s
+            'SELECT slug, title, menu_order FROM shop_content_revisions WHERE type=%s AND language=%s
              AND active_document_key IS NOT NULL AND published=1 AND visible_in_menu=1
              ORDER BY menu_order ASC, title ASC',
             'page', $language

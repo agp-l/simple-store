@@ -47,6 +47,7 @@ final class MenuDefinitionRepository
                     'items' => $this->buildTree($this->decode($row['items_json']))],
                 default => $settings[$row['slot']] ?? ['source' => 'manual', 'items' => []],
             };
+            $settings[$row['slot']]['blog_order'] = $this->blogOrder($row['items_json']);
         }
         return $settings;
     }
@@ -62,7 +63,7 @@ final class MenuDefinitionRepository
     }
 
     public function saveSlot(string $language, string $slot, string $source, string $parent, bool $blog,
-        ?string $title = null): void
+        ?string $title = null, ?int $blogOrder = null): void
     {
         $this->validateSlot($language, $slot);
         if (!in_array($source, ['categories', 'content', 'manual'], true) ||
@@ -75,6 +76,11 @@ final class MenuDefinitionRepository
             throw new InvalidArgumentException('Vyber existující kořenovou kategorii menu.');
         }
         $existing = $this->row($language, $slot);
+        $blogOrder ??= $existing === null ? (int) ($this->defaults[$slot]['blog_order'] ?? 0)
+            : $this->blogOrder($existing['items_json']);
+        if ($blogOrder < 0 || $blogOrder > 65535) {
+            throw new InvalidArgumentException('Pořadí Blogu musí být celé číslo od 0 do 65535.');
+        }
         $title ??= $existing === null ? ($this->defaults[$slot]['title'] ?? 'Informace')
             : $this->title($existing['items_json'], $this->defaults[$slot]['title'] ?? 'Informace');
         $title = trim($title);
@@ -86,7 +92,7 @@ final class MenuDefinitionRepository
             $existing['source'] !== 'manual' && $items === []) {
             $items = $this->defaultItems($slot);
         }
-        $json = $this->encode($items, $title);
+        $json = $this->encode($items, $title, $blogOrder);
         $this->db->query(
             'INSERT INTO shop_navigation_menus (language, slot, source, parent_path, include_blog, items_json)
              VALUES (%s, %s, %s, %s, %i, %s)
@@ -193,7 +199,8 @@ final class MenuDefinitionRepository
         $row = $this->row($language, $slot);
         $this->db->query(
             'UPDATE shop_navigation_menus SET items_json=%s WHERE language=%s AND slot=%s',
-            $this->encode($items, $this->title($row['items_json'], $this->defaults[$slot]['title'] ?? 'Informace')),
+            $this->encode($items, $this->title($row['items_json'], $this->defaults[$slot]['title'] ?? 'Informace'),
+                $this->blogOrder($row['items_json'])),
             $language, $slot
         );
     }
@@ -202,6 +209,13 @@ final class MenuDefinitionRepository
     {
         $data = json_decode($json, true);
         return is_array($data) && is_string($data['title'] ?? null) ? $data['title'] : $fallback;
+    }
+
+    private function blogOrder(string $json): int
+    {
+        $data = json_decode($json, true);
+        $order = is_array($data) ? ($data['blog_order'] ?? null) : null;
+        return is_int($order) && $order >= 0 && $order <= 65535 ? $order : 0;
     }
 
     /** The old footer default listed categories in two fixed columns. */
@@ -213,9 +227,9 @@ final class MenuDefinitionRepository
             $this->decode($row['items_json'] ?? '[]') === [];
     }
 
-    private function encode(array $items, string $title): string
+    private function encode(array $items, string $title, int $blogOrder): string
     {
-        return json_encode(['title' => $title, 'items' => array_values($items)],
+        return json_encode(['title' => $title, 'blog_order' => $blogOrder, 'items' => array_values($items)],
             JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
     }
 
@@ -300,7 +314,7 @@ final class MenuDefinitionRepository
             $links = [];
             foreach ($ordered as $row) {
                 if ($row['parent_id'] !== $parent) continue;
-                $link = ['label' => $row['label'], 'children' => $build($row['id'])];
+                $link = ['label' => $row['label'], 'sort_order' => $row['sort_order'], 'children' => $build($row['id'])];
                 $link[$row['target_type']] = $row['target'];
                 $links[] = $link;
             }

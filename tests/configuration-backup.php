@@ -41,6 +41,13 @@ $plan=$service->plan($decoded);
 $assert($plan['counts']['changed']===1,'Old partial backup must preserve custom blog copy.');
 $db->copy=[];
 $nav=$service->snapshot('navigation');
+$nav['data']['cs']['menus']['utility']['blog_order']=25;
+$decoded=$service->decode(B::json($nav),'navigation');
+$assert($decoded['data']['cs']['menus']['utility']['blog_order']===25&&$service->plan($decoded)['counts']['changed']===1,'Blog order must be included in navigation import and preview.');
+foreach([-1,65536,'20',null]as$invalidOrder){$invalid=$nav;$invalid['data']['cs']['menus']['utility']['blog_order']=$invalidOrder;$reject(fn()=>$service->decode(B::json($invalid),'navigation'));}
+unset($nav['data']['cs']['menus']['utility']['blog_order']);
+$assert($service->decode(B::json($nav),'navigation')['data']['cs']['menus']['utility']['blog_order']===0,'Legacy backups must accept missing Blog order.');
+$nav=$service->snapshot('navigation');
 $nav['data']['cs']['categories']=['spani/spacaky'=>['title'=>'Spacáky','sort_order'=>10,'enabled'=>true]];
 $reject(fn()=>$service->plan($service->decode(B::json($nav),'navigation')));
 $nav['data']['cs']['categories']['spani']=['title'=>'Spaní','sort_order'=>10,'enabled'=>true];

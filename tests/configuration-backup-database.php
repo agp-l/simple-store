@@ -23,12 +23,15 @@ try {
     $productBefore=$db->query('SELECT * FROM shop_product_revisions WHERE product_key=%s',$product);
     $nav=$service->snapshot('navigation');
     $nav['data']=['cs'=>['categories'=>[$root=>['title'=>'Root restored','sort_order'=>30,'enabled'=>true],$child=>['title'=>'Child restored','sort_order'=>20,'enabled'=>false],$root.'/new'=>['title'=>'New category','sort_order'=>10,'enabled'=>true]],
-        'menus'=>[$slot=>['source'=>'categories','parent'=>$root,'include_blog'=>false,'title'=>'Backup menu','items'=>[
+        'menus'=>[$slot=>['source'=>'categories','parent'=>$root,'include_blog'=>false,'blog_order'=>20,'title'=>'Backup menu','items'=>[
             ['id'=>str_repeat('a',16),'parent_id'=>'','label'=>'Home','target_type'=>'path','target'=>'','sort_order'=>10],
             ['id'=>str_repeat('b',16),'parent_id'=>str_repeat('a',16),'label'=>'Child','target_type'=>'category','target'=>$child,'sort_order'=>20],
         ]]],'pages'=>[$slug=>['visible'=>true,'sort_order'=>30]]]];
     $counts=$apply($nav);$assert($counts['new']===1&&$counts['changed']===4,'Import plan count mismatch.');
     $after=$service->snapshot('navigation');$assert(count($after['data']['cs']['menus'][$slot]['items'])===2,'Nested links were lost.');
+    $assert($after['data']['cs']['menus'][$slot]['blog_order']===20,'Blog order must survive import and export even with another menu source.');
+    $legacy=$nav;unset($legacy['data']['cs']['menus'][$slot]['blog_order']);
+    $counts=$apply($legacy);$assert($counts['changed']===0&&$service->snapshot('navigation')['data']['cs']['menus'][$slot]['blog_order']===20,'Older backups must preserve the saved Blog order.');
     $assert($after['data']['cs']['menus'][$slot]['items'][1]['parent_id']===str_repeat('a',16),'Menu parent ID changed.');
     $assert($db->query('SELECT * FROM shop_product_revisions WHERE product_key=%s',$product)===$productBefore,'Import changed product category, variants or history.');
     $page=(new ContentRepository($db))->currentDocument($pageKey,'cs');

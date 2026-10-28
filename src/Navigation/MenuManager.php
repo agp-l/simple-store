@@ -42,13 +42,18 @@ final class MenuManager
             $links = [];
             if ($settings['include_blog'] ?? false) {
                 $links[] = $this->item('Blog', $this->url->path('blog'),
-                    in_array($this->url->route()['name'], ['blog', 'post'], true));
+                    in_array($this->url->route()['name'], ['blog', 'post'], true)) +
+                    ['sort_order' => (int) ($settings['blog_order'] ?? 0)];
             }
             foreach ($this->content->menuPages($this->url->getLanguage()) as $page) {
                 $links[] = $this->item($page['title'], $this->url->path($page['slug']),
-                    $this->url->getSegments() === [$page['slug']]);
+                    $this->url->getSegments() === [$page['slug']]) +
+                    ['sort_order' => (int) ($page['menu_order'] ?? 0)];
             }
-            return array_merge($links, $this->manualLinks($settings['items'] ?? []));
+            $links = array_merge($links, $this->manualLinks($settings['items'] ?? []));
+            // Sort only roots: descendants travel with their parent. Equal orders remain stable.
+            usort($links, static fn (array $a, array $b): int => $a['sort_order'] <=> $b['sort_order']);
+            return $links;
         }
         if ($source === 'manual') {
             return $this->manualLinks($settings['items'] ?? []);
@@ -101,6 +106,7 @@ final class MenuManager
             $active = $active || in_array(true, array_column($children, 'active'), true);
             $link = $this->item($item['label'], $href, $active, $children);
             $link['manual'] = true;
+            $link['sort_order'] = (int) ($item['sort_order'] ?? 65535);
             $link['newTab'] = is_string($external) && str_starts_with($external, 'https://');
             $links[] = $link;
         }
