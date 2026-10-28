@@ -39,6 +39,7 @@ $fallback = CheckoutSettingsRepository::withDefaults(
     is_file($localFile) ? require $localFile : $example, $example);
 $repository = new CheckoutSettingsRepository($db);
 $settings = $repository->load($fallback);
+$deliveryEstimateForm = \SimpleStore\Product\DeliveryEstimate::configuration($settings['delivery_estimate'] ?? null);
 $mailSettingsStore = new MailSettingsRepository($db);
 $mailSettingsReady = $mailSettingsStore->installed();
 $taxMailFrom = (string) ((new TaxEvidenceRepository($db))->settings()['mail_from'] ?? '');
@@ -200,6 +201,12 @@ if ($method === 'POST' && !in_array($_POST['action'] ?? '', ['configuration-prev
         $settingsError = $exception->getMessage();
     }
     if ($settingsError !== '' && ($_POST['action'] ?? null) === 'save-checkout-settings') {
+        if ($settingsTab === 'prices' && is_array($_POST['delivery_estimate'] ?? null)) {
+            foreach ($deliveryEstimateForm as $key => $value) {
+                if ($key !== 'enabled' && is_string($_POST['delivery_estimate'][$key] ?? null)) $deliveryEstimateForm[$key] = $_POST['delivery_estimate'][$key];
+            }
+            $deliveryEstimateForm['enabled'] = ($_POST['delivery_estimate']['enabled'] ?? null) === '1';
+        }
         foreach ($form as $key => $value) {
             if (is_string($value) && is_string($_POST[$key] ?? null)) $form[$key] = $_POST[$key];
         }

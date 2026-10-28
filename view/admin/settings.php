@@ -31,7 +31,7 @@ $btcpayWebhookSecretConfigured ??= false;
       ['delivery', 'Doprava', 'Ceník a dostupnost výdejních míst i doručení na adresu.'],
       ['carriers', 'Dopravci', 'Widgety výdejních míst a údaje pro podávání zásilek.'],
       ['payment', 'Platby', 'Bankovní převod a připojené platební brány.'],
-      ['prices', 'Ceny', 'Zobrazení orientační ceny v BTC.'],
+      ['prices', 'Ceny', 'Zobrazení cen a odhadu doručení u produktů skladem.'],
       ['mail', 'E-maily', 'SMTP, potvrzení objednávek a texty zpráv.'],
       ['legal', 'Obchodní podmínky', 'Odkaz na publikovanou stránku obchodních podmínek.'],
   ] as [$key, $title, $description]): ?>
@@ -100,6 +100,7 @@ $btcpayWebhookSecretConfigured ??= false;
   <p class="panel-help">Přepočet používá kurz CoinGecko uložený na 15 minut. Objednávky se dál účtují v Kč; skutečnou částku k platbě bitcoinem určí BTCPay při vytvoření platby. Když kurz není dostupný, zobrazí se jen cena v Kč. Vyžaduje aktualizovanou databázi.</p>
   </section>
 <?php endif; ?>
+<?php if ($settingsTab === 'prices') require __DIR__ . '/settings-delivery-estimate.php'; ?>
 <?php if ($settingsTab === 'delivery'): ?>
   <section class="panel-panel panel-settings-block" id="settings-delivery">
   <h2>Doprava</h2><h3>Výdejní místa a boxy</h3>

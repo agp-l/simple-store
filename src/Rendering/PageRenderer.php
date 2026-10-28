@@ -29,6 +29,7 @@ final class PageRenderer
         $basePath = (string) ($data['basePath'] ?? '/');
         $siteRoot = htmlspecialchars($basePath, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $priceDisplay = $data['priceDisplay'] ?? null;
+        $deliveryEstimate = $data['deliveryEstimate'] ?? null;
         $primaryMenu = $data['primaryMenu'] ?? [];
         $utilityMenu = $data['utilityMenu'] ?? [];
         $footerMenu = $data['footerMenu'] ?? [];
@@ -187,6 +188,7 @@ final class PageRenderer
         $siteRoot = htmlspecialchars($basePath, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
         $siteCopy = array_replace(\SimpleStore\Content\SiteCopyRepository::DEFAULTS, $data['siteCopy'] ?? []);
         $priceDisplay = $data['priceDisplay'] ?? null;
+        $deliveryEstimate = $data['deliveryEstimate'] ?? null;
         $categoryLabels = $data['categoryLabels'] ?? [];
         $canManageContent = (bool) ($data['canManageContent'] ?? false);
         $adminCsrf = (string) ($data['adminCsrf'] ?? '');

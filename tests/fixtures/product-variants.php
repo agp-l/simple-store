@@ -8,6 +8,7 @@ foreach ($items as $i => &$variant) {
     $variant['quantity'] = $i % 3;
     $variant['price_czk'] = $i % 2 ? 2890 : null;
     $variant['sku'] = 'BUNDA-' . $i;
+    if ($i === 5) $variant['stock_status'] = 'on_order';
     if ($i === 2) $variant['image_path'] = 'images/batoh.webp';
 }
 unset($variant);
@@ -38,6 +39,7 @@ $old = array_replace($exact,['link_key'=>str_repeat('f',32),'label'=>'Původní 
 $manual = array_replace($exact,['link_key'=>str_repeat('9',32),'variant_key'=>$items[0]['id'],'label'=>'Ruční odkaz','origin'=>'manual','verification'=>'unverified','result'=>null]);
 
 (new \SimpleStore\Rendering\PageRenderer(dirname(__DIR__, 2) . '/view'))->render('product-record', [
+    'deliveryEstimate' => \SimpleStore\Product\DeliveryEstimate::present(array_replace(\SimpleStore\Product\DeliveryEstimate::defaults(), ['enabled' => true])),
     'basePath' => '/', 'language' => 'cs', 'product' => $product, 'canEditProduct' => $admin,
     'selectedVariant' => in_array('--selected', $argv, true) ? $items[2] : (in_array('--unavailable', $argv, true) ? $items[0] : null),
     'editMode' => $admin, 'editToken' => 'test-token', 'stockReady' => true,
