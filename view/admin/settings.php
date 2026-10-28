@@ -59,6 +59,11 @@ $btcpayWebhookSecretConfigured ??= false;
       </nav>
     <?php endif; ?>
     <p class="panel-help">Texty pro jazyk <?= $escape(strtoupper($copyLanguage)) ?>. Každý jazyk má vlastní znění.</p>
+    <fieldset class="panel-settings-block" id="header-message">
+      <legend><strong><?= \SimpleStore\Rendering\Icon::render('book') ?> Horní informační lišta</strong></legend>
+      <label>Nápis vlevo vedle horního menu<input name="header_message" value="<?= $escape($siteCopyValues['header_message']) ?>" maxlength="200" placeholder="35 % výdělku investujeme do vzdělávání dětí"></label>
+      <p class="panel-help">Zobrazí se vedle odkazů Blog, O nás a Kontakt. Na mobilu je nad odkazy. Prázdné pole nápis skryje. Uloží se společně tlačítkem Uložit texty.</p>
+    </fieldset>
     <label>Nadpis v hlavičce<input name="hero_title" value="<?= $escape($siteCopyValues['hero_title']) ?>" maxlength="90" required></label>
     <label>Text pod nadpisem<input name="hero_subtitle" value="<?= $escape($siteCopyValues['hero_subtitle']) ?>" maxlength="200" required></label>
     <h3>Výpis produktů</h3>

@@ -278,14 +278,14 @@ header {
 }
 
 .utility {
-  height: 40px;
+  min-height: 44px;
   position: relative;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 20px;
-  padding: 0 0px;
-  /* background: rgba(0, 0, 0, .18); */
+  flex-wrap: wrap;
+  gap: 4px 24px;
+  padding: 6px 0;
   color: #e6eae4;
 }
 
@@ -296,15 +296,51 @@ header {
   letter-spacing: .01em;
 }
 
+.utility .utility-message {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex: 1 1 280px;
+  min-width: 0;
+  color: #f1f3ee;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.utility-message span { min-width: 0; }
+
 .utility .utility-right {
   display: flex;
   align-items: center;
-  gap: 17px;
+  gap: 4px 18px;
   flex-wrap: wrap;
   color: #f1f3ee;
   font-size: 12.5px;
   font-weight: 600;
-  margin-right: 20px;
+  margin-left: auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.utility-right > a {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.utility-right > a:not(.menu-admin-shortcut)::before,
+.utility-right > .nav-dropdown > summary::before {
+  content: "";
+  width: 5px;
+  height: 5px;
+  flex: 0 0 5px;
+  border-radius: 50%;
+  background: var(--amber);
 }
 
 .utility-right a {
@@ -423,18 +459,6 @@ header {
   position: relative;
   z-index: 1;
   max-width: 750px;
-}
-
-.hero-tag {
-  color: var(--lime);
-
-}
-
-.hero-tag::before {
-  content: "";
-  width: 6px;
-  height: 1px;
-  background: var(--amber);
 }
 
 .hero h1 {
@@ -1427,9 +1451,13 @@ main {
   .utility .utility-right {
     display: flex;
     font-size: 11px;
+    margin-left: 0;
+    width: 100%;
+    gap: 2px 16px;
   }
 
-  .utility p {
+  .utility .utility-message {
+    flex-basis: 100%;
     font-size: 11px;
   }
 
