@@ -163,6 +163,9 @@ try {
 
     $liteUrl = 'http://127.0.0.1:' . liteIntegrationFreePort();
     $shopUrl = 'http://127.0.0.1:' . liteIntegrationFreePort();
+    $installationFile = $temporary . '/installation.json';
+    file_put_contents($installationFile, json_encode(['public_base_url' => $shopUrl], JSON_THROW_ON_ERROR));
+    putenv('SIMPLE_STORE_INSTALLATION_FILE=' . $installationFile);
     $secret = 'test-only-webhook-secret';
     $settings = ['enabled' => true, 'server_url' => $liteUrl, 'store_id' => 'integration',
         'api_key' => 'integration-key', 'webhook_secret' => $secret,
@@ -195,7 +198,7 @@ try {
     $processes[] = liteIntegrationStart([PHP_BINARY, '-S', substr($liteUrl, 7), __FILE__],
         $temporary . '/lite.log', ['SIMPLE_STORE_LITE_FIXTURE' => $fixturePath]);
     $processes[] = liteIntegrationStart([PHP_BINARY, '-d', 'sendmail_path=' . $sendmail,
-        '-S', substr($shopUrl, 7), '-t', $webRoot, $storeRoot . '/tests/fixtures/panel-router.php'], $temporary . '/shop.log', []);
+        '-S', substr($shopUrl, 7), '-t', $webRoot, $storeRoot . '/tests/fixtures/panel-router.php'], $temporary . '/shop.log', ['SIMPLE_STORE_INSTALLATION_FILE' => $installationFile]);
     foreach ([$liteUrl . '/api/v1/health', $shopUrl . '/btcpay-callback.php'] as $url) {
         $ready = false;
         for ($attempt = 0; $attempt < 100; $attempt++) {

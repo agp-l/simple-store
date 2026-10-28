@@ -553,7 +553,7 @@ ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
 if (!str_contains($html, 'name="action" value="fio-cron-rotate"') ||
-    !str_contains($html, '/shop/fio-cron.php?key=' . $fioCronKey) ||
+    !str_contains($html, \SimpleStore\Configuration\Installation::current()->url('fio-cron.php?key=' . $fioCronKey)) ||
     !str_contains($html, 'name="payment_area" value="fio"') ||
     str_contains($html, 'name="bank_transfer_enabled"')) {
     throw new RuntimeException('Fio settings must be separate from bank transfer and expose Cron.');
@@ -569,7 +569,8 @@ require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
 if (!str_contains($html, 'name="payment_area" value="btcpay"') ||
     !str_contains($html, 'draft&lt;key&gt;') || str_contains($html, 'draft<key>') ||
-    !str_contains($html, 'value="http://obchod.example/shop"') ||
+    !str_contains($html, 'value="' . \SimpleStore\Configuration\Installation::current()->baseUrl() . '"') ||
+    str_contains($html, 'name="btcpay_return_base_url"') ||
     !str_contains($html, 'Uložit BTCPay') ||
     str_contains($html, 'name="account_display"') ||
     !str_contains($html, 'id="settings-btcpay" open')) {
@@ -638,3 +639,7 @@ if (!str_contains($html, 'aktualizuj SQL tabulky') || str_contains($html, 'name=
 }
 
 echo "Admin rendering tests passed.\n";
+
+$screen = 'settings'; $settingsTab = 'installation';
+ob_start(); require dirname(__DIR__) . '/view/admin/layout.php'; $html = ob_get_clean();
+if (!str_contains($html, 'config/installation.json') || !str_contains($html, 'Podsložka nesouhlasí') || !str_contains($html, '/account/?google=callback') || str_contains($html, 'name="public_base_url"')) throw new RuntimeException('Installation diagnostics missing or editable.');

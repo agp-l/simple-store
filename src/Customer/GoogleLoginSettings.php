@@ -4,30 +4,38 @@ namespace SimpleStore\Customer;
 use InvalidArgumentException;
 use MeekroDB;
 use SimpleStore\Accounting\MailCredential;
+use SimpleStore\Configuration\Installation;
 
 final class GoogleLoginSettings
 {
     public const DEFAULTS = ['enabled'=>false,'client_id'=>'','client_secret_encrypted'=>'','redirect_uri'=>''];
-    public function __construct(private MeekroDB $db) {}
+    private Installation $installation;
+    public function __construct(private MeekroDB $db, ?Installation $installation = null)
+    {
+        $this->installation = $installation ?? Installation::current();
+    }
     public function installed(): bool
     {
         return (int)$this->db->queryFirstField('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME IN (%s,%s)', 'shop_google_login_settings','shop_customer_google') === 2;
     }
     public function load(): array
     {
-        if (!$this->installed()) return self::DEFAULTS;
+        $defaults = array_replace(self::DEFAULTS, ['redirect_uri' => $this->installation->url('account/?google=callback')]);
+        if (!$this->installed()) return $defaults;
         $json=$this->db->queryFirstField('SELECT settings_json FROM shop_google_login_settings WHERE id=1');
         $saved=$json===null ? [] : json_decode($json,true,16);
-        if(!is_array($saved)) return self::DEFAULTS;
-        foreach(self::DEFAULTS as $key=>$default) if(isset($saved[$key]) && gettype($saved[$key])!==gettype($default)) return self::DEFAULTS;
-        return array_replace(self::DEFAULTS,array_intersect_key($saved,self::DEFAULTS));
+        if(!is_array($saved)) return $defaults;
+        foreach(self::DEFAULTS as $key=>$default) if(isset($saved[$key]) && gettype($saved[$key])!==gettype($default)) return $defaults;
+        $settings = array_replace($defaults,array_intersect_key($saved,self::DEFAULTS));
+        $settings['redirect_uri'] = $defaults['redirect_uri'];
+        return $settings;
     }
     public function save(array $input): void
     {
         if (!$this->installed()) throw new InvalidArgumentException('Nejdřív aktualizuj databázi.');
         $old=$this->load();
-        foreach(['client_id','client_secret','redirect_uri'] as $key) if(!is_string($input[$key]??null)) throw new InvalidArgumentException('Neplatné nastavení Google.');
-        $id=trim($input['client_id']); $uri=trim($input['redirect_uri']); $secret=trim($input['client_secret']);
+        foreach(['client_id','client_secret'] as $key) if(!is_string($input[$key]??null)) throw new InvalidArgumentException('Neplatné nastavení Google.');
+        $id=trim($input['client_id']); $uri=$this->installation->url('account/?google=callback'); $secret=trim($input['client_secret']);
         $enabled=($input['enabled']??'')==='1';
         if ($id!=='' && !preg_match('/^[a-zA-Z0-9-]+\.apps\.googleusercontent\.com$/D',$id)) throw new InvalidArgumentException('Zkontroluj Google Client ID.');
         $parts=parse_url($uri);

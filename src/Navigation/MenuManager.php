@@ -87,7 +87,7 @@ final class MenuManager
                 throw new InvalidArgumentException('Invalid manual menu item.');
             }
             if (is_string($external) && MenuDefinitionRepository::validExternal($external)) {
-                $href = $external;
+                $href = \SimpleStore\Configuration\Installation::current()->relocate($external);
                 $active = false;
             } elseif (is_string($category)) {
                 if ($this->categories->visibility($this->url->getLanguage(), $category) !== 'visible') continue;

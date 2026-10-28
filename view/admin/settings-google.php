@@ -8,7 +8,8 @@
 <label>Client ID<input name="client_id" maxlength="200" value="<?= $escape($googleSettings['client_id']) ?>" autocomplete="off"></label>
 <label>Client secret<input type="password" name="client_secret" maxlength="512" autocomplete="new-password" value=""></label>
 <p><?= $googleSettings['client_secret_encrypted']!==''?'Tajný klíč je uložený. Prázdné pole jej zachová.':'Tajný klíč zatím není uložený.' ?> Klíč se nevrací do formuláře ani neexportuje v zálohách textů.</p>
-<label>Autorizovaná návratová adresa<input type="url" name="redirect_uri" maxlength="1000" value="<?= $escape($googleSettings['redirect_uri']) ?>" placeholder="https://eshop.dobrodruzi.cz/account/?google=callback"></label>
+<label>Autorizovaná návratová adresa<input type="url" readonly maxlength="1000" value="<?= $escape($googleSettings['redirect_uri']) ?>"></label>
+<p class="panel-help">Adresa vzniká ze společné konfigurace webu. Po přesunu ji také aktualizuj v Google Cloud v Authorized redirect URIs.</p>
 <button class="panel-button" type="submit">Uložit přihlášení Google</button></form>
 <?php endif; ?>
 <h3>Jednorázové nastavení u Googlu</h3>

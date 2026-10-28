@@ -35,3 +35,7 @@ Před změnou schématu ulož zálohu databáze a médií. Neimportuj na hostova
 Po přenosu ověř `/cs`, detail produktu, košík, administraci a podle změny pokladnu. U změny schématu ověř v Administraci → Databáze stav „Aktuální“. Návrat k předchozímu kódu je opětovné nasazení staršího commitu; **databáze a její data se automaticky nevracejí**. Starší kód musí být kompatibilní s novým schématem nebo použij ověřenou zálohu.
 
 Heslo FTP účtu dříve sdělené v chatu po nastavení GitHub secretu změň ve Webglobe Adminu. Aktualizuj potom i odpovídající secret; heslo nikdy neposílej do repozitáře.
+
+## Přesun domény
+
+Adresa obchodu je v `config/installation.json`. Nasazovač soubor vytvoří z příkladu pouze při jeho absenci a dále jej nepřepisuje ani nezahrnuje do manifestu. Plánovač partnerů čte tento stejný soubor přes FTP. Po přejmenování složky ověř cílovou složku FTP účtu; DNS, HTTPS a callbacky u služeb jsou samostatná nastavení. [Úplný postup přesunu](moving-installation.md).

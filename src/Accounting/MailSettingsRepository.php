@@ -7,6 +7,7 @@ use InvalidArgumentException;
 use MeekroDB;
 use RuntimeException;
 use Throwable;
+use SimpleStore\Configuration\Installation;
 
 /** Editable customer copy and sending identity; order facts remain immutable data. */
 final class MailSettingsRepository
@@ -30,8 +31,9 @@ final class MailSettingsRepository
             'message' => "Dobrý den,\n\npotvrzujeme zrušení objednávky {order_number}. Pokud to neodpovídá vaší domluvě s námi, odpovězte prosím na tento e-mail."],
     ];
 
-    public function __construct(private MeekroDB $db)
+    public function __construct(private MeekroDB $db, private ?Installation $installation = null)
     {
+        $this->installation ??= Installation::current();
     }
 
     public function installed(): bool
@@ -50,7 +52,7 @@ final class MailSettingsRepository
             $legacySender = (string) ((new TaxEvidenceRepository($this->db))->settings()['mail_from'] ?? '');
         }
         $settings = ['from_email' => $legacySender, 'from_name' => 'dobrodruzi.cz',
-            'reply_to' => '', 'public_base_url' => '', 'automatic_enabled' => true,
+            'reply_to' => '', 'public_base_url' => $this->installation->baseUrl(), 'automatic_enabled' => true,
             'admin_recovery_email' => '', 'smtp_host' => '', 'smtp_port' => 587,
             'smtp_security' => 'starttls', 'smtp_username' => '', 'smtp_password_encrypted' => '',
             'copy' => MailContent::defaults()];
@@ -74,6 +76,7 @@ final class MailSettingsRepository
             $templates[$code] = ['enabled' => (bool) $row['enabled'], 'subject' => (string) $row['subject'],
                 'message' => self::upgradeDefault($code, (string) $row['message_text']), 'label' => MailContent::definitions()[$code]['label']];
         }
+        $settings['public_base_url'] = $this->installation->baseUrl();
         $settings['copy'] = MailContent::copy(['settings' => $settings]);
         return ['settings' => $settings, 'templates' => $templates];
     }
@@ -84,7 +87,7 @@ final class MailSettingsRepository
         $email = self::field($input, 'from_email', 254);
         $reply = self::field($input, 'reply_to', 254);
         $name = self::field($input, 'from_name', 100);
-        $baseUrl = rtrim(self::field($input, 'public_base_url', 500), '/');
+        $baseUrl = $this->installation->baseUrl();
         $previousConfiguration = $this->load();
         $previous = $previousConfiguration['settings'];
         $recovery = self::field($input + $previous, 'admin_recovery_email', 254);
@@ -105,12 +108,7 @@ final class MailSettingsRepository
         if ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL) === false ||
             $reply !== '' && filter_var($reply, FILTER_VALIDATE_EMAIL) === false ||
             $recovery !== '' && filter_var($recovery, FILTER_VALIDATE_EMAIL) === false ||
-            $name === '' || preg_match('/[\r\n]/', $name) ||
-            $baseUrl !== '' && (!filter_var($baseUrl, FILTER_VALIDATE_URL) ||
-                parse_url($baseUrl, PHP_URL_SCHEME) !== 'https' ||
-                parse_url($baseUrl, PHP_URL_QUERY) !== null ||
-                parse_url($baseUrl, PHP_URL_FRAGMENT) !== null ||
-                parse_url($baseUrl, PHP_URL_USER) !== null)) {
+            $name === '' || preg_match('/[\r\n]/', $name)) {
             throw new InvalidArgumentException('Zkontroluj jméno odesílatele, e-mailové adresy a veřejnou HTTPS adresu obchodu.');
         }
         $encrypted = ($input['smtp_clear_password'] ?? '') === '1' ? '' : (string) $previous['smtp_password_encrypted'];
@@ -167,7 +165,7 @@ final class MailSettingsRepository
     /** Drafts never expose the stored SMTP secret and never save or send anything. */
     public static function withDraft(array $configuration, array $input): array
     {
-        foreach (['from_email', 'from_name', 'reply_to', 'public_base_url', 'admin_recovery_email',
+        foreach (['from_email', 'from_name', 'reply_to', 'admin_recovery_email',
             'smtp_host', 'smtp_port', 'smtp_security', 'smtp_username'] as $key) {
             if (is_string($input[$key] ?? null)) $configuration['settings'][$key] = $input[$key];
         }

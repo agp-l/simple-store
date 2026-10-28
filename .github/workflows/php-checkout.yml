@@ -67,10 +67,12 @@ jobs:
           php -l tools/supplier-price-worker.php
       - name: Verify deployment package excludes private data
         run: |
+          python3 tests/installation.py
           python3 tests/deployment.py
           python3 tests/supplier-worker.py
       - name: Test checkout and shared views
         run: |
+          php tests/installation.php
           php tests/assisted-purchase.php
           php tests/checkout-cart.php
           php tests/checkout-render.php

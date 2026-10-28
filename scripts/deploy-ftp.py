@@ -13,6 +13,7 @@ import time
 from pathlib import Path, PurePosixPath
 
 from release_paths import allowed
+from installation_config import public_base_url
 
 
 def configuration() -> tuple[str, int, str, str, str, str]:
@@ -120,6 +121,23 @@ def upload(ftp: ftplib.FTP, local: Path, remote: str) -> None:
             ftp.delete(temporary)
 
 
+def initialize_installation(ftp: ftplib.FTP, example: Path, root: str) -> None:
+    """Create the installation-owned config once; never overwrite an FTP edit."""
+    target = posixpath.join(root, "config/installation.json")
+    if file_exists(ftp, target):
+        return
+    content = example.read_bytes()
+    public_base_url(content)
+    temporary = target + ".upload-" + secrets.token_hex(6)
+    try:
+        ftp.storbinary("STOR " + temporary, io.BytesIO(content))
+        if not file_exists(ftp, target):
+            ftp.rename(temporary, target)
+    finally:
+        if file_exists(ftp, temporary):
+            ftp.delete(temporary)
+
+
 def deploy(package: Path, dry_run: bool) -> None:
     manifest = release(package)
     host, port, user, password, root, security = configuration()
@@ -165,6 +183,12 @@ def deploy(package: Path, dry_run: bool) -> None:
             target = posixpath.join(root, directory)
             if not directory_exists(ftp, target):
                 ftp.mkd(target)
+        example = package / "config/installation.example.json"
+        if example.is_file():
+            initialize_installation(ftp, example, root)
+        # Dependencies arrive before consumers; bootstrap/config switch last.
+        changed.sort(key=lambda name: (2 if name in ("config/site.php", "src/bootstrap.php") else
+                                      0 if name.startswith(("src/Configuration/", "config/installation.")) else 1, name))
         for name in changed:
             upload(ftp, package / name, posixpath.join(root, name))
         upload(ftp, package / "release.json", remote_manifest_path)

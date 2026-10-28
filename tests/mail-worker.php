@@ -174,3 +174,23 @@ expectMail($accept->dispatchDue(1, 'shop@example.test')['sent'] === 1 &&
     $db->rows[7]['state'] === 'sent',
     'An active unpaid order confirmation was suppressed.');
 echo "Bounded mail worker and ambiguous SMTP state OK\n";
+
+// Pending mail follows the new installation, while its legal attachment and DB body stay immutable.
+require __DIR__ . '/support/mail-message.php';
+$installationFile = tempnam(sys_get_temp_dir(), 'mail-installation-');
+file_put_contents($installationFile, json_encode(['public_base_url' => 'https://new.test/eshop', 'previous_base_urls' => ['https://old.test/shop']]));
+putenv('SIMPLE_STORE_INSTALLATION_FILE=' . $installationFile);
+try {
+    $make(501);
+    $original = 'Objednávka https://old.test/shop/cs/objednavka/test?x=1#detail';
+    $terms = 'Původní smlouva https://old.test/shop/cs/podminky';
+    $db->rows[501]['body_text'] = $original;
+    $db->rows[501]['body_html'] = '<a href="https://old.test/shop/cs/objednavka/test?x=1#detail">Objednávka</a>';
+    $db->rows[501]['terms_attachment'] = $terms;
+    $received = '';
+    $moved = new OrderMailQueue($db, static function ($to, $subject, $body) use (&$received): bool { $received = $body; return true; });
+    expectMail($moved->dispatch(501, 'shop@example.test'), 'Pending mail did not dispatch after migration.');
+    expectMail(str_contains(decodedMailText($received), 'https://new.test/eshop/cs/objednavka/test?x=1#detail'), 'Pending mail retained the previous origin.');
+    expectMail(str_contains($received, chunk_split(base64_encode($terms), 76, "\r\n")), 'Immutable legal attachment was rewritten.');
+    expectMail($db->rows[501]['body_text'] === $original && $db->rows[501]['terms_attachment'] === $terms, 'Mail history was rewritten.');
+} finally { unlink($installationFile); putenv('SIMPLE_STORE_INSTALLATION_FILE'); }

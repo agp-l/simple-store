@@ -35,4 +35,15 @@ if (is_file($composerAutoload)) {
     });
 }
 
+try {
+    $site['public_base_url'] = \SimpleStore\Configuration\Installation::current()->baseUrl();
+} catch (\RuntimeException $error) {
+    if (PHP_SAPI === 'cli') throw $error;
+    error_log($error->getMessage());
+    http_response_code(503);
+    header('Content-Type: text/plain; charset=UTF-8');
+    echo 'Konfigurace adresy obchodu není platná. Zkontrolujte config/installation.json.';
+    exit;
+}
+
 return $site;

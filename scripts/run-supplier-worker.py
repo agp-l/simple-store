@@ -15,15 +15,15 @@ import urllib.error
 import urllib.request
 from email.utils import parsedate_to_datetime
 from pathlib import Path
+from installation_config import public_base_url
 
 spec = importlib.util.spec_from_file_location("shop_deploy", Path(__file__).with_name("deploy-ftp.py"))
 deploy = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(deploy)
-ENDPOINT = "https://eshop.dobrodruzi.cz/supplier-price-cron.php"
 KEY_PATH = "/config/supplier-worker.php"
 
 
-def worker_key():
+def worker_configuration():
     host, port, user, password, root, security = deploy.configuration()
     ftp = ftplib.FTP_TLS(timeout=30) if security == "ftps" else ftplib.FTP(timeout=30)
     try:
@@ -37,6 +37,22 @@ def worker_key():
         for marker in ("index.php", "config/database.php", "config/.htaccess", "supplier-price-cron.php"):
             if not deploy.file_exists(ftp, "/" + marker):
                 raise ValueError("Target is not the installed shop.")
+        configuration_data = io.BytesIO()
+        def receive_config(chunk):
+            if configuration_data.tell() + len(chunk) > 16384:
+                raise ValueError("Installation configuration is too large.")
+            configuration_data.write(chunk)
+        try:
+            ftp.retrbinary("RETR /config/installation.json", receive_config)
+        except ftplib.error_perm as error:
+            if not deploy.missing(error):
+                raise
+            configuration_data = io.BytesIO()
+            ftp.retrbinary("RETR /config/installation.example.json", receive_config)
+        base = public_base_url(configuration_data.getvalue())
+        if not base.startswith("https://"):
+            raise ValueError("The hosted worker requires an HTTPS installation.")
+        endpoint = base + "/supplier-price-cron.php"
         data = io.BytesIO()
         try:
             ftp.retrbinary("RETR " + KEY_PATH, data.write)
@@ -57,7 +73,7 @@ def worker_key():
         match = re.fullmatch(rb"<\?php\s+return '([a-f0-9]{64})';\s*", data.getvalue())
         if not match:
             raise ValueError("Invalid worker configuration; no credential changed.")
-        return match[1].decode()
+        return match[1].decode(), endpoint
     finally:
         deploy.disconnect(ftp)
 
@@ -95,14 +111,14 @@ def retry_delay(error, failures):
 
 def run():
     print("Supplier worker: loading private configuration.", flush=True)
-    key = worker_key()
+    key, endpoint = worker_configuration()
     print("Supplier worker: configuration loaded; processing queue.", flush=True)
     opener = urllib.request.build_opener(NoRedirect)
     deadline = time.monotonic() + 240
     ticks = 0
     failures = 0
     while time.monotonic() < deadline:
-        request = urllib.request.Request(ENDPOINT, data=b"", method="POST",
+        request = urllib.request.Request(endpoint, data=b"", method="POST",
             headers={"X-Supplier-Worker-Key": key, "Accept": "application/json",
                      "User-Agent": "DobrodruziSupplierWorker/1.0"})
         try:

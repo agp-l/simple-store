@@ -1,5 +1,7 @@
 # Dobrodruzi — jednoduchý obchod a CMS
 
+**Doména a přesun:** veřejnou adresu včetně podsložky nastavuje pouze místní `config/installation.json`. [Návod k přestěhování](docs/moving-installation.md); kontrolní přehled je v Nastavení obchodu → Doména a přesun.
+
 Jednoduchý obchod, redakční systém a zákaznický účet v PHP 8.1+ a MySQL. Obchod a zákaznický účet sdílejí hlavičku a patičku z `view/`; přihlášená administrace má vlastní šablonu. Architektura a důvody jednotlivých rozhodnutí jsou popsané v [docs/architecture.md](docs/architecture.md).
 
 Online platby: [Comgate](docs/comgate.md), [GoPay](docs/gopay.md) a [BTCPay Server](docs/btcpay.md). GoPay používá oficiální PHP SDK; BTCPay komunikuje se serverem přes Greenfield API.

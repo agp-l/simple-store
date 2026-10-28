@@ -5,7 +5,7 @@ Nastavení je v **Nastavení obchodu → Přihlášení** (`/admin/settings/?tab
 ## Aktivace
 
 1. V Google Cloud / Google Auth Platform vytvoř OAuth klienta typu **Web application**. Nastav údaje aplikace, doménu, odkazy na podmínky a soukromí a publikum podle požadavků konzole.
-2. Autorizovaná návratová adresa pro produkční obchod je přesně `https://eshop.dobrodruzi.cz/account/?google=callback`. Nepřidávej `/cs`; jiná instalace nebo podsložka potřebuje vlastní přesnou adresu. Klientský JavaScript SDK ani Authorized JavaScript origins tento serverový tok nepoužívá.
+2. Autorizovaná návratová adresa se odvozuje z `config/installation.json` a zobrazí se v administraci Přihlášení nebo Doména a přesun. Zkopíruj ji přesně do Google Cloud; při změně domény ji změň také tam. Nepřidávej `/cs`; jiná instalace nebo podsložka potřebuje vlastní přesnou adresu. Klientský JavaScript SDK ani Authorized JavaScript origins tento serverový tok nepoužívá.
 3. Client ID, Client secret a návratovou adresu zadej do administrace a zapni přihlašování. Secret nikdy neposílej do repozitáře. Prázdné pole secret zachová uloženou hodnotu; změna Client ID vyžaduje nový secret.
 4. V testovacím režimu povol konkrétní testovací účty. Pro veřejný provoz dokonči nastavení publika/produkčního stavu v Google Auth Platform. Vyžadované údaje jsou jen `openid email profile`.
 5. Ověř registraci nového zákazníka, přihlášení existujícího propojeného účtu, návrat z pokladny, zrušení souhlasu, připojení k heslovému účtu, nastavení hesla a odpojení. Bez skutečných OAuth údajů lze automaticky otestovat protokol a databázi, nikoli živé přihlášení u Googlu.

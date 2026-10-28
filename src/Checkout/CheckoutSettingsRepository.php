@@ -6,12 +6,14 @@ namespace SimpleStore\Checkout;
 use InvalidArgumentException;
 use MeekroDB;
 use SimpleStore\Product\DeliveryEstimate;
+use SimpleStore\Configuration\Installation;
 
 /** Store checkout configuration in the database so it can be edited in administration. */
 final class CheckoutSettingsRepository
 {
-    public function __construct(private MeekroDB $db)
+    public function __construct(private MeekroDB $db, private ?Installation $installation = null)
     {
+        $this->installation ??= Installation::current();
     }
 
     public static function withDefaults(array $local, array $example): array
@@ -57,11 +59,11 @@ final class CheckoutSettingsRepository
     public function load(array $fallback): array
     {
         if (!$this->installed()) {
-            return $fallback;
+            return $this->installation->checkout($fallback);
         }
         $row = $this->db->queryFirstRow('SELECT settings_json FROM shop_checkout_settings WHERE id=%i', 1);
         if ($row === null) {
-            return $fallback;
+            return $this->installation->checkout($fallback);
         }
         $saved = json_decode((string) $row['settings_json'], true, 512, JSON_THROW_ON_ERROR);
         if (!is_array($saved)) {
@@ -73,7 +75,7 @@ final class CheckoutSettingsRepository
             $fallback['shipping_methods']);
         $result['delivery_estimate'] = DeliveryEstimate::configuration($result['delivery_estimate'] ?? null);
         $result['bank_transfer']['enabled'] = $saved['bank_transfer']['enabled'] ?? true;
-        return $result;
+        return $this->installation->checkout($result);
     }
 
     /** Save one administration page without resetting values owned by the other pages. */
@@ -173,6 +175,10 @@ final class CheckoutSettingsRepository
 
     public function save(array $input, string $basePath, array $current = []): array
     {
+        // Old database values and submitted forms cannot override installation identity.
+        foreach (['comgate', 'gopay', 'btcpay'] as $gateway) {
+            $input[$gateway . '_return_base_url'] = $this->installation->baseUrl();
+        }
         $prices = $input['shipping_price'] ?? null;
         $enabled = $input['shipping_enabled'] ?? [];
         if (!is_array($prices) || !is_array($enabled)) {
@@ -243,7 +249,7 @@ final class CheckoutSettingsRepository
 
         $termsUrl = self::value($input, 'terms_url');
         if ($termsUrl !== '' && (!str_starts_with($termsUrl, $basePath) ||
-            preg_match('~^/(?:[a-z0-9]+(?:-[a-z0-9]+)*)(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*/?$~D', $termsUrl) !== 1)) {
+            preg_match('~^/(?:[a-z0-9]+(?:-[a-z0-9]+)*)(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*/?$~D', substr($termsUrl, strlen(rtrim($basePath, '/')))) !== 1)) {
             throw new InvalidArgumentException('Odkaz na podmínky musí být místní adresa stránky v tomto obchodě.');
         }
         $packetaKey = self::value($input, 'packeta_api_key');

@@ -53,15 +53,7 @@ try {
             if ($scope === 'selected') $exportRows = ProductBulkTransfer::select($exportRows, is_string($_POST['selected_json'] ?? null) ? $_POST['selected_json'] : '');
             if ($exportRows === []) throw new InvalidArgumentException('Výběr neobsahuje žádné produkty.');
             $namesOnly = ($_POST['export_format'] ?? '') === 'names';
-            $exportUrl = '';
-            if ($namesOnly) {
-                $exportUrl = (string) ((new \SimpleStore\Accounting\MailSettingsRepository($db))->load('')['settings']['public_base_url'] ?? '');
-                if ($exportUrl === '') {
-                    $host = (string) ($_SERVER['HTTP_HOST'] ?? 'localhost');
-                    if (preg_match('/^[a-zA-Z0-9.-]+(?::[0-9]+)?$/D', $host) !== 1) $host = 'localhost';
-                    $exportUrl = ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https://' : 'http://') . $host . rtrim($basePath, '/');
-                }
-            }
+            $exportUrl = $namesOnly ? \SimpleStore\Configuration\Installation::current()->baseUrl() : '';
             $relationsOnly = ($_POST['export_format'] ?? '') === 'relations';
             $variantLinksOnly = ($_POST['export_format'] ?? '') === 'variant-suppliers';
             $body = $variantLinksOnly
