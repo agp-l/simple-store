@@ -25,6 +25,7 @@ $btcpayWebhookSecretConfigured ??= false;
 <?php if ($settingsTab === 'overview'): ?>
 <div class="panel-settings-overview">
   <?php foreach ([
+      ['accounts', 'Přihlášení zákazníků', 'Google účet, registrace a klasické přihlášení.'],
       ['products', 'Hromadná úprava produktů', 'Přiřazení prodávajících, způsob prodeje, sklad a zveřejnění produktů.'],
       ['appearance', 'Texty webu', 'Hlavička, výpis produktů, blog a patička.'],
       ['delivery', 'Doprava', 'Ceník a dostupnost výdejních míst i doručení na adresu.'],
@@ -34,9 +35,11 @@ $btcpayWebhookSecretConfigured ??= false;
       ['mail', 'E-maily', 'SMTP, potvrzení objednávek a texty zpráv.'],
       ['legal', 'Obchodní podmínky', 'Odkaz na publikovanou stránku obchodních podmínek.'],
   ] as [$key, $title, $description]): ?>
-    <a class="panel-settings-card" data-admin-setting="<?= $escape($key) ?>" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=' . $key) ?>"><span class="admin-setting-icon" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render(['products'=>'package', 'appearance'=>'edit', 'delivery'=>'truck', 'carriers'=>'package', 'payment'=>'card', 'prices'=>'card', 'mail'=>'mail', 'legal'=>'document'][$key]) ?></span><span class="admin-setting-arrow" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?></span><strong><?= $escape($title) ?></strong><span><?= $escape($description) ?></span></a>
+    <a class="panel-settings-card" data-admin-setting="<?= $escape($key) ?>" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=' . $key) ?>"><span class="admin-setting-icon" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render(['accounts'=>'user', 'products'=>'package', 'appearance'=>'edit', 'delivery'=>'truck', 'carriers'=>'package', 'payment'=>'card', 'prices'=>'card', 'mail'=>'mail', 'legal'=>'document'][$key]) ?></span><span class="admin-setting-arrow" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?></span><strong><?= $escape($title) ?></strong><span><?= $escape($description) ?></span></a>
   <?php endforeach; ?>
 </div>
+<?php elseif ($settingsTab === 'accounts'): ?>
+<?php require __DIR__.'/settings-google.php'; ?>
 <?php elseif ($settingsTab === 'products'): ?>
 <?php require __DIR__ . '/settings-products.php'; ?>
 <?php elseif ($settingsTab === 'mail'): ?>

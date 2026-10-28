@@ -90,11 +90,7 @@ abstract class RoleAuth
         if ($this->retryAfterSeconds() > 0) return false;
         $user = $this->byName($name);
         if ($user !== null && password_verify($password, $user['password_hash'])) {
-            session_regenerate_id(true);
-            $_SESSION[$this->idKey] = (int) $user['id'];
-            $_SESSION[$this->hashKey] = self::fingerprint($user);
-            $_SESSION['csrf'] = bin2hex(random_bytes(32));
-            unset($_SESSION['failed_logins'], $_SESSION['blocked_until']);
+            $this->establishSession($user);
             return true;
         }
         $_SESSION['failed_logins'] = ($_SESSION['failed_logins'] ?? 0) + 1;
@@ -103,6 +99,16 @@ abstract class RoleAuth
             $_SESSION['failed_logins'] = 0;
         }
         return false;
+    }
+
+    /** Called only after a trusted password or federated identity verification. */
+    protected function establishSession(array $user): void
+    {
+        session_regenerate_id(true);
+        $_SESSION[$this->idKey] = (int) $user['id'];
+        $_SESSION[$this->hashKey] = self::fingerprint($user);
+        $_SESSION['csrf'] = bin2hex(random_bytes(32));
+        unset($_SESSION['failed_logins'], $_SESSION['blocked_until'], $_SESSION['google_oauth'], $_SESSION['google_verified']);
     }
 
     public function signOut(): void

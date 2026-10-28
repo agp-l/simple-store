@@ -110,6 +110,7 @@ jobs:
           php tests/url-manager.php
           php tests/account-render.php
           php tests/customer-account.php
+          php tests/google-oauth.php
           php tests/customer-orders.php
           php tests/admin-customers.php
           php tests/admin-render.php
@@ -214,6 +215,7 @@ jobs:
           php tests/partner-offers-database.php
           php tests/content-import-database.php
           php tests/blog-placement-database.php
+          php tests/google-identity-database.php
           php tests/configuration-backup-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
@@ -282,6 +284,7 @@ jobs:
           php tests/partner-offers-database.php
           php tests/content-import-database.php
           php tests/blog-placement-database.php
+          php tests/google-identity-database.php
           php tests/configuration-backup-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
