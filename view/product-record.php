@@ -22,7 +22,7 @@ $galleryPaths = array_values(array_unique($galleryPaths));
 $categoryPath = CategoryPath::fromProduct($product);
 $categoryLabel = $categoryLabels[$categoryPath] ?? $categoryLabels[explode('/', $categoryPath)[0]] ?? 'Vybavení';
 $stockText = ['in_stock' => 'Skladem', 'on_order' => 'Na objednávku', 'out_of_stock' => 'Není skladem'];
-if (!$editing && ($product['sale_mode'] ?? 'own') === 'assisted') $stockText['in_stock'] = 'Skladem u partnera';
+if (!$editing && ($product['sale_mode'] ?? 'own') === 'assisted') $stockText['in_stock'] = $siteCopy['partner_in_stock'] ?? \SimpleStore\Content\SiteCopyRepository::DEFAULTS['partner_in_stock'];
 $variantMode = (bool) ($product['variant_inventory']['enabled'] ?? false);
 $offerPrice = $editing ? (int) $product['price_czk'] : (int) ($product['offer_price_czk'] ?? $product['price_czk']);
 $availability = $product['availability_status'] ?? $product['stock_status'];

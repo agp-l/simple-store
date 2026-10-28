@@ -319,7 +319,7 @@ final class ConfigurationBackup
         return ['hero_title' => 'Hlavička: nadpis', 'hero_subtitle' => 'Hlavička: podnadpis', 'catalog_home_title' => 'Úvod: nadpis výběru',
             'catalog_title' => 'Katalog: nadpis', 'catalog_home_intro' => 'Úvod: text výběru', 'catalog_all_intro' => 'Katalog: úvod',
             'catalog_category_intro' => 'Kategorie: úvod', 'footer_intro' => 'Patička: úvod', 'footer_closing' => 'Patička: závěr',
-            'blog_eyebrow' => 'Blog: krátký nadpis', 'blog_title' => 'Blog: hlavní nadpis',
+            'partner_in_stock' => 'Dostupnost u partnera', 'blog_eyebrow' => 'Blog: krátký nadpis', 'blog_title' => 'Blog: hlavní nadpis',
             'blog_intro' => 'Blog: úvod', 'blog_note' => 'Blog: motto'][$key] ?? $key;
     }
 

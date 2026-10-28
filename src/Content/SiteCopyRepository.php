@@ -18,6 +18,7 @@ final class SiteCopyRepository
         'catalog_home_intro' => 'Lehké, odolné a osvědčené vybavení na cesty.',
         'catalog_all_intro' => 'Poctivý výběr pro pohodlí na stezce i mimo ni.',
         'catalog_category_intro' => 'Vybavení na každou cestu. Vyberte si z nabídky níže.',
+        'partner_in_stock' => 'Skladem u partnera',
         'blog_eyebrow' => 'Zápisky dobrodruhů',
         'blog_title' => 'Venku je o čem vyprávět.',
         'blog_intro' => 'Cesty, spaní pod širákem i vybavení, které dostalo zabrat. Příběhy z vlastní zkušenosti pro tvoje další dobrodružství.',

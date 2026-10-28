@@ -64,6 +64,11 @@ $btcpayWebhookSecretConfigured ??= false;
     <label>Text pod výběrem na úvodní stránce<input name="catalog_home_intro" value="<?= $escape($siteCopyValues['catalog_home_intro']) ?>" maxlength="200" required></label>
     <label>Text pod celým katalogem<input name="catalog_all_intro" value="<?= $escape($siteCopyValues['catalog_all_intro']) ?>" maxlength="200" required></label>
     <label>Text v kategorii<input name="catalog_category_intro" value="<?= $escape($siteCopyValues['catalog_category_intro']) ?>" maxlength="200" required></label>
+    <fieldset class="panel-settings-block" id="partner-stock-text">
+      <legend><strong>Dostupnost u partnera</strong></legend>
+      <p class="panel-help">Znění dostupnosti u produktů skladem v režimu Asistovaný nákup. Použije se v katalogu, detailu i při výběru varianty. Uloží se tlačítkem Uložit texty.</p>
+      <label>Text místo „Skladem u partnera“<input name="partner_in_stock" value="<?= $escape($siteCopyValues['partner_in_stock']) ?>" maxlength="200" required></label>
+    </fieldset>
     <fieldset class="panel-settings-block" id="blog-texts">
       <legend><strong><?= \SimpleStore\Rendering\Icon::render('book') ?> Úvod blogu</strong></legend>
       <p class="panel-help">Tyto čtyři texty se zobrazují nad články na stránce Blog. Uloží se společně tlačítkem Uložit texty.</p>
