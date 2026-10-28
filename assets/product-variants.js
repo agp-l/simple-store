@@ -3,6 +3,7 @@
   const price = document.querySelector('[data-variant-price]');
   const stock = document.querySelector('[data-variant-stock]');
   const btc = document.querySelector('[data-variant-btc]');
+  const delivery = document.querySelector('[data-variant-delivery]');
   if (!picker || !stock) return;
   const editing = Boolean(picker.closest('.is-editing'));
   const mainImage = document.getElementById('detail-image');
@@ -21,6 +22,7 @@
   const initial = { price: picker.dataset.basePrice, stock: picker.dataset.baseStock, btc: picker.dataset.baseBtc, waiting: picker.dataset.baseState !== 'in_stock' };
   picker.addEventListener('change', () => {
     const option = picker.selectedOptions[0];
+    if (delivery) delivery.hidden = (option?.value ? option.dataset.state : picker.dataset.baseState) !== 'in_stock';
     if (buy) {
       buy.disabled = picker.dataset.published !== '1' || option?.dataset.state === 'out_of_stock' || (!option?.value && picker.dataset.baseState === 'out_of_stock');
       buy.textContent = picker.dataset.published !== '1' ? 'Neveřejný koncept' : (buy.disabled ? 'Není skladem' : 'Přidat do košíku');

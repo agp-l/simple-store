@@ -62,7 +62,9 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
       await page.locator('#variant-choice-0').selectOption('Červená');
       assert.match(await page.locator('[data-variant-price]').textContent(), /2\s*890/);
       assert.ok(await page.locator('.product-purchase').evaluate(form => form.checkValidity()));
+      assert.equal(await page.locator('[data-variant-delivery]').isVisible(), false, 'On-order variant must hide the in-stock delivery estimate');
       await page.locator('#variant-choice-0').selectOption('Modrá');
+      assert.equal(await page.locator('[data-variant-delivery]').isVisible(), true);
       await page.locator('#variant-choice-1').focus(); await page.keyboard.press('Home'); await page.keyboard.press('ArrowDown');
       assert.equal(await page.locator('#variant-choice-1').inputValue(), 'M');
       await page.locator('.product-purchase').screenshot({ path: `/tmp/variant-screenshots/customer-${width}.png` });
@@ -76,8 +78,10 @@ test('variant controls on desktop, mobile, keyboard and PHP-only fallback', asyn
       await page.goto('http://127.0.0.1:8765/' + unavailablePath);
       assert.equal(await page.locator('#variant-choice-1').inputValue(), 'S');
       assert.equal(await page.locator('#detail-add').isDisabled(), true);
+      assert.equal(await page.locator('[data-variant-delivery]').isVisible(), false, 'Unavailable deep link must hide delivery');
       await page.locator('#variant-choice-1').selectOption('M');
       assert.equal(await page.locator('#detail-add').isDisabled(), false);
+      assert.equal(await page.locator('[data-variant-delivery]').isVisible(), true, 'Selecting available variant must restore delivery');
       await page.goto('http://127.0.0.1:8765/' + adminPath);
       assert.equal(await page.locator('#detail-image').getAttribute('src'), '/images/product-placeholder.png');
       assert.ok(await page.locator('#detail-image').evaluate(img => img.complete && img.naturalWidth > 0));

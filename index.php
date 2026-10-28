@@ -98,6 +98,7 @@ try {
         $checkoutConfig = (new CheckoutSettingsRepository($db))->load(
             CheckoutSettingsRepository::withDefaults($checkoutConfig, $exampleCheckout));
         $shared['priceDisplay'] = BitcoinPriceDisplay::fromSettings($db, $checkoutConfig);
+        $shared['deliveryEstimate'] = \SimpleStore\Product\DeliveryEstimate::present($checkoutConfig['delivery_estimate'] ?? null);
     }
 
     // Cart sessions are short-lived and separate from administrator/customer login.
@@ -146,6 +147,7 @@ try {
         $checkoutConfig = (new CheckoutSettingsRepository($db))->load(
             CheckoutSettingsRepository::withDefaults($checkoutConfig, $exampleCheckout));
         $shared['priceDisplay'] = BitcoinPriceDisplay::fromSettings($db, $checkoutConfig);
+        $shared['deliveryEstimate'] = \SimpleStore\Product\DeliveryEstimate::present($checkoutConfig['delivery_estimate'] ?? null);
         $bankSettings = $checkoutConfig['bank_transfer'] ?? [];
         $bank = null;
         if (is_array($bankSettings) && ($bankSettings['enabled'] ?? true) &&

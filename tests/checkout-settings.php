@@ -389,4 +389,26 @@ $db->json = json_encode(['local_test_checkout' => true], JSON_THROW_ON_ERROR);
 if (isset($repo->load($fallback)['local_test_checkout'])) {
     throw new RuntimeException('Obsolete local checkout setting was loaded.');
 }
+$estimateInput = ['enabled' => '1', 'format' => 'relative', 'min_days' => '3', 'max_days' => '4', 'day_type' => 'business', 'cutoff' => '12:00'];
+$withEstimate = $repo->saveSection('prices', ['btc_prices_enabled' => '1', 'delivery_estimate' => $estimateInput], '/simple-store/', $saved);
+if ($withEstimate['delivery_estimate']['min_days'] !== 3 || !$withEstimate['delivery_estimate']['enabled'] ||
+    $withEstimate['comgate'] !== $saved['comgate'] || $withEstimate['bank_transfer'] !== $saved['bank_transfer']) {
+    throw new RuntimeException('Delivery estimate did not save independently of payments.');
+}
+$afterLegal = $repo->saveSection('legal', ['terms_url' => '/simple-store/cs/terms'], '/simple-store/', $withEstimate);
+$afterOldPrices = $repo->saveSection('prices', ['btc_prices_enabled' => '0'], '/simple-store/', $afterLegal);
+if ($afterLegal['delivery_estimate'] !== $withEstimate['delivery_estimate'] ||
+    $afterOldPrices['delivery_estimate'] !== $withEstimate['delivery_estimate'] ||
+    $repo->load($fallback)['delivery_estimate'] !== $withEstimate['delivery_estimate']) {
+    throw new RuntimeException('Saving unrelated settings or an older prices form erased the delivery estimate.');
+}
+try {
+    $repo->saveSection('prices', ['delivery_estimate' => array_replace($estimateInput, ['min_days' => '8'])], '/simple-store/', $afterOldPrices);
+    throw new RuntimeException('Invalid estimate was saved.');
+} catch (InvalidArgumentException $expected) {
+    if ($repo->load($fallback) != $afterOldPrices) throw new RuntimeException('Invalid estimate changed existing settings.');
+}
+unset($estimateInput['enabled']);
+$hiddenEstimate = $repo->saveSection('prices', ['delivery_estimate' => $estimateInput], '/simple-store/', $afterOldPrices);
+if ($hiddenEstimate['delivery_estimate']['enabled']) throw new RuntimeException('Unchecked estimate did not turn off.');
 echo "Checkout settings tests passed.\n";

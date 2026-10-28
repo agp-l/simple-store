@@ -44,6 +44,26 @@ $product = ['revision_number' => 1, 'slug' => 'bota', 'product_key' => str_repea
     'details_json' => null, 'category' => 'boty',
     'subcategory' => '', 'price_czk' => 3990, 'image_path' => 'images/batoh.webp',
     'sizes' => '', 'stock_status' => 'in_stock'];
+$estimate = \SimpleStore\Product\DeliveryEstimate::present(array_replace(\SimpleStore\Product\DeliveryEstimate::defaults(), ['enabled' => true]), new DateTimeImmutable('2026-07-13 09:00', new DateTimeZone('Europe/Prague')));
+foreach (['own', 'assisted'] as $saleMode) {
+    foreach (['in_stock', 'out_of_stock', 'on_order'] as $state) {
+        $deliveryProduct = array_replace($product, ['sale_mode' => $saleMode, 'stock_status' => $state]);
+        $deliveryData = ['basePath' => '/shop/', 'language' => 'cs', 'deliveryEstimate' => $estimate];
+        $batch = $renderer->cards('product', [$deliveryProduct], $deliveryData);
+        ob_start(); $renderer->render('catalog', $deliveryData + ['products' => [$deliveryProduct]]); $initial = ob_get_clean();
+        foreach ([$batch, $initial] as $deliveryHtml) {
+            if (str_contains($deliveryHtml, $estimate['text']) !== ($state === 'in_stock')) throw new RuntimeException('Delivery estimate is inconsistent across stock, sale mode or pagination.');
+        }
+        ob_start(); $renderer->render('product-record', $deliveryData + ['product' => $deliveryProduct]); $detail = ob_get_clean();
+        if (!str_contains($detail, $estimate['text']) || (str_contains($detail, 'data-variant-delivery hidden') !== ($state !== 'in_stock'))) {
+            throw new RuntimeException('Product delivery visibility must follow effective stock.');
+        }
+    }
+}
+$hiddenCards = $renderer->cards('product', [$product], ['basePath' => '/', 'language' => 'cs']);
+if (str_contains($hiddenCards, 'data-variant-delivery')) throw new RuntimeException('Disabled estimates must remain hidden.');
+$draftCards = $renderer->cards('product', [array_replace($product, ['published' => 0])], ['basePath' => '/', 'language' => 'cs', 'deliveryEstimate' => $estimate]);
+if (str_contains($draftCards, 'data-variant-delivery')) throw new RuntimeException('Draft products must not promise delivery.');
 ob_start();
 $renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
     'products' => [$product], 'categoryLabels' => ['boty' => 'Boty'],

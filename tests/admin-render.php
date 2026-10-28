@@ -540,7 +540,7 @@ foreach (['overview', 'delivery', 'carriers', 'payment', 'prices', 'legal'] as $
         $settingsTab === 'payment' && (!str_contains($html, 'value="123456/0100"') ||
             !str_contains($html, 'name="bank_source"') ||
             str_contains($html, 'name="iban"')) ||
-        $settingsTab === 'prices' && !str_contains($html, 'name="btc_prices_enabled"') ||
+        $settingsTab === 'prices' && (!str_contains($html, 'name="btc_prices_enabled"') || !str_contains($html, 'name="delivery_estimate[min_days]"') || !str_contains($html, 'id="delivery-estimate"')) ||
         $settingsTab === 'legal' && !str_contains($html, 'name="terms_url"')) {
         throw new RuntimeException('Settings fields are on the wrong page: ' . $settingsTab);
     }
