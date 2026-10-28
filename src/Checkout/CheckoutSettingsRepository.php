@@ -5,6 +5,7 @@ namespace SimpleStore\Checkout;
 
 use InvalidArgumentException;
 use MeekroDB;
+use SimpleStore\Product\DeliveryEstimate;
 
 /** Store checkout configuration in the database so it can be edited in administration. */
 final class CheckoutSettingsRepository
@@ -18,6 +19,7 @@ final class CheckoutSettingsRepository
         unset($local['local_test_checkout']);
         $local['btc_prices_enabled'] = is_bool($local['btc_prices_enabled'] ?? null)
             ? $local['btc_prices_enabled'] : ($example['btc_prices_enabled'] ?? true);
+        $local['delivery_estimate'] = DeliveryEstimate::configuration($local['delivery_estimate'] ?? null);
         $local['shipping_methods'] = self::normalizedMethods($local['shipping_methods'] ?? [],
             $example['shipping_methods']);
         $local['packeta'] = is_array($local['packeta'] ?? null)
@@ -69,6 +71,7 @@ final class CheckoutSettingsRepository
         $result = array_replace_recursive($fallback, $saved);
         $result['shipping_methods'] = self::normalizedMethods($saved['shipping_methods'] ?? [],
             $fallback['shipping_methods']);
+        $result['delivery_estimate'] = DeliveryEstimate::configuration($result['delivery_estimate'] ?? null);
         $result['bank_transfer']['enabled'] = $saved['bank_transfer']['enabled'] ?? true;
         return $result;
     }
@@ -88,7 +91,7 @@ final class CheckoutSettingsRepository
                 'gopay_clear_secret', 'btcpay_enabled', 'btcpay_server_url', 'btcpay_store_id',
                 'btcpay_return_base_url', 'btcpay_api_key', 'btcpay_clear_api_key',
                 'btcpay_webhook_secret', 'btcpay_clear_webhook_secret'],
-            'prices' => ['btc_prices_enabled'],
+            'prices' => ['btc_prices_enabled', 'delivery_estimate'],
             'legal' => ['terms_url'],
         ];
         if (!isset($fields[$section])) {
@@ -114,6 +117,7 @@ final class CheckoutSettingsRepository
         }
         $values = [
             'shipping_price' => [], 'shipping_enabled' => [],
+            'delivery_estimate' => DeliveryEstimate::configuration($current['delivery_estimate'] ?? null),
             'btc_prices_enabled' => !empty($current['btc_prices_enabled']) ? '1' : '0',
             'account_display' => (string) ($current['bank_transfer']['account_display'] ?? ''),
             'bank_source' => (string) ($current['bank_transfer']['bank_source'] ??
@@ -152,7 +156,9 @@ final class CheckoutSettingsRepository
             $values['shipping_enabled'][$code] = !empty($current['shipping_methods'][$code]['enabled']) ? '1' : '0';
         }
         foreach ($fields[$section] as $field) {
-            if ($field === 'shipping_enabled' || $field === 'shipping_price') {
+            if ($field === 'delivery_estimate') {
+                if (array_key_exists($field, $input)) $values[$field] = DeliveryEstimate::validate($input[$field]);
+            } elseif ($field === 'shipping_enabled' || $field === 'shipping_price') {
                 $values[$field] = $input[$field] ?? [];
             } elseif (in_array($field, ['btc_prices_enabled', 'bank_transfer_enabled', 'fio_enabled',
                 'fio_clear_token', 'comgate_enabled', 'comgate_test',
@@ -320,6 +326,7 @@ final class CheckoutSettingsRepository
             throw new InvalidArgumentException('Před zapnutím BTCPay vyplň adresu serveru, ID obchodu, API klíč, tajný klíč webhooku a adresu obchodu. Pro místní test můžeš použít HTTP na localhostu.');
         }
         $settings = [
+            'delivery_estimate' => DeliveryEstimate::validate($input['delivery_estimate'] ?? DeliveryEstimate::configuration($current['delivery_estimate'] ?? null)),
             'btc_prices_enabled' => ($input['btc_prices_enabled'] ?? null) === '1',
             'shipping_methods' => $shipping,
             'packeta' => ['api_key' => $packetaKey, 'api_password' => $password, 'sender' => $sender],
