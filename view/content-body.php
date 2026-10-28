@@ -36,7 +36,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         <p class="cms-lead"<?= $editable('summary', $content['summary'] ?? '') ?>><?= $escape($content['summary'] ?: 'Krátký úvod…') ?></p>
       <?php endif; ?>
       <?php if ($page === 'post' && !$editing): $toc = array_filter($sections, static fn(array $section): bool => $section['heading'] !== '' && $section['type'] !== 'image'); if (count($toc) >= 3): ?>
-        <details class="blog-toc"><summary>Co se v příběhu dočteš</summary><nav aria-label="Obsah článku"><ol><?php foreach ($toc as $i=>$section): ?><li><a href="#cast-<?= $i ?>"><?= $escape($section['heading']) ?></a></li><?php endforeach; ?></ol></nav></details>
+        <details class="blog-toc" open><summary>Co se v příběhu dočteš</summary><nav aria-label="Obsah článku"><ol><?php foreach ($toc as $i=>$section): ?><li><a href="#cast-<?= $i ?>"><?= $escape($section['heading']) ?></a></li><?php endforeach; ?></ol></nav></details>
       <?php endif; endif; ?>
       <div class="cms-text cms-blocks">
         <?php if ($editing): ?><div class="inline-insert"><button type="button" class="inline-small" data-content-action="choose-block">＋ Přidat blok</button><span class="inline-block-types" hidden><?php foreach (ContentBody::TYPES as $type => $label): ?><button type="button" class="inline-tiny" data-content-action="section-add" data-value="<?= $type ?>" data-index="-1"><?= $label ?></button><?php endforeach; ?></span></div><?php endif; ?>

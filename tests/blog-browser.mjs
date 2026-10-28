@@ -34,7 +34,8 @@ test('blog magazine, centered story and category editor work on desktop and mobi
     const pos=await page.locator('.cms-article').evaluate(el=>{const r=el.getBoundingClientRect();return {left:r.left,right:innerWidth-r.right};});
     assert.ok(Math.abs(pos.left-pos.right)<2,`Article off-center ${JSON.stringify(pos)}`);
     if(mode==='story'){
-     await page.getByText('Co se v příběhu dočteš',{exact:true}).click();
+     assert.equal(await page.locator('.blog-toc').evaluate(el=>el.open),true);
+     await page.locator('.blog-toc nav').waitFor({state:'visible'});
      const links=await page.locator('.blog-toc a').count();assert.ok(links>=3);
      assert.equal(await page.locator('.blog-toc a').evaluateAll(links=>links.every(a=>document.querySelector(a.getAttribute('href')))),true);
     }else{
