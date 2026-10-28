@@ -59,4 +59,15 @@ if (!str_contains($html, 'Vytisknout potvrzení') ||
     str_contains($html, 'Soukromá poznámka')) {
     throw new RuntimeException('Private case view leaked a note, omitted the result or failed escaping.');
 }
+$case['item_options_json'] = json_encode(['Plnění' => 'Služba asistovaného nákupu'], JSON_THROW_ON_ERROR);
+$serviceNotice = CaseNotice::receipt($case);
+ob_start();
+require dirname(__DIR__) . '/view/after-sales/public.php';
+$serviceHtml = ob_get_clean();
+if (!str_contains($serviceHtml, 'Odstupuji od smlouvy o službě asistovaného nákupu') ||
+    str_contains($serviceHtml, 'Odstupuji od kupní smlouvy') ||
+    !str_contains($serviceHtml, 'Služba k položce') ||
+    !str_contains($serviceNotice['text'], 'odstoupil od smlouvy o službě asistovaného nákupu')) {
+    throw new RuntimeException('Assisted-service receipt must not claim withdrawal from the partner purchase.');
+}
 echo "After-sales rendering tests passed.\n";
