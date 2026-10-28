@@ -27,3 +27,10 @@ Original Czech practical article commissioned for the shop blog. Topic inspirati
 ## Import and publication
 
 `kondenzace-ve-stanu.cs.json` is a portable new-draft import (`simple-store.content.v1`, Czech post, category `spani-venku`). It intentionally has no document key or revision, and deployment alone does not publish it. Publication is a separate authenticated CMS action. No application code or database migration required.
+
+Published through the CMS on 2026-10-28: https://eshop.dobrodruzi.cz/cs/blog/kondenzace-ve-stanu
+
+- Document key: `712e49a7015c601d22cf14e14d890422`; published revision: 2.
+- Validated using the actual `ContentImport` and `PageRenderer`: 14 blocks (12 text, 1 table, 1 list), 152-character summary, about 1,270 words including references.
+- Verified the published article in visitor preview, the main blog and the `spani-venku` category. Live reading estimate: 7 minutes. Existing featured/pinned selections were preserved.
+- For future edits, export the current revision from the CMS before updating; this portable new-draft file is not an update snapshot.
