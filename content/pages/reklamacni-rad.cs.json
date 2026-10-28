@@ -1,7 +1,7 @@
 {
   "format": "simple-store.content.v1",
   "document_key": "12eb1a6a8c339d0edca83cce6f2cce80",
-  "revision": 26,
+  "revision": 28,
   "language": "cs",
   "type": "page",
   "content": {
@@ -46,7 +46,7 @@
       {
         "type": "text",
         "heading": "6. Co není vadou a kdy se práva zachovávají",
-        "body": "Běžné opotřebení odpovídající povaze a používání věci ani poškození, které zákazník sám způsobil, nejsou vadou, za kterou odpovídáme. Samotná intenzita používání nebo nedodržení doporučení však neznamenají automatické zamítnutí každé reklamace: rozhodující je souvislost s konkrétní vadou.\n\nZa vadu nepovažujeme konkrétní odchylku, na kterou jsme před uzavřením smlouvy zvlášť upozornili a kterou jste výslovně přijali. To se netýká jiných vad výrobku. U použité věci se zohledňuje opotřebení odpovídající jejímu předchozímu používání.\n\nPokud jste si sami vybrali nevhodnou velikost, obvykle jde o výměnu či vrácení. Dodání jiné objednané velikosti, rozpor s uvedenými rozměry nebo jiný nesoulad s popisem může být vadným plněním."
+        "body": "Běžné opotřebení odpovídající povaze a používání věci ani poškození, které zákazník sám způsobil, nejsou vadou, za kterou odpovídáme. Samotná intenzita používání nebo nedodržení doporučení však neznamenají automatické zamítnutí každé reklamace: rozhodující je souvislost s konkrétní vadou.\n\nZa vadu nepovažujeme konkrétní odchylku, na kterou jsme před uzavřením smlouvy zvlášť upozornili a kterou jste výslovně přijali. To se netýká jiných vad výrobku. U použité věci se zohledňuje opotřebení odpovídající jejímu předchozímu používání.\n\nPokud jste si sami vybrali nevhodnou velikost, obvykle jde o výměnu či vrácení. Dodání jiné než objednané velikosti, rozpor s uvedenými rozměry nebo jiný nesoulad s popisem může být vadným plněním."
       },
       {
         "type": "list",
