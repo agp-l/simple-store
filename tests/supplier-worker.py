@@ -14,6 +14,9 @@ worker = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(worker)
 
 
+ENDPOINT = "https://new.example.test/store/supplier-price-cron.php"
+
+
 class WorkerTests(unittest.TestCase):
     def test_no_credential_forwarding(self):
         self.assertIsNone(worker.NoRedirect().redirect_request(None, None, 302, "", {}, "https://other.test/"))
@@ -24,11 +27,11 @@ class WorkerTests(unittest.TestCase):
             def open(self, request, timeout):
                 calls.append(request)
                 return io.BytesIO(json.dumps({"state": "idle", "wait": 30}).encode())
-        with patch.object(worker, "worker_key", return_value="a" * 64), patch.object(worker.urllib.request, "build_opener", return_value=Opener()), patch.object(worker.time, "sleep") as sleep:
+        with patch.object(worker, "worker_configuration", return_value=("a" * 64, ENDPOINT)), patch.object(worker.urllib.request, "build_opener", return_value=Opener()), patch.object(worker.time, "sleep") as sleep:
             worker.run()
         self.assertEqual(len(calls), 1)
         self.assertEqual(calls[0].get_method(), "POST")
-        self.assertEqual(calls[0].full_url, worker.ENDPOINT)
+        self.assertEqual(calls[0].full_url, ENDPOINT)
         self.assertNotIn("a" * 64, calls[0].full_url)
         self.assertEqual(calls[0].get_header("X-supplier-worker-key"), "a" * 64)
         sleep.assert_not_called()
@@ -37,7 +40,7 @@ class WorkerTests(unittest.TestCase):
         class Opener:
             def open(self, request, timeout):
                 return io.BytesIO(json.dumps({"state": "waiting", "wait": 60, "next_at": 86400}).encode())
-        with patch.object(worker, "worker_key", return_value="a" * 64), patch.object(worker.urllib.request, "build_opener", return_value=Opener()), patch.object(worker.time, "time", return_value=1000), patch.object(worker.time, "sleep") as sleep:
+        with patch.object(worker, "worker_configuration", return_value=("a" * 64, ENDPOINT)), patch.object(worker.urllib.request, "build_opener", return_value=Opener()), patch.object(worker.time, "time", return_value=1000), patch.object(worker.time, "sleep") as sleep:
             worker.run()
         sleep.assert_not_called()
 
@@ -45,12 +48,12 @@ class WorkerTests(unittest.TestCase):
         opener = unittest.mock.Mock()
         opener.open.side_effect = responses
         output = io.StringIO()
-        with patch.object(worker, "worker_key", return_value="a" * 64), patch.object(worker.urllib.request, "build_opener", return_value=opener), patch.object(worker.time, "sleep") as sleep, patch("sys.stdout", output):
+        with patch.object(worker, "worker_configuration", return_value=("a" * 64, ENDPOINT)), patch.object(worker.urllib.request, "build_opener", return_value=opener), patch.object(worker.time, "sleep") as sleep, patch("sys.stdout", output):
             worker.run()
         return opener, sleep, output.getvalue()
 
     def http_error(self, code, headers=None, body=b"private upstream body"):
-        return urllib.error.HTTPError(worker.ENDPOINT, code, "private error", headers or {}, io.BytesIO(body))
+        return urllib.error.HTTPError(ENDPOINT, code, "private error", headers or {}, io.BytesIO(body))
 
     def test_transient_failure_recovers_without_logging_body_or_key(self):
         opener, sleep, output = self.run_responses([
@@ -70,7 +73,7 @@ class WorkerTests(unittest.TestCase):
         for error in (self.http_error(403), self.http_error(503, {"Retry-After": "3600"})):
             opener = unittest.mock.Mock()
             opener.open.side_effect = error
-            with self.subTest(code=error.code), patch.object(worker, "worker_key", return_value="a" * 64), patch.object(worker.urllib.request, "build_opener", return_value=opener), patch.object(worker.time, "sleep") as sleep:
+            with self.subTest(code=error.code), patch.object(worker, "worker_configuration", return_value=("a" * 64, ENDPOINT)), patch.object(worker.urllib.request, "build_opener", return_value=opener), patch.object(worker.time, "sleep") as sleep:
                 with self.assertRaises(urllib.error.HTTPError):
                     worker.run()
                 sleep.assert_not_called()
@@ -79,7 +82,7 @@ class WorkerTests(unittest.TestCase):
     def test_retries_are_bounded(self):
         opener = unittest.mock.Mock()
         opener.open.side_effect = TimeoutError("private exception")
-        with patch.object(worker, "worker_key", return_value="a" * 64), patch.object(worker.urllib.request, "build_opener", return_value=opener), patch.object(worker.time, "sleep") as sleep:
+        with patch.object(worker, "worker_configuration", return_value=("a" * 64, ENDPOINT)), patch.object(worker.urllib.request, "build_opener", return_value=opener), patch.object(worker.time, "sleep") as sleep:
             with self.assertRaises(TimeoutError):
                 worker.run()
         self.assertEqual(opener.open.call_count, 3)

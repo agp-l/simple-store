@@ -73,7 +73,7 @@ final class HttpClient
         curl_setopt_array($curl,[CURLOPT_RETURNTRANSFER=>false,CURLOPT_FOLLOWLOCATION=>false,
             CURLOPT_PROTOCOLS=>CURLPROTO_HTTPS,CURLOPT_CONNECTTIMEOUT=>4,CURLOPT_TIMEOUT=>12,
             CURLOPT_SSL_VERIFYPEER=>true,CURLOPT_SSL_VERIFYHOST=>2,CURLOPT_PROXY=>'',
-            CURLOPT_RESOLVE=>[$host.':443:'.$ip],CURLOPT_USERAGENT=>'DobrodruziSupplierCheck/1.0 (+https://eshop.dobrodruzi.cz/)',
+            CURLOPT_RESOLVE=>[$host.':443:'.$ip],CURLOPT_USERAGENT=>'DobrodruziSupplierCheck/1.0 (+'.\SimpleStore\Configuration\Installation::current()->baseUrl().'/)',
             CURLOPT_HTTPHEADER=>[str_ends_with($url,'/robots.txt')?'Accept: text/plain':'Accept: text/html, text/markdown;q=0.8','Accept-Language: cs-CZ,cs;q=0.9'],
             CURLOPT_WRITEFUNCTION=>static function($handle,string $chunk)use(&$body,&$tooLarge):int{
                 if(strlen($body)+strlen($chunk)>2097152){$tooLarge=true;return 0;} $body.=$chunk;return strlen($chunk);

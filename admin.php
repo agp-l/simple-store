@@ -113,7 +113,7 @@ try {
             }
         } elseif ($action === 'reset-request' && !$auth->signedIn()) {
             try {
-                $entryUrl = 'https://' . ($_SERVER['HTTP_HOST'] ?? '') . $adminUrl;
+                $entryUrl = \SimpleStore\Configuration\Installation::current()->url('admin/');
                 if (!is_string($_POST['email'] ?? null) || filter_var(trim($_POST['email']), FILTER_VALIDATE_EMAIL) === false) {
                     throw new InvalidArgumentException('Zadej platný e-mail správce.');
                 }

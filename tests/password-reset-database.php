@@ -10,6 +10,11 @@ use SimpleStore\Auth\PasswordResetService;
 use SimpleStore\Database\ConnectionFactory;
 use SimpleStore\Database\SchemaUpdater;
 
+$installationFile = tempnam(sys_get_temp_dir(), 'reset-installation-');
+file_put_contents($installationFile, json_encode(['public_base_url' => 'https://example.test/shop']));
+putenv('SIMPLE_STORE_INSTALLATION_FILE=' . $installationFile);
+register_shutdown_function(static function () use ($installationFile): void { unlink($installationFile); });
+
 $db = ConnectionFactory::create(['host' => '127.0.0.1', 'user' => 'root',
     'password' => (string) getenv('MYSQL_TEST_PASSWORD'), 'database' => 'simple_store', 'port' => 3306]);
 (new SchemaUpdater($db, dirname(__DIR__) . '/database/schema.sql'))->apply();

@@ -226,8 +226,9 @@ final class OrderMailQueue
             $headers = 'From: ' . ($name === '' ? '' : '=?UTF-8?B?' . base64_encode($name) . '?= ') .
                 '<' . $sender . ">\r\n";
             if ($config['reply_to'] !== '') $headers .= 'Reply-To: ' . $config['reply_to'] . "\r\n";
-            $mime = OrderMailMime::compose((string) $row['body_text'],
-                (string) ($row['body_html'] ?? self::simpleHtml((string) $row['body_text'])),
+            $installation = \SimpleStore\Configuration\Installation::current();
+            $mime = OrderMailMime::compose($installation->relocateText((string) $row['body_text']),
+                $installation->relocateText((string) ($row['body_html'] ?? self::simpleHtml((string) $row['body_text']))),
                 (string) ($row['terms_attachment'] ?? ''));
             $headers .= $mime['headers'];
             $body = $mime['body'];
@@ -397,13 +398,14 @@ final class OrderMailQueue
     private function orderUrl(array $order, array $settings, string $provided = ''): string
     {
         $url = $provided;
-        if ($url === '' && $settings['public_base_url'] !== '' &&
-            preg_match('/^[a-f0-9]{64}$/D', (string) ($order['order_token'] ?? '')) === 1) {
+        $canonical = $settings['public_base_url'] !== '' &&
+            preg_match('/^[a-f0-9]{64}$/D', (string) ($order['order_token'] ?? '')) === 1;
+        if ($canonical) {
             $language = (string) ($order['items'][0]['language'] ?? 'cs');
             if (!in_array($language, ['cs', 'en'], true)) $language = 'cs';
             $url = $settings['public_base_url'] . '/' . $language . '/objednavka/' . $order['order_token'];
         }
-        if ($url !== '' && (strlen($url) > 1000 || !filter_var($url, FILTER_VALIDATE_URL) ||
+        if (!$canonical && $url !== '' && (strlen($url) > 1000 || !filter_var($url, FILTER_VALIDATE_URL) ||
             parse_url($url, PHP_URL_SCHEME) !== 'https')) {
             throw new InvalidArgumentException('Neplatný odkaz na objednávku.');
         }

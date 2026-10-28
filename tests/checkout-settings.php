@@ -38,7 +38,8 @@ use SimpleStore\Checkout\ShippingPolicy;
 
 $example = require dirname(__DIR__) . '/config/checkout.example.php';
 $db = new MeekroDB();
-$repo = new CheckoutSettingsRepository($db);
+$installation = new \SimpleStore\Configuration\Installation('https://obchod.example/simple-store');
+$repo = new CheckoutSettingsRepository($db, $installation);
 $old = ['bank_transfer' => ['iban' => '', 'account_display' => '', 'recipient' => ''],
     'shipping_methods' => [], 'terms_url' => ''];
 $fallback = CheckoutSettingsRepository::withDefaults($old, $example);
@@ -53,7 +54,7 @@ if ($fallback['bank_transfer']['account_display'] !== '' ||
         'api_key' => '', 'webhook_secret' => '', 'return_base_url' => ''] ||
     $fallback['btc_prices_enabled'] !== true ||
     count($fallback['shipping_methods']) !== 9 ||
-    $repo->load($fallback) !== $fallback) {
+    $repo->load($fallback) !== $installation->checkout($fallback)) {
     throw new RuntimeException('Old private checkout settings did not receive the new defaults.');
 }
 $generated = new BankTransferPayment('', '1265098001/5500', 'Test');
@@ -229,22 +230,10 @@ foreach ([['shipping_price' => array_replace($input['shipping_price'], ['ppl_hom
     ['packeta_api_key' => 'API-HESLO'],
     ['comgate_merchant' => 'invalid merchant ID'],
     ['comgate_secret' => "invalid\nsecret"],
-    ['comgate_return_base_url' => 'http://obchod.example/simple-store'],
-    ['comgate_return_base_url' => 'https://localhost/simple-store'],
-    ['comgate_return_base_url' => 'https://192.168.1.2/simple-store'],
-    ['comgate_return_base_url' => 'https://obchod.example/another-site'],
-    ['comgate_return_base_url' => 'https://obchod.example/simple-store?redirect=evil'],
-    ['comgate_return_base_url' => ''],
     ['gopay_goid' => 'merchant-id'],
     ['gopay_goid' => '123 456'],
     ['gopay_client_id' => "bad\nclient"],
     ['gopay_client_secret' => "bad\nsecret"],
-    ['gopay_return_base_url' => 'http://obchod.example/simple-store'],
-    ['gopay_return_base_url' => 'https://localhost/simple-store'],
-    ['gopay_return_base_url' => 'https://192.168.1.2/simple-store'],
-    ['gopay_return_base_url' => 'https://obchod.example/another-site'],
-    ['gopay_return_base_url' => 'https://obchod.example/simple-store?redirect=evil'],
-    ['gopay_return_base_url' => ''],
     ['btcpay_server_url' => 'http://btcpay.example'],
     ['btcpay_server_url' => 'http://localhost.evil.test'],
     ['btcpay_server_url' => 'https://user@btcpay.example'],
@@ -254,10 +243,6 @@ foreach ([['shipping_price' => array_replace($input['shipping_price'], ['ppl_hom
     ['btcpay_store_id' => 'bad store id'],
     ['btcpay_api_key' => "bad\nkey"],
     ['btcpay_webhook_secret' => "bad\nsecret"],
-    ['btcpay_return_base_url' => 'http://obchod.example/simple-store'],
-    ['btcpay_return_base_url' => 'http://192.168.1.2/simple-store'],
-    ['btcpay_return_base_url' => 'https://obchod.example/another-site'],
-    ['btcpay_return_base_url' => ''],
     ['ppl_widget_key' => 'invalid key with spaces']] as $change) {
     try {
         $repo->save(array_replace($input, $change), '/simple-store/');
@@ -268,7 +253,9 @@ foreach ([['shipping_price' => array_replace($input['shipping_price'], ['ppl_hom
         }
     }
 }
-$localBtcpay = $repo->saveSection('payment', array_replace($input, [
+$localRepo = new CheckoutSettingsRepository($db, new \SimpleStore\Configuration\Installation('http://localhost/simple-store'));
+$localBtcpay = $localRepo->saveSection('payment', array_replace($input, [
+    'comgate_enabled' => '0', 'gopay_enabled' => '0',
     'btcpay_server_url' => 'http://localhost:8080/BTCPayLite/',
     'btcpay_return_base_url' => 'http://localhost/simple-store/',
 ]), '/simple-store/', $saved);
@@ -288,12 +275,12 @@ if ((new ShippingPolicy($disabled['shipping_methods']))->quote('gls_pickup') !==
 }
 $withoutGateway = $repo->save(array_replace($input,
     ['comgate_enabled' => '0', 'comgate_return_base_url' => '']), '/simple-store/');
-if ($withoutGateway['comgate']['enabled'] || $withoutGateway['comgate']['return_base_url'] !== '') {
+if ($withoutGateway['comgate']['enabled'] || $withoutGateway['comgate']['return_base_url'] !== $installation->baseUrl()) {
     throw new RuntimeException('A disabled Comgate gateway must not require a return URL.');
 }
 $withoutGoPay = $repo->save(array_replace($input,
     ['gopay_enabled' => '0', 'gopay_return_base_url' => '']), '/simple-store/');
-if ($withoutGoPay['gopay']['enabled'] || $withoutGoPay['gopay']['return_base_url'] !== '') {
+if ($withoutGoPay['gopay']['enabled'] || $withoutGoPay['gopay']['return_base_url'] !== $installation->baseUrl()) {
     throw new RuntimeException('A disabled GoPay gateway must not require a return URL.');
 }
 $withoutBtcpay = $repo->save(array_replace($input, [
@@ -301,7 +288,7 @@ $withoutBtcpay = $repo->save(array_replace($input, [
     'btcpay_api_key' => '', 'btcpay_webhook_secret' => '', 'btcpay_return_base_url' => '',
 ]), '/simple-store/');
 if ($withoutBtcpay['btcpay']['enabled'] || $withoutBtcpay['btcpay']['server_url'] !== '' ||
-    $withoutBtcpay['btcpay']['return_base_url'] !== '') {
+    $withoutBtcpay['btcpay']['return_base_url'] !== $installation->baseUrl()) {
     throw new RuntimeException('A disabled BTCPay gateway must not require connection settings.');
 }
 $db->json = json_encode(['shipping_methods' => ['home' => [
@@ -344,7 +331,7 @@ $pausedBtcpay = $repo->saveSection('payment', [
     'btcpay_store_id' => 'TestStore123', 'btcpay_return_base_url' => 'http://obchod.example/simple-store',
 ], '/simple-store/', $saved);
 if ($pausedBtcpay['btcpay']['enabled'] ||
-    $pausedBtcpay['btcpay']['return_base_url'] !== 'http://obchod.example/simple-store' ||
+    $pausedBtcpay['btcpay']['return_base_url'] !== $installation->baseUrl() ||
     $pausedBtcpay['btcpay']['server_url'] !== 'http://btcpay.example/pay' ||
     $pausedBtcpay['btcpay']['api_key'] !== $saved['btcpay']['api_key'] ||
     $pausedBtcpay['bank_transfer'] !== $saved['bank_transfer']) {
@@ -412,3 +399,6 @@ unset($estimateInput['enabled']);
 $hiddenEstimate = $repo->saveSection('prices', ['delivery_estimate' => $estimateInput], '/simple-store/', $afterOldPrices);
 if ($hiddenEstimate['delivery_estimate']['enabled']) throw new RuntimeException('Unchecked estimate did not turn off.');
 echo "Checkout settings tests passed.\n";
+
+$ignoredUrls = $repo->save(array_replace($input, ['comgate_return_base_url' => 'https://evil.test', 'gopay_return_base_url' => '', 'btcpay_return_base_url' => ['invalid']]), '/simple-store/');
+foreach (['comgate', 'gopay', 'btcpay'] as $gateway) if ($ignoredUrls[$gateway]['return_base_url'] !== $installation->baseUrl()) throw new RuntimeException('Posted URL overrode installation.');

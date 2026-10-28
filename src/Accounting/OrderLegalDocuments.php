@@ -39,7 +39,7 @@ final class OrderLegalDocuments
         $language = self::language($items);
         $page = (new ContentRepository($this->db))->findPublished('page', self::TERMS_SLUG, $language);
         if ($page === null) return;
-        $terms = self::bodyText((string) $page['body']);
+        $terms = \SimpleStore\Configuration\Installation::current()->relocateText(self::bodyText((string) $page['body']));
         if ($terms === '') throw new InvalidArgumentException('Publikované obchodní podmínky nemají žádný text.');
         $this->db->query('INSERT IGNORE INTO shop_order_legal_snapshots
             (order_id, language, terms_document_key, terms_revision, terms_text)
@@ -82,7 +82,7 @@ final class OrderLegalDocuments
         foreach ($slugs as $slug) {
             $page = (new ContentRepository($this->db))->findPublished('page', $slug, self::language($items));
             if ($page === null) throw new InvalidArgumentException('Podmínky pro tuto objednávku se připravují. Zkuste nákup později.');
-            $body = self::bodyText((string) $page['body']);
+            $body = \SimpleStore\Configuration\Installation::current()->relocateText(self::bodyText((string) $page['body']));
             if ($body === '') throw new InvalidArgumentException('Podmínky objednávky nejsou úplné.');
             $first ??= $page;
             $parts[] = $slug . ' · revize ' . (int) $page['revision_number'] . "\n\n" . $body;

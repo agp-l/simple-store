@@ -1,0 +1,11 @@
+{
+  "valid": [
+    ["https://dobrodruzi.cz/", "https://dobrodruzi.cz"],
+    [" https://SHOP.Example.test:443/store/sub/ ", "https://shop.example.test/store/sub"],
+    ["https://example.test:8443/eshop", "https://example.test:8443/eshop"],
+    ["http://localhost:8080/shop", "http://localhost:8080/shop"],
+    ["http://127.0.0.1:80", "http://127.0.0.1"],
+    ["http://[::1]:8000/shop", "http://[::1]:8000/shop"]
+  ],
+  "invalid": ["", "http://example.test", "https://user:pass@example.test", "//example.test", "https://example.test?x=1", "https://example.test#x", "https://example.test/a/../b", "https://example.test/a//b", "https://example.test/a%2fb", "https://example.test/a\\b", "https://exam\nple.test", "https://exa mple.test", "https://example.test:99999", "https://-bad.example.test", "https://example..test", "https://example.test/a.php", "javascript:alert(1)"]
+}

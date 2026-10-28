@@ -77,7 +77,8 @@ foreach ($mailDefaults as $key => $value) {
     <div class="panel-fields-two"><label>E-mail odesílatele<input type="email" name="from_email" value="<?= $escape($mailForm['from_email']) ?>" maxlength="254" placeholder="objednavky@dobrodruzi.cz"></label>
     <label>Jméno odesílatele<input name="from_name" value="<?= $escape($mailForm['from_name']) ?>" maxlength="100" required></label></div>
     <label>Adresa pro odpovědi (nepovinná)<input type="email" name="reply_to" value="<?= $escape($mailForm['reply_to']) ?>" maxlength="254" placeholder="podpora@dobrodruzi.cz"></label>
-    <label>Veřejná HTTPS adresa obchodu<input type="url" name="public_base_url" value="<?= $escape($mailForm['public_base_url']) ?>" maxlength="500" placeholder="https://eshop.dobrodruzi.cz"></label>
+    <p class="panel-help">Adresa je společná pro celý web. Mění se v <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=installation') ?>">konfiguraci domény</a>.</p>
+    <label>Veřejná HTTPS adresa obchodu<input type="url" readonly value="<?= $escape(\SimpleStore\Configuration\Installation::current()->baseUrl()) ?>" maxlength="500" ></label>
     <p class="panel-help">Z této adresy se vytvoří soukromý odkaz na objednávku a odkazy na publikované obchodní podmínky, vrácení zboží a reklamace. Vyplň kořen instalace bez /cs. Ukládá se do databáze stejně jako ostatní hodnoty níže.</p>
     <label>Kontaktní e-mail obchodu (oznámení)<input type="email" name="admin_recovery_email" value="<?= $escape($mailForm['admin_recovery_email']) ?>" maxlength="254" autocomplete="email" placeholder="spravce@dobrodruzi.cz" required></label>
     <p class="panel-help">Sem chodí oznámení obchodu. Přihlašovací e-maily a hesla správců měň v sekci Účty a administrátoři. Původní správce do prvního uložení svého účtu v nové správě používá k přihlášení tuto adresu.</p>

@@ -130,7 +130,7 @@ try {
                 header('Location: '.$destination,true,303); exit;
             }
             if ($action === 'reset-request' && $user === null) {
-                $entryUrl = 'https://' . ($_SERVER['HTTP_HOST'] ?? '') . $accountUrl;
+                $entryUrl = \SimpleStore\Configuration\Installation::current()->url('account/');
                 (new PasswordResetService($db))->request('customer', $input('email'), 'account.php', $entryUrl);
                 $redirect($accountUrl . '?mode=forgot&sent=1');
             }
