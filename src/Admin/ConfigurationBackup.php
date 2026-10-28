@@ -46,6 +46,7 @@ final class ConfigurationBackup
                     }
                     $data[$language]['menus'][$slot] = ['source' => $settings['source'],
                         'parent' => $settings['parent'] ?? '', 'include_blog' => (bool) ($settings['include_blog'] ?? false),
+                        'blog_order' => (int) ($settings['blog_order'] ?? 0),
                         'title' => $settings['title'] ?? 'Informace', 'items' => self::orderedItems($items)];
                 }
                 foreach ($content->pagesForMenu($language) as $page) {
@@ -117,11 +118,14 @@ final class ConfigurationBackup
                     self::text($category['title'] ?? null, 160); self::order($category['sort_order'] ?? null);
                     if (!is_bool($category['enabled'] ?? null)) throw new InvalidArgumentException('Neplatná viditelnost kategorie.');
                 }
-                $allowedSlots = array_keys((new MenuDefinitionRepository($this->db, $this->menuDefaults))->settings($language));
+                $currentMenus = (new MenuDefinitionRepository($this->db, $this->menuDefaults))->settings($language);
+                $allowedSlots = array_keys($currentMenus);
                 foreach ($data['menus'] as $slot => $menu) {
                     if (!in_array($slot, $allowedSlots, true) || !is_array($menu)) throw new InvalidArgumentException('Neznámé umístění menu.');
+                    if (!array_key_exists('blog_order', $menu)) $menu['blog_order'] = (int) ($currentMenus[$slot]['blog_order'] ?? 0);
                     self::validateMenu($slot, $menu);
-                    $data['menus'][$slot]['items'] = self::orderedItems($menu['items']);
+                    $menu['items'] = self::orderedItems($menu['items']);
+                    $data['menus'][$slot] = $menu;
                 }
                 foreach ($data['pages'] as $slug => $page) {
                     if (!CategoryPath::valid((string) $slug) || str_contains((string) $slug, '/') || !is_array($page)) throw new InvalidArgumentException('Neplatná stránka v menu.');
@@ -136,7 +140,8 @@ final class ConfigurationBackup
 
     private static function validateMenu(string $slot, array $menu): void
     {
-        self::keys($menu, ['source', 'parent', 'include_blog', 'title', 'items']);
+        self::keys($menu, ['source', 'parent', 'include_blog', 'blog_order', 'title', 'items']);
+        self::order($menu['blog_order'] ?? null);
         if (!in_array($menu['source'] ?? '', ['categories', 'content', 'manual'], true) ||
             !is_string($menu['parent'] ?? null) || !is_bool($menu['include_blog'] ?? null) || !is_array($menu['items'] ?? null) ||
             count($menu['items']) > 100) throw new InvalidArgumentException('Neplatné nastavení menu.');
@@ -253,7 +258,8 @@ final class ConfigurationBackup
                 } elseif ($type === 'menu') {
                     $this->db->query('INSERT INTO shop_navigation_menus (language,slot,source,parent_path,include_blog,items_json) VALUES (%s,%s,%s,%s,%i,%s)
                         ON DUPLICATE KEY UPDATE source=VALUES(source),parent_path=VALUES(parent_path),include_blog=VALUES(include_blog),items_json=VALUES(items_json)',
-                        $language, $key, $value['source'], $value['parent'], (int) $value['include_blog'], self::json(['title' => $value['title'], 'items' => $value['items']]));
+                        $language, $key, $value['source'], $value['parent'], (int) $value['include_blog'],
+                        self::json(['title' => $value['title'], 'blog_order' => $value['blog_order'], 'items' => $value['items']]));
                 } elseif ($type === 'page') {
                     // A menu restore is a content revision too; preserve body/publication and all older revisions.
                     $page = $this->db->queryFirstRow('SELECT * FROM shop_content_revisions WHERE type=%s AND language=%s AND slug=%s AND active_document_key IS NOT NULL', 'page', $language, $key);
@@ -334,6 +340,7 @@ final class ConfigurationBackup
         $lines = ['Zdroj: ' . $source, 'Nadpis: ' . ($value['title'] ?? 'Informace')];
         if ($value['source'] === 'categories') $lines[] = 'Kategorie: ' . (($value['parent'] ?? '') === '@context' ? 'podle otevřené kategorie' : (($value['parent'] ?? '') ?: 'hlavní kategorie'));
         if ($value['source'] === 'content') $lines[] = 'Přidat Blog: ' . (!empty($value['include_blog']) ? 'ano' : 'ne');
+        if ($value['source'] === 'content') $lines[] = 'Pořadí Blogu: ' . ($value['blog_order'] ?? 0);
         $items = array_column($value['items'], null, 'id');
         foreach ($value['items'] as $item) {
             $lines[] = $item['label'] . ' → ' . ($item['target'] ?: 'Úvodní stránka') . ' · pořadí ' . ($item['sort_order'] ?? 0) .

@@ -9,6 +9,7 @@ use SimpleStore\Navigation\UrlManager;
 // A database stand-in verifies menu placement and nesting without changing real content.
 class MeekroDB
 {
+    public array $pages = [['slug' => 'o-nas', 'title' => 'O nás', 'menu_order' => 10]];
     public function queryFirstField(string $sql, mixed ...$values): int
     {
         return 1;
@@ -27,7 +28,10 @@ class MeekroDB
                 ['path' => 'obleceni/muzi/bundy', 'title' => 'Bundy', 'sort_order' => 1],
             ];
         }
-        return [['slug' => 'o-nas', 'title' => 'O nás']];
+        if (!str_contains($sql, 'SELECT slug, title, menu_order')) {
+            throw new RuntimeException('Page ordering must be available when merging menu sources.');
+        }
+        return $this->pages;
     }
 }
 
@@ -76,6 +80,28 @@ $blogUrl = new UrlManager('/shop/cs/blog/na-ceste', '/shop/index.php');
 $blogMenu = new MenuManager(new ContentRepository($db), new CategoryRepository($db), $blogUrl, $settings);
 if (!$blogMenu->links('utility')[0]['active'] || !$blogMenu->links('custom')[0]['active']) {
     throw new RuntimeException('Blog navigation must remain active on an article.');
+}
+
+$db->pages[] = ['slug' => 'kontakt', 'title' => 'Kontakt', 'menu_order' => 35];
+$settings['utility']['blog_order'] = 20;
+$settings['utility']['items'] = [['label' => 'Expedice', 'external' => 'https://example.org/expedice',
+    'sort_order' => 1, 'children' => [['label' => 'Tábor', 'path' => 'tabor', 'sort_order' => 50]]]];
+$orderedMenu = new MenuManager(new ContentRepository($db), new CategoryRepository($db), $blogUrl, $settings);
+$ordered = $orderedMenu->links('utility');
+if (array_column($ordered, 'label') !== ['Expedice', 'O nás', 'Blog', 'Kontakt'] ||
+    !$ordered[2]['active'] || $ordered[0]['children'][0]['label'] !== 'Tábor') {
+    throw new RuntimeException('Blog, pages and custom roots must share order without detaching children or losing active state.');
+}
+$settings['utility']['blog_order'] = 10;
+$settings['utility']['items'][0]['sort_order'] = 10;
+$tiedMenu = new MenuManager(new ContentRepository($db), new CategoryRepository($db), $url, $settings);
+if (array_column($tiedMenu->links('utility'), 'label') !== ['Blog', 'O nás', 'Expedice', 'Kontakt']) {
+    throw new RuntimeException('Equal positions must keep deterministic source order.');
+}
+$settings['utility']['include_blog'] = false;
+$withoutBlog = new MenuManager(new ContentRepository($db), new CategoryRepository($db), $url, $settings);
+if (array_column($withoutBlog->links('utility'), 'label') !== ['O nás', 'Expedice', 'Kontakt']) {
+    throw new RuntimeException('Hiding Blog must preserve the shared order of the remaining links.');
 }
 
 $primaryMenu = $primary;

@@ -126,6 +126,33 @@ if ($menus->settings('en')['utility']['include_blog'] || !$menus->settings('cs')
     throw new RuntimeException('Menu settings must be separate per language.');
 }
 
+$menus->saveSlot('cs', 'utility', 'content', '', true, null, 20);
+$extra = $menus->saveItem('cs', 'utility', null, [
+    'label' => 'Expedice', 'target_type' => 'external', 'target' => 'https://example.org/expedice',
+    'parent_id' => '', 'sort_order' => '1',
+]);
+$ordered = (new MenuManager(new ContentRepository($db), new CategoryRepository($db),
+    new UrlManager('/cs', '/index.php'), $menus->settings('cs')))->links('utility');
+if (array_column($ordered, 'label') !== ['Expedice', 'Blog'] || $ordered[0]['sort_order'] !== 1) {
+    throw new RuntimeException('Persisted item order must survive tree building and sort with Blog.');
+}
+$menus->removeItem('cs', 'utility', $extra);
+$menus->saveSlot('cs', 'utility', 'manual', '', false);
+$menus->saveSlot('cs', 'utility', 'content', '', true);
+if ($menus->settings('cs')['utility']['blog_order'] !== 20 || $menus->settings('en')['utility']['blog_order'] !== 0) {
+    throw new RuntimeException('Blog position must survive link edits, removal and source changes within its language.');
+}
+foreach ([-1, 65536] as $invalidOrder) {
+    try {
+        $menus->saveSlot('cs', 'utility', 'content', '', true, null, $invalidOrder);
+        throw new RuntimeException('Invalid Blog order accepted.');
+    } catch (InvalidArgumentException $expected) {}
+}
+$db->menus['en:utility']['items_json'] = '{"title":"Legacy menu","items":[]}';
+if ($menus->settings('en')['utility']['blog_order'] !== 0) {
+    throw new RuntimeException('Old saved menu data must default Blog to the first position.');
+}
+
 $footer = $menus->settings('cs')['footer'];
 if ($footer['source'] !== 'manual' || count($footer['items']) !== 6 ||
     count($menus->itemsForAdmin('cs', 'footer')) !== 6) {
