@@ -1,0 +1,73 @@
+{
+  "format": "simple-store.content.v1",
+  "document_key": "1a304fdb028d84399e31fce515928f2d",
+  "revision": 3,
+  "language": "cs",
+  "type": "page",
+  "content": {
+    "title": "Výměna a vrácení zboží",
+    "slug": "vymena-a-vraceni-zbozi",
+    "summary": "Nesedí vám velikost nebo jste změnili názor? Postup vrácení, lhůty a vzor odstoupení pro zboží i asistovaný nákup.",
+    "published": true,
+    "visible_in_menu": false,
+    "cover_path": null,
+    "menu_order": 0,
+    "sections": [
+      {
+        "type": "text",
+        "heading": "Vrácení bez zbytečných překážek",
+        "body": "U nákupu přes internet má spotřebitel zpravidla právo odstoupit do **14 dnů** bez uvedení důvodu. Formulář není povinný a nepotřebujete předchozí schválení. Jiný postup platí pro naši službu asistence a jiný pro kupní smlouvu s partnerem. Vada výrobku se řeší podle [Reklamační řád](https://eshop.dobrodruzi.cz/cs/reklamacni-rad)."
+      },
+      {
+        "type": "table",
+        "heading": "Komu odstoupení poslat",
+        "body": "Co chcete ukončit | Adresát a počátek lhůty\nKoupi zboží prodávaného námi | My; zpravidla 14 dnů od převzetí zboží.\nNaši službu asistovaného nákupu | My; 14 dnů od uzavření smlouvy o službě. Podmínky dřívějšího zahájení a dokončení jsou uvedeny níže.\nKoupi zboží od partnera | Partnerský prodávající z objednávky; zpravidla 14 dnů od převzetí. Odstoupení od naší služby samo kupní smlouvu s partnerem neruší."
+      },
+      {
+        "type": "list",
+        "heading": "1. Oznámení můžete poslat jednoduše",
+        "body": "Napište na **info@dobrodruzi.cz**, že odstupujete, a označte objednávku a příslušné položky.\nNebo použijte tlačítko **Odstoupit od smlouvy** v soukromém přehledu objednávky a následné potvrzení. U asistované položky tím odstupujete od naší služby. Podání přes web vám potvrdíme včetně jeho obsahu, data a času.\nOznámení lze poslat také písemně na **Petr Lízal, [doplnit adresu sídla]**. Podpis je ve vzoru potřebný jen pro papírové podání.\nPokud nemáte přístup k přehledu objednávky, použijte e-mail. Nečekejte kvůli chybě formuláře na konec lhůty. Samotné nevyzvednutí zásilky není jednoznačným odstoupením."
+      },
+      {
+        "type": "text",
+        "heading": "2. Jak se počítá 14 dnů",
+        "body": "U našeho zboží začíná lhůta běžet den po převzetí vámi nebo vámi určenou osobou odlišnou od dopravce. U více kusů objednaných v jedné objednávce a dodaných samostatně se počítá od převzetí posledního kusu; u věci dodávané po částech od poslední části. U různých kupních smluv s různými partnery se každá smlouva posuzuje samostatně.\n\nStačí oznámení prokazatelně odeslat poslední den lhůty. Připadne-li konec na sobotu, neděli či svátek, posouvá se na nejbližší další pracovní den. Od koupě lze odstoupit i před převzetím. Nebylo-li poskytnuto zákonné poučení, uplatní se zákonné prodloužení lhůty, až o jeden rok; při dodatečném poučení běží 14 dnů od jeho obdržení."
+      },
+      {
+        "type": "text",
+        "heading": "3. Kam a kdy vrátit naše zboží",
+        "body": "Zboží prodané námi zašlete nebo předejte na **[doplnit adresu pro vrácení zboží]**, nejpozději do 14 dnů od odstoupení. Stačí je v této lhůtě odeslat. Pro identifikaci přiložte číslo objednávky nebo kopii oznámení; použití našeho formuláře ani původního obalu nevyžadujeme. Věc a její příslušenství zabalte proti poškození při přepravě.\n\nPřímé náklady na vrácení běžnou přepravou nesete vy. Pokud konkrétní věc nelze pro její povahu obvykle vrátit poštou, sdělíme příslušné náklady nebo jejich odhad před objednáním. Jestliže jsme povinnou informaci o nákladech neposkytli, tyto náklady na vás nepřenášíme. To se liší od oprávněné reklamace, při níž hradíme účelně vynaložené náklady my.\n\nPartnerské zboží neposílejte automaticky k nám: adresátem je prodávající uvedený v objednávce. Pokud si nejste jistí adresou, ozvěte se nám; oznámení odstoupení můžete adresátovi odeslat ihned, nemusíte čekat na domluvu přepravy."
+      },
+      {
+        "type": "text",
+        "heading": "4. Kdy a kolik peněz vrátíme",
+        "body": "U odstoupení od naší kupní smlouvy vrátíme přijaté platby bez zbytečného odkladu, nejpozději do 14 dnů od oznámení odstoupení. Zahrneme původní náklady na dodání nejvýše ve výši nejlevnějšího nabízeného standardního doručení; bezplatný osobní odběr se za něj nepovažuje. Při vrácení jen části objednávky se doprava vypořádá podle rozsahu odstoupení a nákladů na ponechané zboží.\n\nMůžeme počkat, dokud zboží neobdržíme nebo neprokážete jeho odeslání, podle toho, co nastane dříve; to neplatí, pokud jsme nabídli jeho vlastní vyzvednutí. Peníze vrátíme stejným způsobem jako původní platbu, jinak jen po dohodě bez dalších nákladů pro vás. Nevnucujeme kredit ani poukaz.\n\nZa samotné odstoupení neúčtujeme sankci ani paušál za znovuuvedení výrobku do prodeje. Odpovídáte pouze za prokazatelné snížení hodnoty způsobené zacházením nad rámec potřebného seznámení s povahou, vlastnostmi a funkčností výrobku. Případnou částku konkrétně odůvodníme. Běžné rozbalení a přiměřené vyzkoušení samy právo na odstoupení neruší."
+      },
+      {
+        "type": "text",
+        "heading": "5. Výjimky nejsou plošným zákazem vracení",
+        "body": "Právo odstoupit nemáte jen v zákonem stanovených případech, které na dané plnění skutečně dopadají. U zboží jde například o výrobu podle vašich požadavků nebo přizpůsobení osobním potřebám, rychlou zkázu, nenávratné smísení po dodání nebo porušení zapečetěného obalu u zboží, které nelze z hygienických či zdravotních důvodů vrátit.\n\nPouhý výběr běžné velikosti či barvy z katalogu není výrobou na míru. Obuv, oděv ani spacák nepovažujeme za nevratné jen proto, že byly rozbaleny. Konkrétní zákonnou výjimku sdělíme u příslušné nabídky; práva z vad tím nezanikají."
+      },
+      {
+        "type": "text",
+        "heading": "6. Asistovaný nákup: služba a zboží jsou dvě smlouvy",
+        "body": "Naši službu můžete zrušit odstoupením do 14 dnů od jejího uzavření. Začneme-li dříve na vaši výslovnou žádost a po zákonném poučení, při odstoupení před dokončením se hradí pouze poměrná část ceny skutečně poskytnuté služby. Bez takové žádosti či potřebného poučení tuto úhradu nepožadujeme. Po úplném poskytnutí právo odstoupit od služby zanikne jen při splnění zákonných podmínek předchozího výslovného souhlasu a poučení.\n\nOdstoupení od služby samo neruší již uzavřenou kupní smlouvu s partnerem. Vrácení partnerského zboží oznamte přímo jemu; s postupem pomůžeme. Nepoužité svěřené prostředky a částky, které vám v důsledku odstoupení náleží, vypořádáme podle [Podmínky asistovaného nákupu](https://eshop.dobrodruzi.cz/cs/obchodni-podminky-asistovaneho-nakupu). Pokud zákon spojuje odstoupení od hlavní koupě také se zánikem vedlejší smlouvy, tuto ochranu respektujeme. Odměna za asistenci není automaticky nevratná ve všech situacích."
+      },
+      {
+        "type": "text",
+        "heading": "7. Chcete jinou velikost nebo barvu?",
+        "body": "Dobrovolnou přímou výměnu domluvíme podle dostupnosti a konkrétního případu. Bez naší dohody ji nelze předpokládat. Můžete také využít zákonné odstoupení a vytvořit novou objednávku správné varianty. Sjednání výměny neomezuje vaše zákonná práva ani neznamená automatické prodloužení lhůty k odstoupení."
+      },
+      {
+        "type": "text",
+        "heading": "8. Vzor oznámení o odstoupení",
+        "body": "Adresát: Petr Lízal, [doplnit adresu sídla], info@dobrodruzi.cz.\n\nOznamuji/oznamujeme, že odstupuji/odstupujeme od smlouvy o koupi tohoto zboží / o poskytnutí této služby: …\nDatum objednání / převzetí: …\nČíslo objednávky nebo jiné označení smlouvy: …\nPoložky a množství, kterých se odstoupení týká: …\nJméno a příjmení spotřebitele/spotřebitelů: …\nAdresa spotřebitele/spotřebitelů: …\nE-mail pro potvrzení (volitelně): …\nDatum: …\nPodpis spotřebitele/spotřebitelů (pouze při odeslání na papíře): …\n\nNehodící se údaje vynechte. Tento vzor můžete zkopírovat do e-mailu nebo vytisknout. Použití vzoru není podmínkou odstoupení. U koupě od partnera nahraďte adresáta skutečným prodávajícím uvedeným v objednávce."
+      },
+      {
+        "type": "text",
+        "heading": "Další informace",
+        "body": "Podrobné podmínky: [Obchodní podmínky](https://eshop.dobrodruzi.cz/cs/obchodni-podminky) a [Podmínky asistovaného nákupu](https://eshop.dobrodruzi.cz/cs/obchodni-podminky-asistovaneho-nakupu). Řešení vad: [Reklamační řád](https://eshop.dobrodruzi.cz/cs/reklamacni-rad). Kontakty: [Kontakt](https://eshop.dobrodruzi.cz/cs/kontakt).\n\nPlatí od **28. října 2026**."
+      }
+    ]
+  }
+}
