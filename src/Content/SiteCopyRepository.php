@@ -11,6 +11,7 @@ use RuntimeException;
 final class SiteCopyRepository
 {
     public const DEFAULTS = [
+        'header_message' => '35 % výdělku investujeme do vzdělávání dětí',
         'hero_title' => 'Otestováno dobrodruhy.',
         'hero_subtitle' => 'Náš výběr toho nejlepšího vybavení na cesty. Lehké. Odolné. Osvědčené.',
         'catalog_home_title' => 'Náš výběr vybavení',
@@ -48,7 +49,8 @@ final class SiteCopyRepository
         if (!is_array($saved)) return self::DEFAULTS;
         $copy = self::DEFAULTS;
         foreach (self::DEFAULTS as $field => $fallback) {
-            if (is_string($saved[$field] ?? null) && self::valid($saved[$field], 200)) {
+            if (is_string($saved[$field] ?? null) &&
+                (($field === 'header_message' && $saved[$field] === '') || self::valid($saved[$field], 200))) {
                 $copy[$field] = $saved[$field];
             }
         }
@@ -59,6 +61,8 @@ final class SiteCopyRepository
     {
         self::language($language);
         if (!$this->installed()) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky v sekci Databáze.');
+        // Forms opened before the new field was deployed must retain its current value.
+        $input += ['header_message' => $this->load($language)['header_message']];
         $copy = self::validate($input);
         $this->db->query('INSERT INTO shop_site_copy (language, copy_json) VALUES (%s,%s)
             ON DUPLICATE KEY UPDATE copy_json=VALUES(copy_json)', $language,
@@ -72,6 +76,7 @@ final class SiteCopyRepository
             $value = $input[$field] ?? null;
             if (!is_string($value)) throw new InvalidArgumentException('Vyplň všechny texty obchodu.');
             $value = trim($value);
+            if ($field === 'header_message' && $value === '') { $copy[$field] = ''; continue; }
             if (!self::valid($value, in_array($field, ['hero_title', 'catalog_home_title', 'catalog_title', 'blog_title'], true) ? 90 : 200)) {
                 throw new InvalidArgumentException('Texty musí být na jednom řádku a mít nejvýše 200 znaků (nadpisy 90).');
             }

@@ -39,8 +39,8 @@
    <path d="m1122 215 12-28 12 28-12-6z" fill="none" stroke="#e1c01f" stroke-opacity=".5" stroke-width="1.6" stroke-linejoin="round"/>
       </svg>
       <div class="wrap utility">
-        <p></p>
-        <nav class="utility-right hero-tag" aria-label="Stránky a blog">
+        <?php if (($siteCopy['header_message'] ?? '') !== ''): ?><p class="utility-message"><?= \SimpleStore\Rendering\Icon::render('book') ?><span><?= htmlspecialchars($siteCopy['header_message'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></span></p><?php endif; ?>
+        <nav class="utility-right" aria-label="Stránky a blog">
           <?php foreach ($utilityMenu as $link): ?>
             <?php if ($link['children'] !== []): ?><?php require __DIR__ . '/nav-dropdown.php'; ?>
             <?php else: ?><a href="<?= htmlspecialchars($link['href'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?>" <?= $link['active'] ? 'aria-current="page"' : '' ?><?= !empty($link['newTab']) ? ' target="_blank" rel="noopener noreferrer"' : '' ?>><?= htmlspecialchars($link['label'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8') ?></a><?php endif; ?>
