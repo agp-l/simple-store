@@ -22,7 +22,7 @@ $installationPathMatches = $installation->basePath() === $basePath;
     <input type="hidden" name="installation_revision" value="<?= $escape($installationRevision ?? \SimpleStore\Configuration\InstallationSettings::revision($installation)) ?>">
     <label>Hlavní adresa obchodu<input type="url" name="public_base_url" value="<?= $escape($installationFormAddress ?? $installation->baseUrl()) ?>" maxlength="1000" required autocomplete="url" spellcheck="false" aria-describedby="installation-address-help"></label>
     <p class="panel-help" id="installation-address-help">Po uložení se všechny adresy níže přepočítají najednou. Zadej například <code>https://dobrodruzi.cz</code> nebo <code>https://dobrodruzi.cz/eshop</code>, bez <code>/cs</code>. Novou adresu ulož až při skutečném přesunu: začne se používat v celém obchodě ihned po uložení.</p>
-    <div class="panel-settings-save"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit adresu pro celý obchod</button></div>
+    <div class="panel-actions"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit adresu pro celý obchod</button></div>
   </form>
   <h3>Automaticky vypočítané adresy</h3>
   <p>Tyto adresy se nastavují společně polem výše, jednotlivě se neupravují. Po uložení je můžeš zkopírovat do nastavení Googlu, platební brány nebo Cronu u jejich poskytovatele. API klíče zůstávají uložené.</p>
