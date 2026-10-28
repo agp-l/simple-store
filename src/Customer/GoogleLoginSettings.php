@@ -17,7 +17,10 @@ final class GoogleLoginSettings
     {
         if (!$this->installed()) return self::DEFAULTS;
         $json=$this->db->queryFirstField('SELECT settings_json FROM shop_google_login_settings WHERE id=1');
-        return array_replace(self::DEFAULTS, $json === null ? [] : json_decode($json,true,16,JSON_THROW_ON_ERROR));
+        $saved=$json===null ? [] : json_decode($json,true,16);
+        if(!is_array($saved)) return self::DEFAULTS;
+        foreach(self::DEFAULTS as $key=>$default) if(isset($saved[$key]) && gettype($saved[$key])!==gettype($default)) return self::DEFAULTS;
+        return array_replace(self::DEFAULTS,array_intersect_key($saved,self::DEFAULTS));
     }
     public function save(array $input): void
     {
