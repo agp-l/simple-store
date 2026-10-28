@@ -1,0 +1,87 @@
+{
+  "format": "simple-store.content.v1",
+  "language": "cs",
+  "type": "post",
+  "content": {
+    "title": "Kondenzace ve stanu: jak na vlhkost po ránu",
+    "slug": "kondenzace-ve-stanu",
+    "summary": "Mokrý stan ještě nemusí znamenat díru v tropiku. Jak poznat kondenzaci, co připravit před spaním a jak ráno sbalit stan, aniž by navlhl i zbytek batohu.",
+    "published": false,
+    "visible_in_menu": false,
+    "topic": "spani-venku",
+    "cover_path": null,
+    "menu_order": 0,
+    "sections": [
+      {
+        "type": "text",
+        "heading": "Pěkný výhled ještě nezaručí suché ráno",
+        "body": "Místo u jezera vypadá dokonale. Voda se ani nehne, nikde nikdo a na protějším břehu zhasínají poslední světla. Jenže právě bezvětří a vlhké okolí jsou pro suchý stan horší kombinace, než by napovídala ta pohlednice před vchodem.\n\nKondenzace umí pokazit ráno i ve stanu, který spolehlivě drží déšť venku. Než začneš hledat nový model nebo objednávat impregnaci, vyplatí se zjistit, odkud voda přišla. Často pomůže jiné místo, správně otevřené větrání a trochu pořádku při balení. **Úplně suché tropiko ale nemůžeš čekat po každé noci.**"
+      },
+      {
+        "type": "text",
+        "heading": "Jak se voda dostane dovnitř, když neprší",
+        "body": "Vlhkost si do stanu částečně přineseš sám: vydechuješ vodní páru, odpařuje se pot a schnou tam mokré věci. Další vlhkost už je ve venkovním vzduchu. V předsíňce se může odpařovat také voda z nezakryté země.\n\nKdyž se povrch stanu dostatečně ochladí, začne na něm vodní pára kondenzovat — měnit se na kapalné kapky. Důležitý je **rosný bod**, tedy teplota, při které je vzduch s daným obsahem vodní páry nasycený. Studený povrch může této hranice dosáhnout, i když ti uvnitř nepřipadá zvlášť chladno.\n\nKapky na vnitřní straně střechy tedy nemusely projít látkou zvenku. Mohly vzniknout přímo tam. Samotný údaj o vodním sloupci neříká, kolik kondenzace bude ve stanu po noci."
+      },
+      {
+        "type": "table",
+        "heading": "Než začneš stan opravovat: odkud je mokro?",
+        "body": "Jemné kapky na větší ploše zevnitř, i po noci bez deště | Silná stopa pro kondenzaci. Zkontroluj větrání, mokré vybavení a kontakt spacáku se stěnou.\nVoda se za deště opakovaně objevuje u stejného švu či poškozeného místa | Prověř možné zatékání. Sleduj, kde se voda objeví jako první, ne jen místo, kam nakonec steče.\nMokrý konec spacáku u stěny | Můžeš stírat kondenzát z látky. Zkus posunout karimatku a ověř, zda zůstává dost místa i při natažených nohách.\nVlhko nebo loužička na podlaze | Samotný nález příčinu neurčí. Mohly tam stéct kapky, dostat se déšť vchodem nebo zatéct zespodu; i podlaha může kondenzovat."
+      },
+      {
+        "type": "text",
+        "heading": "Jedna mokrá noc ještě není diagnóza",
+        "body": "Kondenzace a zatékání se mohou objevit zároveň. Není proto dobré uzavřít pátrání větou „to je určitě jen sražená voda“. Podezřelé místo vyfoť a poznamenej si počasí i to, zda se tam dotýkaly vrstvy stanu.\n\nDoma stan rozlož, prohlédni švy, podlahu a stav zátěru. Opakovaný průnik vody stejným švem už je důvod řešit konkrétní opravu podle výrobce. Lepkavý nebo odlupující se zátěr je zase jiný problém než kapky na jeho nepoškozeném povrchu. **Univerzální sprej proti kondenzaci není náhradou za zjištění příčiny.**"
+      },
+      {
+        "type": "text",
+        "heading": "Večer začni místem a stavbou stanu",
+        "body": "Pokud máš na výběr, dej přednost suššímu povrchu před podmáčenou loukou a místu dál od vody. Mírné proudění vzduchu bývá užitečné. Kvůli větrání se ale nevystavuj silnému větru; bezpečné místo a stabilita stanu mají přednost.\n\nZa klidného počasí můžeš natočením větracích otvorů využít vánek. Do silného větru stav stan podle návodu konkrétní konstrukce, ne automaticky otevřeným vchodem proti poryvům.\n\nTropiko vypni tak, aby drželo zamýšlený tvar a u dvouplášťového stanu se zbytečně nedotýkalo ložnice. Nejde o přetahování s látkou: použij kotvení a napínání určené výrobcem. Ještě před spaním se podívej, zda se některá část neprověsila."
+      },
+      {
+        "type": "text",
+        "heading": "Větrání musí vést skrz stan, ne jen do předsíňky",
+        "body": "Otevřená síťovina ložnice nepomůže naplno, pokud ji zvenku uzavřeš tropikem bez možnosti výměny vzduchu. Vlhký vzduch potřebuje cestu ven a nový vzduch cestu dovnitř.\n\nZkontroluj malé výztuhy větracích otvorů; někdy zůstávají připlácnuté k látce, přestože mají držet otvor otevřený. Pokud to konstrukce a počasí dovolují, využij větrání na více místech. Za sucha může pomoci i pootevřená předsíňka. V dešti dávej pozor, aby do otvorů nezahánělo.\n\n**Větrání však není záruka sucha.** V mlze nebo za dlouhého deště přichází zvenku velmi vlhký vzduch. Ani dobře postavený stan pak nemusí ráno uschnout. V takové situaci má smysl hlavně chránit spacák a držet mokré povrchy dál od něj."
+      },
+      {
+        "type": "text",
+        "heading": "Co má před spaním zůstat mimo ložnici",
+        "body": "Promočenou bundu a boty dej do předsíňky tak, aby neblokovaly větrání. Pořád jsou blízko stanu a budou schnout, ale nepřidáváš si mokré věci přímo vedle spacáku. Opravdu nasáklé kusy lze při nedostatku jiného místa dočasně oddělit uzavřeným nepromokavým vakem. Počítej s tím, že v něm neuschnou, a při vhodné příležitosti je vyndej.\n\nJeště si zkus lehnout tak, jak běžně spíš. Má spacák volno u nohou i nad hlavou? Batoh natlačený do rohu může posunout vnitřní stěnu k mokrému tropiku. Pár centimetrů získaných přeskládáním věcí někdy pomůže víc než noční utírání spacáku."
+      },
+      {
+        "type": "text",
+        "heading": "Vařič není sušička stanu",
+        "body": "Pára z hrnce přidává vlhkost, ale to je u vaření uvnitř ten menší problém. **Spalovací vařič do stanu ani jeho předsíňky nepatří:** hrozí požár a otrava oxidem uhelnatým. Pootevřený zip z předsíňky nedělá bezpečnou kuchyň.\n\nVař venku na stabilním místě, v bezpečné vzdálenosti od stanové látky a podle návodu vařiče. Stan ani oblečení nesuš nad plamenem."
+      },
+      {
+        "type": "text",
+        "heading": "Dva pláště neznamenají dvakrát méně kapek",
+        "body": "U běžného dvouplášťového stanu prochází vodní pára prodyšnou ložnicí a může se srážet na vnitřní straně nepromokavého tropika. Ložnice pomáhá oddělit tebe a výbavu od mokré střechy. V nepříznivých podmínkách ale může navlhnout i ona.\n\nJednoplášťový stan má mokrý povrch blíž ke spícímu člověku, takže víc řešíš kontakt spacáku se stěnou a otírání kapek. Neznamená to automaticky, že každý jednoplášť bude kondenzovat víc než každý dvouplášť. Výsledek ovlivňuje konkrétní střih, větrání, počasí i počet lidí.\n\nPři výběru si proto kromě hmotnosti prohlédni obytný prostor a ovládání větrání. Dostaneš se k němu z ložnice? Dokážeš ho použít i za deště? A vejde se ti dovnitř karimatka se spacákem bez opírání o šikmé stěny?"
+      },
+      {
+        "type": "text",
+        "heading": "Podlážka pomáhá, ale každá jinak",
+        "body": "Přídavná podlážka neboli footprint chrání podlahu před odíráním a špínou. Pokud vhodný model zakrývá také zem v předsíňce, může omezit přísun vlhkosti odtud. Menší podlážka pouze pod ložnicí tuto odkrytou plochu neřeší.\n\nOd další vrstvy pod neporušenou nepromokavou podlahou proto nečekej, že odstraní páru z dechu nebo mokré bundy. Podlážka je užitečná součást výbavy, ale **nenahrazuje větrání ani vhodné místo**. Používej rozměr a způsob položení určený pro svůj stan."
+      },
+      {
+        "type": "list",
+        "heading": "Ráno: nejdřív suché věci, potom mokrý stan",
+        "body": "**Připrav si suchý prostor pro balení.** Než začneš manipulovat s tropikem, sbal suché oblečení a spacák do jejich ochranného vaku. Pokud už spacák navlhl, využij možnost ho nejdřív vyvětrat.\n**Kapky setři savým hadříkem.** Pracuj jemně a hadřík průběžně vyždímej. Se stanem zbytečně netřes, dokud je uvnitř vybavení.\n**Využij počasí, pokud to jde.** Chvíle proudění vzduchu může pomoci. Když mlha trvá a musíš vyrazit, nemusíš čekat na zázračné úplné vyschnutí.\n**Odděl mokré od suchého.** Dovoluje-li to konstrukce a podmínky, zabal mokré tropiko zvlášť od ložnice. Jinak alespoň izoluj celý vlhký stan od spacáku a oblečení v batohu.\n**Naplánuj další sušení.** Mokré balení ber jako převoz do příští vhodné zastávky. Po návratu domů stan hned vybal a dosuš všechny části."
+      },
+      {
+        "type": "text",
+        "heading": "Největší škoda často vznikne až doma",
+        "body": "Sbalit za mokra se na cestě někdy musí. Nechat tak stan zavřený do dalšího výletu už je zbytečný risk. Dlouhodobá vlhkost podporuje plísně a může poškozovat nepromokavé zátěry.\n\nSuš na vzduchu, podle návodu výrobce. Věnuj pozornost i podlaze, přehybům a místům, která byla při sušení přeložená přes sebe. Stan může na první dotek působit suchý a mezi složenými vrstvami být stále vlhký.\n\nPřed dlouhodobým uložením musí být suchý celý. Potom mu najdi chladné, suché místo mimo slunce; nemačkej ho zbytečně do nejmenšího možného obalu. Péče po návratu je méně fotogenická než výhled od jezera, ale stan ji ocení podstatně víc."
+      },
+      {
+        "type": "text",
+        "heading": "Malý pokus pro příští noc",
+        "body": "Po mokrém ránu si napiš tři věci: kde stan stál, jak jsi větral a kde se objevila voda. Příště zkus upravit jednu věc, kterou můžeš ovlivnit. Třeba nechat správně otevřené střešní větrání nebo dát promočené oblečení mimo ložnici.\n\nPočasí nebude pokaždé stejné, takže to není laboratorní test. Přesto rychleji poznáš, co funguje právě u tvého stanu. A malý savý hadřík nech klidně u kolíků — ráno ho najdeš dřív než na dně batohu."
+      },
+      {
+        "type": "text",
+        "heading": "Zdroje a další čtení",
+        "body": "Podklady ověřeny 28. října 2026. U stavby, údržby a oprav má přednost návod konkrétního stanu. Rozlišení kondenzace a zatékání v tabulce je vodítko, nikoli jistá diagnóza poškození.\n\n[MSR: větrání a příčiny kondenzace](https://support.cascadedesigns.com/hc/en-us/articles/35376984957459-How-do-I-prevent-or-reduce-tent-condensation) · [NEMO: výběr místa, stavba a vlhkost ve stanu](https://www.nemoequipment.com/en-ca/blogs/journal/minimizing-and-preventing-condensation-in-your-nemo-tent) · [NOAA: jak vzniká kondenzace a co je rosný bod](https://www.noaa.gov/jetstream/atmosphere/hydro)\n\n[Hilleberg: účel přídavných podlážek](https://hilleberg.com/eng/products/accessories/footprints) · [MSR: sušení a skladování](https://support.cascadedesigns.com/hc/en-us/articles/35376957490067-How-do-I-keep-my-MSR-tent-clean-and-dry) · [MSR: péče o stan a těsnění švů](https://cascadedesigns.com/blogs/msr-gear-guides/tips-for-longer-tent-life) · [CPSC: spalovací vybavení a oxid uhelnatý při kempování](https://www.cpsc.gov/Safety-Education/Safety-Education-Centers/Carbon-Monoxide-Information-Center/Portable-Heaters--Camping-Equipment?language=en)"
+      }
+    ]
+  }
+}
