@@ -185,6 +185,7 @@ final class PageRenderer
         $basePath = (string) $data['basePath'];
         $language = (string) $data['language'];
         $siteRoot = htmlspecialchars($basePath, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $siteCopy = array_replace(\SimpleStore\Content\SiteCopyRepository::DEFAULTS, $data['siteCopy'] ?? []);
         $priceDisplay = $data['priceDisplay'] ?? null;
         $categoryLabels = $data['categoryLabels'] ?? [];
         $canManageContent = (bool) ($data['canManageContent'] ?? false);
