@@ -642,4 +642,4 @@ echo "Admin rendering tests passed.\n";
 
 $screen = 'settings'; $settingsTab = 'installation';
 ob_start(); require dirname(__DIR__) . '/view/admin/layout.php'; $html = ob_get_clean();
-if (!str_contains($html, 'config/installation.json') || !str_contains($html, 'Podsložka nesouhlasí') || !str_contains($html, '/account/?google=callback') || str_contains($html, 'name="public_base_url"')) throw new RuntimeException('Installation diagnostics missing or editable.');
+if (!str_contains($html, 'config/installation.json') || !str_contains($html, 'Podsložka nesouhlasí') || !str_contains($html, '/account/?google=callback') || substr_count($html, 'name="public_base_url"') !== 1 || !str_contains($html, 'name="action" value="save-installation-address"') || !str_contains($html, 'name="installation_revision"')) throw new RuntimeException('Installation diagnostics or the single address form are missing.');

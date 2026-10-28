@@ -21,7 +21,7 @@ $btcpayWebhookSecretConfigured ??= false;
 ?>
 <div class="panel-intro"><div><p class="panel-eyebrow">Správa obchodu</p><h1>Nastavení obchodu</h1>
   <p>Každá oblast má vlastní stránku a ukládá se samostatně.</p></div></div>
-<?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status">Nastavení bylo uloženo do databáze.</p><?php endif; ?>
+<?php if (($_GET['saved'] ?? '') === '1'): ?><p class="panel-notice" role="status"><?= $settingsTab === 'installation' ? 'Adresa obchodu byla uložena. Všechny odvozené adresy jsou aktualizované.' : 'Nastavení bylo uloženo do databáze.' ?></p><?php endif; ?>
 <?php if ($settingsError !== ''): ?><p class="panel-error" role="alert"><?= $escape($settingsError) ?></p><?php endif; ?>
 <?php require __DIR__ . '/settings-navigation.php'; ?>
 <?php if ($settingsTab === 'overview'): ?>
