@@ -3,7 +3,7 @@ declare(strict_types=1);
 $installation = \SimpleStore\Configuration\Installation::current();
 $installationPathMatches = $installation->basePath() === $basePath;
 ?>
-<section class="panel-panel panel-settings-block">
+<section class="panel-panel panel-settings-block panel-form">
   <h2><?= \SimpleStore\Rendering\Icon::render('globe') ?> Jedna adresa pro celý obchod</h2>
   <p>Veřejná adresa, e-maily, přihlášení Google, platební návraty, sitemap a automatické kontroly partnerů používají <code>config/installation.json</code>. Aktualizace webu tento místní soubor nepřepisují.</p>
   <label>Aktuální veřejná adresa<input readonly value="<?= $escape($installation->baseUrl()) ?>"></label>
@@ -13,7 +13,7 @@ $installationPathMatches = $installation->basePath() === $basePath;
   </p>
   <p class="panel-help">Shoda podsložky není ověřením DNS, certifikátu ani nastavení externích služeb. Tato stránka web nepřesouvá.</p>
 </section>
-<section class="panel-panel panel-settings-block">
+<section class="panel-panel panel-settings-block panel-form">
   <h2>Přesun na jinou doménu nebo do podsložky</h2>
   <ol>
     <li>Zálohuj soubory i databázi. Připrav cílovou doménu, HTTPS a správnou kořenovou složku hostingu. Pokud je tam jiný web, nejdřív mu připrav jiné umístění.</li>
@@ -25,7 +25,7 @@ $installationPathMatches = $installation->basePath() === $basePath;
   <p>Staré interní absolutní odkazy uvedené v <code>previous_base_urls</code> se při zobrazení převedou na aktuální adresu. Uložené objednávky a jejich právní přílohy zůstanou zachované. Odkazy na partnery ani samostatný web expedic se nepřepisují.</p>
   <p class="panel-help">V podsložce nesmí hlavní web přebírat požadavky pro tuto složku. Pravidla pro roboty patří do <code>/robots.txt</code> v kořeni celé domény; spoj je s pravidly druhého webu. Přihlášení a košík ze staré domény se do nové automaticky nepřenášejí.</p>
 </section>
-<section class="panel-panel panel-settings-block">
+<section class="panel-panel panel-settings-block panel-form">
   <h2>Adresy odvozené z konfigurace</h2>
   <p>Po změně domény zde zkopíruješ aktuální adresy do služeb, které používáš. API klíče zůstávají uložené.</p>
   <?php foreach ([

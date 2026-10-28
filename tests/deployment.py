@@ -38,6 +38,8 @@ with tempfile.TemporaryDirectory() as directory:
         "fio-cron.php": "<?php echo 'fio';",
         "mail-cron.php": "<?php echo 'mail';",
         "config/site.php": "<?php return [];",
+        "config/installation.example.json": json.dumps({"public_base_url": "https://shop.example.test"}),
+        "config/installation.json": json.dumps({"public_base_url": "https://private.example.test"}),
         "config/database.php": "<?php return ['password' => 'private'];",
         "database/schema.sql": "CREATE DATABASE test;",
         "tools/fio-worker.php": "<?php echo 'worker';",
@@ -66,6 +68,8 @@ with tempfile.TemporaryDirectory() as directory:
     assert "images/media/.htaccess" in manifest["files"]
     assert manifest["files"]["database/schema.sql"] == manifest["schema_sha256"]
     assert (package / "database/schema.sql").read_bytes() == (root / "database/schema.sql").read_bytes()
+    assert "config/installation.example.json" in manifest["files"]
+    assert "config/installation.json" not in manifest["files"]
     assert "config/database.php" not in manifest["files"]
     assert "database/zaloha.sql" not in manifest["files"]
     assert "images/media/photo.jpg" not in manifest["files"]
@@ -146,12 +150,30 @@ with tempfile.TemporaryDirectory() as directory:
     assert remote.files == {"/site/index.php": b"<?php echo 'store';",
                             "/site/config/database.php": b"private"}
 
+    installation_remote = FakeFTP()
+    example = package / "config/installation.example.json"
+    deployer.initialize_installation(installation_remote, example, "/site")
+    assert installation_remote.files["/site/config/installation.json"] == example.read_bytes()
+    custom = b'{"public_base_url":"https://new.example.test/eshop"}'
+    installation_remote.files["/site/config/installation.json"] = custom
+    deployer.initialize_installation(installation_remote, example, "/site")
+    assert installation_remote.files["/site/config/installation.json"] == custom
+    assert not any(".upload-" in name for name in installation_remote.files)
+
     class FailingFTP(FakeFTP):
         def rename(self, source, target):
             if ".upload-" in source:
                 raise deployer.ftplib.error_perm("550 Cannot rename uploaded file")
             super().rename(source, target)
 
+    failed_installation = FailingFTP()
+    try:
+        deployer.initialize_installation(failed_installation, example, "/site")
+        raise AssertionError("Installation creation silently failed")
+    except deployer.ftplib.error_perm:
+        pass
+    assert "/site/config/installation.json" not in failed_installation.files
+    assert not any(".upload-" in name for name in failed_installation.files)
     failing = FailingFTP()
     try:
         deployer.upload(failing, package / "index.php", "/site/index.php")

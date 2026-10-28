@@ -47,7 +47,7 @@ final class Installation
             if (!$decoded instanceof \stdClass) throw new InvalidArgumentException('Expected a JSON object.');
             $data = get_object_vars($decoded);
             if (!is_array($data) || !is_string($data['public_base_url'] ?? null) ||
-                !is_array($data['previous_base_urls'] ?? []) ||
+                (array_key_exists('previous_base_urls', $data) && !is_array($data['previous_base_urls'])) ||
                 array_diff(array_keys($data), ['public_base_url', 'previous_base_urls'])) {
                 throw new InvalidArgumentException('Invalid installation fields.');
             }

@@ -32,7 +32,7 @@ return [
         'test' => true, // Comgate test flag; a merchant profile and secret are still required.
         'merchant' => '',
         'secret' => '', // Never commit live credentials.
-        'return_base_url' => '', // Public HTTPS installation root, e.g. https://obchod.cz/simple-store.
+        'return_base_url' => '', // Derived from config/installation.json; do not configure independently.
     ],
     'gopay' => [
         'enabled' => false, // Enable after entering your GoID and OAuth credentials in administration.
@@ -40,7 +40,7 @@ return [
         'goid' => '',
         'client_id' => '',
         'client_secret' => '', // Never commit live credentials.
-        'return_base_url' => '', // Public HTTPS installation root, e.g. https://obchod.cz/simple-store.
+        'return_base_url' => '', // Derived from config/installation.json; do not configure independently.
     ],
     'btcpay' => [
         'enabled' => false, // Enable after configuring the store and webhook in administration.
@@ -48,7 +48,7 @@ return [
         'store_id' => '',
         'api_key' => '', // Store-scoped invoice create/view permissions; never commit credentials.
         'webhook_secret' => '', // Secret from a manually created BTCPay invoice webhook.
-        'return_base_url' => '', // Public HTTPS installation root, e.g. https://obchod.cz/simple-store.
+        'return_base_url' => '', // Derived from config/installation.json; do not configure independently.
     ],
     'shipping_methods' => \SimpleStore\Checkout\ShippingPolicy::defaults(),
 ];

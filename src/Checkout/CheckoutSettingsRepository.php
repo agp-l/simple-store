@@ -249,7 +249,7 @@ final class CheckoutSettingsRepository
 
         $termsUrl = self::value($input, 'terms_url');
         if ($termsUrl !== '' && (!str_starts_with($termsUrl, $basePath) ||
-            preg_match('~^/(?:[a-z0-9]+(?:-[a-z0-9]+)*)(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*/?$~D', $termsUrl) !== 1)) {
+            preg_match('~^/(?:[a-z0-9]+(?:-[a-z0-9]+)*)(?:/[a-z0-9]+(?:-[a-z0-9]+)*)*/?$~D', substr($termsUrl, strlen(rtrim($basePath, '/')))) !== 1)) {
             throw new InvalidArgumentException('Odkaz na podmínky musí být místní adresa stránky v tomto obchodě.');
         }
         $packetaKey = self::value($input, 'packeta_api_key');

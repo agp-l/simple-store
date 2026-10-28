@@ -18,6 +18,30 @@ ENDPOINT = "https://new.example.test/store/supplier-price-cron.php"
 
 
 class WorkerTests(unittest.TestCase):
+    def test_ftp_config_controls_endpoint_and_rejects_invalid_config_before_credentials(self):
+        for base in ("https://shop.example.test", "https://new.example.test/eshop/sub"):
+            for missing in (False, True):
+                ftp = unittest.mock.Mock()
+                reads = []
+                def read(command, callback):
+                    reads.append(command)
+                    if missing and command == "RETR /config/installation.json":
+                        raise worker.ftplib.error_perm("550 Not found")
+                    callback(("<?php return '" + "b" * 64 + "';").encode() if command.endswith("supplier-worker.php") else json.dumps({"public_base_url": base}).encode())
+                ftp.retrbinary.side_effect = read
+                with patch.object(worker.deploy, "configuration", return_value=("ftp.test", 21, "shop", "secret", "/", "ftp")), patch.object(worker.ftplib, "FTP", return_value=ftp), patch.object(worker.deploy, "file_exists", return_value=True):
+                    self.assertEqual(worker.worker_configuration(), ("b" * 64, base + "/supplier-price-cron.php"))
+                ftp.storbinary.assert_not_called()
+                self.assertIn("RETR /config/installation.json", reads)
+        for invalid in (b"{broken", b'{"public_base_url":"http://attacker.test"}', b'x' * 16385):
+            ftp = unittest.mock.Mock()
+            ftp.retrbinary.side_effect = lambda command, callback: callback(invalid)
+            with patch.object(worker.deploy, "configuration", return_value=("ftp.test", 21, "shop", "secret", "/", "ftp")), patch.object(worker.ftplib, "FTP", return_value=ftp), patch.object(worker.deploy, "file_exists", return_value=True):
+                with self.assertRaises(ValueError):
+                    worker.worker_configuration()
+            self.assertEqual(ftp.retrbinary.call_count, 1)
+            ftp.storbinary.assert_not_called()
+
     def test_no_credential_forwarding(self):
         self.assertIsNone(worker.NoRedirect().redirect_request(None, None, 302, "", {}, "https://other.test/"))
 

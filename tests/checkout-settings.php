@@ -402,3 +402,7 @@ echo "Checkout settings tests passed.\n";
 
 $ignoredUrls = $repo->save(array_replace($input, ['comgate_return_base_url' => 'https://evil.test', 'gopay_return_base_url' => '', 'btcpay_return_base_url' => ['invalid']]), '/simple-store/');
 foreach (['comgate', 'gopay', 'btcpay'] as $gateway) if ($ignoredUrls[$gateway]['return_base_url'] !== $installation->baseUrl()) throw new RuntimeException('Posted URL overrode installation.');
+
+$directoryRepo = new CheckoutSettingsRepository($db, new \SimpleStore\Configuration\Installation('https://new.example.test/Shop_2'));
+$directorySettings = $directoryRepo->save(array_replace($input, ['terms_url' => '/Shop_2/cs/obchodni-podminky']), '/Shop_2/');
+if ($directorySettings['terms_url'] !== '/Shop_2/cs/obchodni-podminky') throw new RuntimeException('Valid installation prefix rejected.');
