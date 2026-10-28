@@ -9,7 +9,7 @@
 <label>Potvrdit heslo<input type="password" name="password_confirm" minlength="10" maxlength="72" autocomplete="new-password" required></label>
 <button class="panel-button" type="submit">Nastavit heslo</button></form>
 <?php if (!empty($googleReady)): ?><form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($accountUrl.'?section=settings') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="google-start"><p>Pro nastavení hesla je potřeba ověření přes Google z posledních pěti minut.</p><button class="panel-button" type="submit">Znovu ověřit přes Google</button></form><?php endif; ?>
-<p>Heslo můžeš nastavit také přes <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($accountUrl.'?mode=forgot') ?>">obnovu hesla po odhlášení</a>.</p>
+<form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($accountUrl.'?section=settings') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="action" value="google-recovery"><p>Heslo můžeš nastavit také pomocí odkazu na e-mailu účtu. Po odeslání se odhlásíš.</p><button class="panel-button" type="submit">Poslat odkaz pro nastavení hesla</button></form>
 <?php endif; ?>
 <?php if (!empty($googleLinked)): ?>
 <p>Připojený Google účet: <strong><?= $escape($googleLinked['google_email']) ?></strong></p>

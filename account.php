@@ -166,6 +166,11 @@ try {
                 throw new InvalidArgumentException('Přihlas se ke svému účtu.');
             }
             $userId = (int) $user['id'];
+            if ($action === 'google-recovery' && $user['password_hash'] === '') {
+                (new PasswordResetService($db))->request('customer',$user['email'],'account.php');
+                $auth->signOut();
+                $redirect($accountUrl.'?mode=forgot&sent=1');
+            }
             if ($action === 'google-unlink') {
                 $password=$input('current_password');
                 $googleIdentities->unlink($userId,$password);

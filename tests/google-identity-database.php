@@ -26,5 +26,11 @@ try {
  $reject(fn()=>$r->resolve($claims,$secondId,true,GoogleOAuth::binding($second)));
  $db->query('UPDATE shop_users SET is_active=0 WHERE id=%i',$id);$reject(fn()=>$r->resolve($claims,null,true));
  $db->query('UPDATE shop_users SET is_active=1,role=%s WHERE id=%i','admin',$id);$reject(fn()=>$r->resolve($claims,null,true));
+ $recoveryClaims=['sub'=>'recovery_'.$suffix,'email'=>'recovery_'.$suffix.'@example.org'];
+ $ids[]=$recoveryId=$r->resolve($recoveryClaims,null,true);$token=bin2hex(random_bytes(32));
+ $db->query('INSERT INTO shop_password_resets (token_hash,user_id,password_hash_at_issue,role,created_at,expires_at) VALUES (%s,%i,%s,%s,UTC_TIMESTAMP(),DATE_ADD(UTC_TIMESTAMP(),INTERVAL 30 MINUTE))',hash('sha256',$token),$recoveryId,hash('sha256',''),'customer');
+ (new \SimpleStore\Auth\PasswordResetService($db))->complete('customer',$token,'recovered-password-123','recovered-password-123');
+ $check(password_verify('recovered-password-123',$customers->byId($recoveryId)['password_hash']),'Google-only email recovery failed');
+ $reject(fn()=>(new \SimpleStore\Auth\PasswordResetService($db))->complete('customer',$token,'replayed-password-123','replayed-password-123'));
  echo "Google identities: registration, no email auto-link, collision, password, unlink, revocation and roles passed.\n";
 } finally { foreach($ids as $id)$db->query('DELETE FROM shop_users WHERE id=%i',$id); }
