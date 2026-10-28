@@ -1,0 +1,98 @@
+{
+  "format": "simple-store.content.v1",
+  "document_key": "33ce46d6ea47edd1fd35a8308a455fbd",
+  "revision": 4,
+  "language": "cs",
+  "type": "page",
+  "content": {
+    "title": "Ochrana osobních údajů",
+    "slug": "ochrana-osobnich-udaju",
+    "summary": "Jak chráníme vaše údaje při nákupu, komu je předáváme a jaká máte práva. Přehledně o účtu, partnerském doručení, platbách i cookies.",
+    "published": true,
+    "visible_in_menu": false,
+    "cover_path": null,
+    "menu_order": 0,
+    "sections": [
+      {
+        "type": "text",
+        "heading": "1. Kdo za údaje odpovídá a kam napsat",
+        "body": "Správcem osobních údajů při provozu e-shopu **eshop.dobrodruzi.cz** je **Petr Lízal, IČO 14305631**. Pro dotazy k soukromí, opravu údajů, zrušení zákaznického účtu nebo uplatnění dalších práv nám napište na **info@dobrodruzi.cz**.\n\nTyto informace se vztahují na návštěvy e-shopu, zákaznické účty, nákup zboží, asistovaný nákup a související komunikaci. Přihlášky na dětské expedice a další služby na samostatném webu dobrodruzi.cz nejsou součástí tohoto dokumentu. Samotný odkaz na expedice nepředává jejich pořadateli obsah vašeho zákaznického účtu ani objednávky z e-shopu.\n\n**Aktualizováno 28. října 2026.** Níže vysvětlujeme, jaké údaje potřebujeme, komu je zpřístupňujeme a jak můžete rozhodovat o jejich používání."
+      },
+      {
+        "type": "text",
+        "heading": "2. Jaké údaje získáváme",
+        "body": "Při objednávce zpracováváme především jméno a příjmení, e-mail, telefon, doručovací a případně fakturační adresu, vybrané výdejní místo, objednané produkty a jejich varianty, množství, cenu a poznámku k objednávce. Při nákupu na podnikatele také uvedené firemní a identifikační údaje.\n\nK objednávce patří údaje o platbě, dopravě, jejím průběhu a případném vrácení či reklamaci. U platby převodem může bankovní záznam obsahovat číslo účtu plátce, jeho označení, částku, datum, variabilní symbol a zprávu pro příjemce. Do objednávky ukládáme také potvrzení zvolených podmínek a případné žádosti o dřívější zahájení asistované služby.\n\nÚdaje získáváme zejména od vás. Informace o platbě přicházejí od banky; informace o dodání a vyřízení nákupu také od příslušného partnera a dopravce. Zadáte-li jiného příjemce zásilky, získáme jeho doručovací a kontaktní údaje od vás a použijeme je k doručení. Informujte jej prosím o tomto předání a odkažte jej na tuto stránku.\n\nDo poznámek ani běžné komunikace neuvádějte údaje o zdraví, rodná čísla, hesla nebo jiné informace, které k vyřízení nákupu nepotřebujeme."
+      },
+      {
+        "type": "table",
+        "heading": "3. Proč údaje používáme a z jakého důvodu",
+        "body": "Účel | Právní základ\nPřijetí objednávky, přímý prodej, asistovaný nákup, doručení a související komunikace | Příprava a plnění smlouvy — čl. 6 odst. 1 písm. b) GDPR\nVedení dobrovolně založeného zákaznického účtu a uložených adres | Plnění smlouvy o vedení účtu — čl. 6 odst. 1 písm. b) GDPR\nDoklady, daňová evidence a zákonné povinnosti při reklamacích a vrácení | Právní povinnost — čl. 6 odst. 1 písm. c) GDPR\nVyřízení obecného dotazu, ochrana účtu a provozu webu, doložení průběhu nákupu a ochrana právních nároků | Oprávněný zájem — čl. 6 odst. 1 písm. f) GDPR; jde o komunikaci, bezpečnost a ochranu našich práv i práv zákazníků"
+      },
+      {
+        "type": "text",
+        "heading": "",
+        "body": "Souhlas není podmínkou zpracování údajů potřebných pro objednávku nebo zákonné doklady. Bez nezbytných kontaktních, doručovacích a platebních údajů nemusíme být schopni nákup vyřídit. Založení účtu a vyplnění nepovinné poznámky jsou dobrovolné. U oprávněného zájmu můžete podat námitku; podrobnosti najdete níže."
+      },
+      {
+        "type": "text",
+        "heading": "4. Asistovaný nákup a předání údajů partnerovi",
+        "body": "U položek označených **Asistovaný nákup** zajišťujeme nákup u partnerského prodávajícího. Jeho totožnost a podmínky jsou uvedeny v souhrnu před závazným objednáním. K obstarání konkrétního nákupu mu předáme údaje potřebné pro objednání, vystavení dokladu a doručení: zejména jméno, příslušnou adresu, nezbytný kontakt a objednané položky. Při řešení problému také související reklamační nebo platební podklady v potřebném rozsahu.\n\n**Partnerský prodávající je pro svou kupní smlouvu, doklady a zákonné povinnosti samostatným správcem.** Jeho pravidla ochrany údajů se uplatní na tuto část nákupu. My odpovídáme za zpracování související s naší službou. Pokud objednávku plní více partnerů, každý dostává údaje potřebné pro svou část.\n\nPouhá evidence alternativních nabídek a automatické ověřování ceny či dostupnosti produktu neposílají partnerům vaše jméno, adresu ani obsah zákaznického účtu. Pro tyto kontroly používáme produktové odkazy a údaje o zboží."
+      },
+      {
+        "type": "text",
+        "heading": "5. Zákaznický účet a komunikace",
+        "body": "V zákaznickém účtu uchováváme přihlašovací e-mail, zobrazované jméno, případný telefon, uložené adresy a vazby na objednávky. Heslo ukládáme jako bezpečnostní otisk, nikoli jako čitelný text. Pro přihlášení a obnovu hesla používáme také technické ověřovací údaje.\n\nÚdaje profilu a uložené adresy můžete upravit v účtu. O zrušení účtu požádejte na info@dobrodruzi.cz. Zrušení účtu neznamená automatické odstranění dokladů nebo podkladů k nevyřízené objednávce, které potřebujeme z jiného právního důvodu.\n\nPři dotazu, reklamaci či odstoupení zpracujeme váš kontakt, obsah sdělení a související podklady. Posíláme zprávy potřebné k vyřízení objednávky, účtu nebo vašeho požadavku. **Objednání ani registrace samy o sobě nejsou souhlasem se zasíláním reklamy.**"
+      },
+      {
+        "type": "list",
+        "heading": "6. Kdo může údaje obdržet",
+        "body": "**Vybraný partnerský prodávající** — u asistovaného nákupu, v rozsahu popsaném výše.\n**Dopravce a provozovatel vybraného výdejního místa** — jméno příjemce, kontakt, adresa nebo výdejní místo a údaje potřebné k doručení. Konkrétní službu určuje objednávka.\n**Fio banka a banka plátce** — provedení a doložení převodu. Přijaté platby ověřujeme také prostřednictvím Fio API. Banky plní vlastní zákonné povinnosti jako samostatní správci.\n**Webglobe** — technické zajištění hostingu e-shopu, jeho databáze a provozu.\n**Proton Mail** — odesílání e-mailů přes službu Proton; zpracovává se adresa příjemce, obsah zprávy a technické údaje doručení. Informace poskytovatele: https://proton.me/legal/privacy.\n**Google a poskytovatelé map výdejních míst** — technické požadavky z prohlížeče v případech popsaných v části 8.\n**Osoby zajišťující nezbytnou technickou, účetní nebo právní pomoc a příslušné orgány veřejné moci** — pouze pokud je jejich zapojení potřebné a existuje pro předání právní důvod. Každému zpřístupníme jen odpovídající rozsah údajů."
+      },
+      {
+        "type": "text",
+        "heading": "",
+        "body": "Dodavatelé, kteří zpracovávají údaje naším jménem, mají postavení zpracovatele; banky a partnerský prodávající mohou pro své vlastní účely vystupovat jako samostatní správci. Na požádání vám upřesníme příjemce vztahující se ke konkrétní objednávce."
+      },
+      {
+        "type": "text",
+        "heading": "7. Cookies potřebné pro fungování obchodu",
+        "body": "E-shop používá technické cookies pro košík, bezpečné přihlášení a formuláře. Obsahují zejména náhodný identifikátor relace; související údaje se zpracovávají na serveru. V aktuální aplikaci nejsou nasazeny Google Analytics ani reklamní měřicí pixely.\n\nPro nezbytné technické cookies se nevyžaduje souhlas s jejich uložením. Zpracování souvisejících osobních údajů se řídí účelem požadované funkce a oprávněným zájmem na jejím zabezpečení. Cookies můžete odstranit nebo blokovat v prohlížeči, některé funkce však potom nebudou fungovat."
+      },
+      {
+        "type": "table",
+        "heading": "Přehled technických cookies",
+        "body": "Název | K čemu slouží | Platnost v prohlížeči\nsimple_store_cart | Košík, průchod objednávkou a ochrana formulářů | Po dobu relace prohlížeče\nsimple_store_customer | Přihlášení zákazníka a ochrana účtu | Po dobu relace prohlížeče\nsimple_store_support | Bezpečné formuláře reklamace a odstoupení | Po dobu relace prohlížeče"
+      },
+      {
+        "type": "text",
+        "heading": "",
+        "body": "Relace obvykle končí zavřením prohlížeče; funkce obnovení relace ji může zachovat. Cookies může prohlížeč odstranit také dříve. U správců obchodu se používá samostatná přihlašovací cookie administrace; běžnému zákazníkovi nedává přístup ke správě."
+      },
+      {
+        "type": "text",
+        "heading": "8. Externí písmo, mapy a údaje mimo EHP",
+        "body": "Pro zobrazení písma Inter web nyní načítá soubory **Google Fonts** z domén fonts.googleapis.com a fonts.gstatic.com. Při spojení získá Google technické údaje požadavku, včetně IP adresy. Účelem tohoto propojení je zobrazení písma na stránce. Nejde o přihlášení k účtu Google ani o předání objednávky. Google uvádí, že data služby Fonts nepoužívá k vytváření profilů uživatelů ani k reklamě; podrobnosti zveřejňuje ve [vysvětlení ochrany soukromí Google Fonts](https://fonts.googleblog.com/2022/11/your-privacy-and-google-fonts.html).\n\nPři použití mapy výdejních míst v pokladně se prohlížeč může spojit s příslušným dopravcem a jeho technickými dodavateli. Zpracují IP adresu a údaje potřebné pro zobrazení mapy a volbu místa. Přístup k poloze zařízení je samostatná volba prohlížeče; místo lze vyhledat také podle adresy nebo názvu. Podrobnosti závisí na zvolené dopravní službě.\n\nE-mailová služba **Proton AG** je spojena se Švýcarskem. Švýcarsko má rozhodnutí Evropské komise o odpovídající úrovni ochrany. U služeb Google může docházet ke zpracování i mimo Evropský hospodářský prostor, zejména v USA. Google pro příslušná předání uvádí účast Google LLC v EU–US Data Privacy Framework a v dalších případech standardní smluvní doložky. Aktuální mechanismy a způsob získání informací o zárukách jsou popsány v [právních rámcích Google pro přenosy dat](https://policies.google.com/privacy/frameworks?hl=cs).\n\nNa info@dobrodruzi.cz vám na požádání upřesníme předávání údajů související s vaším nákupem a dostupné informace o použitých zárukách."
+      },
+      {
+        "type": "text",
+        "heading": "9. Jak určujeme dobu uchování",
+        "body": "Údaje neuchováváme všechny stejně dlouho. Rozhoduje účel, stav objednávky, existence nároku a příslušná zákonná povinnost:\n\n**Objednávky, reklamace a vrácení:** po dobu vyřízení a trvání souvisejících práv a povinností. Dokumentaci potřebnou k obhajobě konkrétního nároku uchováváme také po dobu jeho promlčení; běží-li spor, kontrola nebo vymáhání, do jejich pravomocného skončení a vypořádání. Neznamená to neomezené uchovávání všech údajů o zákazníkovi.\n\n**Daňové a účetní podklady:** podle předpisů, které se na příslušný doklad vztahují. U evidence pro daň z příjmů je rozhodující konec lhůty pro stanovení daně, včetně jejího případného zákonného prodloužení. Pro účetní doklady se při použití zákona o účetnictví běžně uplatňuje pět let; pro daňové doklady podle zákona o DPH deset let. Tyto lhůty nejsou automatickou dobou uchování celého zákaznického účtu.\n\n**Zákaznický účet a uložené adresy:** po dobu poskytování účtu. Po jeho zrušení ponecháme pouze údaje, které samostatně potřebujeme například k dokladu, neuzavřené reklamaci nebo právnímu nároku.\n\n**Běžné dotazy:** do vyřízení navazující komunikace; pokud se sdělení stane podkladem smlouvy, reklamace nebo sporu, řídí se dobou uchování této dokumentace.\n\n**Technické údaje:** po dobu potřebnou pro příslušnou relaci, doručení zprávy, odstranění provozní chyby nebo prošetření konkrétní bezpečnostní události. U provozních záznamů a záloh hostingu se zohledňuje také jejich cyklus přepisování. Důvod uchování konkrétního záznamu vám na žádost vysvětlíme.\n\nPo zániku všech důvodů pro uchování zajistíme výmaz nebo anonymizaci. Odstranění aktivního záznamu se může do oddělených záloh promítnout až při jejich přepsání; zálohy nejsou určeny k běžnému používání odstraněných údajů."
+      },
+      {
+        "type": "text",
+        "heading": "10. Jak údaje chráníme a jak funguje automatizace",
+        "body": "Přenos mezi prohlížečem a e-shopem používá HTTPS. Zákaznické přihlášení je oddělené od přístupu do administrace; formuláře a soukromé odkazy obsahují bezpečnostní prvky proti neoprávněnému použití. Přístupové heslo ani soukromý odkaz na objednávku proto nepředávejte dalším lidem.\n\nAutomaticky se může párovat platba, přepočítat cena nebo hledat vhodná kombinace partnerských nabídek. Tyto funkce vycházejí z parametrů objednávky a zboží; nepoužíváme je k hodnocení vaší osobnosti, úvěruschopnosti nebo reklamních zájmů. Neprovádíme profilování ani rozhodování o zákazníkovi ve smyslu čl. 22 GDPR, které by bylo založeno výhradně na automatizaci a mělo pro něj právní nebo obdobně významné účinky. Chybu automatické kontroly s vámi může vyřešit člověk na našem kontaktním e-mailu."
+      },
+      {
+        "type": "list",
+        "heading": "11. Vaše práva",
+        "body": "**Přístup:** můžete se dozvědět, zda a jaké údaje o vás zpracováváme, a získat jejich kopii.\n**Oprava:** můžete požádat o opravu nepřesných nebo doplnění neúplných údajů.\n**Výmaz a omezení:** za podmínek GDPR můžete požádat o odstranění údajů nebo omezení jejich používání. Výmaz se nevztahuje na údaje, které musíme dále uchovávat ze zákona nebo potřebujeme k ochraně právních nároků.\n**Přenositelnost:** u automatizovaného zpracování založeného na smlouvě nebo souhlasu můžete získat údaje, které jste poskytli, ve strojově čitelném formátu; je-li to technicky možné, také požádat o předání jinému správci.\n**Námitka:** z důvodů své konkrétní situace můžete namítat zpracování založené na oprávněném zájmu. Posoudíme, zda existuje převažující závažný důvod pro pokračování nebo potřeba ochrany právních nároků. Proti případnému přímému marketingu lze vznést námitku kdykoli; pro tento účel pak údaje přestaneme používat.\n**Odvolání souhlasu:** pokud nám pro konkrétní účel souhlas udělíte, můžete jej kdykoli odvolat. Tím není dotčena zákonnost dřívějšího zpracování.\n**Stížnost a soudní ochrana:** můžete se obrátit na dozorový úřad nebo uplatnit soudní ochranu."
+      },
+      {
+        "type": "text",
+        "heading": "12. Jak požádat o nápravu",
+        "body": "Napište na **info@dobrodruzi.cz** a popište, čeho se žádost týká. Pro dohledání může pomoci e-mail používaný v účtu nebo číslo objednávky; heslo nám neposílejte. Při důvodných pochybnostech o totožnosti si vyžádáme jen údaje nezbytné k jejímu ověření.\n\nOdpovíme bez zbytečného odkladu, nejpozději do jednoho měsíce od obdržení žádosti. U složitých nebo početných žádostí lze lhůtu prodloužit nejvýše o další dva měsíce; o důvodu prodloužení vás informujeme během prvního měsíce. Vyřízení je zpravidla bezplatné.\n\nStížnost můžete podat u **Úřadu pro ochranu osobních údajů**, Pplk. Sochora 27, 170 00 Praha 7; informace a kontakty najdete na [uoou.gov.cz](https://uoou.gov.cz/). Nemusíte nejprve vyčerpat komunikaci s námi.\n\nPři změně používaných služeb nebo způsobu zpracování tento dokument aktualizujeme. Samotná změna textu není vaším souhlasem s novým účelem zpracování."
+      }
+    ]
+  }
+}
