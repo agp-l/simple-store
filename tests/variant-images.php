@@ -21,9 +21,10 @@ $check(VariantImages::resolve($plain, [$plain, array_replace($plain, ['image_pat
 $check(VariantImages::color(['Barva'=>'Modrá']) === ['name'=>'Barva','value'=>'Modrá'], 'Preserve exact identity.');
 $check(VariantImages::color(['COLOUR'=>'Blue']) === ['name'=>'COLOUR','value'=>'Blue'], 'Recognize translated color attributes.');
 $check(VariantImages::color(['Color'=>'Blue']) !== null && VariantImages::color(['Velikost'=>'S']) === null, 'Color recognition failed.');
-echo "Variant color image tests passed.\n";
 
 $previews = VariantImages::previews([$blueSmall, $blueLarge, $red, array_replace($red, ['enabled'=>false, 'image_path'=>'images/disabled.webp'])], $base);
 $check(count($previews) === 3 && $previews[0]['image'] === 'images/blue.webp', 'Shared-stock previews lost enabled color photos.');
 $check(array_keys($previews[0]) === ['choices','image'], 'Preview metadata leaked inventory or private variant fields.');
 $check(VariantImages::previews([], $base) === [], 'Products without prepared variants must remain unchanged.');
+
+echo "Variant color image tests passed.\n";
