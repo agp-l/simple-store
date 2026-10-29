@@ -70,6 +70,7 @@ $orderTaxReady ??= false;
 $orderInvoiceReady ??= false;
 $orderReceipt ??= null;
 $goPayState ??= null;
+$comgateState ??= null;
 $btcpayState ??= null;
 $orderInvoice ??= null;
 $sellerSettings ??= [];

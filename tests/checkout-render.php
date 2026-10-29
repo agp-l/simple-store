@@ -295,4 +295,25 @@ if (!str_contains($cancelledOnlineHtml, 'Objednávka zrušena') ||
     throw new RuntimeException('Cancelled online order must not offer another payment.');
 }
 
+$comgateReceipt = $gopayData;
+$comgateReceipt['order']['payment_method'] = 'comgate';
+$comgateReceipt['comgateAvailable'] = true;
+$comgateReceipt['comgateState'] = ['status' => 'paid', 'test_mode' => 1];
+ob_start();
+$renderer->render('complete', $comgateReceipt);
+$testReceipt = ob_get_clean();
+if (!str_contains($testReceipt, 'Simulované zaplacení bylo ověřeno přímo u Comgate.') ||
+    str_contains($testReceipt, 'name="action" value="comgate_pay"') ||
+    str_contains($testReceipt, '<h2>Platba přijata</h2>')) {
+    throw new RuntimeException('Sandbox receipt must show verification without a real payment or a second charge.');
+}
+$comgateReceipt['comgateState'] = ['status' => 'pending', 'test_mode' => 1];
+$comgateReceipt['comgateAvailable'] = false;
+ob_start();
+$renderer->render('complete', $comgateReceipt);
+$publicTestReceipt = ob_get_clean();
+if (str_contains($publicTestReceipt, 'name="action" value="comgate_pay"')) {
+    throw new RuntimeException('A public viewer must not be offered a test payment retry.');
+}
+
 echo "Checkout rendering tests passed.\n";

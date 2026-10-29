@@ -153,6 +153,8 @@ final class OrderReceiptController
             parse_url($publicBaseUrl, PHP_URL_FRAGMENT) === null) {
             $orderShareUrl = $publicBaseUrl . '/' . $this->url->getLanguage() . '/objednavka/' . $order['order_token'];
         }
+        $comgateState = $this->comgate !== null && $this->comgate->installed()
+            ? $this->comgate->state((int) $order['id']) : null;
         $this->renderer->render('complete', array_replace($this->shared, [
             'title' => 'Objednávka ' . $order['order_number'] . ' — dobrodruzi.cz',
             'privatePage' => true, 'compactHeader' => true, 'order' => $order,
@@ -162,9 +164,9 @@ final class OrderReceiptController
             'invoiceUrl' => $invoice !== null ? $orderUrl . '?invoice=1' : '',
             'bankPayment' => ($order['payment_method'] ?? '') === 'bank_transfer'
                 ? BankTransferPayment::fromOrder($order)->details($order) : [],
-            'comgateAvailable' => $this->comgate !== null && $this->comgate->canInitiate(),
-            'comgateState' => $this->comgate !== null && $this->comgate->installed()
-                ? $this->comgate->state((int) $order['id']) : null,
+            'comgateAvailable' => $this->comgate !== null &&
+                $this->comgate->canInitiate((int) ($comgateState['test_mode'] ?? 0) === 1),
+            'comgateState' => $comgateState,
             'gopayAvailable' => $this->gopay !== null && $this->gopay->canInitiate(),
             'gopayState' => $this->gopay !== null && $this->gopay->installed()
                 ? $this->gopay->state((int) $order['id']) : null,

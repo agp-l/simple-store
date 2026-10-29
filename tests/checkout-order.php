@@ -86,7 +86,8 @@ class MeekroDB
             return [];
         }
         foreach (['shop_comgate_payments', 'shop_gopay_payments', 'shop_btcpay_payments'] as $table) {
-            if (str_starts_with(trim($sql), 'SELECT status FROM ' . $table)) {
+            if (str_starts_with(trim($sql), 'SELECT status FROM ' . $table) ||
+                str_starts_with(trim($sql), 'SELECT status, test_mode FROM ' . $table)) {
                 return array_map(static fn (string $status): array => ['status' => $status],
                     $this->gatewayAttempts[$table][$values[0]] ?? []);
             }

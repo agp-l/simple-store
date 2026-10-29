@@ -6,6 +6,7 @@ use SimpleStore\Checkout\CarrierShipmentCsv;
 use SimpleStore\Checkout\CarrierShipmentRepository;
 use SimpleStore\Checkout\CheckoutSettingsRepository;
 use SimpleStore\Checkout\GoPayPaymentService;
+use SimpleStore\Checkout\ComgatePaymentService;
 use SimpleStore\Checkout\BTCPayPaymentService;
 use SimpleStore\Checkout\BTCPayPaidOrderGuard;
 use SimpleStore\Checkout\PacketaApiClient;
@@ -80,6 +81,7 @@ $orderInvoice = null;
 $orderReceipt = null;
 $orderFioEvidence = null;
 $goPayState = null;
+$comgateState = null;
 $btcpayState = null;
 $orderTaxReady = false;
 $orderInvoiceReady = false;
@@ -159,6 +161,13 @@ if ($rawId !== null) {
     }
     if ($order !== null && $orderControlsReady) {
         $orderEvents = $orderControls->eventsForOrder($id);
+    }
+    if ($order !== null && ($order['payment_method'] ?? '') === 'comgate' && $comgateConfigured) {
+        try {
+            $comgateState = (new ComgatePaymentService($db, $comgateSettings))->state($id);
+        } catch (RuntimeException $exception) {
+            $comgateState = null;
+        }
     }
     if ($order !== null && ($order['payment_method'] ?? '') === 'gopay' && $goPayConfigured) {
         try {

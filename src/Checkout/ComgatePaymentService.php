@@ -20,7 +20,8 @@ final class ComgatePaymentService
     private bool $enabled;
     private string $returnBaseUrl;
 
-    public function __construct(private MeekroDB $db, array $settings, ?ComgateApiClient $client = null)
+    public function __construct(private MeekroDB $db, array $settings, ?ComgateApiClient $client = null,
+        private bool $allowTestPayments = false)
     {
         $this->merchant = trim((string) ($settings['merchant'] ?? ''));
         $this->secret = (string) ($settings['secret'] ?? '');
@@ -41,9 +42,10 @@ final class ComgatePaymentService
         ) === 1;
     }
 
-    public function canInitiate(): bool
+    public function canInitiate(bool $existingTestPayment = false): bool
     {
-        return $this->enabled && $this->returnUrlValid() && $this->installed();
+        return $this->enabled && ((!$this->test && !$existingTestPayment) || $this->allowTestPayments) &&
+            $this->returnUrlValid() && $this->installed();
     }
 
     public function state(int $orderId): ?array
@@ -70,6 +72,7 @@ final class ComgatePaymentService
     {
         $this->assertOrder($order);
         if (!$this->enabled) throw new RuntimeException('Nové platby Comgate jsou vypnuté.');
+        if ($this->test && !$this->allowTestPayments) throw new RuntimeException('Testovací platbu Comgate může založit pouze přihlášený správce.');
         if (!$this->installed()) throw new RuntimeException('Nejdřív aktualizuj SQL tabulky v administraci.');
         if (!$this->returnUrlValid()) throw new RuntimeException('Nastav veřejnou HTTPS adresu obchodu pro návrat z Comgate.');
         $id = (int) $order['id'];
@@ -87,6 +90,10 @@ final class ComgatePaymentService
             );
             if ($last !== null && in_array($last['status'], ['pending', 'authorized'], true) &&
                 is_string($last['redirect_url']) && $last['redirect_url'] !== '') {
+                if (!$this->redirectValid($last['redirect_url']) ||
+                    ((int) $last['test_mode'] === 1 && !$this->allowTestPayments)) {
+                    throw new RuntimeException('Tento odkaz na platbu nelze použít.');
+                }
                 $this->db->commit();
                 return $last['redirect_url'];
             }
@@ -96,6 +103,10 @@ final class ComgatePaymentService
             if ($last !== null && $last['status'] === 'paid') {
                 throw new RuntimeException('Platba již byla přijata.');
             }
+            // Charge the persisted snapshot, never a caller's stale amount or item list.
+            $order = (new OrderRepository($this->db))->findById($id);
+            if ($order === null) throw new RuntimeException('Objednávka již neexistuje.');
+            $payload = ComgatePaymentDraft::fromOrder($order, $this->test);
             $token = bin2hex(random_bytes(32));
             $this->db->insert('shop_comgate_payments', [
                 'order_id' => $id, 'status' => 'creating', 'merchant' => $this->merchant,
@@ -108,40 +119,21 @@ final class ComgatePaymentService
             throw $error;
         }
 
-        $shipping = $order['shipping'] ?? [];
         $return = $this->returnBaseUrl . '/comgate-return.php?token=' . $token;
-        $payload = [
-            'test' => $this->test, 'country' => 'CZ',
-            'price' => (int) $order['total_czk'] * 100, 'curr' => 'CZK',
-            'label' => substr('Objednavka ' . $id, 0, 16),
-            'refId' => (string) $order['order_number'], 'method' => 'ALL',
-            'email' => (string) $order['customer_email'],
-            'fullName' => (string) ($shipping['recipient'] ?? $shipping['name'] ?? ''),
-            'delivery' => ShippingPolicy::isPickup((string) ($shipping['method'] ?? '')) ? 'PICKUP' : 'HOME_DELIVERY',
-            'category' => 'PHYSICAL_GOODS_ONLY', 'lang' => 'cs',
-            'url_paid' => $return, 'url_cancelled' => $return, 'url_pending' => $return,
-        ];
-        $phone = is_string($shipping['phone'] ?? null)
-            ? preg_replace('/[\s()-]+/', '', $shipping['phone']) : '';
-        if (is_string($phone) && preg_match('/^\+[1-9][0-9]{6,14}$/D', $phone) === 1) {
-            $payload['phone'] = $phone;
-        }
-        if ($payload['delivery'] === 'HOME_DELIVERY') {
-            $payload['homeDeliveryCity'] = (string) ($shipping['city'] ?? '');
-            $payload['homeDeliveryStreet'] = (string) ($shipping['street'] ?? '');
-            $payload['homeDeliveryPostalCode'] = (string) ($shipping['postal_code'] ?? '');
-            $payload['homeDeliveryCountry'] = 'CZ';
-        }
+        $payload += ['url_paid' => $return, 'url_cancelled' => $return, 'url_pending' => $return];
         try {
             $created = $this->client->create($payload);
         } catch (Throwable $error) {
             $this->setAttempt($attemptId, 'uncertain', 'Odpověď Comgate nedorazila. V klientském portálu prověř číslo objednávky.');
             throw new RuntimeException('Výsledek založení platby není jistý. Objednávka je uložena; před opakováním zkontroluj Comgate.', 0, $error);
         }
-        if ((string) ($created['code'] ?? '') !== '0') {
-            $code = (string) ($created['code'] ?? '?');
-            $this->setAttempt($attemptId, 'rejected', 'Comgate odmítla založení platby (kód ' . substr($code, 0, 16) . ').');
-            throw new RuntimeException('Comgate odmítla založení platby (kód ' . substr($code, 0, 16) . ').');
+        $code = ComgateApiClient::code($created);
+        if ($code !== 0) {
+            // Only documented input/permission errors prove that no payment was created.
+            $rejected = in_array($code, [1102,1103,1107,1301,1303,1304,1305,1306,1308,1309,1310,1311,1316,1317,1319,1400], true);
+            $message = $rejected ? 'Comgate odmítla založení platby' : 'Nejistý výsledek založení platby u Comgate';
+            $this->setAttempt($attemptId, $rejected ? 'rejected' : 'uncertain', $message . ' (kód ' . $code . ').');
+            throw new RuntimeException($message . ' (kód ' . $code . ').');
         }
         $transId = $created['transId'] ?? null;
         $redirect = $created['redirect'] ?? null;
@@ -188,7 +180,7 @@ final class ComgatePaymentService
         $transId = $payload['transId'] ?? null;
         if (!is_string($transId) || preg_match('/^[A-Za-z0-9-]{3,100}$/D', $transId) !== 1 ||
             !is_string($payload['secret'] ?? null) || !hash_equals($this->secret, $payload['secret']) ||
-            (string) ($payload['merchant'] ?? '') !== $this->merchant || !$this->installed()) {
+            !is_string($payload['merchant'] ?? null) || $payload['merchant'] !== $this->merchant || !$this->installed()) {
             throw new InvalidArgumentException('Neplatná notifikace Comgate.');
         }
         $attempt = $this->db->queryFirstRow(
@@ -247,13 +239,14 @@ final class ComgatePaymentService
                     ((int) $currentAttempt['order_id'] !== (int) $attempt['order_id'] ||
                         $currentOrder['payment_method'] !== 'comgate')) ||
                 (string) ($status['code'] ?? '') !== '0' ||
-                (string) ($status['transId'] ?? '') !== (string) $attempt['trans_id'] ||
+                ($status['transId'] ?? null) !== (string) $attempt['trans_id'] ||
                 !$this->matches($status, $reference, $currentAttempt)) {
                 throw new RuntimeException('Ověření platby Comgate nesouhlasí s objednávkou.');
             }
             $newlyPaid = false;
             $paidAfterCancellation = false;
-            if (!$detached && $remote === 'PAID') {
+            $testPayment = (int) $currentAttempt['test_mode'] === 1;
+            if (!$testPayment && !$detached && $remote === 'PAID') {
                 if ($currentOrder['payment_status'] === 'pending') {
                     $paidAfterCancellation = $currentOrder['status'] === 'cancelled';
                     $this->db->query('UPDATE shop_orders SET payment_status=%s, payment_paid_at=UTC_TIMESTAMP(),
@@ -272,7 +265,7 @@ final class ComgatePaymentService
             if ($currentAttempt['status'] !== 'paid' || $remote === 'PAID') {
                 $local = strtolower($remote);
                 if ($currentAttempt['status'] === 'paid') $local = 'paid';
-                if ($detached && $local === 'paid' && $currentAttempt['status'] !== 'paid') {
+                if (!$testPayment && $detached && $local === 'paid' && $currentAttempt['status'] !== 'paid') {
                     $this->recordDetachedPayment($currentAttempt);
                 }
                 $this->db->query('UPDATE shop_comgate_payments SET status=%s, last_error=NULL,
@@ -337,6 +330,8 @@ final class ComgatePaymentService
     private function matches(array $data, array $order, array $attempt): bool
     {
         $test = $data['test'] ?? null;
+        if ((!is_bool($test) && !is_string($test)) || !is_string($data['transId'] ?? null) ||
+            (!is_int($data['price'] ?? null) && !is_string($data['price'] ?? null))) return false;
         $testString = is_bool($test) ? ($test ? 'true' : 'false') : (string) $test;
         return (string) ($data['transId'] ?? '') === (string) ($attempt['trans_id'] ?? '') &&
             $testString === ((int) $attempt['test_mode'] === 1 ? 'true' : 'false') &&
@@ -371,10 +366,10 @@ final class ComgatePaymentService
 
     private function redirectValid(string $url): bool
     {
-        if (strlen($url) > 2048 || strpbrk($url, "\r\n") !== false) return false;
+        if (strlen($url) > 2048 || preg_match('/[\x00-\x20\x7f\\\\]/', $url) || filter_var($url, FILTER_VALIDATE_URL) === false) return false;
         $parts = parse_url($url);
         if (!is_array($parts) || ($parts['scheme'] ?? '') !== 'https' ||
-            isset($parts['user']) || isset($parts['pass'])) return false;
+            isset($parts['user']) || isset($parts['pass']) || (isset($parts['port']) && $parts['port'] !== 443)) return false;
         $host = strtolower((string) ($parts['host'] ?? ''));
         return $host === 'payments.comgate.cz' || preg_match('/^pay[1-9][0-9]*\.comgate\.cz$/D', $host) === 1;
     }

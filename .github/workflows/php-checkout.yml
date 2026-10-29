@@ -80,6 +80,7 @@ jobs:
           php tests/checkout-availability.php
           php tests/checkout-review.php
           php tests/checkout-settings.php
+          php tests/comgate.php
           php tests/delivery-estimate.php
           php tests/fio-statement.php
           php tests/fio-transport-error.php
@@ -283,6 +284,7 @@ jobs:
           MYSQL_TEST_PASSWORD: ci-only-password
         run: |
           php tests/legacy-order-migration.php
+          php tests/comgate-database.php
           php tests/tax-year-regime-database.php
           php tests/after-sales-database.php
           php tests/flat-tax-advances-database.php

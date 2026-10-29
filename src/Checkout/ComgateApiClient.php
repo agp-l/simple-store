@@ -33,11 +33,33 @@ final class ComgateApiClient
         return $this->request('GET', self::API . '/payment/transId/' . rawurlencode($transId) . '.json', null);
     }
 
+    public static function code(array $response): int
+    {
+        $code = $response['code'] ?? null;
+        if (!(is_int($code) && $code >= 0 && $code <= 99999) &&
+            !(is_string($code) && preg_match('/^(?:0|[1-9][0-9]{0,4})$/D', $code))) {
+            throw new RuntimeException('Comgate nevrátila platný návratový kód.');
+        }
+        return (int) $code;
+    }
+
+    public static function decodeResponse(string $response, int $http): array
+    {
+        if (strlen($response) > 65536) throw new RuntimeException('Odpověď Comgate je příliš velká.');
+        $decoded = json_decode($response, true);
+        if (!is_array($decoded) || $http < 200 || $http >= 500 || ($http >= 300 && $http < 400) ||
+            (self::code($decoded) === 0 && $http >= 400)) {
+            throw new RuntimeException('Comgate nevrátila platnou odpověď (HTTP ' . $http . ').');
+        }
+        return $decoded;
+    }
+
     private function request(string $method, string $url, ?array $body): array
     {
         if ($this->transport !== null) {
             $result = ($this->transport)($method, $url, $body, $this->merchant, $this->secret);
             if (!is_array($result)) throw new RuntimeException('Neplatná odpověď Comgate.');
+            self::code($result);
             return $result;
         }
         if (!function_exists('curl_init')) {
@@ -46,10 +68,13 @@ final class ComgateApiClient
         $ch = curl_init($url);
         if ($ch === false) throw new RuntimeException('Spojení s Comgate není dostupné.');
         $headers = ['Accept: application/json'];
+        $response = '';
         if ($body !== null) $headers[] = 'Content-Type: application/json; charset=UTF-8';
         curl_setopt_array($ch, [
             CURLOPT_RETURNTRANSFER => true,
             CURLOPT_FOLLOWLOCATION => false,
+            // Comgate authorizes outbound IPv4 addresses in the merchant whitelist.
+            CURLOPT_IPRESOLVE => CURL_IPRESOLVE_V4,
             CURLOPT_CONNECTTIMEOUT => 5,
             CURLOPT_TIMEOUT => 15,
             CURLOPT_SSL_VERIFYPEER => true,
@@ -58,21 +83,22 @@ final class ComgateApiClient
             CURLOPT_USERPWD => $this->merchant . ':' . $this->secret,
             CURLOPT_HTTPAUTH => CURLAUTH_BASIC,
             CURLOPT_CUSTOMREQUEST => $method,
+            CURLOPT_WRITEFUNCTION => static function ($handle, string $chunk) use (&$response): int {
+                if (strlen($response) + strlen($chunk) > 65536) return 0;
+                $response .= $chunk;
+                return strlen($chunk);
+            },
         ]);
         if ($body !== null) {
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR));
         }
         try {
-            $response = curl_exec($ch);
+            $received = curl_exec($ch);
             $http = (int) curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
-            if (!is_string($response) || strlen($response) > 65536) {
+            if ($received === false) {
                 throw new RuntimeException('Odpověď Comgate nebyla doručena.');
             }
-            $decoded = json_decode($response, true);
-            if (!is_array($decoded) || !isset($decoded['code']) || $http < 200 || $http >= 500) {
-                throw new RuntimeException('Comgate nevrátila platnou odpověď (HTTP ' . $http . ').');
-            }
-            return $decoded;
+            return self::decodeResponse($response, $http);
         } finally {
             curl_close($ch);
         }

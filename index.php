@@ -165,7 +165,7 @@ try {
         $comgateSettings = $checkoutConfig['comgate'] ?? [];
         if (is_array($comgateSettings) &&
             ($comgateSettings['merchant'] ?? '') !== '' && ($comgateSettings['secret'] ?? '') !== '') {
-            $candidate = new ComgatePaymentService($db, $comgateSettings);
+            $candidate = new ComgatePaymentService($db, $comgateSettings, null, $canEdit);
             if ($candidate->installed()) $comgate = $candidate;
         }
         $gopay = null;
