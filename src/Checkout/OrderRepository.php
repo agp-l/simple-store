@@ -601,9 +601,11 @@ final class OrderRepository
         ) !== 1) {
             throw new InvalidArgumentException('Nejdřív aktualizuj SQL tabulky, aby šlo ověřit platby u brány.');
         }
-        $attempts = $this->db->query('SELECT status FROM ' . $table .
+        $attempts = $this->db->query('SELECT status' . ($paymentMethod === 'comgate' ? ', test_mode' : '') . ' FROM ' . $table .
             ' WHERE order_id=%i FOR UPDATE', $id);
         foreach ($attempts as $attempt) {
+            // A simulated Comgate payment can never capture money or prevent test cleanup.
+            if ($paymentMethod === 'comgate' && (int) ($attempt['test_mode'] ?? 0) === 1) continue;
             if (!in_array($attempt['status'] ?? null, $terminalUnpaid, true)) {
                 throw new InvalidArgumentException('Platba u brány ještě může být aktivní. Nejdřív ověř aktuální stav všech transakcí v detailu objednávky.');
             }

@@ -23,7 +23,7 @@ $db = ConnectionFactory::create([
 ]);
 (new SchemaUpdater($db, dirname(__DIR__) . '/database/schema.sql'))->apply();
 $settings = [
-    'enabled' => true, 'test' => true, 'merchant' => 'test-merchant',
+    'enabled' => true, 'test' => false, 'merchant' => 'test-merchant',
     'secret' => 'test-only-secret', 'return_base_url' => 'https://shop.example.test/',
 ];
 $transId = 'CZ-TEST-' . strtoupper(bin2hex(random_bytes(6)));
@@ -41,7 +41,7 @@ $transport = static function (
     if ($method === 'GET') {
         return array_replace([
             'code' => 0, 'message' => 'OK', 'transId' => $transId,
-            'status' => $providerStatus, 'test' => true,
+            'status' => $providerStatus, 'test' => false,
             'price' => 107900, 'curr' => 'CZK',
             'refId' => (string) ($calls[0][2]['refId'] ?? ''),
         ], $responseOverride);
@@ -73,10 +73,10 @@ expectComgate($payments->receiptUrl($order, 'cs') ===
     'https://shop.example.test/cs/objednavka/' . $order['order_token'],
     'Confirmation mail cannot link to the canonical private order receipt.');
 
-$url = $payments->initiate($order);
+$url = $payments->initiate(array_replace($order, ['total_czk' => 1]));
 expectComgate($url === $redirect && count($calls) === 1 && $calls[0][0] === 'POST' &&
     $calls[0][3] === 'test-merchant' && $calls[0][4] === 'test-only-secret' &&
-    $calls[0][2]['test'] === true && $calls[0][2]['price'] === 107900 &&
+    $calls[0][2]['test'] === false && $calls[0][2]['price'] === 107900 &&
     !isset($calls[0][2]['phone']) &&
     $calls[0][2]['curr'] === 'CZK' && $calls[0][2]['refId'] === $order['order_number'],
     'Comgate request lost credentials, test flag or the order amount/reference.');
@@ -90,7 +90,7 @@ expectComgate($stored['provider_reference'] === $transId &&
 // A browser redirect or callback payload cannot declare a payment paid on its own.
 $notification = [
     'transId' => $transId, 'merchant' => $settings['merchant'], 'secret' => $settings['secret'],
-    'status' => 'PAID', 'test' => true, 'price' => 107900, 'curr' => 'CZK',
+    'status' => 'PAID', 'test' => false, 'price' => 107900, 'curr' => 'CZK',
     'refId' => $order['order_number'],
 ];
 $rejected = false;
@@ -112,7 +112,7 @@ expectComgate($orders->findById((int) $order['id'])['payment_status'] === 'pendi
 
 foreach ([
     ['price' => 107800], ['curr' => 'EUR'], ['refId' => 'OTHER-ORDER'],
-    ['test' => false], ['transId' => 'OTHER-TRANSACTION'],
+    ['test' => true], ['test' => []], ['price' => []], ['transId' => []], ['transId' => 'OTHER-TRANSACTION'],
 ] as $invalid) {
     $responseOverride = $invalid;
     $rejected = false;
@@ -124,7 +124,7 @@ foreach ([
     expectComgate($rejected && $orders->findById((int) $order['id'])['payment_status'] === 'pending',
         'Mismatched provider status was accepted as payment.');
 }
-$responseOverride = [];
+$responseOverride = ['test' => 'false', 'price' => '107900'];
 $providerStatus = 'PAID';
 $payments->notify($notification);
 expectComgate($orders->findById((int) $order['id'])['payment_status'] === 'paid',
@@ -183,7 +183,7 @@ $retryClient = new ComgateApiClient($settings['merchant'], $settings['secret'],
         }
         if ($method === 'GET') {
             return ['code' => 0, 'transId' => $retryIds[0], 'status' => 'CANCELLED',
-                'test' => true, 'price' => 107900, 'curr' => 'CZK',
+                'test' => false, 'price' => 107900, 'curr' => 'CZK',
                 'refId' => $cancelOrder['order_number']];
         }
         throw new RuntimeException('Unexpected retry transport method.');
@@ -211,7 +211,7 @@ $lateCancelClient = new ComgateApiClient($settings['merchant'], $settings['secre
         if ($method === 'POST') return ['code' => 0, 'transId' => $lateCancelId,
             'redirect' => 'https://payments.comgate.cz/payment/' . $lateCancelId];
         if ($method === 'GET') return ['code' => 0, 'transId' => $lateCancelId,
-            'status' => $lateCancelState, 'test' => true, 'price' => 107900,
+            'status' => $lateCancelState, 'test' => false, 'price' => 107900,
             'curr' => 'CZK', 'refId' => $lateCancelOrder['order_number']];
         throw new RuntimeException('Unexpected late-cancellation operation.');
     });
@@ -230,12 +230,12 @@ $orders->setFulfillmentStatus((int) $lateCancelOrder['id'], 'cancelled');
 $lateCancelState = 'PAID';
 $lateCancelPayments->notify([
     'transId' => $lateCancelId, 'merchant' => $settings['merchant'],
-    'secret' => $settings['secret'], 'test' => true,
+    'secret' => $settings['secret'], 'test' => false,
     'price' => 107900, 'curr' => 'CZK', 'refId' => $lateCancelOrder['order_number'],
 ]);
 $lateCancelPayments->notify([
     'transId' => $lateCancelId, 'merchant' => $settings['merchant'],
-    'secret' => $settings['secret'], 'test' => true,
+    'secret' => $settings['secret'], 'test' => false,
     'price' => 107900, 'curr' => 'CZK', 'refId' => $lateCancelOrder['order_number'],
 ]);
 $lateCancelled = $orders->findById((int) $lateCancelOrder['id']);
@@ -256,7 +256,7 @@ $deletedClient = new ComgateApiClient($settings['merchant'], $settings['secret']
         if ($method === 'POST') return ['code' => 0, 'transId' => $deletedTransId,
             'redirect' => 'https://payments.comgate.cz/payment/' . $deletedTransId];
         if ($method === 'GET') return ['code' => 0, 'transId' => $deletedTransId,
-            'status' => 'PAID', 'test' => true, 'price' => $latePrice,
+            'status' => 'PAID', 'test' => false, 'price' => $latePrice,
             'curr' => 'CZK', 'refId' => $deletedOrder['order_number']];
         throw new RuntimeException('Unexpected detached payment transport method.');
     });
@@ -267,7 +267,7 @@ $db->query('UPDATE shop_comgate_payments SET order_number=%s, total_czk=%i, orde
 $db->query('DELETE FROM shop_orders WHERE id=%i', $deletedOrder['id']);
 $deletedNotification = [
     'transId' => $deletedTransId, 'merchant' => $settings['merchant'],
-    'secret' => $settings['secret'], 'test' => true, 'price' => 107900,
+    'secret' => $settings['secret'], 'test' => false, 'price' => 107900,
     'curr' => 'CZK', 'refId' => $deletedOrder['order_number'],
 ];
 $latePrice = 107800;
@@ -290,5 +290,74 @@ expectComgate($orders->findById((int) $deletedOrder['id']) === null &&
         WHERE order_number=%s AND action=%s', $deletedOrder['order_number'],
         'provider_payment_after_delete') === 1,
     'A verified late Comgate payment was lost, duplicated or recreated the order.');
+
+// Sandbox is admin-only, and a simulated PAID callback must never settle a real order.
+$testSettings = array_replace($settings, ['test' => true]);
+$sandboxOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
+    bin2hex(random_bytes(32)), 'comgate');
+$sandboxId = 'CZ-SANDBOX-' . strtoupper(bin2hex(random_bytes(5)));
+$sandboxCalls = 0;
+$sandboxClient = new ComgateApiClient($settings['merchant'], $settings['secret'],
+    static function (string $method) use ($sandboxOrder, $sandboxId, &$sandboxCalls): array {
+        $sandboxCalls++;
+        if ($method === 'POST') return ['code' => 0, 'transId' => $sandboxId,
+            'redirect' => 'https://pay1.comgate.cz/init?id=' . $sandboxId];
+        return ['code' => 0, 'transId' => $sandboxId, 'status' => 'PAID', 'test' => 'true',
+            'price' => '107900', 'curr' => 'CZK', 'refId' => $sandboxOrder['order_number']];
+    });
+$publicSandbox = new ComgatePaymentService($db, $testSettings, $sandboxClient);
+$adminSandbox = new ComgatePaymentService($db, $testSettings, $sandboxClient, true);
+expectComgate(!$publicSandbox->canInitiate() && $adminSandbox->canInitiate(),
+    'Test gateway was offered to public customers or hidden from an administrator.');
+$blocked = false;
+try { $publicSandbox->initiate($sandboxOrder); }
+catch (RuntimeException $expected) { $blocked = true; }
+expectComgate($blocked && $sandboxCalls === 0, 'Public visitor created a sandbox payment.');
+$adminSandbox->initiate($sandboxOrder);
+$publicProduction = new ComgatePaymentService($db, $settings, $sandboxClient);
+$blocked = false;
+try { $publicProduction->initiate($sandboxOrder); }
+catch (RuntimeException $expected) { $blocked = true; }
+expectComgate($blocked && $sandboxCalls === 1, 'Mode change exposed an existing test redirect to a customer.');
+$sandboxNotification = ['transId' => $sandboxId, 'merchant' => $settings['merchant'],
+    'secret' => $settings['secret'], 'test' => 'true', 'price' => '107900', 'curr' => 'CZK',
+    'refId' => $sandboxOrder['order_number']];
+$publicProduction->notify($sandboxNotification); // Stored mode wins over the new configuration.
+$publicProduction->notify($sandboxNotification);
+$sandboxSaved = $orders->findById((int) $sandboxOrder['id']);
+expectComgate($sandboxSaved['payment_status'] === 'pending' && $sandboxSaved['payment_paid_at'] === null &&
+    $publicProduction->state((int) $sandboxOrder['id'])['status'] === 'paid' &&
+    (int) $db->queryFirstField('SELECT COUNT(*) FROM shop_order_financial_events WHERE order_id=%i',
+        $sandboxOrder['id']) === 0, 'Simulated payment was booked as real money.');
+$blocked = false;
+try { $orders->setFulfillmentStatus((int) $sandboxOrder['id'], 'shipped'); }
+catch (InvalidArgumentException $expected) { $blocked = true; }
+expectComgate($blocked, 'Sandbox settlement allowed dispatch of unpaid goods.');
+$orders->setFulfillmentStatus((int) $sandboxOrder['id'], 'cancelled');
+$publicProduction->notify($sandboxNotification);
+expectComgate($orders->findById((int) $sandboxOrder['id'])['status'] === 'cancelled' &&
+    $orders->findById((int) $sandboxOrder['id'])['payment_status'] === 'pending',
+    'A sandbox order could not be cleaned up safely.');
+
+// Only an explicit input rejection permits a retry; malformed/unknown results may have created a payment.
+foreach ([['code' => 1308], ['code' => 1500], ['code' => 1200], ['code' => false],
+    ['code' => 0, 'transId' => 'HOST-' . bin2hex(random_bytes(6)), 'redirect' => 'https://payments.comgate.cz.evil.test/pay']] as $result) {
+    $errorOrder = $orders->create(null, 'buyer@example.test', $items, $shipping, 79,
+        bin2hex(random_bytes(32)), 'comgate');
+    $errorCalls = 0;
+    $errorClient = new ComgateApiClient($settings['merchant'], $settings['secret'],
+        static function () use ($result, &$errorCalls): array { $errorCalls++; return $result; });
+    $errorPayments = new ComgatePaymentService($db, $settings, $errorClient);
+    for ($i = 0; $i < 2; $i++) {
+        $failed = false;
+        try { $errorPayments->initiate($errorOrder); }
+        catch (RuntimeException $expected) { $failed = true; }
+        expectComgate($failed, 'Rejected or malformed create response was accepted.');
+    }
+    $explicitRejection = $result['code'] === 1308;
+    expectComgate($errorCalls === ($explicitRejection ? 2 : 1) &&
+        $errorPayments->state((int) $errorOrder['id'])['status'] === ($explicitRejection ? 'rejected' : 'uncertain'),
+        'Create error classification caused a duplicate payment or blocked a safe retry.');
+}
 
 echo "Comgate payment database integration passed.\n";

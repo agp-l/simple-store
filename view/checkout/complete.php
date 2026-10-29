@@ -11,6 +11,7 @@ $comgateOrder = ($order['payment_method'] ?? '') === 'comgate';
 $gopayOrder = ($order['payment_method'] ?? '') === 'gopay';
 $btcpayOrder = ($order['payment_method'] ?? '') === 'btcpay';
 $comgateStatus = is_array($comgateState ?? null) ? (string) ($comgateState['status'] ?? '') : '';
+$comgateTest = $comgateOrder && (int) ($comgateState['test_mode'] ?? 0) === 1;
 $gopayStatus = is_array($gopayState ?? null) ? (string) ($gopayState['status'] ?? '') : '';
 $btcpayStatus = is_array($btcpayState ?? null) ? (string) ($btcpayState['status'] ?? '') : '';
 $gopayRefund = $gopayOrder && in_array($gopayStatus, ['refunded', 'partially_refunded'], true)
@@ -48,6 +49,8 @@ $onlineAvailable = $btcpayOrder ? ($btcpayAvailable ?? false) :
 $onlineAction = $btcpayOrder ? 'btcpay_pay' : ($gopayOrder ? 'gopay_pay' : 'comgate_pay');
 if ($testOrder) {
     $paymentMessage = 'je testovací. Nic neplaťte; nebyly vytvořeny platební údaje ani QR kód.';
+} elseif ($comgateTest) {
+    $paymentMessage = 'používá testovací Comgate. Nejde o skutečnou úhradu ani pokyn k odeslání zboží.';
 } elseif ($gopayRefund === 'refunded') {
     $paymentMessage = 'má u GoPay evidované úplné vrácení platby.';
 } elseif ($gopayRefund === 'partially_refunded') {
@@ -69,6 +72,16 @@ if ($testOrder) {
   <?php if (($paymentNotice ?? '') !== ''): ?><p class="checkout-alert" role="alert"><?= $checkoutEscape($paymentNotice) ?></p><?php endif; ?>
   <div class="checkout-columns<?= $paymentPaid ? ' checkout-columns-paid' : '' ?>">
     <?php if ($testOrder): ?><section class="checkout-panel"><h2>Jen pro testování</h2><p>Objednávku najdete v administraci mezi testovacími objednávkami. K placení ani expedici neslouží.</p><a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a></section>
+    <?php elseif ($comgateTest): ?>
+    <section class="checkout-panel" aria-labelledby="checkout-comgate-test-title">
+      <h2 id="checkout-comgate-test-title">Testovací platba Comgate</h2>
+      <p><?= $comgateStatus === 'paid' ? 'Simulované zaplacení bylo ověřeno přímo u Comgate.' : 'Test zatím nemá potvrzené simulované zaplacení.' ?> Peníze se nepřevádějí a objednávka zůstává bez skutečné úhrady.</p>
+      <?php if ($onlineAvailable && !$onlineUncertain && $comgateStatus !== 'paid' && !$orderCancelled): ?>
+      <form method="post" action="<?= $checkoutEscape($orderUrl) ?>"><input type="hidden" name="csrf" value="<?= $checkoutEscape($cartToken) ?>"><input type="hidden" name="action" value="comgate_pay"><button type="submit" class="checkout-primary">Pokračovat v testovací platbě</button></form>
+      <?php endif; ?>
+      <p>Po dokončení testu správce objednávku stornuje a uvolní rezervované zboží.</p>
+      <a class="checkout-back" href="<?= $checkoutEscape($siteRoot . $language) ?>#produkty">← Zpět do obchodu</a>
+    </section>
     <?php elseif ($gopayRefund !== ''): ?>
     <section class="checkout-panel" aria-labelledby="checkout-refund-title">
       <h2 id="checkout-refund-title"><?= $gopayRefund === 'refunded' ? 'Platba vrácena' : 'Částečné vrácení platby' ?></h2>

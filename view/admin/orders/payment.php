@@ -7,6 +7,14 @@
         <div><dt>Částka</dt><dd><strong><?= $orderMoney($order['total_czk'] ?? 0) ?></strong></dd></div>
         <?php if ($bankTransfer): ?><div><dt>Variabilní symbol</dt><dd><strong><?= $escape($order['variable_symbol'] ?? 'Neuveden') ?></strong></dd></div><?php endif; ?>
         <?php if ($onlineGateway && !empty($order['provider_reference'])): ?><div><dt><?= $btcpayPayment ? 'Faktura' : 'Transakce' ?> <?= $gatewayName ?></dt><dd><strong><?= $escape($order['provider_reference']) ?></strong></dd></div><?php endif; ?>
+        <?php if ($comgatePayment && $comgateState !== null): ?>
+          <div><dt>Stav u Comgate</dt><dd><?= $escape(match ($comgateState['status'] ?? '') {
+              'creating' => 'Zakládání platby', 'uncertain' => 'Nejistý výsledek – ověř v Comgate',
+              'pending' => 'Čeká na úhradu', 'authorized' => 'Pouze autorizovaná',
+              'paid' => 'Zaplaceno', 'cancelled' => 'Zrušená platba', 'rejected' => 'Založení odmítnuto',
+              default => (string) ($comgateState['status'] ?? ''),
+          }) ?><?= (int) ($comgateState['test_mode'] ?? 0) === 1 ? ' · TEST, bez skutečné úhrady' : '' ?></dd></div>
+        <?php endif; ?>
         <?php if ($goPayPayment && $goPayState !== null): ?>
           <div><dt>Stav u GoPay</dt><dd><?= $escape($goPayStatusLabel($goPayState['status'] ?? '')) ?><?= (int) ($goPayState['test_mode'] ?? 0) === 1 ? ' · testovací' : '' ?></dd></div>
           <?php if (empty($order['provider_reference']) && !empty($goPayState['payment_id'])): ?><div><dt>ID platby GoPay</dt><dd><?= $escape($goPayState['payment_id']) ?></dd></div><?php endif; ?>
@@ -32,6 +40,15 @@
           <div class="panel-order-head-actions"><a class="panel-icon-link panel-button" href="<?= \SimpleStore\Navigation\PanelUrl::escape($invoiceDetailUrl . '&print=1') ?>" target="_blank" rel="noopener noreferrer"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Zobrazit fakturu</a><a class="panel-icon-link panel-text-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($invoiceDetailUrl) ?>"><?= \SimpleStore\Rendering\Icon::render('eye') ?> Detail a odeslání</a></div>
         <?php else: ?><span>Dosud nevystavena</span><?php endif; ?>
       </div>
+      <?php if ($comgatePayment && (int) ($comgateState['test_mode'] ?? 0) === 1): ?>
+        <p class="panel-notice">Testovací platba Comgate neposílá peníze. Ani simulované zaplacení nepotvrdí skutečnou úhradu, nevystaví fakturu a nepovolí expedici. Po testu objednávku stornuj, aby se uvolnily rezervace zboží.</p>
+      <?php endif; ?>
+      <?php if ($comgatePayment && !empty($comgateState['last_error'])): ?>
+        <p class="panel-error" role="alert"><?= $escape($comgateState['last_error']) ?></p>
+      <?php endif; ?>
+      <?php if ($comgatePayment && in_array($comgateState['status'] ?? '', ['creating', 'uncertain'], true)): ?>
+        <p class="panel-help">Další pokus je zablokovaný, aby nedošlo ke dvojímu stržení. Vyhledej platbu v Comgate podle čísla objednávky a dořeš její stav s technickou podporou; nevytvářej další platbu naslepo.</p>
+      <?php endif; ?>
       <?php if ($goPayPayment && $goPayState !== null && in_array($goPayState['status'] ?? '', ['creating', 'uncertain'], true)): ?>
         <p class="panel-error" role="alert">Založení platby má nejasný výsledek. Neopakuj požadavek naslepo; nejprve vyhledej transakci v administraci GoPay podle čísla objednávky.</p>
       <?php endif; ?>
