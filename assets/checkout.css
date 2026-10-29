@@ -998,7 +998,3 @@
     gap: 3px;
   }
 }
-
-.checkout-partner-plan { overflow-wrap: anywhere; padding: 1rem; margin: 1rem 0; border: 1px solid #6dac68; border-radius: .65rem; background: #f2f8ed; color: #203826; }
-.checkout-partner-plan p { margin: .4rem 0; font-weight: 600; }
-.checkout-partner-plan small { line-height: 1.5; display: block; }
