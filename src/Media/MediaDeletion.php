@@ -17,8 +17,14 @@ final class MediaDeletion
         if ($files === []) return [];
         $used = $this->activeTokens($key);
         foreach ($files as &$file) {
+            if (!MediaPath::isManaged($file['path']) || dirname($file['path']) !== MediaPath::directory($type, $key)) {
+                $file['can_delete'] = false;
+                $file['delete_reason'] = 'Soubor patří do jiné nebo společné knihovny. Z produktu ho lze odebrat.';
+                continue;
+            }
             $token = self::token($type, $key, $file['path']);
             $file['can_delete'] = ($file['uses'] ?? []) === [] && !isset($used[$token]);
+            if (!$file['can_delete']) $file['delete_reason'] = 'Fotografie se stále používá v produktu, variantě, jiném obsahu nebo objednávce.';
             if (!$file['can_delete'] && ($file['uses'] ?? []) === []) $file['used_elsewhere'] = true;
         }
         unset($file);
@@ -30,7 +36,7 @@ final class MediaDeletion
         $token = self::token($type, $key, $path);
         if (isset($this->activeTokens($key)[$token])) {
             throw new InvalidArgumentException(
-                'Fotografie se používá v aktuálním produktu, jiném jazyce nebo dalším obsahu. Nejdřív ji odtud odeber.'
+                'Fotografie se používá v produktu, variantě, jiném jazyce, dalším obsahu nebo objednávce. Nejdřív ji odtud odeber.'
             );
         }
         $this->library->deleteManaged($type, $key, $path);
@@ -61,8 +67,10 @@ final class MediaDeletion
         );
         $variants = (new \SimpleStore\Product\ProductVariantRepository($this->db))->installed()
             ? $this->db->query('SELECT image_path FROM shop_product_variants WHERE image_path LIKE %s', $needle) : [];
+        $orders = (int)$this->db->queryFirstField('SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', 'shop_orders') === 1
+            ? $this->db->query('SELECT items_json FROM shop_orders WHERE items_json LIKE %s', $needle) : [];
         $tokens = [];
-        foreach (array_merge($products, $documents, $variants) as $row) {
+        foreach (array_merge($products, $documents, $variants, $orders) as $row) {
             foreach ($row as $value) {
                 if (!is_string($value)) continue;
                 preg_match_all('/--([a-f0-9]{24})(?:-(?:card|thumb))?\.(?:webp|jpg|png)/', $value, $matches);

@@ -19,3 +19,13 @@ Organizace knihovny je v chráněném `images/media/.library.json`; změny použ
 Ověření: `tests/content-cover.php`, `tests/media-catalog.php`, `tests/media-archive.php` (GD + ZIP), `tests/admin-media-browser.mjs` (Playwright). Integrační test ZIP je součástí obou databázových CI úloh; pro vlastní běh databázi nepotřebuje.
 
 Další ověření: `tests/media-browse.php`, `tests/media-owners-database.php` (MySQL/MariaDB), `tests/media-folders-browser.mjs`.
+
+## Odebrání a smazání fotografie produktu
+
+V editoru otevři **Hlavní obrázek** nebo **Přidat fotografii**. U přiřazeného snímku je **Odebrat z galerie** nebo **Odebrat hlavní fotografii**. Změna se ihned uloží jako nová revize, bez dalšího tlačítka Uložit. Po odebrání hlavní fotografie se hlavní stane další snímek galerie, případně výchozí zástupný obrázek. Výběr zahrnuje i používané obrázky ze společné knihovny a starších adresářů. Po zavření výběru se editor obnoví.
+
+**Smazat soubor** je samostatná nevratná akce s potvrzením; odstraní originál i miniatury. Je dostupná pouze u spravovaných souborů nahraných k danému obsahu, které nepoužívá žádná aktuální jazyková verze produktu, varianta (ani vypnutá), stránka, článek ani uložená objednávka. Starší revize a odkazy mimo obchod smazání neblokují a po smazání přestanou obrázek zobrazovat. Soubory z jiné či společné knihovny lze z produktu odebrat, ale tímto editorem je nelze fyzicky smazat.
+
+Přiřazení fotografie variantám a blokům popisu je samostatné. Karta jejich použití označí a vysvětlí, kde je změnit. Odebrání z galerie tato přiřazení nemaže; obrázek používaný variantou se proto může dál zobrazovat mezi fotografiemi produktu. Kontrola aktuální revize brání přepsání souběžné úpravy. Odebrání používá cestu snímku, takže řazení či odstranění duplicit neposune cíl dalšího kliknutí.
+
+Ověření odebrání a mazání: `tests/media-library.php`, `tests/media-deletion.php`, `tests/media-gallery-database.php` a `tests/media-gallery-browser.mjs`.

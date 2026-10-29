@@ -97,6 +97,12 @@ final class ProductInlineEditor
             $gallery = $form['gallery'] === '' ? [] : explode("\n", $form['gallery']);
             if ($operation === 'gallery.add') {
                 $gallery[] = $value;
+            } elseif ($operation === 'gallery.remove' && $value !== '') {
+                // Queued clicks can outlive the rendered indices after a previous removal.
+                if (!ProductDetails::imagePath($value) || !in_array($value, $gallery, true)) {
+                    throw new InvalidArgumentException('Fotografie už není v galerii. Obnov stránku.');
+                }
+                $gallery = array_values(array_filter($gallery, static fn(string $path): bool => $path !== $value));
             } else {
                 self::checkIndex($index, count($gallery));
                 if ($operation === 'gallery.set') {

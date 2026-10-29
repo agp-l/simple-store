@@ -3,9 +3,9 @@ declare(strict_types=1);
 
 class MeekroDB
 {
-    public function __construct(public array $products = [], public array $documents = []) {}
+    public function __construct(public array $products = [], public array $documents = [], public array $orders = []) {}
 
-    public function queryFirstField(string $sql, mixed ...$values): int { return 0; }
+    public function queryFirstField(string $sql, mixed ...$values): int { return $values === ['shop_orders'] ? 1 : 0; }
 
     public function query(string $sql, mixed ...$values): array
     {
@@ -15,6 +15,7 @@ class MeekroDB
             }
             return $this->products;
         }
+        if (str_contains($sql, 'FROM shop_orders')) return $this->orders;
         if (!str_contains($sql, 'active_document_key IS NOT NULL')) {
             throw new RuntimeException('Deletion must check only current documents.');
         }
@@ -68,6 +69,19 @@ try {
         $deletion->deleteUnused('product', $otherKey, $paths[2]);
         throw new RuntimeException('A different product deleted this image.');
     } catch (InvalidArgumentException $expected) {}
+    $db->orders = [['items_json'=>json_encode([['image_path'=>MediaPath::variant($paths[2], 'thumb')]], JSON_THROW_ON_ERROR)]];
+    try {
+        $deletion->deleteUnused('product', $key, $paths[2]);
+        throw new RuntimeException('Image referenced by an order was deleted.');
+    } catch (InvalidArgumentException $expected) {}
+    $db->orders = [];
+    $shared = $deletion->withDeletionState('product', $key, [
+        ['path'=>'images/legacy.webp', 'uses'=>['gallery']],
+        ['path'=>str_replace($key, $otherKey, $paths[2]), 'uses'=>[]],
+    ]);
+    if ($shared[0]['can_delete'] || $shared[1]['can_delete'] || empty($shared[0]['delete_reason'])) {
+        throw new RuntimeException('Foreign or legacy image was marked deletable.');
+    }
     $outside = $temp . '/outside';
     file_put_contents($outside, 'keep this file');
     $symlink = $directory . '/odkaz--' . str_repeat('d', 24) . '.webp';

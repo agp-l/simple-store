@@ -72,9 +72,37 @@ if ($method === 'POST') {
     }
 }
 if (($_GET['api'] ?? '') === 'library') {
-    $mediaListing = $mediaCatalog->listing($mediaFolder, $mediaSearch, $mediaOffset);
-    header('Content-Type: application/json; charset=utf-8'); header('Cache-Control: private, no-store');
-    echo json_encode($mediaListing, JSON_THROW_ON_ERROR); exit;
+    header('Content-Type: application/json; charset=utf-8');
+    header('Cache-Control: private, no-store');
+    try {
+        $mediaListing = $mediaCatalog->listing($mediaFolder, $mediaSearch, $mediaOffset);
+        // Standalone library requests have no current content identity.
+        if (isset($_GET['type'], $_GET['key'], $_GET['language'])) {
+            $type = $_GET['type']; $key = $_GET['key']; $language = $_GET['language'];
+            if (!is_string($type) || !in_array($type, ['product', 'page', 'post'], true) ||
+                !is_string($key) || preg_match('/^[a-f0-9]{32}$/D', $key) !== 1 ||
+                !is_string($language) || !in_array($language, $site['languages'], true)) {
+                throw new InvalidArgumentException('Neplatný obsah pro výběr fotografií.');
+            }
+            $current = $type === 'product'
+                ? (new \SimpleStore\Product\ProductRepository($db, $site['languages']))->current($key, $language)
+                : $content->currentDocument($key, $language);
+            if ($current === null || ($type !== 'product' && $current['type'] !== $type)) {
+                throw new InvalidArgumentException('Obsah už neexistuje.');
+            }
+            if ($type === 'product') $current['variant_inventory'] = (new \SimpleStore\Product\ProductVariantRepository($db))->snapshot($key);
+            $deletion = new \SimpleStore\Media\MediaDeletion($db, new \SimpleStore\Media\MediaLibrary(__DIR__ . '/../..'));
+            $mediaListing['files'] = $deletion->withDeletionState($type, $key,
+                \SimpleStore\Media\MediaAttachment::withUsage($current, $type, $mediaListing['files']));
+        }
+        echo json_encode($mediaListing, JSON_THROW_ON_ERROR);
+    } catch (Throwable $error) {
+        error_log((string) $error);
+        http_response_code($error instanceof InvalidArgumentException ? 422 : 500);
+        echo json_encode(['error' => $error instanceof InvalidArgumentException
+            ? $error->getMessage() : 'Fotografie se nepodařilo načíst.'], JSON_THROW_ON_ERROR);
+    }
+    exit;
 }
 $mediaState = $mediaCatalog->state();
 $mediaAllFiles = $mediaCatalog->files($mediaState);

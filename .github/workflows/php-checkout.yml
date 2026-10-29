@@ -237,6 +237,7 @@ jobs:
           php tests/product-sales-mass-database.php
           php tests/media-archive.php
           php tests/media-owners-database.php
+          php tests/media-gallery-database.php
           php tests/product-zip-database.php
           php tests/product-bulk-database.php
           php tests/product-mass-database.php
@@ -311,6 +312,7 @@ jobs:
           php tests/product-sales-mass-database.php
           php tests/media-archive.php
           php tests/media-owners-database.php
+          php tests/media-gallery-database.php
           php tests/product-zip-database.php
           php tests/product-bulk-database.php
           php tests/product-mass-database.php
@@ -370,6 +372,7 @@ jobs:
           node --test tests/admin-structure-browser.mjs
           node --test tests/admin-media-browser.mjs
           node --test tests/media-folders-browser.mjs
+          node --test tests/media-gallery-browser.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -394,6 +397,7 @@ jobs:
             /tmp/admin-structure-screenshots/
             /tmp/admin-media-screenshots/
             /tmp/media-folders-screenshots/
+            /tmp/media-gallery-screenshots/
           retention-days: 7
 
   private-routes-apache:

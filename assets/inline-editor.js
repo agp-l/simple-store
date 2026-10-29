@@ -241,7 +241,7 @@
     }
     if (action.endsWith('-remove')) {
       if (confirm('Odebrat položku? Předchozí verze zůstane v historii.')) {
-        save(action.replace('-', '.'), '', '', index);
+        save(action.replace('-', '.'), '', action === 'gallery-remove' ? (button.dataset.editorValue || '') : '', index);
       }
       return;
     }

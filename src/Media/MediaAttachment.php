@@ -103,6 +103,21 @@ final class MediaAttachment
         return $form;
     }
 
+    /** Remove display references by stable path, never by a deduplicated thumbnail index. */
+    public static function detachProduct(array $current, string $path): array
+    {
+        if (!ProductDetails::imagePath($path)) throw new InvalidArgumentException('Vyber fotografii produktu.');
+        $path = self::originalPath($path);
+        $form = ProductInlineEditor::fromRevision($current);
+        $gallery = $form['gallery'] === '' ? [] : explode("\n", $form['gallery']);
+        $remaining = array_values(array_filter($gallery, static fn(string $value): bool => self::originalPath($value) !== $path));
+        $main = self::originalPath($form['image_path']) === $path;
+        if (!$main && $remaining === $gallery) throw new InvalidArgumentException('Fotografie už není v galerii ani jako hlavní. Obnov výběr.');
+        if ($main) $form['image_path'] = array_shift($remaining) ?? 'images/product-placeholder.png';
+        $form['gallery'] = implode("\n", $remaining);
+        return $form;
+    }
+
     public static function document(array $current, array $paths,
         string $mode = 'section-add-image', ?int $index = null): array
     {
@@ -130,13 +145,16 @@ final class MediaAttachment
     }
 
     /** Merge physical files with references in the current revision, without altering stored assets. */
-    public static function withUsage(array $current, string $type, array $files): array
+    public static function withUsage(array $current, string $type, array $files, bool $includeReferenced = false): array
     {
         $roles = [];
         if ($type === 'product') {
             $roles[self::originalPath($current['image_path'])]['main'] = true;
             $details = ProductDetails::decode($current['details_json'] ?? null, $current['sizes'] ?? '');
             foreach ($details['gallery'] as $path) $roles[self::originalPath($path)]['gallery'] = true;
+            foreach ($current['variant_inventory']['items'] ?? [] as $variant) {
+                if (($variant['image_path'] ?? '') !== '') $roles[self::originalPath($variant['image_path'])]['variant'] = true;
+            }
             $sections = $details['sections'];
         } else {
             $roles[self::originalPath(\SimpleStore\Content\ContentBody::cover($current['body']))]['cover'] = true;
@@ -145,6 +163,14 @@ final class MediaAttachment
         foreach ($sections as $section) {
             if ($section['type'] === 'image') $roles[self::originalPath($section['body'])]['section'] = true;
         }
+        if ($includeReferenced) {
+            $known = array_fill_keys(array_column($files, 'path'), true);
+            foreach ($roles as $path => $uses) {
+                if (isset($known[$path]) || !ProductDetails::imagePath($path) || in_array($path, ['images/batoh.webp','images/product-placeholder.png'], true)) continue;
+                $files[] = ['path'=>$path, 'card'=>MediaPath::variant($path,'card'),
+                    'thumb'=>MediaPath::variant($path,'thumb'), 'label'=>MediaPath::label($path), 'referenced'=>true];
+            }
+        }
         foreach ($files as &$file) {
             $file['uses'] = array_keys($roles[$file['path']] ?? []);
         }
@@ -152,7 +178,7 @@ final class MediaAttachment
         return $files;
     }
 
-    private static function originalPath(string $path): string
+    public static function originalPath(string $path): string
     {
         return MediaPath::isAsset($path) && !MediaPath::isManaged($path)
             ? (string) preg_replace('/-(?:card|thumb)(\.(?:webp|jpg|png))$/D', '$1', $path)

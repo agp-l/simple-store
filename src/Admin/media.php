@@ -46,9 +46,10 @@ if ($requestedType !== null || $requestedKey !== null || $requestedLanguage !== 
                     rawurlencode($current['slug']) . '?edit=1',
             ];
             $library = new MediaLibrary(__DIR__ . '/../..');
+            if ($requestedType === 'product') $current['variant_inventory'] = (new \SimpleStore\Product\ProductVariantRepository($db))->snapshot($requestedKey);
             $mediaFiles = (new MediaDeletion($db, $library))->withDeletionState($requestedType, $requestedKey,
                 MediaAttachment::withUsage($current, $requestedType,
-                    $library->files($requestedType, $requestedKey)));
+                    $library->files($requestedType, $requestedKey), true));
         }
     }
 }
