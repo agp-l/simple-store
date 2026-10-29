@@ -18,6 +18,8 @@ test('seller website, portable JSON preview and responsive directory',async()=>{
       page.on('pageerror',e=>errors.push(e.message));await page.route('https://**/*',r=>r.abort());
       await page.goto(url(files[0]));
       assert.equal(await page.getByLabel('Web prodávajícího',{exact:false}).inputValue(),'https://www.pod7kilo.cz/');
+      assert.equal(await page.getByLabel('Poštovné v Kč',{exact:false}).inputValue(),'79');
+      assert.equal(await page.getByLabel('Doprava zdarma od nákupní částky v Kč',{exact:false}).inputValue(),'2000');
       assert.equal(await page.locator('.partner-website').count(),3);
       assert.match(await page.getByRole('link',{name:'Exportovat prodávající do JSON'}).getAttribute('href'),/backup=export/);
       assert.equal(await page.locator('#partner-form > form').getAttribute('method'),'post');

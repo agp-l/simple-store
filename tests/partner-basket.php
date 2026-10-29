@@ -16,6 +16,10 @@ $r=Optimizer::choose($groups,$rates);$check($r['choices']===['x'=>'a','y'=>'b'],
 $rates['a']=['shipping'=>350,'free_from'=>400];
 $r=Optimizer::choose($groups,$rates);$check($r['choices']===['x'=>'a','y'=>'a'],'Free delivery threshold ignored.');
 $limited=Optimizer::choose($groups,$rates,1);$check(!$limited['complete'] && count($limited['choices'])===2,'Bounded search lost complete solution.');
+$fractional=['x'=>['quantity'=>2,'primary'=>'a','offers'=>[
+ 'a'=>['cost'=>100,'cost_minor'=>9901], 'b'=>['cost'=>110,'cost_minor'=>11000]]]];
+$r=Optimizer::choose($fractional,['a'=>['shipping'=>100,'free_from'=>200],'b'=>['shipping'=>0,'free_from'=>null]]);
+$check($r['choices']['x']==='b','Rounded purchase price incorrectly triggered free delivery.');
 // Independent exhaustive oracle for random small baskets (shipping thresholds make greedy selection incorrect).
 mt_srand(71);
 for ($case=0;$case<80;$case++) {

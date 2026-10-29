@@ -58,7 +58,17 @@ final class CartPartnerSelection
         }
         unset($group);
         $result=PartnerBasketOptimizer::choose($groups,$rates);
-        $selected=[];
+        $selected=[]; $purchaseTotals=[]; $retail=0;
+        foreach ($result['choices'] as $key=>$partner) {
+            $group=$groups[$key];
+            $purchaseTotals[$partner]=($purchaseTotals[$partner]??0)+($group['offers'][$partner]['cost_minor']??$group['offers'][$partner]['cost']*100)*$group['quantity'];
+            $retail+=$group['price']*100*$group['quantity'];
+        }
+        if ($result['priced']) {
+            $total=array_sum($purchaseTotals);
+            foreach ($purchaseTotals as $partner=>$amount) if ($rates[$partner]['free_from']===null || $amount<$rates[$partner]['free_from']*100) $total+=$rates[$partner]['shipping']*100;
+            if ($total>$retail) throw new InvalidArgumentException('Pro tento košík nyní nedokážeme zajistit partnerský nákup za uvedenou cenu. Uprav košík nebo nás kontaktuj.');
+        }
         foreach ($result['choices'] as $key=>$partner) {
             $group=$groups[$key]; $offer=$group['offers'][$partner];
             $seller=array_intersect_key($byKey[$partner],PurchasePartnerRepository::FIELDS);
@@ -86,8 +96,8 @@ final class CartPartnerSelection
             $cost=(int)ceil((float)$amount);
             usort($rows,static fn(array $a,array $b):int=>[$a['source_url'],$a['resolved_url']]<=>[$b['source_url'],$b['resolved_url']]);
             $row=$rows[0];
-            $result[$partner]=['cost'=>$cost,'priority'=>(int)($partners[$partner]['priority']??100),
-                'source'=>['url'=>$row['resolved_url']?:$row['source_url'],'source_url'=>$row['source_url'],'observed_at'=>$row['observed_at']]];
+            $result[$partner]=['cost'=>$cost,'cost_minor'=>(int)round((float)$amount*100),'priority'=>(int)($partners[$partner]['priority']??100),
+                'source'=>['url'=>$row['resolved_url']?:$row['source_url'],'source_url'=>$row['source_url'],'observed_at'=>$row['observed_at'],'amount_minor'=>(int)round((float)$amount*100)]];
         }
         return $result;
     }

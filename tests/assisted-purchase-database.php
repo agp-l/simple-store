@@ -75,6 +75,7 @@ try {
     $stock->reopen((int)$order['id']);
     $check((int)$db->queryFirstField('SELECT available_quantity FROM shop_product_inventory WHERE product_key=%s',$key)===10,'Legacy assisted reopening drained partner limit.');
     $db->rollback();
+    $check(($order['items'][0]['procurement'] ?? null) === ($summary['items'][0]['procurement'] ?? null), 'Reviewed procurement snapshot was not persisted.');
     $check($order['items'][0]['delivery_note']===A::DELIVERY_POLICY, 'Common delivery mandate was not frozen in the order.');
     $check((int)$order['total_czk']===3879&&$order['items'][0]['assistance_fee_czk']===122,'Order snapshot differs from approval.');
     $check($orders->create(null,'buyer@example.test',$summary['items'],$shipping,79,$requestKey)['id']===$order['id'],'Duplicate contract created.');

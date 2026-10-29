@@ -59,6 +59,8 @@ final class PurchasePartnerRepository
             if ($usage[$id] !== []) {
                 throw new InvalidArgumentException('Prodávající je stále použitý u ' . count($usage[$id]) . ' produktů. Nejprve změň jejich prodávajícího a odeber jeho partnerské odkazy.');
             }
+            $costs = new PartnerDeliveryCosts($this->db);
+            if ($costs->installed()) $costs->save($partner['partner_key'], null);
             $this->db->query('DELETE FROM shop_purchase_partners WHERE id=%i AND version=%i', $id, $version);
             $this->db->commit();
         } catch (\Throwable $error) { $this->db->rollback(); throw $error; }

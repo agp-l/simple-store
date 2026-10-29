@@ -29,4 +29,4 @@ První tlačítko zařazení zapne denní kontrolu všech nabídek; další běh
 
 Produkty se počítají jednou bez ohledu na počet velikostí a jazyků. Samostatně se vykazují aktivní varianty, čerstvě ověřené produkty, kompletní pokrytí všech variant a produkty s alespoň jednou dostupnou variantou. Poslední kus se nepovažuje za nabízený. Rozporné nabídky stejného partnera a varianty se nepočítají mezi použitelné. Po 24 hodinách ověření vyprší. Překryv podle odkazů neznamená záruku splnitelnosti konkrétního košíku.
 
-Tento katalog je podklad pro budoucí výběr dodavatele na úrovni objednávky; sám ještě neoptimalizuje košík ani nemění přijaté objednávky.
+Katalog nyní používá [výběr partnerů celého košíku](basket-partners.md). Samotná kontrola nabídek dál nemění výchozího partnera produktu ani přijaté objednávky.

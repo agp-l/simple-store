@@ -58,6 +58,9 @@ try {
  $selected=$summary['items'][0];$link=$db->queryFirstField('SELECT id FROM shop_product_supplier_links WHERE product_key=%s AND url=%s',$selected['product_key'],$selected['procurement']['source']['source_url']);
  (new ProductSupplierLinkRepository($db))->remove($selected['product_key'],(int)$link);
  $reject(fn()=>$selection->validate($summary['items']));
+ $costs->save($ps['a']['partner_key'],['shipping_czk'=>99999,'free_from_czk'=>null]);
+ $costs->save($ps['b']['partner_key'],['shipping_czk'=>99999,'free_from_czk'=>null]);
+ $check(!$service->summary($cart)['can_continue'],'Known freight loss accepted.');
  $cart->clear();
  echo "Basket SQL integration: exact evidence, cart consolidation, freight, quantity, expiry, removed links, review revalidation and stock passed.\n";
 } finally {$db->disconnect();$admin->query('DROP DATABASE %b',$database);$admin->disconnect();}

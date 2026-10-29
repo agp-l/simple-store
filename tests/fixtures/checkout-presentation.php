@@ -44,6 +44,6 @@ if ($page === 'account') {
         'checkoutReady'=>true,'bankConfigured'=>true,'paymentMethod'=>'bank_transfer','paymentStepReady'=>true,
         'termsUrl'=>'/cs/obchodni-podminky','assistedTermsUrl'=>'/cs/obchodni-podminky-asistovaneho-nakupu',
         'hasAssisted'=>true,'hasOwnSale'=>true,'reviewToken'=>'test-review','order'=>$order,'priceDisplay'=>$priceDisplay,
-        'checkout'=>['items'=>$items,'count'=>4,'subtotal_czk'=>3805,'issues'=>[],'can_continue'=>true],
+        'checkout'=>['partner_plan'=>['partners'=>['Gramino s.r.o.']], 'items'=>$items,'count'=>4,'subtotal_czk'=>3805,'issues'=>[],'can_continue'=>true],
     ]);
 }

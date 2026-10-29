@@ -2,7 +2,7 @@
 declare(strict_types=1);
 namespace SimpleStore\Checkout;
 
-/** Pure, bounded facility assignment. All money is integer CZK; freight is paid once per seller. */
+/** Pure, bounded facility assignment. Search uses integer haléře; freight is paid once per seller. */
 final class PartnerBasketOptimizer
 {
     public static function choose(array $groups, array $rates, int $budget = 100000): array
@@ -18,13 +18,13 @@ final class PartnerBasketOptimizer
             $totals=[]; $priority=0;
             foreach ($choices as $key=>$partner) {
                 $offer=$groups[$key]['offers'][$partner];
-                $totals[$partner]=($totals[$partner]??0)+$offer['cost']*$groups[$key]['quantity'];
+                $totals[$partner]=($totals[$partner]??0)+($offer['cost_minor']??$offer['cost']*100)*$groups[$key]['quantity'];
                 $priority+=(int)($offer['priority']??100);
             }
             $cost=array_sum($totals);
             if ($priced) foreach ($totals as $partner=>$total) {
                 $rate=$rates[$partner];
-                if ($rate['free_from']===null || $total<$rate['free_from']) $cost+=$rate['shipping'];
+                if ($rate['free_from']===null || $total<$rate['free_from']*100) $cost+=$rate['shipping']*100;
             }
             ksort($choices);
             return [$priced?$cost:count($totals),$priced?count($totals):$cost,$priority,json_encode($choices)];
@@ -56,7 +56,7 @@ final class PartnerBasketOptimizer
             $offers=$group['offers'];
             uksort($offers,static fn(string $a,string $b):int=>[isset($used[$a])?0:1,$offers[$a]['cost'],$a]<=>[isset($used[$b])?0:1,$offers[$b]['cost'],$b]);
             foreach ($offers as $partner=>$offer) {
-                $search($index+1,$choices+[$key=>$partner],$used+[$partner=>true],$purchase+$offer['cost']*$group['quantity']);
+                $search($index+1,$choices+[$key=>$partner],$used+[$partner=>true],$purchase+($offer['cost_minor']??$offer['cost']*100)*$group['quantity']);
                 if (!$complete) return;
             }
         };
