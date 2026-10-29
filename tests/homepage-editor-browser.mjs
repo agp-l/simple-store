@@ -61,7 +61,7 @@ test('homepage order buttons on desktop, mobile and without JavaScript', async (
     let submitted;
     await fallback.route('**/admin/', async route => {
       submitted = new URLSearchParams(route.request().postData());
-      await route.fulfill({contentType: 'text/html', body: '<p>Pořadí přijato</p>'});
+      await route.fulfill({contentType: 'text/html; charset=utf-8', body: '<p>Pořadí přijato</p>'});
     });
     await fallback.goto(url);
     await fallback.getByRole('button', {name: 'Posunout nahoru: Lehký spacák do hor', exact: true}).click();
