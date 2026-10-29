@@ -520,6 +520,7 @@ ob_start();
 require dirname(__DIR__) . '/view/admin/layout.php';
 $html = ob_get_clean();
 if (!str_contains($html, 'value="save-site-copy"') ||
+    !str_contains($html, 'id="partner-stock-text"') || !str_contains($html, 'name="partner_in_stock"') ||
     !str_contains($html, 'name="hero_title"') || !str_contains($html, 'name="footer_intro"') ||
     !str_contains($html, 'name="csrf" value="test-token"')) {
     throw new RuntimeException('Storefront copy must be editable from the protected settings page.');

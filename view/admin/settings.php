@@ -106,6 +106,7 @@ $btcpayWebhookSecretConfigured ??= false;
 <?php if ($settingsTab === 'prices'): ?>
   <section class="panel-panel panel-settings-block" id="settings-prices">
   <h2>Zobrazení cen</h2>
+  <p class="panel-help">Znění „Skladem u partnera“ můžeš změnit v <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=appearance#partner-stock-text') ?>">Textech webu → Dostupnost u partnera</a>.</p>
   <label class="panel-check"><input type="checkbox" name="btc_prices_enabled" value="1" <?= $form['btc_prices_enabled'] === '1' ? 'checked' : '' ?>> Ukazovat orientační cenu v BTC pod cenou v Kč</label>
   <p class="panel-help">Přepočet používá kurz CoinGecko uložený na 15 minut. Objednávky se dál účtují v Kč; skutečnou částku k platbě bitcoinem určí BTCPay při vytvoření platby. Když kurz není dostupný, zobrazí se jen cena v Kč. Vyžaduje aktualizovanou databázi.</p>
   </section>

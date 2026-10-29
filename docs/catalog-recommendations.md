@@ -18,9 +18,13 @@ Equal prices/names/weights use product identity as a deterministic tie-breaker.
 Administrators can add/remove the current product from the homepage or any of
 its ancestor categories in the product panel. Drag recommendation handles in the
 category's “Náš tip” panel, or in the existing homepage editor, to save their
-order. Alt + Up/Down is the keyboard alternative. Reorders require administrator
+order. The homepage also has numbered photo rows and visible Up/Down buttons;
+they save immediately and work as ordinary POST forms if JavaScript is unavailable.
+Open the editor from “Upravit výběr a pořadí vybavení” beside the homepage heading,
+the admin toolbar or Settings → Products. Alt + Up/Down is the keyboard alternative. Reorders require administrator
 login, CSRF, the exact current membership and the previously displayed order;
-stale saves are rejected. Failed requests restore the last acknowledged order.
+stale asynchronous saves are rejected. Failed requests restore the last acknowledged order,
+including position numbers. Concurrent movement/removal is blocked while saving.
 After changing category recommendation order, random catalog views reload from
 the first page so loaded cards and pagination remain consistent. Explicitly sorted
 catalogs stay in their chosen order. Homepage previews can reorder in place.

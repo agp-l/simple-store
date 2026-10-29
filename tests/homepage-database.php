@@ -34,6 +34,19 @@ if ($homepage->keys('cs') !== [$keys[1], $keys[0]] || $homepage->keys('en') !== 
     throw new RuntimeException('Homepage selection lost order, duplicated an item or crossed languages.');
 }
 try {
+    $homepage->reorder('cs', [$keys[0], $keys[1]], [$keys[1], $keys[0]]);
+    $reloaded = new HomepageProductSelection($db, ['cs', 'en']);
+    if ($reloaded->keys('cs') !== [$keys[0], $keys[1]] ||
+        array_column($reloaded->products('cs', $reloaded->keys('cs')), 'product_key') !== [$keys[0], $keys[1]]) {
+        throw new RuntimeException('Saved homepage order must survive reload and control the public catalog.');
+    }
+    $homepage->reorder('cs', [$keys[1], $keys[0]], [$keys[1], $keys[0]]);
+    throw new RuntimeException('A stale homepage reorder overwrote the current order.');
+} catch (InvalidArgumentException $expected) {
+    if (!str_contains($expected->getMessage(), 'mezitím')) throw $expected;
+}
+if ($homepage->keys('cs') !== [$keys[0], $keys[1]]) throw new RuntimeException('Rejected reorder changed saved data.');
+try {
     $homepage->change('cs', 'add', $keys[2]);
     throw new RuntimeException('A draft was added to the homepage.');
 } catch (InvalidArgumentException $expected) {

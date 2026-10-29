@@ -10,14 +10,26 @@
     const announce = (message, error = false) => {
       if (status) { status.textContent = message; status.classList.toggle('is-error', error); }
     };
+    const refreshPositions = () => {
+      [...list.children].forEach((item, index) => {
+        const position = item.querySelector('[data-selection-position]');
+        if (position) position.textContent = String(index + 1);
+        item.querySelectorAll('[data-selection-move]').forEach((button) => {
+          const edge = button.dataset.selectionMove === 'up' ? index === 0 : index === list.children.length - 1;
+          button.setAttribute('aria-disabled', String(busy || edge));
+        });
+      });
+    };
     const restore = () => {
       const items = new Map([...list.children].map((item) => [item.dataset.key, item]));
       saved.forEach((key) => list.append(items.get(key)));
+      refreshPositions();
     };
     async function save() {
       const order = keys();
       if (busy || JSON.stringify(order) === JSON.stringify(saved)) return;
       busy = true; list.setAttribute('aria-busy', 'true'); announce('Ukládám pořadí…');
+      refreshPositions();
       try {
         const body = new URLSearchParams({action: 'product-selection-order', csrf: list.dataset.csrf,
           language: list.dataset.language, scope: list.dataset.scope,
@@ -41,9 +53,22 @@
         }
       } catch (error) {
         restore(); announce(error instanceof SyntaxError ? 'Server změnu nepotvrdil. Obnov stránku a zkontroluj přihlášení.' : error.message, true);
-      } finally { busy = false; list.removeAttribute('aria-busy'); }
+      } finally { busy = false; list.removeAttribute('aria-busy'); refreshPositions(); }
+    }
+    function move(item, direction) {
+      if (busy || dragged) return;
+      if (direction === 'up' && item.previousElementSibling) list.insertBefore(item, item.previousElementSibling);
+      if (direction === 'down' && item.nextElementSibling) list.insertBefore(item.nextElementSibling, item);
+      refreshPositions(); save();
     }
     [...list.children].forEach((item) => {
+      item.querySelectorAll('[data-selection-move]').forEach((button) => {
+        button.addEventListener('click', (event) => {
+          event.preventDefault();
+          move(item, button.dataset.selectionMove);
+          button.focus();
+        });
+      });
       const handle = item.querySelector('.selection-drag');
       if (!handle) return;
       handle.addEventListener('pointerdown', (event) => {
@@ -54,12 +79,16 @@
         list.setPointerCapture(pointer); handle.focus(); item.classList.add('is-dragging');
       });
       handle.addEventListener('keydown', (event) => {
-        if (busy || !event.altKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+        if (!event.altKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
         event.preventDefault();
-        if (event.key === 'ArrowUp' && item.previousElementSibling) list.insertBefore(item, item.previousElementSibling);
-        if (event.key === 'ArrowDown' && item.nextElementSibling) list.insertBefore(item.nextElementSibling, item);
-        handle.focus(); save();
+        move(item, event.key === 'ArrowUp' ? 'up' : 'down');
+        handle.focus();
       });
+    });
+    refreshPositions();
+    list.addEventListener('submit', (event) => {
+      // Removing a row during an outstanding reorder would leave the preview stale.
+      if (busy || dragged) event.preventDefault();
     });
     list.addEventListener('pointermove', (event) => {
       if (pointer !== event.pointerId || !dragged) return;
@@ -67,6 +96,7 @@
       if (!target || target === dragged || target.parentElement !== list) return;
       const rect = target.getBoundingClientRect();
       list.insertBefore(dragged, event.clientY < rect.top + rect.height / 2 ? target : target.nextSibling);
+      refreshPositions();
     });
     list.addEventListener('pointerup', (event) => {
       if (pointer !== event.pointerId || !dragged) return;
