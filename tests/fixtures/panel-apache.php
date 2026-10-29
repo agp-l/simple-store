@@ -21,6 +21,10 @@ $auth = new ApachePanelAuth($area, $base);
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!$auth->validToken($_POST['csrf'] ?? null)) { http_response_code(403); exit('csrf'); }
     if (($_POST['action'] ?? '') === 'login') {
+        try {
+            \SimpleStore\Auth\LoginThrottle::guard($area === 'admin' ? 'admin' : 'customer',
+                (string) ($_POST['email'] ?? ''), new \SimpleStore\Auth\LoginThrottle('/tmp/login-' . hash('sha256', $base) . '.json'));
+        } catch (InvalidArgumentException $error) { exit($error->getMessage()); }
         if (!$auth->signIn((string) ($_POST['email'] ?? ''), (string) ($_POST['password'] ?? ''))) { http_response_code(403); exit('login'); }
         header('Location: ' . PanelUrl::path($base,$area),true,303); exit;
     }

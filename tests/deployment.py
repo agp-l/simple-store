@@ -41,6 +41,8 @@ with tempfile.TemporaryDirectory() as directory:
         "config/installation.example.json": json.dumps({"public_base_url": "https://shop.example.test"}),
         "config/installation.json": json.dumps({"public_base_url": "https://private.example.test"}),
         "config/database.php": "<?php return ['password' => 'private'];",
+        "config/.login-throttle.json": '{"private-attempt-state":true}',
+        "config/.login-throttle.json.lock": "",
         "database/schema.sql": "CREATE DATABASE test;",
         "tools/fio-worker.php": "<?php echo 'worker';",
         "database/zaloha.sql": "private database dump",
@@ -71,6 +73,8 @@ with tempfile.TemporaryDirectory() as directory:
     assert "config/installation.example.json" in manifest["files"]
     assert "config/installation.json" not in manifest["files"]
     assert "config/database.php" not in manifest["files"]
+    assert "config/.login-throttle.json" not in manifest["files"]
+    assert "config/.login-throttle.json.lock" not in manifest["files"]
     assert "database/zaloha.sql" not in manifest["files"]
     assert "images/media/photo.jpg" not in manifest["files"]
     assert not (package / "config/database.php").exists()
