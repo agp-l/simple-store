@@ -10,6 +10,7 @@
   const pageStatus = document.querySelector('[data-media-status]');
   let mode = pageSettings?.defaultMode || (pageSettings?.type === 'product' ? 'main-image' : 'section-add-image');
   let index = null;
+  let targetPath = '';
   let busy = false;
   let libraryOffset = 0;
   let loadSequence = 0;
@@ -95,13 +96,13 @@
         config.revision = result.revision;
         if (config.reloadAfterUpload) { location.reload(); return; }
         const mainLink = document.querySelector('[data-media-main]');
-        if (mainLink && result.paths?.[0]) {
-          mainLink.href = absolute(result.paths[0]);
-          mainLink.textContent = result.paths[0];
+        if (mainLink && (result.image_path || result.paths?.[0])) {
+          mainLink.href = absolute(result.image_path || result.paths[0]);
+          mainLink.textContent = result.image_path || result.paths[0];
         }
         if (pageStatus) pageStatus.textContent =
-          `${action === 'media-upload' ? 'Nahráno' : 'Vloženo'} · revize ${config.revision}`;
-        load();
+          `${action === 'media-detach' ? 'Odebráno' : action === 'media-upload' ? 'Nahráno' : 'Vloženo'} · revize ${config.revision}`;
+        if (action !== 'media-detach') load();
       }
     };
     document.querySelector('[data-media-open]').addEventListener('click', () => open(mode));
@@ -138,41 +139,18 @@
       title.textContent = file.label.replaceAll('-', ' ');
       const uses = document.createElement('span');
       uses.className = 'media-item-usage';
-      const roleLabels = {main: 'Hlavní fotografie', gallery: 'V galerii', section: 'V bloku', cover: 'Náhled článku'};
+      const roleLabels = {main: 'Hlavní fotografie', gallery: 'V galerii', variant: 'U varianty', section: 'V bloku', cover: 'Náhled článku'};
       uses.textContent = file.uses?.length
         ? file.uses.map(role => roleLabels[role] || role).join(' · ')
         : file.group ? 'Ze společné knihovny' : file.used_elsewhere ? 'Použitá v jiné aktuální verzi' : 'V aktuální verzi nepoužitá';
       const usageLine = document.createElement('div');
       usageLine.className = 'media-item-status';
       usageLine.append(uses);
-      if (file.can_delete) {
-        const remove = document.createElement('button');
-        remove.type = 'button';
-        remove.className = 'media-item-delete';
-        remove.textContent = '×';
-        remove.title = 'Smazat fotografii z disku';
-        remove.setAttribute('aria-label', `Smazat fotografii ${file.label.replaceAll('-', ' ')} z disku`);
-        remove.addEventListener('click', async () => {
-          if (busy || !window.confirm('Smazat fotografii z disku včetně miniatur? Odkazy na ni ve starších revizích a jinde přestanou fungovat.')) return;
-          try {
-            busy = true;
-            status.textContent = 'Mažu fotografii…';
-            await removeFile(file.path);
-            if (await load()) {
-              status.textContent = 'Fotografie a její miniatury byly smazány z disku.';
-              if (pageStatus) pageStatus.textContent = status.textContent;
-            }
-          } catch (error) {
-            status.textContent = error.message;
-            if (pageStatus) pageStatus.textContent = error.message;
-          } finally { busy = false; }
-        });
-        usageLine.append(remove);
-      }
       const buttons = document.createElement('div');
       buttons.className = 'media-item-actions';
       const choose = document.createElement('button');
       choose.type = 'button';
+      choose.className = 'media-item-choose';
       choose.textContent = mode === 'cover-image' ? 'Použít jako náhled' : mode === 'main-image' ? 'Použít jako hlavní'
         : promotesFirst() ? 'Nastavit jako první fotografii'
         : mode === 'gallery-add' ? 'Přidat do galerie'
@@ -196,6 +174,64 @@
       });
       if (mode !== 'gallery-add' || !file.uses?.includes('gallery')) {
         buttons.append(choose);
+      }
+      if (context.type === 'product' && file.uses?.some(role => role === 'main' || role === 'gallery')) {
+        const detach = document.createElement('button');
+        detach.type = 'button';
+        detach.className = 'media-item-detach';
+        detach.textContent = file.uses.includes('main') ? 'Odebrat hlavní fotografii' : 'Odebrat z galerie';
+        detach.addEventListener('click', async () => {
+          if (busy) return;
+          try {
+            busy = true;
+            detach.disabled = true;
+            status.textContent = 'Odebírám fotografii…';
+            await detachFile(file.path);
+            if (await load()) {
+              status.textContent = 'Odebráno a uloženo. Soubor zůstává v knihovně.';
+              if (pageStatus) pageStatus.textContent = status.textContent;
+            }
+          } catch (error) {
+            status.textContent = error.message;
+            if (pageStatus) pageStatus.textContent = error.message;
+          } finally { busy = false; detach.disabled = false; }
+        });
+        buttons.append(detach);
+      }
+      if (typeof file.can_delete === 'boolean') {
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'media-item-delete';
+        remove.textContent = 'Smazat soubor';
+        remove.disabled = !file.can_delete;
+        remove.title = file.delete_reason || 'Trvale smazat fotografii i miniatury';
+        remove.addEventListener('click', async () => {
+          if (busy || !window.confirm('Trvale smazat fotografii z disku včetně miniatur? Tuto akci nelze vrátit. Odkazy ve starších revizích a mimo obchod přestanou fungovat.')) return;
+          try {
+            busy = true;
+            remove.disabled = true;
+            status.textContent = 'Mažu fotografii…';
+            await removeFile(file.path);
+            if (await load()) {
+              status.textContent = 'Fotografie a její miniatury byly smazány z disku.';
+              if (pageStatus) pageStatus.textContent = status.textContent;
+            }
+          } catch (error) {
+            status.textContent = error.message;
+            if (pageStatus) pageStatus.textContent = error.message;
+          } finally { busy = false; remove.disabled = !file.can_delete; }
+        });
+        buttons.append(remove);
+        if (!file.can_delete) {
+          const reason = document.createElement('small');
+          reason.className = 'media-item-delete-reason';
+          reason.textContent = file.uses?.includes('variant')
+            ? 'Fotografii používá varianta. Přiřazení změň v tabulce variant.'
+            : file.uses?.includes('section') ? 'Fotografie je také v popisu. Odeber příslušný obrazový blok.'
+            : file.uses?.some(role => role === 'main' || role === 'gallery') ? 'Pro smazání ji nejdřív odeber z produktu.'
+            : file.delete_reason || 'Fotografie se stále používá.';
+          buttons.append(reason);
+        }
       }
       for (const [label, path] of [['Velký', file.path], ['Karta', file.card], ['Miniatura', file.thumb]]) {
         const copy = document.createElement('button');
@@ -264,9 +300,10 @@
     }
   }
 
-  function open(nextMode, nextIndex = null) {
+  function open(nextMode, nextIndex = null, nextPath = '') {
     mode = nextMode;
     index = nextIndex;
+    targetPath = nextPath;
     status.textContent = '';
     const fileInput = dialog.querySelector('[type="file"]');
     if (fileInput) fileInput.multiple = mode !== 'cover-image';
@@ -286,8 +323,19 @@
       key: context.key, type: context.type, language: context.language,
       revision: String(revision), mode, path})) fields.set(name, value);
     if (index !== null) fields.set('index', String(index));
+    if (mode === 'gallery-set' && targetPath) fields.set('target_path', targetPath);
     const result = await request(fields);
     context.uploaded(result, 'media-attach');
+  }
+  async function detachFile(path) {
+    const revision = await context.getRevision();
+    const fields = new FormData();
+    for (const [name, value] of Object.entries({action: 'media-detach', csrf: context.csrf,
+      key: context.key, type: context.type, language: context.language,
+      revision: String(revision), path})) fields.set(name, value);
+    const result = await request(fields);
+    if (result.detached !== path) throw new Error('Server odebrání fotografie nepotvrdil. Obnov knihovnu.');
+    context.uploaded(result, 'media-detach');
   }
   async function removeFile(path) {
     const revision = await context.getRevision();
@@ -338,6 +386,7 @@
         key: context.key, type: context.type, language: context.language,
         revision: String(revision), mode})) fields.set(name, value);
       if (index !== null) fields.set('index', String(index));
+      if (mode === 'gallery-set' && targetPath) fields.set('target_path', targetPath);
       status.textContent = 'Nahrávám a zpracovávám fotografie…';
       const result = await request(fields);
       form.reset();

@@ -120,6 +120,39 @@ if ($promoted['image_path'] !== $fullGallery[0] ||
     throw new RuntimeException('Nelze povýšit snímek z plné galerie na hlavní.');
 }
 
+// Detachment uses paths, includes shared/legacy references and leaves variant/content assignments intact.
+$product['image_path'] = $path;
+$product['details_json'] = json_encode(['gallery'=>[$path, $side, $back], 'sections'=>[
+    ['type'=>'image', 'heading'=>'Detail', 'body'=>$side]], 'options'=>[], 'specifications'=>[]], JSON_THROW_ON_ERROR);
+$product['variant_inventory'] = ['items'=>[['image_path'=>$side, 'enabled'=>false]]];
+$detached = MediaAttachment::detachProduct($product, MediaPath::variant($path, 'thumb'));
+if ($detached['image_path'] !== $side || $detached['gallery'] !== $back || $detached['section_body'] !== [$side]) {
+    throw new RuntimeException('Removing main photo failed to promote next image or touched the description.');
+}
+$detached = MediaAttachment::detachProduct($product, $side);
+if ($detached['image_path'] !== $path || str_contains($detached['gallery'], $side) || $detached['section_body'] !== [$side] || isset($detached['variant_inventory'])) {
+    throw new RuntimeException('Detachment changed unrelated references or failed to remove the selected path.');
+}
+$listed = MediaAttachment::withUsage($product, 'product', [], true);
+$byPath = array_column($listed, null, 'path');
+if (count($listed) !== 3 || $byPath[$side]['uses'] !== ['gallery', 'variant', 'section']) {
+    throw new RuntimeException('Referenced photos or disabled variant usage disappeared from the picker.');
+}
+$product['details_json'] = json_encode(['gallery'=>[], 'sections'=>[], 'options'=>[], 'specifications'=>[]], JSON_THROW_ON_ERROR);
+if (MediaAttachment::detachProduct($product, $path)['image_path'] !== 'images/product-placeholder.png') {
+    throw new RuntimeException('Removing last photo did not restore the placeholder.');
+}
+try {
+    MediaAttachment::detachProduct($product, $side);
+    throw new RuntimeException('Detached a nonexistent reference.');
+} catch (InvalidArgumentException $expected) {}
+$form = ProductInlineEditor::fromRevision($product);
+$form['gallery'] = $path . "\n" . $side . "\n" . $back;
+$form = ProductInlineEditor::change($form, 'gallery.remove', '', $path, 0);
+$form = ProductInlineEditor::change($form, 'gallery.remove', '', $side, 1);
+if ($form['gallery'] !== $back) throw new RuntimeException('Queued removal deleted an image at a stale index.');
+if (!\SimpleStore\Admin\AdminActionPolicy::allows('media-detach')) throw new RuntimeException('Media detach action is blocked by the router.');
+
 $document = ContentInlineEditor::starter('post', 'cs');
 $document['revision_number'] = 1;
 $first = str_replace('/products/', '/posts/', $path);

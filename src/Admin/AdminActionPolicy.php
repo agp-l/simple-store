@@ -42,7 +42,7 @@ final class AdminActionPolicy
         'configuration-preview', 'configuration-apply', 'purchase-partner-preview', 'purchase-partner-import', 'purchase-partner-delete',
         'menu-slot', 'menu-item-save', 'menu-item-remove', 'page-menu',
         'media-library-folder', 'media-library-upload', 'media-library-move', 'media-library-export', 'media-library-import',
-        'media-upload', 'media-attach', 'media-delete', 'delete-product',
+        'media-upload', 'media-attach', 'media-detach', 'media-delete', 'delete-product',
         'delete-content', 'homepage-product', 'product-selection', 'product-selection-order', 'product-supplier-link', 'product-sale', 'purchase-partner-save', 'product-relation', 'catalog-post',
         'products-partners-assign', 'products-sale-preview', 'products-sale-apply', 'products-mass-preview', 'products-mass-apply', 'products-variants-preview', 'products-variants-apply', 'save-checkout-settings', 'fio-cron-rotate', 'save-google-login', 'save-installation-address', 'save-site-copy',
         'save-mail-settings', 'preview-mail', 'mail-test', 'schema-apply',
