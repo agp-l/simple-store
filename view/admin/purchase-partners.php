@@ -42,7 +42,15 @@ $partnerCatalogUrl = ($basePath ?? '/') . ($site['default_language'] ?? 'cs') . 
     <input type="hidden" name="id" value="<?= (int) $partnerForm['id'] ?>"><input type="hidden" name="version" value="<?= $escape($partnerForm['version']) ?>">
     <?php $partnerFields = $partnerForm; $partnerPrefix = ''; require __DIR__ . '/../manage/purchase-partner-fields.php'; ?>
     <label>Priorita při automatickém přiřazení<input type="number" name="priority" min="1" max="9999" step="1" required value="<?= $escape($partnerForm['priority'] ?? 100) ?>"><small>Menší číslo má přednost. Výchozí hodnota je 100.</small></label>
-    <button class="panel-button panel-action" type="submit">Uložit prodávajícího</button>
+    <fieldset><legend>🚚 Poštovné partnera pro společný košík</legend>
+      <p>Interní odhad doručení po ČR za jednu objednávku u tohoto partnera. Nemění cenu dopravy zákazníkovi. Při více způsobech doručení zadej částku, kterou skutečně používáš.</p>
+      <?php if ($deliveryCostsReady ?? false): ?>
+      <label>Poštovné v Kč<input type="number" name="partner_shipping_czk" min="0" max="9999999" step="1" value="<?= $escape($partnerForm['partner_shipping_czk'] ?? '') ?>"><small>Prázdné = neznámé; 0 = doprava vždy zdarma.</small></label>
+      <label>Doprava zdarma od nákupní částky v Kč<input type="number" name="partner_free_from_czk" min="0" max="9999999" step="1" value="<?= $escape($partnerForm['partner_free_from_czk'] ?? '') ?>"><small>Prázdné = bez hranice pro dopravu zdarma.</small></label>
+      <?php else: ?><p>Pro zadání poštovného nejprve aktualizuj databázi v administraci.</p><?php endif; ?>
+      <p>Košík porovnává nákupní ceny a poštovné. Pokud některé poštovné chybí, upřednostní méně partnerů a nepoužije dražší zboží. Alternativy musí mít čerstvě ověřenou přesnou variantu i dostatečnou dostupnost.</p>
+    </fieldset>
+    <button class="panel-button panel-action" type="submit">Uložit prodávajícího i poštovné</button>
     <p class="panel-help">Uložit můžeš i neúplné kontakty. Stav „Připravený“ se nastaví automaticky po doplnění všech údajů a potvrzení spolupráce.</p>
   </form>
   <?php if ((int) $partnerForm['id'] > 0): $partnerUsageCount = count($partnerUsage[(int) $partnerForm['id']] ?? []); ?>

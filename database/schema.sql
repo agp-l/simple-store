@@ -1645,3 +1645,9 @@ CREATE TABLE IF NOT EXISTS shop_customer_google (
   UNIQUE KEY customer_google_sub (google_sub),
   CONSTRAINT customer_google_user_fk FOREIGN KEY (user_id) REFERENCES shop_users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Internal partner freight estimates for basket assignment.
+CREATE TABLE IF NOT EXISTS shop_partner_delivery_costs (
+    partner_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
+    shipping_czk INT UNSIGNED NOT NULL, free_from_czk INT UNSIGNED DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

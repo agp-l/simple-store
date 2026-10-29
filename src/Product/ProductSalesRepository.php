@@ -56,6 +56,11 @@ final class ProductSalesRepository
         return AssistedPurchase::snapshot($sale, $price);
     }
 
+    public function optimizeCart(array $items): array
+    {
+        return (new \SimpleStore\Checkout\CartPartnerSelection($this->db))->select($items);
+    }
+
     /** Only the mode is published on cards and product pages. */
     public function decorate(array $rows): array
     {

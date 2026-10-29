@@ -169,6 +169,7 @@ final class OrderRepository
                 $snapshot += AssistedPurchase::snapshot(['mode' => 'assisted',
                     'supplier_price_czk' => $item['supplier_price_czk'] ?? null,
                     'seller' => $item['seller'] ?? null, 'delivery_note' => $item['delivery_note'] ?? ''], $price);
+                if (isset($item['procurement'])) $snapshot['procurement'] = $item['procurement'];
                 if (($item['assistance_fee_czk'] ?? null) !== $snapshot['assistance_fee_czk']) {
                     throw new InvalidArgumentException('Rozpis ceny asistovaného nákupu nesouhlasí.');
                 }
