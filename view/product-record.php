@@ -74,7 +74,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         <?php foreach ($details['options'] as $i => $group): ?>
           <div class="inline-option">
             <label class="field-label" for="product-option-<?= $i ?>"><span<?= $editable('option_name', $group['name'], $i, 'option.set') ?>><?= $escape($group['name']) ?></span></label>
-            <select id="product-option-<?= $i ?>" name="options[<?= $i ?>]" class="product-option" required><option value="">Vyberte <?= $escape($group['name']) ?></option>
+            <select id="product-option-<?= $i ?>" name="options[<?= $i ?>]" data-image-choice="<?= $escape($group['name']) ?>" class="product-option" required><option value="">Vyberte <?= $escape($group['name']) ?></option>
               <?php foreach ($group['values'] as $choice): ?><option value="<?= $escape($choice) ?>"><?= $escape($choice) ?></option><?php endforeach; ?>
             </select>
             <?php if ($editing): ?><div class="inline-option-tools"><button class="inline-tiny" type="button" data-editor-action="option-values" data-editor-index="<?= $i ?>">✎ Upravit možnosti</button><button class="inline-tiny" type="button" data-editor-action="option-remove" data-editor-index="<?= $i ?>">× Odebrat</button></div>
@@ -133,7 +133,15 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         </tbody></table></div><?php if ($editing): ?><button class="inline-small" type="button" data-editor-action="spec-add">＋ Přidat parametr</button><?php endif; ?></aside><?php endif; ?>
       </div>
     <?php endif; ?>
-    <?php if ($variantMode): ?><script defer src="<?= $escape($basePath . 'assets/product-variants.js?v=' . filemtime(__DIR__ . '/../assets/product-variants.js')) ?>"></script><?php endif; ?>
+    <?php
+    $photoPreviews = !$variantMode && $details['options'] !== []
+        ? \SimpleStore\Product\VariantImages::previews($product['variant_inventory']['items'] ?? [], $product['image_path']) : [];
+    if ($photoPreviews !== []) {
+        foreach ($photoPreviews as &$preview) $preview['image'] = $imageUrl($preview['image']);
+        unset($preview);
+        $photoConfig = ['colorName' => \SimpleStore\Product\VariantImages::color($photoPreviews[0]['choices'])['name'] ?? '', 'variants' => $photoPreviews];
+    ?><script type="application/json" id="product-option-photos"><?= json_encode($photoConfig, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) ?></script><?php } ?>
+    <?php if ($variantMode || $photoPreviews !== []): ?><script defer src="<?= $escape($basePath . 'assets/product-variants.js?v=' . filemtime(__DIR__ . '/../assets/product-variants.js')) ?>"></script><?php endif; ?>
     <?php require __DIR__ . '/product-related.php'; ?>
     <?php if ($editing && $productHistory !== []): ?><details class="inline-history"><summary>Historie úprav (<?= count($productHistory) ?>)</summary><p>Načtení starší verze vytvoří další novou revizi.</p>
       <?php foreach ($productHistory as $revision): ?><div class="inline-revision"><span>Revize <?= (int) $revision['revision_number'] ?> · <?= $escape($revision['saved_at']) ?> · <?= $escape($revision['name']) ?></span>

@@ -290,3 +290,48 @@ test('first variants: clear validation, editable base price and drafts survive a
     await browser?.close(); server.kill(); for (const file of files) unlinkSync(file);
   }
 });
+
+
+test('shared stock still previews saved color photos without changing prices, cart IDs or availability', async () => {
+  const path = 'tests/fixtures/variant-shared-photos.html';
+  writeFileSync(path, execFileSync('php', ['tests/fixtures/product-variants.php', '--shared-photos']));
+  const server = spawn('php', ['-S', '127.0.0.1:8768', '-t', process.cwd()], {stdio:'ignore'});
+  let browser;
+  try {
+    const url = 'http://127.0.0.1:8768/' + path;
+    for (let i=0; i<50; i++) {try {await fetch(url); break;} catch {await new Promise(r=>setTimeout(r,100));}}
+    browser = await chromium.launch();
+    for (const width of [1440,390]) {
+      const page = await browser.newPage({viewport:{width,height:1050}});
+      const errors=[]; page.on('pageerror', e=>errors.push(e.message));
+      await page.route('https://**/*', route=>route.abort());
+      await page.goto(url);
+      const price = await page.locator('[data-variant-price]').textContent();
+      const stock = await page.locator('[data-variant-stock]').textContent();
+      assert.equal(await page.locator('#product-variant').count(),0);
+      await page.getByLabel('Barva',{exact:true}).selectOption('Modrá');
+      assert.equal(await page.locator('#detail-image').getAttribute('src'),'/images/batoh.webp');
+      assert.equal(await page.getByLabel('Velikost',{exact:true}).inputValue(),'');
+      await page.getByLabel('Velikost',{exact:true}).selectOption('S');
+      assert.equal(await page.locator('#detail-image').getAttribute('src'),'/images/batoh.webp','Size with zero staged stock still inherits color photo');
+      assert.equal(await page.locator('#detail-add').isEnabled(),true);
+      const fields = await page.locator('.product-purchase').evaluate(form=>Object.fromEntries(new FormData(form)));
+      assert.equal(fields.variant_key,undefined); assert.equal(fields['options[0]'],'Modrá'); assert.equal(fields['options[1]'],'S');
+      assert.equal(new URL(page.url()).searchParams.has('variant'),false);
+      await page.locator('#detail-image-open').click();
+      assert.match(await page.locator('#detail-lightbox-image').getAttribute('src'),/images\/batoh.webp$/);
+      await page.locator('#detail-lightbox-close').click();
+      await page.getByLabel('Barva',{exact:true}).selectOption('Červená');
+      assert.equal(await page.locator('#detail-image').getAttribute('src'),'/images/product-placeholder.png');
+      await page.getByLabel('Barva',{exact:true}).selectOption('Zelená');
+      assert.equal(await page.locator('#detail-image').getAttribute('src'),'/images/product-placeholder.png','Unmapped color must not show the previous color');
+      await page.getByLabel('Barva',{exact:true}).selectOption('Modrá');
+      assert.equal(await page.locator('[data-variant-price]').textContent(),price);
+      assert.equal(await page.locator('[data-variant-stock]').textContent(),stock);
+      await page.locator('.product-detail').screenshot({path:`/tmp/variant-screenshots/shared-photos-${width}.png`});
+      await page.getByLabel('Barva',{exact:true}).selectOption('');
+      assert.equal(await page.locator('#detail-image').getAttribute('src'),'/images/product-placeholder.png');
+      assert.deepEqual(errors,[]); await page.close();
+    }
+  } finally {await browser?.close(); server.kill(); unlinkSync(path);}
+});
