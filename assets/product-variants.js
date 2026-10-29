@@ -4,15 +4,33 @@
   const stock = document.querySelector('[data-variant-stock]');
   const btc = document.querySelector('[data-variant-btc]');
   const delivery = document.querySelector('[data-variant-delivery]');
-  if (!picker || !stock) return;
-  const editing = Boolean(picker.closest('.is-editing'));
   const mainImage = document.getElementById('detail-image');
-  const initialImage = picker.dataset.baseImage || mainImage?.getAttribute('src');
+  const initialImage = picker?.dataset.baseImage || mainImage?.getAttribute('src');
   const selectImage = image => {
     const thumbnail = Array.from(document.querySelectorAll('[data-gallery-image]'))
       .find(button => button.dataset.galleryImage === image);
     thumbnail?.click();
   };
+  const previewImage = (matching, hasChoice, colorChosen) => {
+    const images = [...new Set(matching.map(variant => variant.image))];
+    selectImage(hasChoice && (colorChosen || images.length === 1) ? (images[0] || initialImage) : initialImage);
+  };
+  const sharedPhotos = document.getElementById('product-option-photos');
+  if (!picker && sharedPhotos) {
+    // Photo selection must not depend on enabling separate stock, prices or cart variant IDs.
+    const config = JSON.parse(sharedPhotos.textContent);
+    const selectors = Array.from(document.querySelectorAll('[data-image-choice]'));
+    const refreshPhoto = () => {
+      const matching = config.variants.filter(variant => selectors.every(select =>
+        !select.value || variant.choices[select.dataset.imageChoice] === select.value));
+      previewImage(matching, selectors.some(select => select.value !== ''),
+        selectors.some(select => select.dataset.imageChoice === config.colorName && select.value !== ''));
+    };
+    selectors.forEach(select => select.addEventListener('change', refreshPhoto));
+    refreshPhoto();
+  }
+  if (!picker || !stock) return;
+  const editing = Boolean(picker.closest('.is-editing'));
   // The editable base price must stay intact while previewing a variant photo.
   picker.addEventListener('change', () => {
     selectImage(picker.selectedOptions[0]?.dataset.image || initialImage);
@@ -67,9 +85,8 @@
       const matching = variants.filter(variant => names.every((name, index) => !selectors[index].value || variant.choices[name] === selectors[index].value));
       const colorIndex = names.indexOf(picker.dataset.colorName);
       const hasChoice = selectors.some(select => select.value !== '');
-      const images = [...new Set(matching.map(variant => variant.option.dataset.image))];
       const colorChosen = colorIndex >= 0 && selectors[colorIndex].value !== '';
-      selectImage(hasChoice && (colorChosen || images.length === 1) ? (images[0] || initialImage) : initialImage);
+      previewImage(matching.map(variant => ({image: variant.option.dataset.image})), hasChoice, colorChosen);
     }
   };
   const setAddress = () => {

@@ -23,7 +23,7 @@ foreach ($details['options'] as $group) $variantGroups[] = $group['name'] . ': '
   <?php if ($variantError !== '' && !in_array($variantForm['operation'] ?? '', ['merge', 'merge-preview'], true)): ?><p class="panel-error" role="alert"><?= $escape($variantError) ?></p><?php endif; ?>
   <?php if ($variantRows !== [] && !$variantInventory['enabled']): ?>
   <div class="variant-mode-note" role="status"><strong>Varianty jsou připravené · stále se používá společný sklad</strong>
-    <p>Prodej dál používá společnou cenu a společný počet <?= (int) ($product['stock_quantity'] ?? 0) ?> ks. Údaje v tabulce variant se zákazníkům projeví až po zapnutí skladu variant.</p>
+    <p>Prodej dál používá společnou cenu a společný počet <?= (int) ($product['stock_quantity'] ?? 0) ?> ks. Přiřazené fotografie se mění podle vybrané barvy už nyní. Samostatné ceny, počty a dostupnost variant se použijí až po zapnutí skladu variant.</p>
     <p>Doplň skutečné volné kusy a dostupnost jednotlivých variant, ulož tabulku a potom použij <a href="#variant-stock-mode">Zapnout sklad variant</a>. Původní kusy se mezi varianty automaticky nerozdělují.</p>
   </div>
   <?php endif; ?>

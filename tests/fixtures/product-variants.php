@@ -27,6 +27,14 @@ if (in_array('--empty', $argv, true)) {
     $product['price_varies'] = false;
 }
 if (in_array('--prepared', $argv, true)) $product['variant_inventory']['enabled'] = false;
+if (in_array('--shared-photos', $argv, true)) {
+    $product['variant_inventory']['enabled'] = false;
+    $product['price_varies'] = false;
+    $product['details_json'] = json_encode(['options'=>[
+        ['name'=>'Barva','values'=>['Modrá','Červená','Zelená']],
+        ['name'=>'Velikost','values'=>['S','M','L']],
+    ]], JSON_THROW_ON_ERROR);
+}
 $partners = [
     ['id'=>1, 'partner_key'=>str_repeat('c',32), 'name'=>'Horská výbava s.r.o.', 'ico'=>'12345678', 'address'=>'Ukázková 12, Praha', 'email'=>'info@example.test', 'terms_url'=>'https://example.test/podminky', 'confirmed'=>1],
     ['id'=>2, 'partner_key'=>str_repeat('d',32), 'name'=>'Rozpracovaný dodavatel', 'ico'=>'', 'address'=>'', 'email'=>'', 'terms_url'=>'', 'confirmed'=>0],

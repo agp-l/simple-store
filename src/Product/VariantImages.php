@@ -5,6 +5,17 @@ namespace SimpleStore\Product;
 /** A colour photo is shared across sizes; an explicit combination photo wins. */
 final class VariantImages
 {
+    /** Public photo metadata also works while the product still uses shared inventory. */
+    public static function previews(array $variants, string $base): array
+    {
+        $result = [];
+        foreach ($variants as $variant) {
+            if (empty($variant['enabled'])) continue;
+            $result[] = ['choices' => $variant['choices'], 'image' => self::resolve($variant, $variants, $base)];
+        }
+        return $result;
+    }
+
     public static function color(array $choices): ?array
     {
         foreach ($choices as $name => $value) {

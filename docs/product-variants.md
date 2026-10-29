@@ -106,3 +106,7 @@ Etapy A/B nemění sklad, rezervace, ceny, režimy ani objednávky. Automatická
 Editor má samostatné rámečky Základní údaje, Způsob prodeje a Nabídka, sklad a partnerské odkazy. Horní navigace obsahuje i filtrovanou historii cen produktu. Produkt bez variant má řádek Základní provedení se skladovými poli a stejným editorem partnerských odkazů přímo pod ním; nejde o založení umělé databázové varianty. Společný sklad zůstává editovatelný i při připravených, dosud nezapnutých variantách.
 
 Hromadné uložení variant zůstává na pevném místě, nepřekrývá řádky při posouvání. Pod tabulkou je návrat k tomuto tlačítku. Jednotlivé formuláře vysvětlují rozsah uložení: sklad ukládá počet, prodej partnera a nákupní ceny, každý partnerský odkaz vlastní adresu a tabulka variant všechny změněné řádky. Obnova rozpracovaných variant při samostatném uložení odkazu a kontrola souběžných změn zůstávají zachované.
+
+### Fotografie při společném skladu
+
+Přiřazení fotografie v tabulce variant funguje i před zapnutím skladu variant. Zákazník vybere barvu v původním výběru vlastností a galerie ihned zobrazí uloženou fotografii; stejný snímek otevře zvětšení. Prázdná fotografie přebírá snímek stejné barvy, případně hlavní obrázek. Vyřazené řádky fotografii neposkytují. Náhled nemění společnou cenu, dostupnost, počty ani způsob ukládání položky do košíku. Variantní sklad tedy není potřeba zapínat jen kvůli obrázkům. Fotografie musí být přiřazená a tabulka uložená; pořadí snímků v galerii samo o sobě neurčuje jejich barvu.
