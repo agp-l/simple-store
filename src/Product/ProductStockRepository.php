@@ -115,6 +115,7 @@ final class ProductStockRepository
             foreach ($variantItems as $item) if (($item['sale_mode'] ?? 'own') !== $mode) {
                 throw new InvalidArgumentException('Způsob prodeje se mezitím změnil. Obnov košík.');
             }
+            if ($mode === 'assisted') (new \SimpleStore\Checkout\CartPartnerSelection($this->db))->validate($variantItems);
             $assisted = $partnerLimits && $mode === 'assisted';
             if ((new ProductVariantStock($this->db))->reserve($orderId, $key, $variantItems, $assisted)) {
                 if ($assisted) $refresh->request($key, time() + 1);

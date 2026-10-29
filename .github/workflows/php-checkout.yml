@@ -132,6 +132,7 @@ jobs:
           php tests/variant-link-matcher.php
           php tests/variant-offer-evaluation.php
           php tests/partner-coverage.php
+          php tests/partner-basket.php
           php tests/partner-link-presentation.php
           php tests/inline-editor.php
           php tests/content-cover.php
@@ -220,6 +221,7 @@ jobs:
           php tests/product-import-database.php
           php tests/product-import-offers-database.php
           php tests/partner-offers-database.php
+          php tests/partner-basket-database.php
           php tests/content-import-database.php
           php tests/blog-placement-database.php
           php tests/google-identity-database.php
@@ -289,6 +291,7 @@ jobs:
           php tests/product-import-database.php
           php tests/product-import-offers-database.php
           php tests/partner-offers-database.php
+          php tests/partner-basket-database.php
           php tests/content-import-database.php
           php tests/blog-placement-database.php
           php tests/google-identity-database.php

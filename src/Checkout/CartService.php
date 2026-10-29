@@ -130,11 +130,20 @@ final class CartService
                 'issue' => $issue,
             ];
         }
+        $partnerPlan = null;
+        if ($issues === [] && $this->sales !== null) {
+            try {
+                $selection = $this->sales->optimizeCart($items);
+                $items = $selection['items'];
+                $partnerPlan = $selection['plan'];
+            } catch (InvalidArgumentException $error) { $issues[] = $error->getMessage(); }
+        }
         if ($issues === [] && $subtotal > 9999999) {
             $issues[] = 'Celková částka přesahuje limit objednávky. Uprav počet kusů v košíku.';
         }
         return [
             'items' => $items,
+            'partner_plan' => $partnerPlan,
             'count' => $count,
             'subtotal_czk' => $issues === [] ? $subtotal : null,
             'issues' => $issues,

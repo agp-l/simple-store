@@ -40,6 +40,7 @@
                 <?php endif; ?>
                 <?php if (!empty($item['variant_sku'])): ?><small class="panel-order-item-sku">SKU: <?= $escape($item['variant_sku']) ?></small><?php endif; ?>
                 <?php if (($item['sale_mode'] ?? 'own') === 'assisted'): ?><small><?= $escape(\SimpleStore\Checkout\AssistedPurchase::description($item)) ?></small><?php endif; ?>
+                <?php $offerUrl = $item['procurement']['source']['url'] ?? ''; if (is_string($offerUrl) && \SimpleStore\Product\PurchasePartnerRepository::validWebsite($offerUrl)): ?><a href="<?= $escape($offerUrl) ?>" target="_blank" rel="noopener noreferrer">Otevřít vybranou nabídku partnera ↗</a><?php endif; ?>
                 <?php if (!empty($orderSupplierLinks[$item['product_key'] ?? ''])): ?>
                   <div class="panel-order-suppliers"><span>Dodavatelé:</span>
                     <?php foreach ($orderSupplierLinks[$item['product_key']] as $supplier): ?>
