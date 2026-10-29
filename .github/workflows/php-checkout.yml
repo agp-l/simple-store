@@ -192,6 +192,8 @@ jobs:
           tools: composer:v2
           coverage: none
       - run: composer install --no-interaction --prefer-dist --no-progress
+      - name: Audit locked PHP dependencies for known vulnerabilities
+        run: composer audit --locked --no-interaction
       - name: Verify full schema and tax workflow against MySQL
         env:
           MYSQL_TEST_PASSWORD: ci-only-password
