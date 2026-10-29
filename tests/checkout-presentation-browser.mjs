@@ -53,7 +53,7 @@ test('checkout: readable secondary BTC, compact assisted disclosure and historic
           assert.match(await disclosure.innerText(), /IČO 05769884/);
           await disclosure.locator('summary').click();
         }
-        if (['cart','shipping','review'].includes(mode)) assert.match(await page.locator('.checkout-partner-plan').innerText(), /Gramino s.r.o./);
+        if (['cart','shipping','review'].includes(mode)) assert.equal(await page.locator('.checkout-partner-plan').count(), 0);
         if (mode === 'review') {
           assert.ok(await page.getByRole('button', { name: 'Objednat s povinností platby' }).isVisible());
           assert.equal(await page.locator('.checkout-summary-total .money-main').textContent(), '3 884 Kč');

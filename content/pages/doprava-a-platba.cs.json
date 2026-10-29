@@ -1,13 +1,13 @@
 {
   "format": "simple-store.content.v1",
   "document_key": "556d220ae7ddee664603acda64e401aa",
-  "revision": 16,
+    "revision": 17,
   "language": "cs",
   "type": "page",
   "content": {
     "title": "Doprava a platba",
     "slug": "doprava-a-platba",
-    "summary": "Doručení po České republice, aktuální nabídka dopravců a bankovní převod. Vysvětlení lhůt u přímého i asistovaného nákupu.",
+    "summary": "Doručení po České republice, nabídka dopravců a platby bankovním převodem, kartou nebo bitcoinem podle dostupnosti v pokladně.",
     "published": true,
     "visible_in_menu": false,
     "cover_path": null,
@@ -36,7 +36,7 @@
       {
         "type": "text",
         "heading": "Jak zaplatit",
-        "body": "Aktuálně přijímáme **bankovní převod v Kč**, včetně úhrady pomocí QR kódu. Účet, částku, variabilní symbol a konkrétní datum splatnosti uvidíte po objednání a v potvrzení. Splatnost převodu je nastavena na **2 dny**; řiďte se datem u své objednávky. Za bankovní převod si neúčtujeme vlastní příplatek. Případné poplatky vaší banky se řídí jejím ceníkem.\n\nQR kód je pouze pomůcka k předvyplnění převodu. Platba je přijatá připsáním na účet; pokud se nespáruje, napište nám číslo objednávky a potřebné údaje o převodu. Orientační cena v BTC u produktu sama neznamená dostupnost platby bitcoinem. Karta, dobírka ani bitcoin nyní nejsou nabízenou platební metodou.\n\nU asistované položky je odměna za službu již zahrnuta v uvedené ceně. Rozpis částky určené na zboží a na asistenci se zobrazí před objednáním; odměnu v pokladně nepřičítáme podruhé."
+        "body": "Způsob platby si vyberete v pokladně před dokončením objednávky. Pro konkrétní objednávku lze použít metody, které jsou v pokladně právě dostupné.\n\n**Bankovní převod v Kč** můžete provést také pomocí QR kódu. Účet, částku, variabilní symbol a konkrétní datum splatnosti uvidíte po objednání a v potvrzení. Splatnost převodu je nastavena na **2 dny**; řiďte se datem u své objednávky. Za bankovní převod si neúčtujeme vlastní příplatek. Případné poplatky vaší banky se řídí jejím ceníkem. QR kód slouží k předvyplnění převodu. Platba je přijatá připsáním na účet; pokud se nespáruje, napište nám číslo objednávky a potřebné údaje o převodu.\n\n**Platební kartou** lze zaplatit, pokud je tato možnost nabídnuta v pokladně. Po objednání přejdete na zabezpečenou platební bránu. Údaje o kartě zadáváte přímo u poskytovatele brány; náš e-shop je nezískává ani neukládá. Úhradu potvrdíme po ověření výsledku platby u brány.\n\n**Bitcoinem (BTC)** lze zaplatit, pokud je tato možnost nabídnuta v pokladně. Závazná cena objednávky je uvedena v Kč. Přesnou částku v BTC, platební adresu a dobu platnosti platebních pokynů uvidíte před odesláním platby. Orientační přepočet u produktu se může od platebního kurzu lišit. Případný síťový poplatek zobrazuje vaše peněženka. Platbu potvrdíme po jejím ověření; aktualizace stavu nemusí být okamžitá.\n\nU asistované položky je odměna za službu již zahrnuta v uvedené ceně. Rozpis částky určené na zboží a na asistenci se zobrazí před objednáním; odměnu v pokladně nepřičítáme podruhé."
       },
       {
         "type": "text",

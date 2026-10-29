@@ -3,9 +3,6 @@ declare(strict_types=1);
 ?>
 <aside class="checkout-summary" aria-labelledby="checkout-summary-title">
   <h2 id="checkout-summary-title">Souhrn objednávky</h2>
-  <?php if (!empty($checkout['partner_plan']['partners'])): ?>
-  <div class="checkout-partner-plan"><strong>📦 Zboží od partnerů</strong><p><?= $checkoutEscape(implode(' · ', $checkout['partner_plan']['partners'])) ?></p><small>Partnerské položky spojujeme do společného nákupu, kde to dostupné nabídky umožňují. Vybraného prodávajícího najdeš u každé položky.</small></div>
-  <?php endif; ?>
   <p class="checkout-summary-count"><?= (int) ($checkout['count'] ?? 0) ?> ks v košíku</p>
   <dl>
     <div><dt>Produkty</dt><dd><?= $checkoutSubtotal === null ? 'Nelze určit' : $checkoutMoney($checkoutSubtotal) ?></dd></div>
