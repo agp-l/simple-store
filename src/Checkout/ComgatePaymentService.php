@@ -42,9 +42,10 @@ final class ComgatePaymentService
         ) === 1;
     }
 
-    public function canInitiate(): bool
+    public function canInitiate(bool $existingTestPayment = false): bool
     {
-        return $this->enabled && (!$this->test || $this->allowTestPayments) && $this->returnUrlValid() && $this->installed();
+        return $this->enabled && ((!$this->test && !$existingTestPayment) || $this->allowTestPayments) &&
+            $this->returnUrlValid() && $this->installed();
     }
 
     public function state(int $orderId): ?array

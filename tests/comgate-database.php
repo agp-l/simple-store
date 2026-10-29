@@ -315,6 +315,8 @@ catch (RuntimeException $expected) { $blocked = true; }
 expectComgate($blocked && $sandboxCalls === 0, 'Public visitor created a sandbox payment.');
 $adminSandbox->initiate($sandboxOrder);
 $publicProduction = new ComgatePaymentService($db, $settings, $sandboxClient);
+expectComgate($publicProduction->canInitiate() && !$publicProduction->canInitiate(true),
+    'Switching to production exposed an old sandbox retry in the public receipt.');
 $blocked = false;
 try { $publicProduction->initiate($sandboxOrder); }
 catch (RuntimeException $expected) { $blocked = true; }
