@@ -2,6 +2,7 @@
 /config/database.php
 /config/installation.json
 /config/.installation*
+/config/.login-throttle*
 /config/checkout.php
 /config/mail-cron.php
 /config/supplier-worker.php

@@ -149,6 +149,7 @@ try {
                 $redirect($checkoutReturn);
             }
             if ($action === 'login' && $user === null) {
+                \SimpleStore\Auth\LoginThrottle::guard('customer', $input('email'));
                 if (!$auth->signIn($input('email'), $input('password'))) {
                     $remaining = $auth->retryAfterSeconds();
                     throw new InvalidArgumentException($remaining > 0

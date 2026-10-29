@@ -102,14 +102,19 @@ try {
         if ($action === 'login' && !$auth->signedIn()) {
             $email = $_POST['email'] ?? null;
             $password = $_POST['password'] ?? null;
-            if (!is_string($email) || !is_string($password) || !$auth->signIn($email, $password)) {
-                $remaining = $auth->retryAfterSeconds();
-                $error = $remaining > 0
-                    ? 'Příliš mnoho pokusů. Zkus to znovu za ' . (int) ceil($remaining / 60) . ' min.'
-                    : 'Nesprávné přihlašovací údaje. Zkontroluj e-mail správce a heslo nebo použij obnovu hesla.';
-            } else {
-                header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl), true, 303);
-                exit;
+            try {
+                \SimpleStore\Auth\LoginThrottle::guard('admin', is_string($email) ? $email : '');
+                if (!is_string($email) || !is_string($password) || !$auth->signIn($email, $password)) {
+                    $remaining = $auth->retryAfterSeconds();
+                    $error = $remaining > 0
+                        ? 'Příliš mnoho pokusů. Zkus to znovu za ' . (int) ceil($remaining / 60) . ' min.'
+                        : 'Nesprávné přihlašovací údaje. Zkontroluj e-mail správce a heslo nebo použij obnovu hesla.';
+                } else {
+                    header('Location: ' . \SimpleStore\Navigation\PanelUrl::pretty($adminUrl), true, 303);
+                    exit;
+                }
+            } catch (InvalidArgumentException $exception) {
+                $error = $exception->getMessage();
             }
         } elseif ($action === 'reset-request' && !$auth->signedIn()) {
             try {

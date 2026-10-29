@@ -120,6 +120,7 @@ jobs:
           php tests/admin-render.php
           php tests/admin-actions.php
           php tests/admin-auth.php
+          php tests/login-throttle.php
           php tests/password-reset-collation.php
           php tests/password-reset-url.php
           php tests/product-import.php
