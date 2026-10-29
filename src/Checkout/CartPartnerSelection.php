@@ -57,7 +57,7 @@ final class CartPartnerSelection
             if ($group['offers']===[]) throw new InvalidArgumentException('Nákupní cena se změnila. Partnerskou nabídku je potřeba aktualizovat.');
         }
         unset($group);
-        $result=PartnerBasketOptimizer::choose($groups,$rates);
+        $result=PartnerBasketOptimizer::choose($groups,$priced ? $rates : []);
         $selected=[]; $purchaseTotals=[]; $retail=0;
         foreach ($result['choices'] as $key=>$partner) {
             $group=$groups[$key];
