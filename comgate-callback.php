@@ -10,6 +10,7 @@ header('Content-Type: text/plain; charset=UTF-8');
 header('Cache-Control: no-store');
 header('X-Content-Type-Options: nosniff');
 if (($_SERVER['REQUEST_METHOD'] ?? '') !== 'POST') {
+    header('Allow: POST');
     http_response_code(405);
     exit;
 }

@@ -238,7 +238,7 @@ final class ComgatePaymentService
                     ((int) $currentAttempt['order_id'] !== (int) $attempt['order_id'] ||
                         $currentOrder['payment_method'] !== 'comgate')) ||
                 (string) ($status['code'] ?? '') !== '0' ||
-                (string) ($status['transId'] ?? '') !== (string) $attempt['trans_id'] ||
+                ($status['transId'] ?? null) !== (string) $attempt['trans_id'] ||
                 !$this->matches($status, $reference, $currentAttempt)) {
                 throw new RuntimeException('Ověření platby Comgate nesouhlasí s objednávkou.');
             }
