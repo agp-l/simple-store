@@ -79,11 +79,11 @@ final class LoginThrottle
     }
 
     /** Called after CSRF validation, only on anonymous password-login submissions. */
-    public static function guard(string $role, string $identifier): void
+    public static function guard(string $role, string $identifier, ?self $storage = null): void
     {
         try {
             // Forwarded headers are client-controlled unless a trusted proxy rewrites REMOTE_ADDR.
-            $retry = (new self())->consume($role, $identifier, (string) ($_SERVER['REMOTE_ADDR'] ?? ''));
+            $retry = ($storage ?? new self())->consume($role, $identifier, (string) ($_SERVER['REMOTE_ADDR'] ?? ''));
         } catch (RuntimeException $error) {
             error_log('Login protection unavailable: ' . $error->getMessage());
             http_response_code(503);

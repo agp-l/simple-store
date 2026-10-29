@@ -76,6 +76,18 @@ for base in ['/', '/shop/']:
         for suffix in ['unknown/','orders/extra/','orders//']:
             assert request(opener,root+suffix)[0] == 404
         assert request(opener,root.rstrip('/'))[1]['Location'] == root
+        # Every failed attempt has a brand new session/cookie and a valid CSRF token.
+        for attempt in range(11):
+            fresh = client()
+            status, _, raw = request(fresh, root)
+            token = json.loads(raw)['csrf']
+            status, headers, body = request(fresh, root, {'csrf':token, 'action':'login', 'email':'limit@example.test', 'password':'wrong'})
+            if attempt < 10:
+                assert status == 403
+            else:
+                assert status == 429 and int(headers['Retry-After']) > 0 and 'Příliš mnoho' in body
     assert request(client(),base+'src/bootstrap.php')[0] == 403
     assert request(client(),base+'config/database.php')[0] == 403
+    assert request(client(),base+'scripts/deploy-ftp.py')[0] == 403
+    assert request(client(),base+'config/.login-throttle.json')[0] == 403
 print('Apache panel routes, legacy links/uploads, CSRF and role cookies passed at root and /shop/.')

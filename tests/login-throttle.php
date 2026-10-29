@@ -40,6 +40,13 @@ try {
     $reject(fn () => (new LoginThrottle($file))->consume('admin', 'x', '192.0.2.1', 1000));
     $reject(fn () => (new LoginThrottle($root . '/missing/state.json'))->consume('admin', 'x', '192.0.2.1', 1000));
     $check(file_get_contents($file) === '{broken', 'Corrupt state was silently reset.');
+    file_put_contents($file, str_repeat(' ', 2097153));
+    $reject(fn () => (new LoginThrottle($file))->consume('admin', 'x', '192.0.2.1', 1000));
+    $full = [];
+    for ($i = 0; $i < 10000; $i++) $full[hash('sha256', (string) $i)] = ['count' => 1, 'until' => 1300];
+    file_put_contents($file, json_encode($full, JSON_THROW_ON_ERROR));
+    $reject(fn () => (new LoginThrottle($file))->consume('admin', 'x', '192.0.2.1', 1000));
+    $check((new LoginThrottle($file))->consume('admin', 'x', '192.0.2.1', 1300) === 0, 'Expired records did not reclaim full storage.');
     $jobs = [];
     for ($i = 0; $i < 24; $i++) {
         $process = proc_open([PHP_BINARY, __FILE__, 'worker', $root . '/parallel.json'], [0 => ['pipe','r'], 1 => ['pipe','w'], 2 => ['pipe','w']], $pipes);

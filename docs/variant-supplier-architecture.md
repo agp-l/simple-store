@@ -1,6 +1,6 @@
 # Odkazy partnerů u variant a dostupnost asistovaného nákupu
 
-Stav: **etapy A/B/C a synchronizace limitů D implementované**, 26. 10. 2026. Upřesnění uživatele zde nahrazuje širší návrh z commitů `dd14f4f` a `2e26198`. Současný provoz popisují [varianty](product-variants.md), [asistovaný nákup](assisted-purchase.md) a [cenový automat](supplier-prices.md). Etapy A/B přidávají evidenci odkazů, editor, JSON a přímé URL. Etapa C doplňuje volitelné automatické ověřování přesných URL z čerstvých uložených nabídek; zapíná se v administraci cen. Změny dostupnosti D zatím nejsou implementované.
+Stav: **etapy A/B/C a synchronizace limitů D implementované**, 26. 10. 2026. Upřesnění uživatele zde nahrazuje širší návrh z commitů `dd14f4f` a `2e26198`. Současný provoz popisují [varianty](product-variants.md), [asistovaný nákup](assisted-purchase.md) a [cenový automat](supplier-prices.md). Etapy A/B přidávají evidenci odkazů, editor, JSON a přímé URL. Etapa C doplňuje volitelné automatické ověřování přesných URL z čerstvých uložených nabídek; zapíná se v administraci cen. D je implementované v `PartnerStockPolicy` a `PartnerStockSynchronizer`; vlastní sklad zůstává oddělený.
 
 ## Význam partnera a režimů prodeje
 
@@ -114,9 +114,9 @@ Není důvod kvůli etapě A převádět 179 jednoduchých produktů na nový sk
 
 Nový registr produktů, povinná výchozí varianta každého produktu, samostatné tabulky identifikátorů/atributů, velkoobchodní nabídky, další fyzické sklady, rozsáhlé nové API a automatický nákup nejsou součástí tohoto úkolu. Závazný směr je **současný systém + odkazy partnerů po variantách + následně přesná dostupnost asistence**.
 
-## Navazující práce po kontrole 26. 10. 2026
+## Historický plán a průběh z 26. 10. 2026
 
-Uživatel požaduje postupné dokončení, s předností přehledného editoru a stabilního jádra. Původní A/B/C nejsou dokončením celého cenového a dostupnostního systému.
+Následující seznam a datované záznamy zachycují tehdejší mezistavy, nikoli aktuální seznam úkolů. Později byly dodány přesné variantní cenové zdroje, adaptér 4camping, synchronizace partnerské dostupnosti a evidence alternativních nabídek. Aktuální pravidla jsou v [cenovém automatu](supplier-prices.md), [katalogu nabídek](partner-offer-catalog.md) a [kontrole projektu](audit-2026-10.md). Podle vět „zatím neaktivovat“ nebo „zůstává otevřené“ v historických záznamech se hotové části nevypínají ani znovu neimplementují.
 
 1. **Aktuální krok — editor a ochrana režimu:** společný vzhled partnerů u produktu bez variant i u kombinací; fotografie vedle konkrétní nabídky; nadbytečné převzaté adresy oddělit od aktivních. Dosavadní společné zdroje zachovat pro cenový automat, dokud není převeden. Ochránit vlastní prodej před partnerskou cenovou automatikou včetně rozpracované fronty a ručního převzetí.
 2. **Cenové jádro a evidence nabídek:** oddělit produkt/variantu, partnerskou nabídku a pozorování ceny/dostupnosti. Jednoduchý produkt má jednu základní nabídku bez zavádění umělého fyzického skladu. Připravit aditivní migraci společných zdrojů, stabilní ID a tombstones; cenu vybírat z aktivního partnera a přesné kombinace. Starou tabulku neodstraňovat, dokud není ověřen převod editoru, importů, exportů, fronty i objednávkových snímků. Společná modelová stránka je zdroj vyhledávání, nikoli druhá zákaznická nabídka. Worker rozdělit na výběr zdrojů, načtení/cache, párování, cenové rozhodnutí a atomický zápis; zachovat společné limity, zámky a pokračování po přerušení.
