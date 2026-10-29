@@ -4,6 +4,7 @@
 <p>Spravuj společné profily prodávajících a rozpracované kontakty pro výběr u produktů.</p>
 <div class="partner-assignment-links"><a class="panel-icon-link" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=purchase-partners') ?>">Seznam prodávajících a nový prodávající</a>
 <a href="<?= $escape($basePath . $site['default_language'] . '?manage=1#produkty') ?>">Produkty a filtr podle partnera →</a>
+<a href="<?= $escape($basePath . $site['default_language'] . '?homepage_edit=1#homepage-editor') ?>">Výběr a pořadí vybavení na úvodu →</a>
 <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=supplier-prices') ?>">Ceny a dostupnost u partnerů →</a></div>
 <p class="panel-help">Zde měníš nastavení současných produktů. Automatické kontroly partnerských cen a odkazy variant spravuj v sekci Ceny dodavatelů. Každý nástroj níže má vlastní potvrzení a nemění nastavení ostatních nástrojů.</p>
 <nav class="partner-assignment-links" aria-label="Nástroje produktů"><a href="#product-partner-assignment">Přiřazení partnerů</a><a href="#bulk-product-sales">Způsob prodeje</a><a href="#bulk-product-stock">Počty a viditelnost</a><a href="#bulk-product-variants">Vytvoření variant</a></nav></section>
@@ -14,7 +15,7 @@
   <h2><?= \SimpleStore\Rendering\Icon::render('package') ?> Hromadná úprava produktů</h2>
   <p>Změna platí pro všechny produkty včetně konceptů a všech jazyků. Počet produktů: <strong><?= (int) $massCount ?></strong>.</p>
   <p class="panel-help">Počet znamená volné kusy k prodeji. U produktu se skladem variant se zadaný počet i dostupnost nastaví každé nabízené variantě zvlášť. Překlady sdílejí stejný sklad. Po inventuře zadej počet bez kusů rezervovaných pro objednávky. Rezervace se nemění; při stornu objednávky se její rezervované kusy vrátí na sklad.</p>
-  <p class="panel-help">V režimu „Prodáváme my“ jde o vlastní sklad. U asistovaného nákupu jde o ručně nastavený limit nabídky; tento nástroj neověřuje, kolik kusů skutečně má partner. Stav „Skladem“ zákazník u asistovaného nákupu uvidí jako „Skladem u partnera“.</p>
+  <p class="panel-help">V režimu „Prodáváme my“ jde o vlastní sklad. U asistovaného nákupu jde o ručně nastavený limit nabídky; tento nástroj neověřuje, kolik kusů skutečně má partner. Znění dostupnosti „Skladem u partnera“ upravíš v <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=appearance#partner-stock-text') ?>">Textech webu → Dostupnost u partnera</a>.</p>
   <form class="panel-form" method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=products#bulk-product-stock') ?>">
     <input type="hidden" name="csrf" value="<?= $escape($csrf) ?>">
     <input type="hidden" name="tab" value="products">

@@ -24,6 +24,7 @@ $customCopy = array_replace(\SimpleStore\Content\SiteCopyRepository::DEFAULTS, [
     'catalog_all_intro' => 'Zkouška & pohodlí',
     'footer_intro' => 'Lehké & odolné',
     'footer_closing' => 'Zpátky na cestu',
+    'partner_in_stock' => 'U partnera & připraveno <ihned>',
 ]);
 ob_start();
 $renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs', 'siteCopy' => $customCopy]);
@@ -48,13 +49,15 @@ $estimate = \SimpleStore\Product\DeliveryEstimate::present(array_replace(\Simple
 foreach (['own', 'assisted'] as $saleMode) {
     foreach (['in_stock', 'out_of_stock', 'on_order'] as $state) {
         $deliveryProduct = array_replace($product, ['sale_mode' => $saleMode, 'stock_status' => $state]);
-        $deliveryData = ['basePath' => '/shop/', 'language' => 'cs', 'deliveryEstimate' => $estimate];
+        $deliveryData = ['basePath' => '/shop/', 'language' => 'cs', 'deliveryEstimate' => $estimate, 'siteCopy' => $customCopy];
         $batch = $renderer->cards('product', [$deliveryProduct], $deliveryData);
         ob_start(); $renderer->render('catalog', $deliveryData + ['products' => [$deliveryProduct]]); $initial = ob_get_clean();
         foreach ([$batch, $initial] as $deliveryHtml) {
             if (str_contains($deliveryHtml, $estimate['text']) !== ($state === 'in_stock')) throw new RuntimeException('Delivery estimate is inconsistent across stock, sale mode or pagination.');
+            if (str_contains($deliveryHtml, 'U partnera &amp; připraveno &lt;ihned&gt;') !== ($saleMode === 'assisted' && $state === 'in_stock')) throw new RuntimeException('Custom partner stock copy must only affect available assisted products, including pagination.');
         }
         ob_start(); $renderer->render('product-record', $deliveryData + ['product' => $deliveryProduct]); $detail = ob_get_clean();
+        if (str_contains($detail, 'U partnera &amp; připraveno &lt;ihned&gt;') !== ($saleMode === 'assisted' && $state === 'in_stock')) throw new RuntimeException('Detail must use the same custom partner stock copy.');
         if (!str_contains($detail, $estimate['text']) || (str_contains($detail, 'data-variant-delivery hidden') !== ($state !== 'in_stock'))) {
             throw new RuntimeException('Product delivery visibility must follow effective stock.');
         }
@@ -149,6 +152,7 @@ if (!str_contains($selectedHome, '<h2 id="section-title">Náš výběr vybavení
     !str_contains($selectedHome, '/shop/cs/produkt/bota') ||
     !str_contains($selectedHome, '?all=1#produkty') ||
     str_contains($selectedHome, 'product-admin-nav') ||
+    str_contains($selectedHome, 'Upravit výběr a pořadí vybavení') ||
     str_contains($selectedHome, 'name="action" value="homepage-product"') ||
     str_contains($selectedHome, 'id="homepage-editor"') || str_contains($selectedHome, 'id="sort"')) {
     throw new RuntimeException('Public homepage must show the chosen products without management controls.');
@@ -164,6 +168,8 @@ $renderer->render('catalog', ['basePath' => '/shop/', 'language' => 'cs',
     'canManageCatalog' => true]);
 $editableHome = ob_get_clean();
 if (!str_contains($editableHome, 'name="action" value="homepage-product"') ||
+    !str_contains($editableHome, 'data-selection-move="up"') || !str_contains($editableHome, 'data-selection-move="down"') ||
+    !str_contains($editableHome, 'class="homepage-pick-image"') ||
     !str_contains($editableHome, 'href="/shop/cs?homepage_edit=1#homepage-editor" aria-current="page"') ||
     !str_contains($editableHome, 'href="/shop/cs#produkty"') ||
     !str_contains($editableHome, 'name="csrf" value="home-csrf"') ||

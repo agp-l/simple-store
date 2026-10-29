@@ -16,8 +16,12 @@ const list = {addEventListener: (name, fn) => listHandlers[name] = fn,
   insertBefore(item, target) { this.children = this.children.filter(x => x !== item); const i = this.children.indexOf(target); this.children.splice(i < 0 ? this.children.length : i, 0, item); }};
 const item = (key) => {
   const handlers = {};
+  const position = {textContent: ''};
+  const buttons = ['up', 'down'].map(direction => ({dataset: {selectionMove: direction}, handlers: {}, attrs: {},
+    addEventListener(name, fn) { this.handlers[name] = fn; }, setAttribute(name, value) { this.attrs[name] = value; }, focus() {}}));
   const handle = {addEventListener: (name, fn) => handlers[name] = fn, focus() {}, setPointerCapture() { throw new Error('Capture must not belong to a moving row.'); }, releasePointerCapture() {}};
-  const row = {dataset: {key}, parentElement: list, classList: classes(), handlers, querySelector: () => handle,
+  const row = {dataset: {key}, parentElement: list, classList: classes(), handlers, buttons, position,
+    querySelector: selector => selector === '.selection-drag' ? handle : position, querySelectorAll: () => buttons,
     closest: () => row, getBoundingClientRect: () => ({top: 0, height: 100}),
     get previousElementSibling() { return list.children[list.children.indexOf(row) - 1]; },
     get nextElementSibling() { return list.children[list.children.indexOf(row) + 1]; },
@@ -74,3 +78,27 @@ b.handlers.keydown({altKey: true, key: 'ArrowUp', preventDefault() {}}); await s
 assert.equal(prepends, 2, 'Homepage preview should still update immediately.');
 assert.equal(redirected, '');
 console.log('Recommendation preview respects explicit sorts and resets random pagination.');
+
+assert.equal(b.position.textContent, '1');
+assert.equal(b.buttons[0].attrs['aria-disabled'], 'true');
+let prevented = false;
+b.buttons[1].handlers.click({preventDefault() { prevented = true; }});
+assert.equal(prevented, true, 'Enhanced move must not also submit the fallback form.');
+const requestsDuringSave = requests;
+a.buttons[1].handlers.click({preventDefault() {}});
+let submitBlocked = false;
+listHandlers.submit({preventDefault() { submitBlocked = true; }});
+assert.equal(submitBlocked, true, 'Removal must wait for the outstanding reorder.');
+await settle();
+assert.equal(requests, requestsDuringSave, 'Rapid clicks must not race saves.');
+assert.deepEqual(list.children, [a, b]);
+assert.equal(a.position.textContent, '1'); assert.equal(b.position.textContent, '2');
+assert.equal(b.buttons[1].attrs['aria-disabled'], 'true');
+b.buttons[1].handlers.click({preventDefault() {}}); await settle();
+assert.equal(requests, requestsDuringSave, 'Moving past the boundary should not save.');
+responseOK = false;
+b.buttons[0].handlers.click({preventDefault() {}}); await settle();
+assert.deepEqual(list.children, [a, b]);
+assert.equal(a.position.textContent, '1'); assert.equal(b.position.textContent, '2');
+assert.equal(status.textContent, 'Conflict');
+console.log('Visible move buttons, positions, boundaries and concurrent-save protection passed.');

@@ -19,7 +19,7 @@ $toolsRoot = $basePath . $toolsLanguage;
     </div>
     <div class="site-admin-group" role="group" aria-label="Spravovat obsah">
       <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($toolsRoot . '?manage=1') ?>"><?= \SimpleStore\Rendering\Icon::render('package') ?> Produkty a koncepty</a>
-      <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($toolsRoot . '?homepage_edit=1#homepage-editor') ?>" <?= ($homepageEditing ?? false) ? 'aria-current="page"' : '' ?>><?= \SimpleStore\Rendering\Icon::render('check') ?> Výběr na úvodní stránku</a>
+      <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($toolsRoot . '?homepage_edit=1#homepage-editor') ?>" <?= ($homepageEditing ?? false) ? 'aria-current="page"' : '' ?>><?= \SimpleStore\Rendering\Icon::render('check') ?> Výběr a pořadí na úvodu</a>
       <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($basePath . 'admin/?section=contents') ?>"><?= \SimpleStore\Rendering\Icon::render('document') ?> Stránky</a>
       <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($toolsRoot . '/blog?manage=1') ?>"><?= \SimpleStore\Rendering\Icon::render('book') ?> Blog</a>
       <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($basePath . 'admin/') ?>"><?= \SimpleStore\Rendering\Icon::render('settings') ?> Další obsah a nastavení</a>
