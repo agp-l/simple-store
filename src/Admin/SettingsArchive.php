@@ -122,6 +122,8 @@ final class SettingsArchive
             foreach ($rows as $key => $row) {
                 if (($primary === 'id' && (string)$key !== '1') || ($primary === 'language' && preg_match('/^[a-z]{2}$/D', (string)$key) !== 1) ||
                     ($primary === 'event_code' && !isset($current[$section][$key])) || !is_array($row) || array_diff(array_keys($row), $columns)) throw new InvalidArgumentException('Neplatný záznam v oblasti '.$section);
+                // Empty fields are omissions even at the SQL-column boundary.
+                $row = array_filter($row, static fn($value) => $value !== null && $value !== '' && $value !== []);
                 foreach ($row as $column => $value) {
                     if (str_ends_with($column, '_json') && !is_array($value)) throw new InvalidArgumentException('Nastavení musí být objekt: '.$section);
                     if (!str_ends_with($column, '_json') && !is_scalar($value) && $value !== null) throw new InvalidArgumentException('Neplatné pole: '.$section);
@@ -160,7 +162,7 @@ final class SettingsArchive
             $next=$group===''?$after:($after[$group]??[]);
             $input=$group===''?$incoming:($incoming[$group]??[]);
             foreach ($identities as $identity) foreach ($secrets as $secret) {
-                if (($next[$identity]??'')!==($old[$identity]??'') && !empty($next[$secret]) && empty($input[$secret])) throw new InvalidArgumentException('Změna účtu '.$section.'.'.$group.' vyžaduje i odpovídající přístupový klíč.');
+                if (($next[$identity]??'')!==($old[$identity]??'') && !empty($next[$secret]) && (empty($input[$secret]) || $input[$secret] !== $next[$secret])) throw new InvalidArgumentException('Změna účtu '.$section.'.'.$group.' vyžaduje i odpovídající přístupový klíč.');
                 if (($next[$secret]??'')!==($old[$secret]??'') && !empty($input[$identity]) && $input[$identity]!==($next[$identity]??'')) throw new InvalidArgumentException('Klíč patří k jinému účtu v záloze. Režim doplnění by smíchal přístupové údaje.');
             }
         }
@@ -193,6 +195,8 @@ final class SettingsArchive
                 if (empty($s[$gateway]['enabled'])) continue;
                 foreach ($required as $field) if (!is_string($s[$gateway][$field] ?? null) || $s[$gateway][$field] === '') throw new InvalidArgumentException('Chybí údaj zapnuté služby '.$gateway.'.'.$field);
             }
+            $cronHash=$s['fio_bank']['cron_key_hash'] ?? '';
+            if ($cronHash !== '' && (!is_string($cronHash) || preg_match('/^[a-f0-9]{64}$/D',$cronHash)!==1)) throw new InvalidArgumentException('Neplatný otisk Fio cron klíče.');
             if (!empty($s['fio_bank']['token']) && !\SimpleStore\Checkout\FioStatementClient::validToken($s['fio_bank']['token'])) throw new InvalidArgumentException('Neplatný Fio token.');
         }
         if ($section === 'business') {

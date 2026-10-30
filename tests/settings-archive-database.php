@@ -24,6 +24,31 @@ try {
     $assert(isset($downloadData['reference_only']['installation'],$downloadData['data']['checkout']), 'Comprehensive export coverage missing');
     $assert($a->snapshot()===$before, 'Opening Export changed settings');
     $reject(fn()=>$a->plan($before,['google'=>[1=>['settings_json'=>['client_id'=>'other.apps.googleusercontent.com']]]],true));
+    // Filling an empty ID must never retain a different nonempty secret.
+    $incomplete=$before;
+    $incomplete['google'][1]['settings_json']['client_id']='';
+    $pair=['google'=>[1=>['settings_json'=>['client_id'=>'new.apps.googleusercontent.com','client_secret'=>'new-secret']]]];
+    $reject(fn()=>$a->plan($incomplete,$pair,false));
+    $assert(count($a->plan($incomplete,$pair,true)['changes'])===1,'Explicit replacement of a complete pair must work');
+    $incomplete=$before;$incomplete['google'][1]['settings_json']['client_secret']='';
+    $reject(fn()=>$a->plan($incomplete,$pair,false));
+    foreach ([null,'',[]] as $empty) {
+        $assert($a->plan($before,['google'=>[1=>['settings_json'=>$empty]]],true)['changes']===[],'Empty JSON column must preserve data');
+        $assert($a->plan($before,['supplier_prices'=>[1=>['paused'=>$empty]]],true)['changes']===[],'Empty scalar column must preserve data');
+    }
+    // A broken staged preview must not trap the administrator on an error page.
+    $_SESSION['settings_archive_pending']=['expires'=>time()+60,'encrypted'=>'broken'];
+    require dirname(__DIR__).'/src/Admin/settings-export.php';
+    $assert($archivePending===null && !isset($_SESSION['settings_archive_pending']) && $a->snapshot()===$before,'Broken preview must be discarded without writes');
+    $other=ConnectionFactory::create(['host'=>'127.0.0.1','user'=>'root','password'=>(string)getenv('MYSQL_TEST_PASSWORD'),'database'=>'simple_store','port'=>3306]);
+    $lockName='supplier-prices:'.sha1((string)$other->queryFirstField('SELECT DATABASE()'));
+    $assert((int)$other->queryFirstField('SELECT GET_LOCK(%s,0)',$lockName)===1,'Fixture worker lock failed');
+    try {
+        $busy=false;
+        try {$a->apply(['product_import'=>[1=>['prompt_text'=>'Must not be written']]],true,A::digest($before));}
+        catch (\SimpleStore\Supplier\WorkerBusy $e) {$busy=true;}
+        $assert($busy && $a->snapshot()===$before,'Concurrent worker must block import without writes');
+    } finally {$other->queryFirstField('SELECT RELEASE_LOCK(%s)',$lockName);}
     $rows=$db->query('SELECT * FROM shop_google_login_settings');
     $assert($before['google'][1]['settings_json']['client_secret']==='fixture-secret','Portable secret missing');
     $assert(!isset($before['google'][1]['settings_json']['client_secret_encrypted']),'Cipher is not portable');
@@ -55,6 +80,10 @@ try {
     $plan=$a->plan($before,['checkout'=>[1=>['settings_json'=>['packeta'=>['api_password'=>'fixture-password']]]]],true);
     $assert(count($plan['changes'])===1,'Valid carrier update rejected');
     $assert($a->snapshot()===$after,'Checkout validator wrote data');
+    $incomplete=$before;$incomplete['checkout'][1]['settings_json']['comgate']['secret']='old-secret';
+    $reject(fn()=>$a->plan($incomplete,['checkout'=>[1=>['settings_json'=>['comgate'=>['merchant'=>'123','secret'=>'new-secret']]]]],false));
+    $reject(fn()=>$a->plan($before,['checkout'=>[1=>['settings_json'=>['fio_bank'=>['cron_key_hash'=>'not-a-hash']]]]],true));
+
     $reject(fn()=>$a->plan($before,['checkout'=>[1=>['settings_json'=>['bank_transfer'=>['account_display'=>'123456/0100','recipient'=>'Fixture','iban'=>'CZ0000000000000000000000']]]]],true));
     $reject(fn()=>$a->plan($before,['checkout'=>[1=>['settings_json'=>['shipping_methods'=>['zasilkovna_pickup'=>['price_czk'=>-1]]]]]],true));
     echo "Settings archive DB: read-only export, secret round trip, non-destructive import, atomic rollback and stale preview passed.\n";

@@ -41,7 +41,13 @@ $download = static function(array $value, string $prefix): void {
 try {
     $pending=$_SESSION['settings_archive_pending']??null;
     if (is_array($pending) && ($pending['expires']??0)>=time()) {
-        $archivePending=json_decode(MailCredential::decrypt($pending['encrypted']),true,64,JSON_THROW_ON_ERROR);
+        try {
+            $archivePending=json_decode(MailCredential::decrypt($pending['encrypted']),true,64,JSON_THROW_ON_ERROR);
+            if (!is_array($archivePending) || !is_string($archivePending['token']??null) || !is_array($archivePending['before']['data']??null) || !is_array($archivePending['incoming']??null) || !is_bool($archivePending['overwrite']??null) || !is_string($archivePending['version']??null)) throw new RuntimeException('Invalid staged preview');
+        } catch (Throwable $error) {
+            unset($_SESSION['settings_archive_pending']); $archivePending=null;
+            $archiveError='Uložený náhled nelze přečíst a byl zrušen. Nastavení se nezměnilo; soubor můžeš nahrát znovu nebo stáhnout novou zálohu.';
+        }
     } else unset($_SESSION['settings_archive_pending']);
     if ($method==='POST') {
         if ($action==='settings-export-download') {
