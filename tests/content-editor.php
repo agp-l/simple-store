@@ -86,6 +86,22 @@ foreach (['page', 'post'] as $type) {
         'editToken' => 'test-token',
     ]);
     $editor = ob_get_clean();
+    ob_start();
+    $renderer->render($type, array_replace($data, [
+        'content' => $revision + ['saved_at' => '2026-10-30 12:00:00'],
+        'revisionPreview' => true, 'privatePage' => true,
+        'revisionReturnUrl' => '/shop/cs/moje-adresa?edit=1#content-history',
+        'canEditContent' => false, 'contentEditMode' => false,
+    ]));
+    $preview = ob_get_clean();
+    if (!str_contains($preview, 'Náhled revize 2') ||
+        !str_contains($preview, 'Aktuální stránka se nemění.') ||
+        !str_contains($preview, 'noindex, nofollow') ||
+        str_contains($preview, 'contenteditable=') ||
+        str_contains($preview, 'content-editor-config') ||
+        !str_contains($editor, 'preview_revision=1')) {
+        throw new RuntimeException('Revision preview must render read-only and remain accessible from history.');
+    }
     $editableSectionCount = count(array_filter(ContentBody::decode($snapshot['body']),
         static fn (array $section): bool => $section['type'] !== 'image'));
     $compactEditableBodies = preg_match_all('/<div class="cms-block-text"[^>]*><(?:p>|ul\b|div\b)/', $editor) ===
