@@ -91,7 +91,7 @@ try {
     unset($navigation['manager'], $navigation['hasContent']);
     $shared = array_merge($shared, $navigation);
     $shared['siteCopy'] = (new SiteCopyRepository($db))->load($url->getLanguage());
-    if (in_array($route['name'], ['catalog', 'category', 'product'], true) && !array_key_exists('preview_revision', $_GET)) {
+    if (in_array($route['name'], ['catalog', 'category', 'product'], true) && !($route['name'] === 'product' && array_key_exists('preview_revision', $_GET))) {
         $checkoutFile = __DIR__ . '/config/checkout.php';
         $exampleCheckout = require __DIR__ . '/config/checkout.example.php';
         $checkoutConfig = is_file($checkoutFile) ? require $checkoutFile : $exampleCheckout;

@@ -31,8 +31,8 @@ test('product history opens a read-only snapshot with working gallery and return
       const popupPromise = context.waitForEvent('page');
       await page.locator('#product-history a').click();
       const popup = await popupPromise; await popup.waitForLoadState();
-      assert.equal(await popup.locator('h1').textContent(), 'Historický batoh');
-      assert.equal(await page.locator('h1').textContent(), 'Aktuální batoh');
+      assert.equal(await popup.locator('.detail-info h1').textContent(), 'Historický batoh');
+      assert.equal(await page.locator('.detail-info h1').textContent(), 'Aktuální batoh');
       assert.equal(await popup.locator('#detail-add, #qty, [contenteditable], #inline-editor-config, [data-editor-action]').count(), 0);
       assert.equal(await popup.locator('form.product-purchase').count(), 0);
       assert.match(await popup.locator('.detail-prices').textContent(), /1\s*234/);

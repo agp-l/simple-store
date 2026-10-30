@@ -65,7 +65,7 @@ $productCardEffects = $page === 'catalog'
 <?php if ($page === 'complete' && !empty($bankPayment['spayd'])): ?><script type="module" src="<?= $siteRoot ?>assets/payment-qr.js?v=<?= filemtime(__DIR__ . '/../assets/payment-qr.js') ?>"></script><?php endif; ?>
 <?php if ($page === 'complete'): ?><script defer src="<?= $siteRoot ?>assets/order-link.js?v=<?= filemtime(__DIR__ . '/../assets/order-link.js') ?>"></script><?php endif; ?>
 <?php if ($page === 'catalog' || $page === 'blog'): ?><script defer src="<?= $siteRoot ?>assets/load-more.js"></script><?php endif; ?>
-<?php if ($page === 'product-record'): ?><script defer src="<?= $siteRoot ?>assets/product.js"></script><?php endif; ?>
+<?php if ($page === 'product-record'): ?><script defer src="<?= $siteRoot ?>assets/product.js?v=<?= filemtime(__DIR__ . '/../assets/product.js') ?>"></script><?php endif; ?>
 <?php if ($editMode): ?><script defer src="<?= $siteRoot ?>assets/inline-editor.js?v=<?= filemtime(__DIR__ . '/../assets/inline-editor.js') ?>"></script><?php endif; ?>
 <?php if ($contentEditMode): ?><script defer src="<?= $siteRoot ?>assets/content-editor.js?v=<?= filemtime(__DIR__ . '/../assets/content-editor.js') ?>"></script><?php endif; ?>
 <?php if ($editMode || $contentEditMode || ($mediaManager ?? false)): ?><script defer src="<?= $siteRoot ?>assets/media-manager.js?v=<?= filemtime(__DIR__ . '/../assets/media-manager.js') ?>"></script><?php endif; ?>
@@ -73,3 +73,4 @@ $productCardEffects = $page === 'catalog'
 <?php if (($homepageEditing ?? false) || ($categoryTipsScope ?? '') !== ''): ?><script defer src="<?= $siteRoot ?>assets/product-selection.js?v=<?= filemtime(__DIR__ . '/../assets/product-selection.js') ?>"></script><?php endif; ?>
 </body>
 </html>
+
