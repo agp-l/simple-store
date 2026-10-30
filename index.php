@@ -59,7 +59,7 @@ if (in_array($route['name'], ['catalog','category','product','page','blog','post
     $shared['canonicalUrl'] = \SimpleStore\Seo\PublicSite::absolute($shared['publicBaseUrl'], $url->path(implode('/', $url->getSegments())), $url->getBasePath());
     if (in_array($route['name'], ['catalog','category','blog'], true) && isset($_GET['offset']) && is_string($_GET['offset']) && ctype_digit($_GET['offset']) && (int) $_GET['offset'] > 0) $shared['canonicalUrl'] .= '?offset=' . (int) $_GET['offset'];
 }
-$shared['noIndex'] = isset($_GET['manage']) || isset($_GET['edit']) || isset($_GET['preview']) || isset($_GET['search']) || isset($_GET['sort']) || isset($_GET['max_weight']) || isset($_GET['homepage_edit']);
+$shared['noIndex'] = isset($_GET['manage']) || isset($_GET['edit']) || isset($_GET['preview']) || isset($_GET['preview_revision']) || isset($_GET['search']) || isset($_GET['sort']) || isset($_GET['max_weight']) || isset($_GET['homepage_edit']);
 $databaseFile = __DIR__ . '/config/database.php';
 $missing = [];
 if (!is_file(__DIR__ . '/vendor/autoload.php')) {
@@ -91,7 +91,7 @@ try {
     unset($navigation['manager'], $navigation['hasContent']);
     $shared = array_merge($shared, $navigation);
     $shared['siteCopy'] = (new SiteCopyRepository($db))->load($url->getLanguage());
-    if (in_array($route['name'], ['catalog', 'category', 'product'], true)) {
+    if (in_array($route['name'], ['catalog', 'category', 'product'], true) && !array_key_exists('preview_revision', $_GET)) {
         $checkoutFile = __DIR__ . '/config/checkout.php';
         $exampleCheckout = require __DIR__ . '/config/checkout.example.php';
         $checkoutConfig = is_file($checkoutFile) ? require $checkoutFile : $exampleCheckout;
@@ -386,6 +386,10 @@ try {
         }
         $renderer->render('catalog', $shared);
     } elseif ($route['name'] === 'product') {
+        if (array_key_exists('preview_revision', $_GET)) {
+            require __DIR__.'/src/Admin/product-revision-preview.php';
+            exit;
+        }
         $repository = new ProductRepository($db, $site['languages'], null, 50, $productStock);
         $item = $editRequested && $canEdit
             ? $repository->findCurrentBySlug($route['slug'], $url->getLanguage())
@@ -584,3 +588,4 @@ try {
     error_log((string) $error);
     $renderer->render('unavailable', $shared + ['debugError' => (string) $error], 503);
 }
+
