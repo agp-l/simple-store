@@ -87,9 +87,9 @@ foreach ($mailDefaults as $key => $value) {
     <label>Port<input type="number" name="smtp_port" value="<?= (int) $mailForm['smtp_port'] ?>" min="1" max="65535" required></label></div>
     <div class="panel-fields-two"><label>Zabezpečení<select name="smtp_security"><option value="starttls" <?= $mailForm['smtp_security'] === 'starttls' ? 'selected' : '' ?>>STARTTLS (obvykle 587)</option><option value="tls" <?= $mailForm['smtp_security'] === 'tls' ? 'selected' : '' ?>>TLS od začátku (obvykle 465)</option></select></label>
     <label>Uživatelské jméno schránky<input name="smtp_username" value="<?= $escape($mailForm['smtp_username']) ?>" maxlength="254" autocomplete="off" placeholder="objednavky@dobrodruzi.cz"></label></div>
-    <label>Heslo schránky<input type="password" name="smtp_password" maxlength="512" autocomplete="new-password" placeholder="<?= $mailForm['smtp_password_encrypted'] !== '' ? 'Heslo je uloženo; pro změnu napiš nové' : 'Heslo ke schránce' ?>"></label>
+    <label>Heslo schránky<input type="text" spellcheck="false" name="smtp_password" value="<?= $escape($smtpPasswordValue ?? '') ?>" maxlength="512" autocomplete="off" placeholder="<?= $mailForm['smtp_password_encrypted'] !== '' ? 'Heslo je uloženo; pro změnu napiš nové' : 'Heslo ke schránce' ?>"></label>
     <label class="panel-check"><input type="checkbox" name="smtp_clear_password" value="1"> Smazat uložené SMTP heslo</label>
-    <p class="panel-help">Heslo se do stránky nikdy nevrací; v databázi je šifrované. Spolu s databází zálohuj také <code>config/.smtp-key.php</code>. Použij údaje pro odchozí poštu a nastav adresu odesílatele podle své schránky.</p>
+    <p class="panel-help">Uložené heslo je zde viditelné pro správce; v databázi zůstává šifrované. Prázdné pole heslo zachová. Pro odstranění pole vyprázdni a zaškrtni smazání. Spolu s databází zálohuj také <code>config/.smtp-key.php</code>. Použij údaje pro odchozí poštu a nastav adresu odesílatele podle své schránky.</p>
     </div>
   </details>
   <div class="mail-save-bar"><div><strong data-mail-state aria-live="polite"><?= $mailPreviewIsDraft ? 'Rozepsané změny nejsou uložené' : 'Uložené nastavení' ?></strong><span>Již vytvořené zprávy ve frontě si ponechají původní obsah.</span></div><button class="panel-action panel-button" type="submit" name="action" value="save-mail-settings" <?= !$mailSettingsReady ? 'disabled' : '' ?>><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit nastavení e-mailů</button></div>
@@ -113,3 +113,4 @@ foreach ($mailDefaults as $key => $value) {
 </section>
 
 </div>
+

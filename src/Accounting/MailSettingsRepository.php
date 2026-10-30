@@ -233,3 +233,4 @@ final class MailSettingsRepository
         return trim($value);
     }
 }
+

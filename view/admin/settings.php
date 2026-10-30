@@ -27,6 +27,7 @@ $btcpayWebhookSecretConfigured ??= false;
 <?php if ($settingsTab === 'overview'): ?>
 <div class="panel-settings-overview">
   <?php foreach ([
+      ['export', 'Export a import', 'JSON záloha nastavení a klíčů, náhled změn a bezpečný import.'],
       ['installation', 'Doména a přesun', 'Společná adresa webu, kontrola podsložky a návod k přestěhování.'],
       ['accounts', 'Přihlášení zákazníků', 'Google účet, registrace a klasické přihlášení.'],
       ['products', 'Hromadná úprava produktů', 'Přiřazení prodávajících, způsob prodeje, sklad a zveřejnění produktů.'],
@@ -38,9 +39,11 @@ $btcpayWebhookSecretConfigured ??= false;
       ['mail', 'E-maily', 'SMTP, potvrzení objednávek a texty zpráv.'],
       ['legal', 'Obchodní podmínky', 'Odkaz na publikovanou stránku obchodních podmínek.'],
   ] as [$key, $title, $description]): ?>
-    <a class="panel-settings-card" data-admin-setting="<?= $escape($key) ?>" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=' . $key) ?>"><span class="admin-setting-icon" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render(['accounts'=>'user', 'products'=>'package', 'appearance'=>'edit', 'delivery'=>'truck', 'carriers'=>'package', 'payment'=>'card', 'prices'=>'card', 'mail'=>'mail', 'legal'=>'document', 'installation'=>'globe'][$key]) ?></span><span class="admin-setting-arrow" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?></span><strong><?= $escape($title) ?></strong><span><?= $escape($description) ?></span></a>
+    <a class="panel-settings-card" data-admin-setting="<?= $escape($key) ?>" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=' . $key) ?>"><span class="admin-setting-icon" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render(['accounts'=>'user', 'products'=>'package', 'appearance'=>'edit', 'delivery'=>'truck', 'carriers'=>'package', 'payment'=>'card', 'prices'=>'card', 'mail'=>'mail', 'legal'=>'document', 'export'=>'document', 'installation'=>'globe'][$key]) ?></span><span class="admin-setting-arrow" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?></span><strong><?= $escape($title) ?></strong><span><?= $escape($description) ?></span></a>
   <?php endforeach; ?>
 </div>
+<?php elseif ($settingsTab === 'export'): ?>
+<?php require __DIR__.'/settings-export.php'; ?>
 <?php elseif ($settingsTab === 'installation'): ?>
 <?php require __DIR__.'/settings-installation.php'; ?>
 <?php elseif ($settingsTab === 'accounts'): ?>
@@ -133,9 +136,9 @@ $btcpayWebhookSecretConfigured ??= false;
   <h3>Podávání zásilek</h3>
   <label>Označení odesílatele (hodnota pro API pole eshop)<input name="packeta_sender" value="<?= $escape($form['packeta_sender'] ?? '') ?>" maxlength="64" autocomplete="off" placeholder="Zkopíruj přesné Označení, ne název firmy"></label>
   <p class="panel-help">V <a href="https://client.packeta.com/senders/" target="_blank" rel="noopener noreferrer">klientské sekci Zásilkovny → Odesílatelé</a> zkopíruj hodnotu <strong>Označení</strong> ze čtvrtého sloupce u svého odesílatele. Samotný název firmy nebo e-shopu nemusí být stejný. Pokud odesílatel chybí, nejdřív ho tam vytvoř a ulož; účet musí být schválený.</p>
-  <label>API heslo Zásilkovny<input type="password" name="packeta_api_password" value="" maxlength="128" autocomplete="new-password" placeholder="<?= !empty($packetaPasswordConfigured) ? 'Heslo je uloženo; pro změnu zadej nové' : 'Zadej soukromé API heslo' ?>"></label>
-  <p class="panel-help">API heslo je jiné než veřejný klíč widgetu. Prázdné pole ponechá uložené heslo beze změny. Heslo se na veřejných stránkách ani v administraci znovu nevypisuje.</p>
-  <?php if (!empty($packetaPasswordConfigured)): ?><label class="panel-check"><input type="checkbox" name="packeta_clear_password" value="1"> Odstranit uložené API heslo</label><?php endif; ?>
+  <label>API heslo Zásilkovny<input type="text" spellcheck="false" name="packeta_api_password" value="<?= $escape($form['packeta_api_password'] ?? '') ?>" maxlength="128" autocomplete="off" placeholder="<?= !empty($packetaPasswordConfigured) ? 'Heslo je uloženo; pro změnu zadej nové' : 'Zadej soukromé API heslo' ?>"></label>
+  <p class="panel-help">API heslo je jiné než veřejný klíč widgetu. Prázdné pole ponechá uložené heslo beze změny. Uložené heslo je viditelné pouze správci v tomto formuláři.</p>
+  <?php if (!empty($packetaPasswordConfigured)): ?><label class="panel-check"><input type="checkbox" name="packeta_clear_password" value="1"> Vyprázdnit pole výše a odstranit uložené API heslo</label><?php endif; ?>
   </section>
 <?php endif; ?>
 <?php if ($settingsTab === 'payment'): ?>
@@ -169,8 +172,8 @@ $btcpayWebhookSecretConfigured ??= false;
   <?php if ($settingsError !== '' && $paymentArea === 'fio'): ?><p class="panel-error" role="alert"><?= $escape($settingsError) ?></p><?php endif; ?>
   <label class="panel-check"><input type="checkbox" name="fio_enabled" value="1" <?= $form['fio_enabled'] === '1' ? 'checked' : '' ?>> Ověřovat přijaté převody přes Fio API</label>
   <label>Účet, ke kterému patří token<input name="fio_account_display" value="<?= $escape($form['fio_account_display']) ?>" maxlength="22" autocomplete="off" placeholder="číslo/2010"></label>
-  <label>Token Fio pouze pro sledování účtu<input type="password" name="fio_token" value="<?= $escape($fioDraftToken ?? '') ?>" maxlength="512" autocomplete="new-password" placeholder="<?= !empty($fioTokenConfigured) ? 'Token je uložen; pro změnu zadej nový' : 'Vlož token vytvořený ve Fio internetbankingu' ?>"></label>
-  <?php if (!empty($fioTokenConfigured)): ?><label class="panel-check"><input type="checkbox" name="fio_clear_token" value="1" <?= $settingsError !== '' && $paymentArea === 'fio' && ($_POST['fio_clear_token'] ?? null) === '1' ? 'checked' : '' ?>> Odstranit uložený token</label><?php endif; ?>
+  <label>Token Fio pouze pro sledování účtu<input type="text" spellcheck="false" name="fio_token" value="<?= $escape($fioDraftToken ?? '') ?>" maxlength="512" autocomplete="off" placeholder="<?= !empty($fioTokenConfigured) ? 'Token je uložen; pro změnu zadej nový' : 'Vlož token vytvořený ve Fio internetbankingu' ?>"></label>
+  <?php if (!empty($fioTokenConfigured)): ?><label class="panel-check"><input type="checkbox" name="fio_clear_token" value="1" <?= $settingsError !== '' && $paymentArea === 'fio' && ($_POST['fio_clear_token'] ?? null) === '1' ? 'checked' : '' ?>> Vyprázdnit pole výše a odstranit uložený token</label><?php endif; ?>
   <p class="panel-help">Fio kontroluje pouze převody na tento účet. Pro automatické potvrzování nových plateb musí být stejný jako účet pro převod a QR platbu výše. Při platbě na jinou banku zůstává QR kód funkční, přijetí platby ale potvrď ručně. Token se zde nikdy nevypisuje zpět.</p>
   <p class="panel-help">Token má přesně 64 znaků. V internetbankingu Fio otevři Nastavení → API, dokonči jeho autorizaci a po schválení počkej 5 minut. Stačí právo „Sledování účtu“. Používej pro obchod vlastní token: další aplikace se stejným tokenem může vyvolat limit HTTP 409. Pokud Fio vrátí HTTP 500, ověř jeho aktivní stav a platnost. <a href="https://www.fio.cz/docs/cz/API_Bankovnictvi.pdf" target="_blank" rel="noopener noreferrer">Dokumentace Fio ↗</a></p>
   <p class="panel-help">Automaticky se páruje jedna příchozí platba v Kč přesně ve výši objednávky za posledních 89 dní. Rozdělené platby, přeplatky, vratky a storna zkontroluj ve výpisu ručně.</p>
@@ -190,8 +193,8 @@ $btcpayWebhookSecretConfigured ??= false;
   <p class="panel-help">V Comgate jej najdeš v Integrace → Nastavení obchodů → Propojení obchodu. Použij ID propojení, nikoli automaticky Merchant ID organizace. Vlastní merchant a secret jsou potřeba i pro testování.</p>
   <label>Veřejná HTTPS adresa obchodu<input type="url" readonly aria-describedby="installation-address-help" value="<?= $escape($form['comgate_return_base_url']) ?>" maxlength="1000" autocomplete="off" placeholder="<?= $escape('https://obchod.cz' . rtrim($basePath, '/')) ?>"></label>
   <p class="panel-help">Adresa se odvozuje z jediné adresy instalace v nastavení systému. Návraty PAID, PENDING a CANCELLED obchod generuje pro každou platbu automaticky. Doména i případná podsložka musí být dostupné přes HTTPS také při testování.</p>
-  <label>Tajný klíč API (secret)<input type="password" name="comgate_secret" value="<?= $escape($paymentDraftSecrets['comgate_secret'] ?? '') ?>" maxlength="256" autocomplete="new-password" placeholder="<?= $comgateSecretConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'Tajný klíč z klientského portálu' ?>"></label>
-  <p class="panel-help">Prázdné pole ponechá uložený klíč beze změny. Klíč se znovu nezobrazuje ani se neposílá zákazníkovi.</p>
+  <label>Tajný klíč API (secret)<input type="text" spellcheck="false" name="comgate_secret" value="<?= $escape($paymentDraftSecrets['comgate_secret'] ?? '') ?>" maxlength="256" autocomplete="off" placeholder="<?= $comgateSecretConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'Tajný klíč z klientského portálu' ?>"></label>
+  <p class="panel-help">Prázdné pole ponechá uložený klíč beze změny. Uložený klíč je viditelný pouze správci v tomto formuláři.</p>
   <?php $comgatePublicRoot = $form['comgate_return_base_url'] !== '' ? rtrim($form['comgate_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/'); ?>
   <label>PUSH – adresa pro oznámení výsledku platby<input readonly value="<?= $escape($comgatePublicRoot . '/comgate-callback.php') ?>" aria-describedby="comgate-push-help"></label>
   <p class="panel-help" id="comgate-push-help">Tuto adresu zkopíruj do propojení obchodu u Comgate. Přijímá serverový POST v JSON podle REST v2, bez přihlášení a bez přesměrování. Její běžné otevření v prohlížeči vrátí 405 – to je správně.</p>
@@ -208,7 +211,7 @@ $btcpayWebhookSecretConfigured ??= false;
     <p class="panel-help">Refundaci skutečně odešli v klientském portálu Comgate. Zápis vratky nebo storno objednávky v e-shopu samo peníze nevrací. Nejasné založení platby se automaticky neopakuje; nejdřív prověř transakci u Comgate podle čísla objednávky.</p>
     <p><a href="https://help.comgate.eu/docs/jak-ziskat-platebni-branu" target="_blank" rel="noopener noreferrer">Požadavky Comgate</a> · <a href="https://help.comgate.eu/docs/navod-k-pouziti" target="_blank" rel="noopener noreferrer">Testování a klientský portál</a> · <a href="https://help.comgate.eu/docs/loga-a-udaje-na-webu" target="_blank" rel="noopener noreferrer">Oficiální loga</a></p>
   </div></details>
-  <?php if ($comgateSecretConfigured): ?><label class="panel-check"><input type="checkbox" name="comgate_clear_secret" value="1" <?= $settingsError !== '' && $paymentArea === 'comgate' && ($_POST['comgate_clear_secret'] ?? null) === '1' ? 'checked' : '' ?>> Odstranit uložený tajný klíč</label><?php endif; ?>
+  <?php if ($comgateSecretConfigured): ?><label class="panel-check"><input type="checkbox" name="comgate_clear_secret" value="1" <?= $settingsError !== '' && $paymentArea === 'comgate' && ($_POST['comgate_clear_secret'] ?? null) === '1' ? 'checked' : '' ?>> Vyprázdnit pole výše a odstranit uložený tajný klíč</label><?php endif; ?>
   <div class="panel-settings-save"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit Comgate</button></div>
   </div></details></form>
   <?php endif; ?>
@@ -224,9 +227,9 @@ $btcpayWebhookSecretConfigured ??= false;
   <label>Client ID<input name="gopay_client_id" value="<?= $escape($form['gopay_client_id']) ?>" maxlength="256" autocomplete="off" placeholder="Client ID od GoPay"></label>
   <label>Veřejná HTTPS adresa obchodu<input type="url" readonly aria-describedby="installation-address-help" value="<?= $escape($form['gopay_return_base_url']) ?>" maxlength="1000" autocomplete="off" placeholder="<?= $escape('https://obchod.cz' . rtrim($basePath, '/')) ?>"></label>
   <p class="panel-help">Vlož kořenovou adresu této instalace bez posledního lomítka. Tuto adresu musí být možné otevřít z internetu přes HTTPS, také při testování.</p>
-  <label>Client secret<input type="password" name="gopay_client_secret" value="<?= $escape($paymentDraftSecrets['gopay_client_secret'] ?? '') ?>" maxlength="256" autocomplete="new-password" placeholder="<?= $gopaySecretConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'Client secret od GoPay' ?>"></label>
-  <p class="panel-help">Prázdné pole ponechá uložený klíč beze změny. Tajný klíč se zde znovu nevypisuje. GoPay zavolá URL oznámení <code><?= $escape(($form['gopay_return_base_url'] !== '' ? rtrim($form['gopay_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/')) . '/gopay-callback.php') ?></code> a zákazníka vrátí přes <code>gopay-return.php</code>. Místní localhost GoPay nemůže zavolat.</p>
-  <?php if ($gopaySecretConfigured): ?><label class="panel-check"><input type="checkbox" name="gopay_clear_secret" value="1" <?= $settingsError !== '' && $paymentArea === 'gopay' && ($_POST['gopay_clear_secret'] ?? null) === '1' ? 'checked' : '' ?>> Odstranit uložený Client secret</label><?php endif; ?>
+  <label>Client secret<input type="text" spellcheck="false" name="gopay_client_secret" value="<?= $escape($paymentDraftSecrets['gopay_client_secret'] ?? '') ?>" maxlength="256" autocomplete="off" placeholder="<?= $gopaySecretConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'Client secret od GoPay' ?>"></label>
+  <p class="panel-help">Prázdné pole ponechá uložený klíč beze změny. Uložený klíč je zde viditelný správci. GoPay zavolá URL oznámení <code><?= $escape(($form['gopay_return_base_url'] !== '' ? rtrim($form['gopay_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/')) . '/gopay-callback.php') ?></code> a zákazníka vrátí přes <code>gopay-return.php</code>. Místní localhost GoPay nemůže zavolat.</p>
+  <?php if ($gopaySecretConfigured): ?><label class="panel-check"><input type="checkbox" name="gopay_clear_secret" value="1" <?= $settingsError !== '' && $paymentArea === 'gopay' && ($_POST['gopay_clear_secret'] ?? null) === '1' ? 'checked' : '' ?>> Vyprázdnit pole výše a odstranit uložený Client secret</label><?php endif; ?>
   <div class="panel-settings-save"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit GoPay</button></div>
   </div></details></form>
   <?php endif; ?>
@@ -241,11 +244,11 @@ $btcpayWebhookSecretConfigured ??= false;
   <label>ID obchodu (Store ID)<input name="btcpay_store_id" value="<?= $escape($form['btcpay_store_id']) ?>" maxlength="128" autocomplete="off" placeholder="ID obchodu v BTCPay"></label>
   <label>Adresa tohoto obchodu<input type="url" readonly aria-describedby="installation-address-help" value="<?= $escape($form['btcpay_return_base_url']) ?>" maxlength="1000" autocomplete="off" placeholder="<?= $escape('https://obchod.cz' . rtrim($basePath, '/')) ?>"></label>
   <p class="panel-help">Běžný provoz vyžaduje veřejné HTTPS. Při testu obou aplikací na stejném počítači můžeš pro obě adresy použít <code>http://localhost</code> (včetně instalačních podsložek). V BTCPay Lite musíš zapnout <code>allow_local_webhooks</code>; bez toho webhook na localhost nebude doručen.</p>
-  <label>API klíč BTCPay<input type="password" name="btcpay_api_key" value="<?= $escape($paymentDraftSecrets['btcpay_api_key'] ?? '') ?>" maxlength="512" autocomplete="new-password" placeholder="<?= $btcpayApiKeyConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'API klíč pro tento BTCPay obchod' ?>"></label>
-  <?php if ($btcpayApiKeyConfigured): ?><label class="panel-check"><input type="checkbox" name="btcpay_clear_api_key" value="1" <?= $settingsError !== '' && $paymentArea === 'btcpay' && ($_POST['btcpay_clear_api_key'] ?? null) === '1' ? 'checked' : '' ?>> Odstranit uložený API klíč</label><?php endif; ?>
-  <label>Tajný klíč webhooku<input type="password" name="btcpay_webhook_secret" value="<?= $escape($paymentDraftSecrets['btcpay_webhook_secret'] ?? '') ?>" maxlength="512" autocomplete="new-password" placeholder="<?= $btcpayWebhookSecretConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'Secret z nastavení webhooku v BTCPay' ?>"></label>
-  <?php if ($btcpayWebhookSecretConfigured): ?><label class="panel-check"><input type="checkbox" name="btcpay_clear_webhook_secret" value="1" <?= $settingsError !== '' && $paymentArea === 'btcpay' && ($_POST['btcpay_clear_webhook_secret'] ?? null) === '1' ? 'checked' : '' ?>> Odstranit uložený tajný klíč webhooku</label><?php endif; ?>
-  <p class="panel-help">V BTCPay v nastavení tohoto obchodu založ webhook pro události faktur. Jeho URL nastav na <code><?= $escape(($form['btcpay_return_base_url'] !== '' ? rtrim($form['btcpay_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/')) . '/btcpay-callback.php') ?></code>. Secret webhooku zkopíruj sem. Prázdná pole s klíči ponechají uložené hodnoty beze změny; uložené klíče se znovu nevypisují. Pokud uložení selže, právě zadané klíče zůstanou pouze v tomto formuláři.</p>
+  <label>API klíč BTCPay<input type="text" spellcheck="false" name="btcpay_api_key" value="<?= $escape($paymentDraftSecrets['btcpay_api_key'] ?? '') ?>" maxlength="512" autocomplete="off" placeholder="<?= $btcpayApiKeyConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'API klíč pro tento BTCPay obchod' ?>"></label>
+  <?php if ($btcpayApiKeyConfigured): ?><label class="panel-check"><input type="checkbox" name="btcpay_clear_api_key" value="1" <?= $settingsError !== '' && $paymentArea === 'btcpay' && ($_POST['btcpay_clear_api_key'] ?? null) === '1' ? 'checked' : '' ?>> Vyprázdnit pole výše a odstranit uložený API klíč</label><?php endif; ?>
+  <label>Tajný klíč webhooku<input type="text" spellcheck="false" name="btcpay_webhook_secret" value="<?= $escape($paymentDraftSecrets['btcpay_webhook_secret'] ?? '') ?>" maxlength="512" autocomplete="off" placeholder="<?= $btcpayWebhookSecretConfigured ? 'Klíč je uložen; pro změnu zadej nový' : 'Secret z nastavení webhooku v BTCPay' ?>"></label>
+  <?php if ($btcpayWebhookSecretConfigured): ?><label class="panel-check"><input type="checkbox" name="btcpay_clear_webhook_secret" value="1" <?= $settingsError !== '' && $paymentArea === 'btcpay' && ($_POST['btcpay_clear_webhook_secret'] ?? null) === '1' ? 'checked' : '' ?>> Vyprázdnit pole výše a odstranit uložený tajný klíč webhooku</label><?php endif; ?>
+  <p class="panel-help">V BTCPay v nastavení tohoto obchodu založ webhook pro události faktur. Jeho URL nastav na <code><?= $escape(($form['btcpay_return_base_url'] !== '' ? rtrim($form['btcpay_return_base_url'], '/') : 'https://obchod.cz' . rtrim($basePath, '/')) . '/btcpay-callback.php') ?></code>. Secret webhooku zkopíruj sem. Prázdná pole s klíči ponechají uložené hodnoty beze změny; uložené klíče jsou zde viditelné správci. Pokud uložení selže, právě zadané klíče zůstanou pouze v tomto formuláři.</p>
   <div class="panel-settings-save"><button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('save') ?> Uložit BTCPay</button></div>
   </div></details></form>
   <?php endif; ?>
@@ -277,3 +280,4 @@ $btcpayWebhookSecretConfigured ??= false;
   </section>
 <?php endif; ?>
 <?php endif; ?>
+
