@@ -180,7 +180,7 @@ final class SettingsArchive
             if (!empty($s['enabled']) && (empty($s['client_id']) || empty($s['client_secret']))) throw new InvalidArgumentException('Zapnutý Google vyžaduje ID i secret.');
         }
         if ($section === 'checkout') {
-            (new \SimpleStore\Checkout\CheckoutSettingsRepository($this->db))->saveSection('legal', ['terms_url'=>$s['terms_url'] ?? ''], '', $s, false);
+            (new \SimpleStore\Checkout\CheckoutSettingsRepository($this->db))->saveSection('legal', ['terms_url'=>$s['terms_url'] ?? ''], \SimpleStore\Configuration\Installation::current()->basePath(), $s, false);
             $bank=$s['bank_transfer'] ?? [];
             if (!empty($bank['iban']) && !empty($bank['account_display'])) {
                 $iban=\SimpleStore\Checkout\BankTransferPayment::ibanForCzechAccount($bank['account_display']);
