@@ -103,6 +103,8 @@ final class PageRenderer
         $purchasePartners = $data['purchasePartners'] ?? [];
         $productSaleForm = $data['productSaleForm'] ?? [];
         $productSaleError = $data['productSaleError'] ?? '';
+        $revisionPreview = (bool) ($data['revisionPreview'] ?? false);
+        $revisionReturnUrl = (string) ($data['revisionReturnUrl'] ?? '');
         $contentEditMode = (bool) ($data['contentEditMode'] ?? false);
         $canEditContent = (bool) ($data['canEditContent'] ?? false);
         $canManageContent = (bool) ($data['canManageContent'] ?? false);

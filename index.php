@@ -540,6 +540,30 @@ try {
         $item = $editRequested && $canEdit
             ? $contents->findCurrentBySlug($type, $slug, $url->getLanguage())
             : $contents->findPublished($type, $slug, $url->getLanguage());
+        if (array_key_exists('preview_revision', $_GET)) {
+            $previewNumber = filter_var($_GET['preview_revision'], FILTER_VALIDATE_INT,
+                ['options' => ['min_range' => 1]]);
+            if (!$canEdit || !$editRequested || $item === null || $previewNumber === false) {
+                $renderer->render('not-found', $shared, 404);
+                exit;
+            }
+            $preview = $contents->revision($item['document_key'], $url->getLanguage(), $previewNumber);
+            if ($preview === null || $preview['type'] !== $type) {
+                $renderer->render('not-found', $shared, 404);
+                exit;
+            }
+            header('Cache-Control: private, no-store');
+            header('X-Robots-Tag: noindex, nofollow');
+            $renderer->render($type, array_merge($shared, [
+                'title' => 'Náhled revize ' . $previewNumber . ' — ' . $preview['title'],
+                'description' => $preview['summary'] ?? '', 'content' => $preview,
+                'canEditContent' => false, 'contentEditMode' => false,
+                'privatePage' => true, 'revisionPreview' => true,
+                'revisionReturnUrl' => $url->path(($type === 'post' ? 'blog/' : '') . rawurlencode($item['slug'])) . '?edit=1&history=1#content-history',
+                'backLink' => $type === 'post' ? $url->path('blog') : '',
+            ]));
+            exit;
+        }
         $contentEditMode = $editRequested && $canEdit && $item !== null;
         if ($contentEditMode && $type === 'post') $shared['catalogPostKeys'] = (new \SimpleStore\Content\CatalogPostSelection($db, $site['languages']))->keys($url->getLanguage());
         if ($contentEditMode && $type === 'post') $shared['blogPlacement'] = (new \SimpleStore\Content\BlogPlacement($db, $site['languages']))->load($url->getLanguage());
