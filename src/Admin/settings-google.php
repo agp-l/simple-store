@@ -12,3 +12,12 @@ if(($_SERVER['REQUEST_METHOD']??'GET')==='POST') {
     catch(Throwable $e) { $settingsError='Nastavení Google se nepodařilo uložit. Zkontroluj dostupnost databáze a šifrovacího klíče.'; }
 }
 $googleSettings=$googleSettingsStore->load();
+
+$googleClientSecret = '';
+if ($googleSettingsReady && $googleSettings['client_secret_encrypted'] !== '') {
+    try {
+        $googleClientSecret = \SimpleStore\Accounting\MailCredential::decrypt($googleSettings['client_secret_encrypted']);
+    } catch (Throwable $e) {
+        $settingsError = 'Uložený Client secret nelze přečíst. Vlož jej znovu z Google Cloud nebo obnov šifrovací klíč instalace.';
+    }
+}
