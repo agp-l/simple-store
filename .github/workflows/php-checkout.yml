@@ -137,6 +137,7 @@ jobs:
           php tests/partner-basket.php
           php tests/partner-link-presentation.php
           php tests/inline-editor.php
+          php tests/product-revision-preview.php
           php tests/content-cover.php
           php tests/blog-topics.php
           php tests/media-catalog.php
@@ -357,6 +358,7 @@ jobs:
       - name: Verify variant and sale UI on desktop and mobile
         run: |
           node --test tests/product-variants-browser.mjs
+          node --test tests/product-revision-browser.mjs
           node --test tests/product-prompt-browser.mjs
           node --test tests/partner-links-browser.mjs
           node --test tests/product-sale-browser.mjs
@@ -419,4 +421,5 @@ jobs:
           coverage: none
       - name: Verify private routes, legacy forms and sessions on Apache
         run: bash tests/panel-apache.sh
+
 

@@ -6,8 +6,9 @@ use SimpleStore\Media\MediaPath;
 use SimpleStore\Editing\CardSummary;
 
 $escape = static fn (mixed $value): string => htmlspecialchars((string) $value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-$editing = (bool) ($editMode ?? false);
-$canEdit = (bool) ($canEditProduct ?? false);
+$revisionPreview = (bool) ($revisionPreview ?? false);
+$editing = !$revisionPreview && (bool) ($editMode ?? false);
+$canEdit = !$revisionPreview && (bool) ($canEditProduct ?? false);
 $imageUrl = static fn (string $path): string => str_starts_with($path, 'images/') ? $basePath . $path : $path;
 $selectedVariant = $editing ? null : ($selectedVariant ?? null);
 $displayImagePath = $selectedVariant !== null ? \SimpleStore\Product\VariantImages::resolve($selectedVariant, $product['variant_inventory']['items'] ?? [], $product['image_path']) : $product['image_path'];
@@ -42,6 +43,14 @@ $editable = static function (string $field, string $value, ?int $index = null, s
 };
 ?>
   <main class="wrap detail-page<?= $editing ? ' is-editing' : '' ?>" id="produkty">
+    <?php if ($revisionPreview): ?>
+    <aside class="inline-history" aria-label="Náhled historické verze produktu">
+      <strong>Náhled revize <?= (int) $product['revision_number'] ?></strong>
+      <p><?= $escape(\SimpleStore\Rendering\LocalDateTime::czech($product['saved_at'] ?? null)) ?> · <?= !empty($product['published']) ? 'Zveřejněný produkt' : 'Skrytý koncept' ?> · Původní adresa: <?= $escape($product['slug']) ?></p>
+      <p>Aktuální produkt se nemění. Prohlížíš uložené texty, cenu, parametry a fotografie. Počty kusů, skladové varianty a partnerské vazby nejsou součástí těchto revizí a obnovením se nemění.</p>
+      <a class="inline-small" href="<?= \SimpleStore\Navigation\PanelUrl::escape($revisionReturnUrl) ?>">Zpět k historii a obnovení verze</a>
+    </aside>
+    <?php endif; ?>
     <?php require __DIR__ . '/manage/product-panel.php'; ?>
     <nav class="breadcrumbs" aria-label="Drobečková navigace"><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . $language) ?>">Úvod</a>
       <?php foreach ($categoryTrail as $crumb): ?><span>/</span><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . $language . '/kategorie-produktu/' . $crumb['path']) ?>"><?= $escape($crumb['title']) ?></a><?php endforeach; ?>
@@ -65,18 +74,21 @@ $editable = static function (string $field, string $value, ?int $index = null, s
           <small class="inline-summary-hint" id="product-summary-hint">Perex na kartě: nejvýše <?= CardSummary::MAX_CHARACTERS ?> znaků; v katalogu se zobrazí maximálně tři řádky. <output data-summary-counter></output></small>
         <?php elseif ($product['summary'] !== ''): ?><p class="detail-lead"><?= $escape($product['summary']) ?></p><?php endif; ?>
         <?php if (($product['sale_mode'] ?? 'own') === 'assisted'): ?><p class="assisted-label">Asistovaný nákup · služba v ceně. <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . $language . '/obchodni-podminky-asistovaneho-nakupu') ?>">Jak nákup funguje</a></p><?php endif; ?>
+        <?php if ($revisionPreview): ?><div class="product-purchase"><?php else: ?>
         <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($cartUrl) ?>" class="product-purchase">
           <input type="hidden" name="action" value="add"><input type="hidden" name="csrf" value="<?= $escape($cartToken) ?>">
           <input type="hidden" name="product_key" value="<?= $escape($product['product_key']) ?>"><input type="hidden" name="language" value="<?= $escape($language) ?>">
+        <?php endif; ?>
         <?php if ($product['variant_inventory']['enabled'] ?? false): ?>
           <?php require __DIR__ . '/product-variant-picker.php'; ?>
         <?php else: ?>
         <?php foreach ($details['options'] as $i => $group): ?>
           <div class="inline-option">
             <label class="field-label" for="product-option-<?= $i ?>"><span<?= $editable('option_name', $group['name'], $i, 'option.set') ?>><?= $escape($group['name']) ?></span></label>
+            <?php if ($revisionPreview): ?><p><?= $escape(implode(', ', $group['values'])) ?></p><?php else: ?>
             <select id="product-option-<?= $i ?>" name="options[<?= $i ?>]" data-image-choice="<?= $escape($group['name']) ?>" class="product-option" required><option value="">Vyberte <?= $escape($group['name']) ?></option>
               <?php foreach ($group['values'] as $choice): ?><option value="<?= $escape($choice) ?>"><?= $escape($choice) ?></option><?php endforeach; ?>
-            </select>
+            </select><?php endif; ?>
             <?php if ($editing): ?><div class="inline-option-tools"><button class="inline-tiny" type="button" data-editor-action="option-values" data-editor-index="<?= $i ?>">✎ Upravit možnosti</button><button class="inline-tiny" type="button" data-editor-action="option-remove" data-editor-index="<?= $i ?>">× Odebrat</button></div>
               <div class="inline-choices" hidden<?= $editable('option_values', implode("\n", $group['values']), $i, 'option.set') ?>><?= $escape(implode("\n", $group['values'])) ?></div>
             <?php endif; ?>
@@ -85,9 +97,11 @@ $editable = static function (string $field, string $value, ?int $index = null, s
         <?php if ($editing): ?><button class="inline-small" type="button" data-editor-action="option-add">＋ Přidat výběr (barva, velikost…)</button><?php endif; ?>
         <?php endif; ?>
         <div class="detail-price"><div class="detail-prices"><?php if ($editing && $variantMode): ?><small>Výchozí cena variant</small><?php endif; ?><strong><span<?= !$editing ? ' data-variant-price' : '' ?><?= $editable('price_czk', (string) $product['price_czk']) ?>><?= !$editing && $selectedVariant === null && !empty($product['price_varies']) ? 'od ' : '' ?><?= number_format($offerPrice, 0, ',', ' ') ?></span> Kč</strong><?php $btcPrice = $priceDisplay instanceof \SimpleStore\Pricing\BitcoinPriceDisplay ? $priceDisplay->bitcoin($offerPrice) : null; ?><?php if ($btcPrice !== null): ?><small class="price-secondary" data-variant-btc title="Orientační přepočet na bitcoin"><?= $escape($btcPrice) ?></small><?php endif; ?></div><div class="product-availability"><span class="stock <?= $availability === 'in_stock' ? '' : 'stock-wait' ?>"><span class="stock-dot" aria-hidden="true"></span><span data-variant-stock><?= $escape($stockText[$availability] ?? '') ?></span></span><?php if (!$editing && $deliveryEstimate !== null && !empty($product['published'])): ?><?php require __DIR__ . '/product-delivery-estimate.php'; ?><?php endif; ?></div></div>
+        <?php if (!$revisionPreview): ?>
         <div class="buy-row"><div class="quantity"><button type="button" id="minus" aria-label="Ubrat kus">−</button><input id="qty" type="number" name="quantity" min="1" max="99" value="1" aria-label="Počet kusů" required><button type="button" id="plus" aria-label="Přidat kus">＋</button></div>
           <button class="detail-add" type="submit" id="detail-add" <?= $availability === 'out_of_stock' || empty($product['published']) ? 'disabled' : '' ?>><?= empty($product['published']) ? 'Neveřejný koncept' : ($availability === 'out_of_stock' ? 'Není skladem' : 'Přidat do košíku') ?></button></div>
         </form>
+        <?php else: ?></div><?php endif; ?>
       </div>
     </div>
     <?php if ($editing || $product['description'] !== '' || $details['sections'] !== [] || $details['specifications'] !== []): ?>
@@ -143,8 +157,9 @@ $editable = static function (string $field, string $value, ?int $index = null, s
     ?><script type="application/json" id="product-option-photos"><?= json_encode($photoConfig, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) ?></script><?php } ?>
     <?php if ($variantMode || $photoPreviews !== []): ?><script defer src="<?= $escape($basePath . 'assets/product-variants.js?v=' . filemtime(__DIR__ . '/../assets/product-variants.js')) ?>"></script><?php endif; ?>
     <?php require __DIR__ . '/product-related.php'; ?>
-    <?php if ($editing && $productHistory !== []): ?><details class="inline-history"><summary>Historie úprav (<?= count($productHistory) ?>)</summary><p>Načtení starší verze vytvoří další novou revizi.</p>
+    <?php if ($editing && $productHistory !== []): ?><details class="inline-history" id="product-history"<?= ($_GET['history'] ?? '') === '1' ? ' open' : '' ?>><summary>Historie úprav (<?= count($productHistory) ?>)</summary><p>Nejprve si můžeš verzi prohlédnout v nové kartě. Obnovení vytvoří další revizi a převezme také tehdejší cenu, adresu a stav zveřejnění. Počty kusů, skladové varianty a partnerské vazby zůstanou zachované.</p>
       <?php foreach ($productHistory as $revision): ?><div class="inline-revision"><span>Revize <?= (int) $revision['revision_number'] ?> · <?= $escape($revision['saved_at']) ?> · <?= $escape($revision['name']) ?></span>
+        <a class="inline-small" target="_blank" rel="noopener" href="<?= \SimpleStore\Navigation\PanelUrl::escape($basePath . $language . '/produkt/' . rawurlencode($product['slug']) . '?edit=1&preview_revision=' . (int) $revision['revision_number']) ?>" aria-label="Prohlédnout revizi <?= (int) $revision['revision_number'] ?> v nové kartě">Prohlédnout</a>
         <?php if ($revision['active_product_key'] === null): ?><button class="inline-small" type="button" data-editor-action="restore" data-editor-value="<?= (int) $revision['revision_number'] ?>">Obnovit jako novou revizi</button><?php else: ?><small>Aktuální</small><?php endif; ?>
       </div><?php endforeach; ?></details><?php endif; ?>
     <p><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . $language . ($categoryTrail !== [] ? '/kategorie-produktu/' . $categoryPath : '')) ?>#produkty">← Zpět na produkty</a></p>
@@ -155,3 +170,4 @@ $editable = static function (string $field, string $value, ?int $index = null, s
       ], JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_THROW_ON_ERROR) ?></script>
       <?php require __DIR__ . '/media/picker.php'; ?><?php endif; ?>
   </main>
+

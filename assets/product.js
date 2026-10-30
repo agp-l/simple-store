@@ -1,7 +1,7 @@
 (() => {
   const quantity = document.getElementById('qty');
-  if (!quantity) return;
   const mainImage = document.getElementById('detail-image');
+  if (!mainImage) return;
   const thumbnails = Array.from(document.querySelectorAll('[data-gallery-image]'));
   const lightbox = document.getElementById('detail-lightbox');
   const lightboxImage = document.getElementById('detail-lightbox-image');
@@ -41,10 +41,11 @@
   });
   lightbox.addEventListener('click', event => { if (event.target === lightbox) lightbox.close(); });
   lightbox.addEventListener('close', () => lightboxImage.removeAttribute('src'));
-  document.getElementById('minus').addEventListener('click', () => {
+  if (quantity) document.getElementById('minus').addEventListener('click', () => {
     quantity.value = Math.max(1, (Number(quantity.value) || 1) - 1);
   });
-  document.getElementById('plus').addEventListener('click', () => {
+  if (quantity) document.getElementById('plus').addEventListener('click', () => {
     quantity.value = Math.min(99, (Number(quantity.value) || 0) + 1);
   });
 })();
+
