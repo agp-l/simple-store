@@ -56,6 +56,7 @@ $productCardEffects = $page === 'catalog'
 <script defer src="<?= $siteRoot ?>assets/admin-layout.js?v=<?= filemtime(__DIR__ . '/../assets/admin-layout.js') ?>"></script>
 <?php else: ?>
 <?php require __DIR__ . '/footer.php'; ?>
+<a class="back-to-top" href="#nahoru" aria-label="Zpět nahoru k menu" title="Zpět nahoru k menu"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m6 12 6-6 6 6M12 6v13" /></svg><span>Nahoru</span></a>
 <script defer src="<?= $siteRoot ?>assets/app.js?v=<?= filemtime(__DIR__ . '/../assets/app.js') ?>"></script>
 <?php endif; ?>
 <?php if ($page === 'shipping' && ($packetaApiKey ?? '') !== ''): ?><script defer src="https://widget.packeta.com/v6/www/js/library.js"></script><script defer src="<?= $siteRoot ?>assets/packeta-checkout.js?v=<?= filemtime(__DIR__ . '/../assets/packeta-checkout.js') ?>"></script><?php endif; ?>
