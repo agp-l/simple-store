@@ -22,6 +22,8 @@ $editable = static function (string $field, string $value, ?int $index = null, s
       <aside class="inline-history" aria-label="Náhled historické verze">
         <strong>Náhled revize <?= (int) $content['revision_number'] ?></strong>
         <p>Uloženo: <?= $escape($content['saved_at']) ?>. Pouze prohlížíš historii. Aktuální stránka se nemění.</p>
+        <p>Stav v této revizi: <strong><?= !empty($content['published']) ? 'Zveřejněno' : 'Skrytý koncept' ?></strong> · Adresa: <?= $escape($route) ?></p>
+        <p>Obnovení převezme také tehdejší adresu, stav zveřejnění a nastavení stránky.</p>
         <a href="<?= \SimpleStore\Navigation\PanelUrl::escape($revisionReturnUrl) ?>">Zpět k historii a obnovení verze</a>
       </aside>
     <?php endif; ?>
@@ -85,7 +87,7 @@ $editable = static function (string $field, string $value, ?int $index = null, s
       </div>
       <?php if ($page === 'post' && !$editing): ?><footer class="blog-story-footer"><span>Kam povede tvoje další cesta?</span><a href="<?= $escape($basePath.$language.'/blog') ?>">Všechny příběhy <?= \SimpleStore\Rendering\Icon::render('arrow-right') ?></a></footer><?php endif; ?>
     </article>
-    <?php if ($editing && $contentHistory !== []): ?><details class="inline-history" id="content-history"><summary>Historie úprav (<?= count($contentHistory) ?>)</summary><p>Obnovení starší verze vytvoří další revizi. Předchozí verze zůstanou uložené.</p>
+    <?php if ($editing && $contentHistory !== []): ?><details class="inline-history" id="content-history"<?= ($_GET['history'] ?? '') === '1' ? ' open' : '' ?>><summary>Historie úprav (<?= count($contentHistory) ?>)</summary><p>Nejprve si můžeš verzi prohlédnout v nové kartě. Obnovení vytvoří další revizi a převezme také tehdejší adresu, stav zveřejnění a nastavení stránky.</p>
       <?php foreach ($contentHistory as $revision): ?><div class="inline-revision"><span>Revize <?= (int) $revision['revision_number'] ?> · <?= $escape($revision['saved_at']) ?> · <?= $escape($revision['title']) ?></span>
         <a class="inline-small" target="_blank" rel="noopener" href="<?= \SimpleStore\Navigation\PanelUrl::escape($siteRoot . $route . '?edit=1&preview_revision=' . (int) $revision['revision_number']) ?>" aria-label="Prohlédnout revizi <?= (int) $revision['revision_number'] ?> v nové kartě">Prohlédnout</a>
         <?php if ($revision['active_document_key'] === null): ?><button class="inline-small" type="button" data-content-action="restore" data-value="<?= (int) $revision['revision_number'] ?>">Obnovit jako novou revizi</button><?php else: ?><small>Aktuální</small><?php endif; ?>

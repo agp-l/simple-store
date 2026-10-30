@@ -559,7 +559,7 @@ try {
                 'description' => $preview['summary'] ?? '', 'content' => $preview,
                 'canEditContent' => false, 'contentEditMode' => false,
                 'privatePage' => true, 'revisionPreview' => true,
-                'revisionReturnUrl' => $url->path(($type === 'post' ? 'blog/' : '') . rawurlencode($item['slug'])) . '?edit=1#content-history',
+                'revisionReturnUrl' => $url->path(($type === 'post' ? 'blog/' : '') . rawurlencode($item['slug'])) . '?edit=1&history=1#content-history',
                 'backLink' => $type === 'post' ? $url->path('blog') : '',
             ]));
             exit;

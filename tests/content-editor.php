@@ -88,13 +88,17 @@ foreach (['page', 'post'] as $type) {
     $editor = ob_get_clean();
     ob_start();
     $renderer->render($type, array_replace($data, [
-        'content' => $revision + ['saved_at' => '2026-10-30 12:00:00'],
+        'content' => array_replace($revision, ['saved_at' => '2026-10-30 12:00:00',
+            'title' => 'Historický nadpis', 'body' => 'Historický text', 'published' => false]),
         'revisionPreview' => true, 'privatePage' => true,
         'revisionReturnUrl' => '/shop/cs/moje-adresa?edit=1#content-history',
         'canEditContent' => false, 'contentEditMode' => false,
     ]));
     $preview = ob_get_clean();
     if (!str_contains($preview, 'Náhled revize 2') ||
+        !str_contains($preview, 'Historický nadpis') ||
+        !str_contains($preview, 'Historický text') ||
+        !str_contains($preview, 'Skrytý koncept') ||
         !str_contains($preview, 'Aktuální stránka se nemění.') ||
         !str_contains($preview, 'noindex, nofollow') ||
         str_contains($preview, 'contenteditable=') ||
