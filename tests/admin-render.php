@@ -596,6 +596,13 @@ if (!str_contains($html, 'value="draft-gopay-secret"') ||
     str_contains($html, 'name="comgate_secret"')) {
     throw new RuntimeException('A failed GoPay save must keep the submitted secret in its own form.');
 }
+$settingsTab = 'carriers';
+$form['packeta_api_password'] = 'fixture"><secret>';
+ob_start();require dirname(__DIR__).'/view/admin/layout.php';$html=ob_get_clean();
+if (!str_contains($html, 'name="packeta_api_password" value="fixture&quot;&gt;&lt;secret&gt;"') || str_contains($html, 'type="password"')) throw new RuntimeException('Saved carrier secret must be visible and escaped.');
+$settingsTab='export';$archiveError='';$archiveNotice='';$archivePlan=null;$archivePending=null;
+ob_start();require dirname(__DIR__).'/view/admin/layout.php';$html=ob_get_clean();
+if (!str_contains($html, 'data-admin-setting="export"') || !str_contains($html, 'settings-export-download')) throw new RuntimeException('Settings export navigation and screen missing.');
 unset($paymentArea, $paymentDraftSecrets);
 $settingsError = '';
 
@@ -644,3 +651,4 @@ echo "Admin rendering tests passed.\n";
 $screen = 'settings'; $settingsTab = 'installation';
 ob_start(); require dirname(__DIR__) . '/view/admin/layout.php'; $html = ob_get_clean();
 if (!str_contains($html, 'config/installation.json') || !str_contains($html, 'Podsložka nesouhlasí') || !str_contains($html, '/account/?google=callback') || substr_count($html, 'name="public_base_url"') !== 1 || !str_contains($html, 'name="action" value="save-installation-address"') || !str_contains($html, 'name="installation_revision"')) throw new RuntimeException('Installation diagnostics or the single address form are missing.');
+

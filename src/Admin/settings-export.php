@@ -17,6 +17,8 @@ $defaults = [
     'mail'=>[1=>['settings_json'=>Archive::portable($mail['settings'])]],
     'business'=>[1=>['settings_json'=>(new \SimpleStore\Accounting\TaxEvidenceRepository($db))->settings()]],
     'mail_templates'=>[], 'site_texts'=>[],
+    'product_import'=>[1=>['prompt_text'=>\SimpleStore\Product\ProductImportPromptRepository::defaultText()]],
+    'supplier_prices'=>[1=>['paused'=>0,'weekly_enabled'=>0,'cron_hash'=>'','options_json'=>\SimpleStore\Supplier\PricingPolicy::DEFAULTS]],
 ];
 foreach ($mail['templates'] as $code=>$entry) $defaults['mail_templates'][$code]=['enabled'=>(int)$entry['enabled'],'subject'=>$entry['subject'],'message_text'=>$entry['message']];
 foreach ($site['languages'] as $language) $defaults['site_texts'][$language]=['copy_json'=>\SimpleStore\Content\SiteCopyRepository::DEFAULTS];
@@ -48,6 +50,7 @@ try {
             catch (Throwable $e) { $db->rollback(); throw $e; }
             $download($snapshot,'nastaveni');
         } elseif ($action==='settings-import-preview') {
+            unset($_SESSION['settings_archive_pending']); $archivePending=null;
             $upload=$_FILES['settings_file']??null;
             if (!is_array($upload) || ($upload['error']??-1)!==UPLOAD_ERR_OK || !is_string($upload['tmp_name']??null) || !is_uploaded_file($upload['tmp_name']) || ($upload['size']??0)>Archive::LIMIT) throw new InvalidArgumentException('Vyber JSON soubor do 8 MiB.');
             $json=file_get_contents($upload['tmp_name']);

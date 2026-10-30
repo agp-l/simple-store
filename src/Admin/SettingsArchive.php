@@ -30,7 +30,7 @@ final class SettingsArchive
 
     public static function json(array $data): string
     {
-        return json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        return json_encode($data, JSON_PRETTY_PRINT | JSON_PRESERVE_ZERO_FRACTION | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
     }
 
     /** Export never creates a row or changes an encryption key. */
@@ -129,6 +129,7 @@ final class SettingsArchive
                 }
                 $before = $current[$section][$key] ?? [];
                 $after = self::merge($before, $row, $overwrite, $section.'.'.$key);
+                self::credentialPairs($section, $before['settings_json'] ?? [], $after['settings_json'] ?? [], $row['settings_json'] ?? []);
                 if ($section === 'google' && ($after['settings_json']['client_id'] ?? '') !== ($before['settings_json']['client_id'] ?? '') && empty($row['settings_json']['client_secret'])) throw new InvalidArgumentException('Změna Google Client ID vyžaduje současně jeho Client secret.');
                 if (self::digest($before) !== self::digest($after)) $this->validate($section, $after, (string)$key);
                 if (self::digest($before) !== self::digest($after)) {
@@ -138,6 +139,31 @@ final class SettingsArchive
             }
         }
         return ['data'=>$next, 'changes'=>$changes, 'version'=>self::digest($current)];
+    }
+
+    /** Never combine a retained account identity with another account's imported secret. */
+    private static function credentialPairs(string $section, array $before, array $after, array $incoming): void
+    {
+        $groups = match ($section) {
+            'google' => ['' => [['client_id'], ['client_secret']]],
+            'mail' => ['' => [['smtp_host','smtp_username'], ['smtp_password']]],
+            'checkout' => [
+                'comgate'=>[['merchant'],['secret']],
+                'gopay'=>[['goid','client_id'],['client_secret']],
+                'btcpay'=>[['server_url','store_id'],['api_key','webhook_secret']],
+                'fio_bank'=>[['account_display'],['token']],
+            ],
+            default => [],
+        };
+        foreach ($groups as $group => [$identities,$secrets]) {
+            $old=$group===''?$before:($before[$group]??[]);
+            $next=$group===''?$after:($after[$group]??[]);
+            $input=$group===''?$incoming:($incoming[$group]??[]);
+            foreach ($identities as $identity) foreach ($secrets as $secret) {
+                if (($next[$identity]??'')!==($old[$identity]??'') && !empty($next[$secret]) && empty($input[$secret])) throw new InvalidArgumentException('Změna účtu '.$section.'.'.$group.' vyžaduje i odpovídající přístupový klíč.');
+                if (($next[$secret]??'')!==($old[$secret]??'') && !empty($input[$identity]) && $input[$identity]!==($next[$identity]??'')) throw new InvalidArgumentException('Klíč patří k jinému účtu v záloze. Režim doplnění by smíchal přístupové údaje.');
+            }
+        }
     }
 
     private function validate(string $section, array $row, string $key): void
@@ -168,6 +194,7 @@ final class SettingsArchive
             foreach (['email','mail_from'] as $f) if (!empty($s[$f]) && filter_var($s[$f], FILTER_VALIDATE_EMAIL) === false) throw new InvalidArgumentException('Neplatný kontaktní e-mail.');
             if (isset($s['legal_form']) && !in_array($s['legal_form'], ['sole_trader','company'], true) || isset($s['expense_method']) && !in_array($s['expense_method'], ['actual','percentage'], true) || isset($s['expense_percentage']) && !in_array($s['expense_percentage'], [30,40,60,80], true)) throw new InvalidArgumentException('Neplatné údaje provozovatele.');
         }
+        if ($section === 'product_import' && (!is_string($row['prompt_text'] ?? null) || strlen($row['prompt_text']) > \SimpleStore\Product\ProductImportPromptRepository::LIMIT)) throw new InvalidArgumentException('Importní prompt může mít nejvýše 128 KiB.');
         if ($section === 'supplier_prices') {
             $options=$row['options_json'] ?? [];
             \SimpleStore\Supplier\PricingPolicy::settings($options + \SimpleStore\Supplier\PricingPolicy::DEFAULTS);

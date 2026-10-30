@@ -17,6 +17,13 @@ try {
     $db->query('INSERT INTO shop_google_login_settings (id,settings_json) VALUES (1,%s) ON DUPLICATE KEY UPDATE settings_json=VALUES(settings_json)',A::json(['enabled'=>true,'client_id'=>'fixture.apps.googleusercontent.com','client_secret_encrypted'=>MailCredential::encrypt('fixture-secret'),'redirect_uri'=>'https://example.test/account/?google=callback']));
     $db->query('INSERT INTO shop_product_import_settings (id,prompt_text) VALUES (1,%s) ON DUPLICATE KEY UPDATE prompt_text=VALUES(prompt_text)','Keep prompt');
     $a=new A($db);$before=$a->snapshot();
+    $site=['languages'=>['cs'],'default_language'=>'cs'];$method='GET';$action='';$_SESSION=[];
+    require dirname(__DIR__).'/src/Admin/settings-export.php';
+    $assert($archiveError==='', 'Export controller failed to initialize');
+    $downloadData=$envelope($archive->snapshot());
+    $assert(isset($downloadData['reference_only']['installation'],$downloadData['data']['checkout']), 'Comprehensive export coverage missing');
+    $assert($a->snapshot()===$before, 'Opening Export changed settings');
+    $reject(fn()=>$a->plan($before,['google'=>[1=>['settings_json'=>['client_id'=>'other.apps.googleusercontent.com']]]],true));
     $rows=$db->query('SELECT * FROM shop_google_login_settings');
     $assert($before['google'][1]['settings_json']['client_secret']==='fixture-secret','Portable secret missing');
     $assert(!isset($before['google'][1]['settings_json']['client_secret_encrypted']),'Cipher is not portable');
