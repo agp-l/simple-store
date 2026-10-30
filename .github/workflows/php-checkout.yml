@@ -109,6 +109,7 @@ jobs:
           php tests/footer-legal.php
           php tests/site-copy.php
           php tests/configuration-backup.php
+          php tests/settings-archive.php
           php tests/menu-definitions.php
           php tests/menu-manager.php
           php tests/storefront-footer.php
@@ -227,6 +228,7 @@ jobs:
           php tests/blog-placement-database.php
           php tests/google-identity-database.php
           php tests/configuration-backup-database.php
+          php tests/settings-archive-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
           php tests/purchase-partner-transfer-database.php
@@ -299,6 +301,7 @@ jobs:
           php tests/blog-placement-database.php
           php tests/google-identity-database.php
           php tests/configuration-backup-database.php
+          php tests/settings-archive-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
           php tests/purchase-partner-transfer-database.php
@@ -416,3 +419,4 @@ jobs:
           coverage: none
       - name: Verify private routes, legacy forms and sessions on Apache
         run: bash tests/panel-apache.sh
+

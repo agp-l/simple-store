@@ -79,7 +79,7 @@ final class CheckoutSettingsRepository
     }
 
     /** Save one administration page without resetting values owned by the other pages. */
-    public function saveSection(string $section, array $input, string $basePath, array $current): array
+    public function saveSection(string $section, array $input, string $basePath, array $current, bool $persist = true): array
     {
         $fields = [
             'delivery' => ['shipping_price', 'shipping_enabled'],
@@ -170,10 +170,10 @@ final class CheckoutSettingsRepository
                 $values[$field] = $input[$field] ?? '';
             }
         }
-        return $this->save($values, $basePath, $current);
+        return $this->save($values, $basePath, $current, $persist);
     }
 
-    public function save(array $input, string $basePath, array $current = []): array
+    public function save(array $input, string $basePath, array $current = [], bool $persist = true): array
     {
         // Old database values and submitted forms cannot override installation identity.
         foreach (['comgate', 'gopay', 'btcpay'] as $gateway) {
@@ -365,6 +365,7 @@ final class CheckoutSettingsRepository
             ],
             'terms_url' => $termsUrl,
         ];
+        if (!$persist) return $settings;
         $this->ensureTable();
         $json = json_encode($settings, JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
         $this->db->query('INSERT INTO shop_checkout_settings (id, settings_json) VALUES (%i, %s)
@@ -512,3 +513,4 @@ final class CheckoutSettingsRepository
         return rtrim($url, '/');
     }
 }
+

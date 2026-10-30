@@ -11,10 +11,11 @@ use SimpleStore\Content\SiteCopyRepository;
 // admin.php has already verified the administrator session and form token.
 $screen = 'settings';
 $settingsError = '';
-$settingsTabs = ['overview', 'accounts', 'products', 'appearance', 'delivery', 'carriers', 'payment', 'prices', 'mail', 'legal', 'installation'];
+$settingsTabs = ['overview', 'accounts', 'products', 'appearance', 'delivery', 'carriers', 'payment', 'prices', 'mail', 'legal', 'installation', 'export'];
 $requestedTab = $_POST['tab'] ?? $_GET['tab'] ?? 'overview';
 $settingsTab = is_string($requestedTab) && in_array($requestedTab, $settingsTabs, true)
     ? $requestedTab : 'overview';
+if ($settingsTab === 'export') { require __DIR__.'/settings-export.php'; return; }
 if ($settingsTab === 'installation') { require __DIR__ . '/settings-installation.php'; return; }
 if ($settingsTab === 'accounts') { require __DIR__.'/settings-google.php'; return; }
 if ($settingsTab === 'products') {
@@ -94,6 +95,7 @@ $form = [
     'recipient' => $settings['bank_transfer']['recipient'] ?? '',
     'payment_due_days' => (string) ($settings['bank_transfer']['payment_due_days'] ?? 7),
     'terms_url' => $settings['terms_url'] ?? '',
+    'packeta_api_password' => $settings['packeta']['api_password'] ?? '',
     'packeta_api_key' => $settings['packeta']['api_key'] ?? '',
     'ppl_widget_key' => $settings['ppl']['widget_key'] ?? '',
     'packeta_sender' => $settings['packeta']['sender'] ?? '',
@@ -117,14 +119,19 @@ $gopaySecretConfigured = ($settings['gopay']['client_secret'] ?? '') !== '';
 $btcpayApiKeyConfigured = ($settings['btcpay']['api_key'] ?? '') !== '';
 $btcpayWebhookSecretConfigured = ($settings['btcpay']['webhook_secret'] ?? '') !== '';
 $fioTokenConfigured = ($settings['fio_bank']['token'] ?? '') !== '';
-$fioDraftToken = '';
+$fioDraftToken = (string) ($settings['fio_bank']['token'] ?? '');
 $fioCronKey = '';
 $fioAccountDifferent = !empty($settings['fio_bank']['enabled']) &&
     \SimpleStore\Checkout\FioTransferMatcher::canonicalAccount(
         (string) ($settings['fio_bank']['account_display'] ?? '')) !==
     \SimpleStore\Checkout\FioTransferMatcher::canonicalAccount(
         (string) ($settings['bank_transfer']['account_display'] ?? ''));
-$paymentDraftSecrets = [];
+$paymentDraftSecrets = [
+    'comgate_secret' => $settings['comgate']['secret'] ?? '',
+    'gopay_client_secret' => $settings['gopay']['client_secret'] ?? '',
+    'btcpay_api_key' => $settings['btcpay']['api_key'] ?? '',
+    'btcpay_webhook_secret' => $settings['btcpay']['webhook_secret'] ?? '',
+];
 foreach ($shippingCatalog as $code => $definition) {
     $saved = $settings['shipping_methods'][$code] ?? $definition;
     $form['shipping_price'][$code] = (string) ($saved['price_czk'] ?? $definition['price_czk']);
@@ -249,4 +256,14 @@ if ($method === 'POST' && !in_array($_POST['action'] ?? '', ['configuration-prev
 if ($settingsTab === 'mail' && $settingsError === '' && is_string($previewCode) &&
     isset(\SimpleStore\Accounting\MailContent::definitions()[$previewCode])) {
     $mailPreview = \SimpleStore\Accounting\MailPreview::compose($previewCode, $previewMode, $mailConfiguration);
+}
+
+
+$smtpPasswordValue = '';
+if ($settingsTab === 'mail') {
+    try {
+        $encrypted = (string) ($mailConfiguration['settings']['smtp_password_encrypted'] ?? '');
+        $smtpPasswordValue = $encrypted === '' ? '' : \SimpleStore\Accounting\MailCredential::decrypt($encrypted);
+        if ($method === 'POST' && is_string($_POST['smtp_password'] ?? null) && strlen($_POST['smtp_password']) <= 512) $smtpPasswordValue = $_POST['smtp_password'];
+    } catch (Throwable $error) { $settingsError = 'Uložené SMTP heslo nelze zobrazit. Zkontroluj šifrovací klíč instalace; uložená data se nezměnila.'; }
 }
