@@ -181,6 +181,11 @@ final class SettingsArchive
         }
         if ($section === 'checkout') {
             (new \SimpleStore\Checkout\CheckoutSettingsRepository($this->db))->saveSection('legal', ['terms_url'=>$s['terms_url'] ?? ''], '', $s, false);
+            $bank=$s['bank_transfer'] ?? [];
+            if (!empty($bank['iban']) && !empty($bank['account_display'])) {
+                $iban=\SimpleStore\Checkout\BankTransferPayment::ibanForCzechAccount($bank['account_display']);
+                if (strtoupper(str_replace(' ', '', $bank['iban'])) !== $iban) throw new InvalidArgumentException('IBAN v záloze nesouhlasí s číslem bankovního účtu.');
+            }
             if (isset($s['delivery_estimate'])) \SimpleStore\Product\DeliveryEstimate::validate($s['delivery_estimate']);
             foreach (['comgate','gopay','btcpay','fio_bank','packeta','ppl','bank_transfer','shipping_methods'] as $field) if (isset($s[$field]) && !is_array($s[$field])) throw new InvalidArgumentException('Neplatná konfigurace '.$field);
             if (isset($s['shipping_methods'])) new \SimpleStore\Checkout\ShippingPolicy($s['shipping_methods']);
@@ -191,12 +196,16 @@ final class SettingsArchive
             if (!empty($s['fio_bank']['token']) && !\SimpleStore\Checkout\FioStatementClient::validToken($s['fio_bank']['token'])) throw new InvalidArgumentException('Neplatný Fio token.');
         }
         if ($section === 'business') {
+            foreach (['name'=>120,'ico'=>8,'street'=>160,'city'=>100,'postal_code'=>6,'email'=>254,'phone'=>40,'bank_account'=>40,'mail_from'=>254,'registration'=>190] as $f=>$max) if (isset($s[$f]) && (!is_string($s[$f]) || strlen($s[$f]) > $max)) throw new InvalidArgumentException('Neplatné pole provozovatele: '.$f);
+            if (!empty($s['ico']) && preg_match('/^[0-9]{8}$/D',$s['ico'])!==1 || !empty($s['postal_code']) && preg_match('/^[0-9]{3} ?[0-9]{2}$/D',$s['postal_code'])!==1 || ($s['legal_form']??'')==='company' && ($s['expense_method']??'')==='percentage') throw new InvalidArgumentException('Zkontroluj IČO, PSČ a metodu výdajů.');
             foreach (['email','mail_from'] as $f) if (!empty($s[$f]) && filter_var($s[$f], FILTER_VALIDATE_EMAIL) === false) throw new InvalidArgumentException('Neplatný kontaktní e-mail.');
             if (isset($s['legal_form']) && !in_array($s['legal_form'], ['sole_trader','company'], true) || isset($s['expense_method']) && !in_array($s['expense_method'], ['actual','percentage'], true) || isset($s['expense_percentage']) && !in_array($s['expense_percentage'], [30,40,60,80], true)) throw new InvalidArgumentException('Neplatné údaje provozovatele.');
         }
         if ($section === 'product_import' && (!is_string($row['prompt_text'] ?? null) || strlen($row['prompt_text']) > \SimpleStore\Product\ProductImportPromptRepository::LIMIT)) throw new InvalidArgumentException('Importní prompt může mít nejvýše 128 KiB.');
         if ($section === 'supplier_prices') {
             $options=$row['options_json'] ?? [];
+            if (isset($options['pricing_enabled']) && !in_array($options['pricing_enabled'],[0,1],true)) throw new InvalidArgumentException('Neplatný přepínač cenotvorby.');
+            foreach (['variant_links_enabled','offer_catalog_enabled'] as $f) if (isset($options[$f]) && !is_bool($options[$f])) throw new InvalidArgumentException('Neplatný přepínač dodavatelů.');
             \SimpleStore\Supplier\PricingPolicy::settings($options + \SimpleStore\Supplier\PricingPolicy::DEFAULTS);
         }
         if ($section === 'mail') {

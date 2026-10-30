@@ -55,6 +55,7 @@ try {
     $plan=$a->plan($before,['checkout'=>[1=>['settings_json'=>['packeta'=>['api_password'=>'fixture-password']]]]],true);
     $assert(count($plan['changes'])===1,'Valid carrier update rejected');
     $assert($a->snapshot()===$after,'Checkout validator wrote data');
+    $reject(fn()=>$a->plan($before,['checkout'=>[1=>['settings_json'=>['bank_transfer'=>['account_display'=>'123456/0100','recipient'=>'Fixture','iban'=>'CZ0000000000000000000000']]]]],true));
     $reject(fn()=>$a->plan($before,['checkout'=>[1=>['settings_json'=>['shipping_methods'=>['zasilkovna_pickup'=>['price_czk'=>-1]]]]]],true));
     echo "Settings archive DB: read-only export, secret round trip, non-destructive import, atomic rollback and stale preview passed.\n";
 } finally {
