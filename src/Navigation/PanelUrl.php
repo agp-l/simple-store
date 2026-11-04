@@ -9,7 +9,7 @@ use InvalidArgumentException;
 final class PanelUrl
 {
     private const SECTIONS = [
-        'admin' => ['contents', 'products', 'product-removal', 'purchase-partners', 'supplier-prices', 'product-import', 'content-import',
+        'admin' => ['dashboard', 'contents', 'products', 'product-removal', 'purchase-partners', 'supplier-prices', 'product-import', 'content-import',
             'orders', 'returns', 'accounting', 'settings', 'users', 'database', 'media', 'categories', 'menus'],
         'account' => ['orders', 'returns', 'addresses', 'payments', 'settings'],
     ];

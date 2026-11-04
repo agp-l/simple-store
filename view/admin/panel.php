@@ -9,6 +9,7 @@ $inside = $adminWorkspace;
     <?php
     $panelCurrent = $screen === 'content-import' ? 'product-import' : ($screen === 'product-removal' ? 'products' : $screen);
     $panelLinks = [
+        ['key' => 'dashboard', 'label' => 'Přehled obchodu', 'icon_name' => 'home', 'href' => $adminUrl . '?section=dashboard'],
         ['key' => 'editor', 'label' => 'Stránky', 'icon_name' => 'document', 'href' => $adminUrl . '?section=contents'],
         ['key' => 'products', 'label' => 'Produkty', 'icon_name' => 'package', 'href' => $basePath . $site['default_language'] . '?manage=1#produkty'],
         ['key' => 'supplier-prices', 'label' => 'Ceny dodavatelů', 'icon_name' => 'refresh', 'href' => $adminUrl . '?section=supplier-prices'],
@@ -73,6 +74,8 @@ $inside = $adminWorkspace;
             <button class="panel-action panel-button" type="submit"><?= \SimpleStore\Rendering\Icon::render('edit') ?> Změnit heslo</button></form><?php endif; ?>
         <?php endif; ?><p><a href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl) ?>" class="panel-icon-link"><?= \SimpleStore\Rendering\Icon::render('lock') ?> Přihlásit se</a></p>
       </section>
+    <?php elseif ($screen === 'dashboard'): ?>
+      <?php require __DIR__ . '/dashboard.php'; ?>
     <?php elseif ($screen === 'content-import'): ?>
       <?php require __DIR__ . '/content-import.php'; ?>
     <?php elseif ($screen === 'product-removal'): ?>
