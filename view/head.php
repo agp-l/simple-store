@@ -30,4 +30,5 @@
   <link rel="stylesheet" href="<?= $siteRoot ?>assets/prices.css?v=<?= filemtime(__DIR__ . '/../assets/prices.css') ?>">
   <?php if ($adminWorkspace ?? false): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/admin-layout.css?v=<?= filemtime(__DIR__ . '/../assets/admin-layout.css') ?>"><?php endif; ?>
   <?php if (($adminWorkspace ?? false) && in_array($screen ?? '', ['editor', 'media'], true)): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/content-manager.css?v=<?= filemtime(__DIR__ . '/../assets/content-manager.css') ?>"><?php endif; ?>
+  <?php if (($adminWorkspace ?? false) && ($screen ?? '') === 'dashboard'): ?><link rel="stylesheet" href="<?= $siteRoot ?>assets/admin-dashboard.css?v=<?= filemtime(__DIR__ . '/../assets/admin-dashboard.css') ?>"><?php endif; ?>
 </head>

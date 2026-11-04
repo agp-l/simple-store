@@ -8,6 +8,7 @@ foreach (['/', '/shop/'] as $base) {
         $root=$base.$area.'/';
         $assert(PanelUrl::pretty($base.$area.'.php')===$root,'Legacy root URL failed.');
         $token=str_repeat('a',64);
+        if ($area === 'admin') $assert(PanelUrl::pretty($root.'?section=dashboard&scope=all') === $root.'dashboard/?scope=all', 'Dashboard route lost its scope.');
         $old=$base.$area.'.php?mode=reset&token='.$token;
         $assert(PanelUrl::pretty($old)===$root.'reset-password/?token='.$token,'Recovery token lost.');
         $route=PanelUrl::request($area,$base,$root.'reset-password/?token='.$token,['token'=>$token]);

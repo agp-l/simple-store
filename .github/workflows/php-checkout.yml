@@ -120,6 +120,7 @@ jobs:
           php tests/customer-orders.php
           php tests/admin-customers.php
           php tests/admin-render.php
+          php tests/dashboard.php
           php tests/admin-actions.php
           php tests/admin-auth.php
           php tests/login-throttle.php
@@ -230,6 +231,7 @@ jobs:
           php tests/google-identity-database.php
           php tests/configuration-backup-database.php
           php tests/settings-archive-database.php
+          php tests/dashboard-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
           php tests/purchase-partner-transfer-database.php
@@ -303,6 +305,7 @@ jobs:
           php tests/google-identity-database.php
           php tests/configuration-backup-database.php
           php tests/settings-archive-database.php
+          php tests/dashboard-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
           php tests/purchase-partner-transfer-database.php

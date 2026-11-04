@@ -350,7 +350,11 @@ try {
         exit;
     }
 
-    require __DIR__ . '/src/Admin/contents.php';
+    if ($method !== 'POST' && ($section === 'dashboard' || ($section === '' && !array_intersect(['key','language','type','status','q','offset'], array_keys($_GET))))) {
+        require __DIR__ . '/src/Admin/dashboard.php';
+    } else {
+        require __DIR__ . '/src/Admin/contents.php';
+    }
 } catch (Throwable $exception) {
     error_log((string) $exception);
     if ($method === 'POST' && in_array($_POST['action'] ?? null, ['inline-product', 'inline-content', 'media-upload', 'media-attach', 'media-detach', 'media-delete', 'product-bulk-step', 'product-zip-step'], true)) {
