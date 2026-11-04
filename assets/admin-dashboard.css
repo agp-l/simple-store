@@ -1,6 +1,7 @@
 .dashboard-heading h1 { margin-bottom: 8px; }
 .dashboard-filter { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
-.dashboard-filter label { flex: 1 1 260px; max-width: 420px; margin: 0; }
+.dashboard-filter label { display: grid; gap: 6px; flex: 1 1 260px; max-width: 420px; margin: 0; }
+.dashboard-filter select { width: 100%; min-width: 0; min-height: 40px; padding: 6px 10px; border: 1px solid #c5cfdc; border-radius: 4px; background: #fff; }
 .dashboard-filter button { margin: 0; }
 .dashboard-cards { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin-block: 20px; }
 .dashboard-cards--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }

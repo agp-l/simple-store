@@ -17,12 +17,12 @@ $money = static fn (int $value): string => $number($value) . ' Kč';
   $labels = ['own'=>'Prodáváme my', 'assisted'=>'Externí dodavatelé', 'total'=>'Dohromady'];
 ?>
 <div class="dashboard-cards">
-  <section class="panel-panel"><h2>Produktů ve výběru</h2><strong class="dashboard-value"><?= $number($total['products']) ?></strong><p>V celém katalogu: <?= $number($dashboard['published']) ?> zveřejněných a <?= $number($dashboard['drafts']) ?> konceptů.</p></section>
-  <section class="panel-panel"><h2>Prodáváme my</h2><strong class="dashboard-value"><?= $number($own['products']) ?></strong><p><?= $number($own['in_stock']) ?> produktů dostupných skladem u nás.</p></section>
-  <section class="panel-panel"><h2>Externí dodavatelé</h2><strong class="dashboard-value"><?= $number($groups['assisted']['products']) ?></strong><p><?= $number($groups['assisted']['in_stock']) ?> produktů vedených jako skladem u dodavatele.</p></section>
+  <section class="panel-panel"><h2>Produktů ve výběru</h2><strong class="dashboard-value"><?= $number($total['products']) ?></strong><p>Celý katalog — zveřejněné: <?= $number($dashboard['published']) ?>, koncepty: <?= $number($dashboard['drafts']) ?>.</p></section>
+  <section class="panel-panel"><h2>Prodáváme my</h2><strong class="dashboard-value"><?= $number($own['products']) ?></strong><p>Počet produktů dostupných skladem u nás: <?= $number($own['in_stock']) ?>.</p></section>
+  <section class="panel-panel"><h2>Externí dodavatelé</h2><strong class="dashboard-value"><?= $number($groups['assisted']['products']) ?></strong><p>Počet produktů vedených jako skladem u dodavatele: <?= $number($groups['assisted']['in_stock']) ?>.</p></section>
   <section class="panel-panel"><h2>Volných kusů u nás</h2><strong class="dashboard-value"><?= $number($own['quantity']) ?></strong><p>Součet vlastního skladu a aktivních variant, po odečtení rezervací.</p></section>
 </div>
-<?php if ($total['empty_variants'] > 0): ?><p class="panel-notice" role="status"><?= $number($total['empty_variants']) ?> produktů má zapnuté varianty, ale žádnou aktivní variantu. Jejich ceny nejsou v součtech zahrnuté.</p><?php endif; ?>
+<?php if ($total['empty_variants'] > 0): ?><p class="panel-notice" role="status">Počet produktů se zapnutými variantami, ale bez aktivní varianty: <?= $number($total['empty_variants']) ?>. Jejich ceny nejsou v součtech zahrnuté.</p><?php endif; ?>
 <?php if ($dashboard['invalid_prices'] > 0): ?><p class="panel-notice" role="status">U <?= $number($dashboard['invalid_prices']) ?> produktů nelze přečíst dodavatelské ceny variant. Přehled u nich používá společnou cenu, pokud je vyplněná.</p><?php endif; ?>
 
 <?php foreach (['product'=>'Jeden kus od každého produktu', 'unit'=>'Jeden kus od každé varianty'] as $prefix => $heading): ?>
