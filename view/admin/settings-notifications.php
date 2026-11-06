@@ -6,14 +6,14 @@
 <section class="panel-panel panel-settings-block">
 <h2>Oznámení nových objednávek přes ntfy</h2>
 <p>Po uložení nové objednávky dostaneš číslo, čas, jméno zákazníka, zboží s variantami a počty kusů, cenu a odkaz do administrace. Oznámení objednávky ještě neznamená, že je zaplacená.</p>
-<label><input type="checkbox" name="enabled" value="1" <?= $ntfy['enabled']?'checked':'' ?>> Zapnout oznámení nových objednávek</label>
+<label class="panel-check"><input type="checkbox" name="enabled" value="1" <?= $ntfy['enabled']?'checked':'' ?>> Zapnout oznámení nových objednávek</label>
 <label>Tajná adresa ntfy<input type="url" name="address" value="<?= $escape($ntfy['topic']!==''?'https://ntfy.sh/'.$ntfy['topic']:'') ?>" maxlength="81" autocomplete="off" spellcheck="false" placeholder="https://ntfy.sh/tvoje-tajne-tema"></label>
 <p class="panel-help">Vlož celou adresu svého tématu na https://ntfy.sh/. Adresa se používá jen na serveru a v administraci. Nechráněné téma může číst každý, kdo zná jeho název. Pro údaje zákazníků použij soukromé téma s řízeným přístupem.</p>
 <label>Přístupový token (volitelný)<input type="text" name="token" value="<?= $escape($ntfy['token']) ?>" maxlength="512" autocomplete="off" spellcheck="false"></label>
 <p class="panel-help">Pro chráněné téma použij token s právem publikovat. Prázdné pole ponechá uložený token. Token je v databázi šifrovaný a v této administraci viditelný.</p>
-<label><input type="checkbox" name="clear_token" value="1"> Smazat uložený token (nejdřív vyprázdni pole)</label>
+<label class="panel-check"><input type="checkbox" name="clear_token" value="1"> Smazat uložený token (nejdřív vyprázdni pole)</label>
 <label>Priorita<select name="priority"><?php foreach([1=>'Minimální',2=>'Nízká',3=>'Běžná',4=>'Vysoká',5=>'Naléhavá'] as $value=>$label): ?><option value="<?= $value ?>" <?= $ntfy['priority']===$value?'selected':'' ?>><?= $escape($label) ?></option><?php endforeach; ?></select></label>
-<label><input type="checkbox" name="include_contact" value="1" <?= $ntfy['include_contact']?'checked':'' ?>> Přidat také e-mail a telefon zákazníka</label>
+<label class="panel-check"><input type="checkbox" name="include_contact" value="1" <?= $ntfy['include_contact']?'checked':'' ?>> Přidat také e-mail a telefon zákazníka</label>
 <button class="button" type="submit">Uložit oznámení</button>
 </section></form>
 <section class="panel-panel"><h2>Jak to nastavit v telefonu</h2>
@@ -28,5 +28,5 @@
 <h3><?= $escape($row['order_number']) ?></h3>
 <p><?= $escape(\SimpleStore\Rendering\LocalDateTime::czech($row['created_at'])) ?> · <?= $escape(['pending'=>'Čeká','sending'=>'Odesílá se','sent'=>'Odesláno','failed'=>'Chyba','uncertain'=>'Nepotvrzeno','skipped'=>'Vynecháno'][$row['state']]??$row['state']) ?> · Pokusy: <?= (int)$row['attempts'] ?></p>
 <?php if($row['last_error']!==''): ?><p><?= $escape($row['last_error']) ?></p><?php endif; ?>
-<?php if(in_array($row['state'],['pending','failed','uncertain'],true)): ?><form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl.'?section=settings&tab=notifications') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="notifications"><input type="hidden" name="order_id" value="<?= (int)$row['order_id'] ?>"><label><input type="checkbox" name="confirm_retry" value="1" required> Zkontroloval jsem telefon. Opakování může vytvořit duplicitní zprávu.</label> <button type="submit" name="action" value="ntfy-retry" class="button button--ghost">Zkusit odeslat znovu</button></form><?php endif; ?>
+<?php if(in_array($row['state'],['pending','failed','uncertain'],true)): ?><form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl.'?section=settings&tab=notifications') ?>"><input type="hidden" name="csrf" value="<?= $escape($csrf) ?>"><input type="hidden" name="tab" value="notifications"><input type="hidden" name="order_id" value="<?= (int)$row['order_id'] ?>"><label class="panel-check"><input type="checkbox" name="confirm_retry" value="1" required> Zkontroloval jsem telefon. Opakování může vytvořit duplicitní zprávu.</label> <button type="submit" name="action" value="ntfy-retry" class="button button--ghost">Zkusit odeslat znovu</button></form><?php endif; ?>
 </article><?php endforeach; ?></section>

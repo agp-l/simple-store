@@ -43,6 +43,9 @@ try {
     $check($archive->apply(['ntfy'=>[1=>['settings_json'=>['token'=>'']]]],true,A::digest($before))===0,'Empty import erased token');
     $check($archive->apply($before,true,A::digest($before))===0,'Backup roundtrip rewrote settings');
     $reject(fn()=>$archive->plan($before,['ntfy'=>[1=>['settings_json'=>['topic'=>'other']]]],true));
+    $check($archive->apply(['ntfy'=>[1=>['settings_json'=>['token'=>'replacement-token']]]],true,A::digest($before))===1,'Explicit token import failed');
+    $check(S::portable($store->load())['token']==='replacement-token' && $store->load()['token_encrypted']!=='replacement-token','Imported token was not encrypted');
+    $save(true,'fixture-private','fixture-token');
     $check($queue->enqueue($order) && !$queue->enqueue($order),'Order deduplication failed');
     $reentrant=static function()use($other,$order,$check):void {
         $duplicate=new Q($other,static function():array{throw new RuntimeException('Must never send');});
@@ -73,6 +76,15 @@ try {
     $order=$newOrder();$queue->enqueue($order);
     $db->query('DELETE FROM shop_orders WHERE id=%i',$order['id']);
     $check($queue->dispatch((int)$order['id'])==='skipped','Deleted order was sent');
+    $order=$newOrder();$queue->enqueue($order);$mode='failed';
+    for($i=0;$i<5;++$i) {
+        $db->query('UPDATE shop_ntfy_outbox SET next_attempt_at=NULL WHERE order_id=%i',$order['id']);
+        $queue->dispatch((int)$order['id']);
+    }
+    $previousCalls=$calls;$queue->dispatchDue();
+    $check($calls===$previousCalls && (int)$row((int)$order['id'])['attempts']===5,'Retry ceiling failed');
+    $store->save(['address'=>'https://ntfy.sh/fixture-private','token'=>'','clear_token'=>'1','priority'=>'3']);
+    $check($store->load()['token_encrypted']==='','Explicit token removal failed');
     // Corrupt notification configuration must not undo a real checkout commit.
     $db->query('UPDATE shop_ntfy_settings SET settings_json=%s WHERE id=1','{"enabled":true,"token_encrypted":"invalid"}');
     $items=[['product_key'=>bin2hex(random_bytes(16)),'language'=>'cs','slug'=>'ntfy-fixture','name'=>'Test checkout','quantity'=>1,'unit_price_czk'=>1000]];
