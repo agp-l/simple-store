@@ -11,10 +11,11 @@ use SimpleStore\Content\SiteCopyRepository;
 // admin.php has already verified the administrator session and form token.
 $screen = 'settings';
 $settingsError = '';
-$settingsTabs = ['overview', 'accounts', 'products', 'appearance', 'delivery', 'carriers', 'payment', 'prices', 'mail', 'legal', 'installation', 'export'];
+$settingsTabs = ['overview', 'notifications', 'accounts', 'products', 'appearance', 'delivery', 'carriers', 'payment', 'prices', 'mail', 'legal', 'installation', 'export'];
 $requestedTab = $_POST['tab'] ?? $_GET['tab'] ?? 'overview';
 $settingsTab = is_string($requestedTab) && in_array($requestedTab, $settingsTabs, true)
     ? $requestedTab : 'overview';
+if ($settingsTab === 'notifications') { require __DIR__.'/settings-notifications.php'; return; }
 if ($settingsTab === 'export') { require __DIR__.'/settings-export.php'; return; }
 if ($settingsTab === 'installation') { require __DIR__ . '/settings-installation.php'; return; }
 if ($settingsTab === 'accounts') { require __DIR__.'/settings-google.php'; return; }
@@ -267,3 +268,4 @@ if ($settingsTab === 'mail') {
         if ($method === 'POST' && is_string($_POST['smtp_password'] ?? null) && strlen($_POST['smtp_password']) <= 512) $smtpPasswordValue = $_POST['smtp_password'];
     } catch (Throwable $error) { $settingsError = 'Uložené SMTP heslo nelze zobrazit. Zkontroluj šifrovací klíč instalace; uložená data se nezměnila.'; }
 }
+

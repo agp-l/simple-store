@@ -1651,3 +1651,24 @@ CREATE TABLE IF NOT EXISTS shop_partner_delivery_costs (
     partner_key CHAR(32) CHARACTER SET ascii COLLATE ascii_bin NOT NULL PRIMARY KEY,
     shipping_czk INT UNSIGNED NOT NULL, free_from_czk INT UNSIGNED DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+
+-- Optional ntfy order notifications. Existing settings and orders are not modified.
+CREATE TABLE IF NOT EXISTS shop_ntfy_settings (
+    id TINYINT UNSIGNED NOT NULL PRIMARY KEY,
+    settings_json LONGTEXT NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS shop_ntfy_outbox (
+    order_id BIGINT UNSIGNED NOT NULL PRIMARY KEY,
+    order_number VARCHAR(40) NOT NULL,
+    topic_hash CHAR(64) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
+    state VARCHAR(16) NOT NULL DEFAULT 'pending',
+    attempts INT UNSIGNED NOT NULL DEFAULT 0,
+    attempted_at DATETIME NULL,
+    next_attempt_at DATETIME NULL,
+    sent_at DATETIME NULL,
+    last_error VARCHAR(190) NOT NULL DEFAULT '',
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    KEY ntfy_due (state, next_attempt_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

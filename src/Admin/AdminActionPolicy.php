@@ -45,7 +45,7 @@ final class AdminActionPolicy
         'media-upload', 'media-attach', 'media-detach', 'media-delete', 'delete-product',
         'delete-content', 'homepage-product', 'product-selection', 'product-selection-order', 'product-supplier-link', 'product-sale', 'purchase-partner-save', 'product-relation', 'catalog-post',
         'products-partners-assign', 'products-sale-preview', 'products-sale-apply', 'products-mass-preview', 'products-mass-apply', 'products-variants-preview', 'products-variants-apply', 'save-checkout-settings', 'fio-cron-rotate', 'settings-export-download', 'settings-import-preview', 'settings-import-backup', 'settings-import-apply', 'settings-import-cancel', 'save-google-login', 'save-installation-address', 'save-site-copy',
-        'save-mail-settings', 'preview-mail', 'mail-test', 'schema-apply',
+        'save-mail-settings', 'preview-mail', 'mail-test', 'ntfy-save', 'ntfy-test', 'ntfy-retry', 'schema-apply',
         'table-prefix-migrate', 'table-prefix-cleanup',
     ];
 
@@ -59,4 +59,5 @@ final class AdminActionPolicy
             in_array($action, self::RETURNS, true);
     }
 }
+
 

@@ -17,6 +17,7 @@ final class SettingsArchive
     public const TABLES = [
         'checkout' => ['shop_checkout_settings', 'id', ['settings_json']],
         'mail' => ['shop_mail_settings', 'id', ['settings_json']],
+        'ntfy' => ['shop_ntfy_settings', 'id', ['settings_json']],
         'google' => ['shop_google_login_settings', 'id', ['settings_json']],
         'business' => ['shop_tax_settings', 'id', ['settings_json']],
         'site_texts' => ['shop_site_copy', 'language', ['copy_json']],
@@ -24,7 +25,7 @@ final class SettingsArchive
         'product_import' => ['shop_product_import_settings', 'id', ['prompt_text']],
         'supplier_prices' => ['shop_supplier_price_settings', 'id', ['paused', 'weekly_enabled', 'cron_hash', 'options_json']],
     ];
-    private const SECRETS = ['smtp_password_encrypted' => 'smtp_password', 'client_secret_encrypted' => 'client_secret'];
+    private const SECRETS = ['token_encrypted' => 'token', 'smtp_password_encrypted' => 'smtp_password', 'client_secret_encrypted' => 'client_secret'];
 
     public function __construct(private MeekroDB $db, private array $defaults = []) {}
 
@@ -147,6 +148,7 @@ final class SettingsArchive
     private static function credentialPairs(string $section, array $before, array $after, array $incoming): void
     {
         $groups = match ($section) {
+            'ntfy' => ['' => [['topic'], ['token']]],
             'google' => ['' => [['client_id'], ['client_secret']]],
             'mail' => ['' => [['smtp_host','smtp_username'], ['smtp_password']]],
             'checkout' => [
@@ -171,6 +173,7 @@ final class SettingsArchive
     private function validate(string $section, array $row, string $key): void
     {
         $s = $row['settings_json'] ?? [];
+        if ($section === 'ntfy') \SimpleStore\Notification\NtfySettings::validate($s);
         if ($section === 'site_texts') \SimpleStore\Content\SiteCopyRepository::validate($row['copy_json']);
         if ($section === 'mail_templates') {
             \SimpleStore\Accounting\MailContent::validatePlaceholders(($row['subject'] ?? '').' '.($row['message_text'] ?? ''), \SimpleStore\Accounting\MailContent::placeholders($key));
@@ -261,3 +264,4 @@ final class SettingsArchive
         } catch (Throwable $e) { $this->db->rollback(); throw $e; }
     }
 }
+
