@@ -261,7 +261,9 @@ final class OrderRepository
                 }
             }
             $this->db->commit();
-            return self::hydrate($saved);
+            $order = self::hydrate($saved);
+            \SimpleStore\Notification\NtfyQueue::afterOrder($this->db, $order);
+            return $order;
         } catch (Throwable $error) {
             $this->db->rollback();
             // A concurrent request may have won the unique idempotency constraint.
@@ -678,3 +680,4 @@ final class OrderRepository
         return $json;
     }
 }
+

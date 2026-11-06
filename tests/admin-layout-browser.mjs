@@ -7,6 +7,7 @@ import { chromium } from 'playwright';
 test('admin workspace: equal widths, accessible mobile navigation and customer isolation', async () => {
   const fixtures = {
     dashboard: ['dashboard.php'],
+    notifications: ['ntfy-settings.php'],
     users: ['admin-users.php', 'detail'],
     accounting: ['evidence-workspace.php', 'overview', 'shell'],
     settings: ['product-sales-mass.php', 'start'],
@@ -37,7 +38,7 @@ test('admin workspace: equal widths, accessible mobile navigation and customer i
       page.on('pageerror', error => errors.push(error.message));
       await page.route('https://**/*', route => route.abort());
       let expectedMain;
-      for (const name of ['dashboard', 'users', 'accounting', 'settings', 'overview', 'orders']) {
+      for (const name of ['dashboard', 'users', 'accounting', 'settings', 'overview', 'orders', 'notifications']) {
         await page.goto(url(name));
         const geometry = await page.evaluate(() => ({
           width: document.querySelector('.panel-main').getBoundingClientRect().width,

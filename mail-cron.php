@@ -49,11 +49,15 @@ try {
     if (!is_file($root . '/vendor/autoload.php') || !is_file($root . '/config/database.php')) {
         throw new RuntimeException('Missing Composer or database setup.');
     }
-    $queue = new OrderMailQueue(ConnectionFactory::create(require $root . '/config/database.php'));
+    $workerDb = ConnectionFactory::create(require $root . '/config/database.php');
+    $queue = new OrderMailQueue($workerDb);
     $queue->dispatchDue(3);
+    try { (new \SimpleStore\Notification\NtfyQueue($workerDb))->dispatchDue(3); }
+    catch (Throwable $e) { error_log('ntfy worker unavailable; email processing completed.'); }
     echo "OK\n";
 } catch (Throwable $error) {
     error_log('Mail cron: ' . $error->getMessage());
     http_response_code(503);
     echo "Worker unavailable\n";
 }
+

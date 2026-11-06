@@ -22,11 +22,15 @@ try {
     if (!is_file($root . '/vendor/autoload.php') || !is_file($root . '/config/database.php')) {
         throw new RuntimeException('Run composer install and configure config/database.php first.');
     }
-    $queue = new OrderMailQueue(ConnectionFactory::create(require $root . '/config/database.php'));
+    $workerDb = ConnectionFactory::create(require $root . '/config/database.php');
+    $queue = new OrderMailQueue($workerDb);
     $result = $queue->dispatchDue((int) $matches[1]);
+    try { (new \SimpleStore\Notification\NtfyQueue($workerDb))->dispatchDue(3); }
+    catch (Throwable $e) { error_log('ntfy worker unavailable; email processing completed.'); }
     echo "Selected: {$result['selected']}; sent: {$result['sent']}; failed: {$result['failed']}; skipped: {$result['skipped']}\n";
 } catch (Throwable $error) {
     error_log('Mail worker: ' . $error->getMessage());
     fwrite(STDERR, "Mail worker failed. Check the PHP error log and admin mail queue.\n");
     exit(1);
 }
+

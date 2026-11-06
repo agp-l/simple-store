@@ -12,6 +12,7 @@ $local = __DIR__.'/../../config/checkout.php';
 $fallback = \SimpleStore\Checkout\CheckoutSettingsRepository::withDefaults(is_file($local) ? require $local : $example, $example);
 $mail = (new \SimpleStore\Accounting\MailSettingsRepository($db))->load();
 $defaults = [
+    'ntfy'=>[1=>['settings_json'=>Archive::portable(\SimpleStore\Notification\NtfySettings::DEFAULTS)]],
     'checkout'=>[1=>['settings_json'=>$fallback]],
     'google'=>[1=>['settings_json'=>Archive::portable(\SimpleStore\Customer\GoogleLoginSettings::DEFAULTS)]],
     'mail'=>[1=>['settings_json'=>Archive::portable($mail['settings'])]],
@@ -86,3 +87,4 @@ try {
     if ($archivePending!==null && $archivePlan===null) $archivePlan=$archive->plan($archivePending['before']['data'],$archivePending['incoming'],$archivePending['overwrite']);
 } catch (InvalidArgumentException $e) { $archiveError=$e->getMessage(); http_response_code(422); }
 catch (Throwable $e) { $archiveError='Operaci se nepodařilo dokončit. Import nebyl uložen. Zkontroluj databázi a šifrovací klíč instalace.'; http_response_code(503); }
+

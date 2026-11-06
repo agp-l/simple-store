@@ -86,6 +86,7 @@ jobs:
           php tests/fio-transport-error.php
           php tests/mail-render.php
           php tests/mail-settings.php
+          php tests/ntfy.php
           php tests/after-sales-render.php
           php tests/order-legal-snapshot.php
           php tests/mail-worker.php
@@ -232,6 +233,7 @@ jobs:
           php tests/configuration-backup-database.php
           php tests/settings-archive-database.php
           php tests/dashboard-database.php
+          php tests/ntfy-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
           php tests/purchase-partner-transfer-database.php
@@ -306,6 +308,7 @@ jobs:
           php tests/configuration-backup-database.php
           php tests/settings-archive-database.php
           php tests/dashboard-database.php
+          php tests/ntfy-database.php
           php tests/assisted-purchase-database.php
           php tests/purchase-partners-database.php
           php tests/purchase-partner-transfer-database.php
@@ -424,5 +427,6 @@ jobs:
           coverage: none
       - name: Verify private routes, legacy forms and sessions on Apache
         run: bash tests/panel-apache.sh
+
 
 

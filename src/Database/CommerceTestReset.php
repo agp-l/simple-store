@@ -20,7 +20,7 @@ final class CommerceTestReset
         'shop_invoice_corrections', 'shop_invoice_number_events', 'shop_invoices', 'shop_invoice_sequence',
         'shop_flat_tax_advances', 'shop_tax_entry_events', 'shop_tax_entries',
         'shop_tax_register_events', 'shop_tax_balances', 'shop_tax_write_requests', 'shop_tax_year_regimes',
-        'shop_mail_outbox', 'shop_order_legal_snapshots', 'shop_order_tracking',
+        'shop_ntfy_outbox', 'shop_mail_outbox', 'shop_order_legal_snapshots', 'shop_order_tracking',
         'shop_sale_lines', 'shop_order_variant_reservations', 'shop_order_stock_reservations',
         'shop_packeta_cancelled_shipments', 'shop_packeta_shipments', 'shop_carrier_shipments',
         'shop_comgate_payments', 'shop_gopay_payments', 'shop_btcpay_payments',
@@ -71,6 +71,10 @@ final class CommerceTestReset
         try {
             // The tool is meant for an offline development database. A mail worker
             // already transmitting a message cannot be rolled back by deleting rows.
+            if ($this->exists('shop_ntfy_outbox') && (int) $this->db->queryFirstField(
+                'SELECT COUNT(*) FROM shop_ntfy_outbox WHERE state=%s', 'sending') > 0) {
+                throw new \RuntimeException('Právě se odesílá ntfy oznámení. Zkus reset později.');
+            }
             if ($this->exists('shop_mail_outbox') && (int) $this->db->queryFirstField(
                 'SELECT COUNT(*) FROM shop_mail_outbox WHERE state=%s', 'sending') > 0) {
                 throw new RuntimeException('Právě se odesílá e-mail. Zastav worker a zopakuj úklid.');
@@ -103,3 +107,4 @@ final class CommerceTestReset
             WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=%s', $table) === 1;
     }
 }
+

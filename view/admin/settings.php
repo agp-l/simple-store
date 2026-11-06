@@ -27,6 +27,7 @@ $btcpayWebhookSecretConfigured ??= false;
 <?php if ($settingsTab === 'overview'): ?>
 <div class="panel-settings-overview">
   <?php foreach ([
+      ['notifications', 'Oznámení', 'Zprávy o nových objednávkách do telefonu přes ntfy.'],
       ['export', 'Export a import', 'JSON záloha nastavení a klíčů, náhled změn a bezpečný import.'],
       ['installation', 'Doména a přesun', 'Společná adresa webu, kontrola podsložky a návod k přestěhování.'],
       ['accounts', 'Přihlášení zákazníků', 'Google účet, registrace a klasické přihlášení.'],
@@ -39,9 +40,11 @@ $btcpayWebhookSecretConfigured ??= false;
       ['mail', 'E-maily', 'SMTP, potvrzení objednávek a texty zpráv.'],
       ['legal', 'Obchodní podmínky', 'Odkaz na publikovanou stránku obchodních podmínek.'],
   ] as [$key, $title, $description]): ?>
-    <a class="panel-settings-card" data-admin-setting="<?= $escape($key) ?>" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=' . $key) ?>"><span class="admin-setting-icon" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render(['accounts'=>'user', 'products'=>'package', 'appearance'=>'edit', 'delivery'=>'truck', 'carriers'=>'package', 'payment'=>'card', 'prices'=>'card', 'mail'=>'mail', 'legal'=>'document', 'export'=>'document', 'installation'=>'globe'][$key]) ?></span><span class="admin-setting-arrow" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?></span><strong><?= $escape($title) ?></strong><span><?= $escape($description) ?></span></a>
+    <a class="panel-settings-card" data-admin-setting="<?= $escape($key) ?>" href="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl . '?section=settings&tab=' . $key) ?>"><span class="admin-setting-icon" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render(['notifications'=>'mail', 'accounts'=>'user', 'products'=>'package', 'appearance'=>'edit', 'delivery'=>'truck', 'carriers'=>'package', 'payment'=>'card', 'prices'=>'card', 'mail'=>'mail', 'legal'=>'document', 'export'=>'document', 'installation'=>'globe'][$key]) ?></span><span class="admin-setting-arrow" aria-hidden="true"><?= \SimpleStore\Rendering\Icon::render('arrow-right') ?></span><strong><?= $escape($title) ?></strong><span><?= $escape($description) ?></span></a>
   <?php endforeach; ?>
 </div>
+<?php elseif ($settingsTab === 'notifications'): ?>
+<?php require __DIR__.'/settings-notifications.php'; ?>
 <?php elseif ($settingsTab === 'export'): ?>
 <?php require __DIR__.'/settings-export.php'; ?>
 <?php elseif ($settingsTab === 'installation'): ?>
@@ -280,4 +283,5 @@ $btcpayWebhookSecretConfigured ??= false;
   </section>
 <?php endif; ?>
 <?php endif; ?>
+
 
