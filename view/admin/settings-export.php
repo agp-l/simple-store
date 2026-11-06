@@ -1,9 +1,9 @@
 <?php declare(strict_types=1); ?>
 <section class="panel-panel">
 <h2>Export a bezpečný import nastavení</h2>
-<p>JSON obsahuje dopravce, ceny dopravy, platby a brány, Fio, Google, SMTP, texty webu i e-mailů, údaje provozovatele, importní prompt a nastavení aktualizací dodavatelů. Obsahuje také skutečné API klíče a hesla — ulož jej soukromě.</p>
+<p>JSON obsahuje dopravce, ceny dopravy, platby a brány, Fio, Google, SMTP, oznámení ntfy, texty webu i e-mailů, údaje provozovatele, importní prompt a nastavení aktualizací dodavatelů. Obsahuje také skutečné API klíče a hesla — ulož jej soukromě.</p>
 <p>Doména, souborová konfigurace, menu, kategorie, partneři a číselné řady jsou přiložené jako <strong>reference_only</strong>. Hromadný import je automaticky nemění: doménu změň v Doména a přesun, menu či partnery přes jejich vlastní import. Záloha nastavení nenahrazuje úplnou zálohu databáze: neobsahuje objednávky, zákazníky, produkty, fotografie ani přihlašovací údaje k databázi.</p>
-<p>Cron klíče uložené pouze jako otisk nelze zpětně zobrazit; záloha zachovává jejich otisky. Google a SMTP hesla se při importu znovu zašifrují klíčem cílové instalace.</p>
+<p>Cron klíče uložené pouze jako otisk nelze zpětně zobrazit; záloha zachovává jejich otisky. Google, SMTP a ntfy klíče se při importu znovu zašifrují klíčem cílové instalace.</p>
 <?php if ($archiveError!==''): ?><p class="panel-error" role="alert"><?= $escape($archiveError) ?></p><?php endif; ?>
 <?php if ($archiveNotice!==''): ?><p class="panel-notice" role="status"><?= $escape($archiveNotice) ?></p><?php endif; ?>
 <form method="post" action="<?= \SimpleStore\Navigation\PanelUrl::escape($adminUrl.'?section=settings&tab=export') ?>">
@@ -31,3 +31,4 @@
 <button name="action" value="settings-import-cancel" formnovalidate>Zrušit náhled</button>
 </form></section>
 <?php endif; ?>
+

@@ -10,12 +10,13 @@ final class NtfyMessage
     public static function order(array $order, array $settings, ?string $baseUrl=null): array
     {
         $money=static fn(int $n):string=>number_format($n,0,',',' ').' Kč';
-        $shipping=$order['shipping']??[];
+        $shipping=$order['shipping_ordered']??$order['shipping']??[];
+        $payment=['bank_transfer'=>'Bankovní převod','comgate'=>'Comgate','gopay'=>'GoPay','btcpay'=>'Bitcoin'];
         $lines=['Kdy: '.LocalDateTime::czech($order['created_at']??null).' (Praha)',
             'Kdo: '.self::line($shipping['recipient']??$shipping['name']??'Zákazník'),
             'Celkem: '.$money((int)$order['total_czk']),
             'Doprava: '.$money((int)($order['shipping_czk']??0)).' · '.self::line($shipping['label']??''),
-            'Platba: '.self::line($order['payment_method']??'').' · '.(($order['payment_status']??'')==='paid'?'uhrazeno':'zatím nepotvrzená')];
+            'Platba: '.self::line($payment[$order['payment_method']??'']??($order['payment_method']??'')).' · '.(($order['payment_status']??'')==='paid'?'uhrazeno':'zatím nepotvrzená')];
         if ($settings['include_contact']) {
             $lines[]='E-mail: '.self::line($order['customer_email']??'');
             if (!empty($shipping['phone'])) $lines[]='Telefon: '.self::line($shipping['phone']);
