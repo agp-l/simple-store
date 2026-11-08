@@ -998,3 +998,6 @@
     gap: 3px;
   }
 }
+
+.checkout-place .checkout-primary { display: block; width: 100%; }
+.checkout-start-label { display: block; margin-top: .3rem; font-size: .85em; font-weight: 500; }

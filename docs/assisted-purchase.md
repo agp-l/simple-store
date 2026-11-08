@@ -19,7 +19,7 @@ Nastavení prodeje je společné jazykovým verzím produktu a samostatné vůč
 
 Karta a detail: decentní „Asistovaný nákup · služba v ceně“. Košík a závěrečný souhrn ponechávají viditelné označení asistence, jméno prodávajícího a cenu zboží i již zahrnuté služby. Sídlo, IČO, kontakt a odkaz na jeho podmínky jsou v označeném rozbalovacím detailu, dostupném i bez JavaScriptu. Společné podmínky obstarání a doručení jsou uvedeny jednou pod seznamem položek. Konkrétního partnera vybírá správce, zákazník jej nemusí vybírat. Změna prodávajícího či rozpisu ceny po zobrazení závěrečného souhrnu vyžaduje novou kontrolu a odeslání.
 
-Smíšená objednávka zachová obě sady podmínek. U asistence zákazník potvrzuje pověření a může zvlášť požádat o zahájení služby během 14 dnů. Bez této žádosti neprováděj nákup u partnera před uplynutím lhůty pro odstoupení (včetně zákonného posunu posledního dne). Aplikace nákup na cizím webu sama neprovádí; pokyn vidíš u objednávky.
+Smíšená objednávka zachová obě sady podmínek v jednom potvrzení. U nové asistované objednávky zákazník výslovně žádá okamžité vyřízení objednacím tlačítkem; poučení je přímo vedle něj. U historické objednávky bez této žádosti neprováděj nákup u partnera před uplynutím lhůty pro odstoupení (včetně zákonného posunu posledního dne). Aplikace nákup na cizím webu sama neprovádí; uložený pokyn vidíš u objednávky.
 
 Smlouva o asistenci vzniká úspěšným odesláním závazné objednávky. Kupní smlouvu s partnerem následně uzavíráš jako zástupce zákazníka podle podmínek partnera. Partner musí znát kupujícího; nepoužívej své IČO jako odběratele, má-li jít o tento režim. Běžný vlastní nákup s následným přeprodejem do tohoto režimu nepatří. Bez předchozího souhlasu neměň prodávajícího, zboží ani sjednanou vyšší cenu. Úspora z levnějšího nákupu není automaticky další odměnou.
 
@@ -77,3 +77,12 @@ Ověření: [ČOI – dodání zboží](https://coi.gov.cz/faq/7-kdy-musi-prodav
 ## Doplňkové BTC ceny
 
 Orientační BTC se zobrazují na samostatném řádku, menším běžným písmem, v katalogu, detailu a souvisejících produktech, košíku, dopravě, souhrnu, potvrzení a zákaznickém účtu. U dílčího rozpisu asistence jsou jen Kč; BTC je u celkové ceny položky. Při vypnutém přepočtu nebo nedostupném kurzu BTC řádek nevzniká. Obchod aktuálně nemá přepínač hlavní měny na BTC; účetní a objednávkové ceny zůstávají Kč. Skutečnou částku a kurz bitcoinové platby určuje BTCPay, jeho platební rozhraní tyto styly nemění.
+
+
+## Jedno potvrzení podmínek a okamžité vyřízení (8. 11. 2026)
+
+Vlastní prodej, asistovaný nákup i jejich kombinace zůstávají samostatnými režimy. Souhrn používá jedno povinné políčko podmínek; smíšená objednávka odkazuje na oba dokumenty. U asistovaných položek objednací tlačítko výslovně žádá okamžité vyřízení po zaplacení a sousední text vysvětluje odstoupení od služby. Žádost není předem zaškrtnutá ani skrytá v obchodních podmínkách. Server vyžaduje hodnotu odeslaného tlačítka a podpis souhrnu zahrnuje verzi postupu i přesný text. Starý formulář se musí znovu zobrazit.
+
+Nové potvrzení e-mailem obsahuje stručný další postup podle uložené žádosti. Identita prodávajícího, poplatek a konečná cena zůstávají v přehledu. Úplné identifikační údaje, dodací ujednání a doslovná žádost jsou připojené ke kopii podmínek v textové příloze. Pokud příloha není dostupná nebo by překročila velikostní limit, úplné údaje zůstanou v těle zprávy. Historické souhlasy, dodací ujednání, publikované stránky, nastavení, již připravené zprávy a účetní členění se nepřepisují. U objednávky bez původní žádosti se neslibuje okamžitý nákup; zrušená objednávka také nedostane tento příslib.
+
+Právní východisko: [pokyny Evropské komise 2021/C 525/01, část 5.6.1](https://eur-lex.europa.eu/legal-content/EN/TXT/?uri=CELEX:52021XC1229(04)) požadují aktivní výslovnou žádost a připouštějí společné vyjádření žádosti a vědomí zániku práva po úplném plnění. Konkrétní provedení tlačítkem je návrh rozhraní, nikoliv právní posudek. Publikované podmínky musí nadále odpovídat skutečnému fungování služby.

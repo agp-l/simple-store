@@ -8,7 +8,7 @@ final class OrderEmailComposer
 {
     public static function compose(string $event, array $order, array $template,
         array $tracking = [], string $orderUrl = '', string $publicBaseUrl = '',
-        array $publishedLegal = [], string $legalLanguage = 'cs', array $configuration = []): array
+        array $publishedLegal = [], string $legalLanguage = 'cs', array $configuration = [], string $termsAttachment = ''): array
     {
         $shipping = $event === 'order' ? ($order['shipping_ordered'] ?? $order['shipping'] ?? []) : ($order['shipping'] ?? []);
         if (!is_array($shipping)) $shipping = [];
@@ -100,22 +100,41 @@ final class OrderEmailComposer
         $lines = array_merge($lines, ['', $copy['delivery'] . ' · ' . $vars['carrier'] . ':'], $address);
         $html .= EmailLayout::heading($copy['delivery']) . EmailLayout::paragraph(implode("\n", array_merge([$vars['carrier']], $address)));
         if ($showContract && $partners !== []) {
-            $html .= EmailLayout::heading($copy['partner_heading']);
-            $lines[] = ''; $lines[] = $copy['partner_heading'];
-            if (!$late && ($order['status'] ?? '') !== 'cancelled') {
-                $lines[] = $copy['partner_intro'];
-                $html .= EmailLayout::paragraph($copy['partner_intro']);
-            }
-            foreach ($partners as $partnerFacts) {
-                $lines = array_merge($lines, EmailLayout::factLines($partnerFacts), ['']);
-                $html .= EmailLayout::facts($partnerFacts);
-            }
             $consent = $order['shipping_ordered']['assisted_purchase'] ?? $order['shipping']['assisted_purchase'] ?? null;
-            if (is_array($consent)) {
-                $note = $copy['assistance_contract'] . "\n" . (!empty($consent['early_start'])
-                    ? $copy['early_request'] . ': ' . (string) ($consent['early_request_text'] ?? '') : $copy['assistance_wait']);
-                $lines[] = $note;
-                $html .= EmailLayout::heading($copy['assistance']) . EmailLayout::notice($note);
+            $contract = [$copy['assistance_contract']];
+            foreach ($partners as $partnerFacts) $contract = array_merge($contract, EmailLayout::factLines($partnerFacts), ['']);
+            if (is_array($consent)) $contract[] = !empty($consent['early_start'])
+                ? $copy['early_request'] . ': ' . (string) ($consent['early_request_text'] ?? '') : $copy['assistance_wait'];
+            $attachment = $termsAttachment . "\n\nPotvrzení asistovaného nákupu · " . (string) ($order['order_number'] ?? '') . "\n" . implode("\n", $contract);
+            // Never remove contractual information unless a complete durable attachment fits.
+            if ($termsAttachment !== '' && strlen($attachment) <= 64000) {
+                $termsAttachment = $attachment;
+                $note = 'Podmínky a potvrzení sjednaných údajů najdete v příloze.';
+                if (!$late && ($order['status'] ?? '') !== 'cancelled' && is_array($consent)) {
+                    $note = (!empty($consent['early_start'])
+                        ? ($event === 'paid' ? 'Platbu máme. Nákup u partnera zajistíme bez zbytečného odkladu.' : 'Po přijetí platby zajistíme nákup u partnera bez zbytečného odkladu.')
+                        : $copy['assistance_wait']) . "\n" . $note;
+                }
+                $lines[] = ''; $lines[] = $note;
+                $html .= EmailLayout::paragraph($note);
+            } else {
+                $html .= EmailLayout::heading($copy['partner_heading']);
+                $lines[] = ''; $lines[] = $copy['partner_heading'];
+                if (!$late && ($order['status'] ?? '') !== 'cancelled') {
+                    $lines[] = $copy['partner_intro'];
+                    $html .= EmailLayout::paragraph($copy['partner_intro']);
+                }
+                foreach ($partners as $partnerFacts) {
+                    $lines = array_merge($lines, EmailLayout::factLines($partnerFacts), ['']);
+                    $html .= EmailLayout::facts($partnerFacts);
+                }
+                $consent = $order['shipping_ordered']['assisted_purchase'] ?? $order['shipping']['assisted_purchase'] ?? null;
+                if (is_array($consent)) {
+                    $note = $copy['assistance_contract'] . "\n" . (!empty($consent['early_start'])
+                        ? $copy['early_request'] . ': ' . (string) ($consent['early_request_text'] ?? '') : $copy['assistance_wait']);
+                    $lines[] = $note;
+                    $html .= EmailLayout::heading($copy['assistance']) . EmailLayout::notice($note);
+                }
             }
         }
         $footerLinks = [];
@@ -130,8 +149,10 @@ final class OrderEmailComposer
                 }
             }
         }
-        return EmailLayout::message($message['subject'], $copy['order_heading'], $message['message'], $html, $lines,
+        $result = EmailLayout::message($message['subject'], $copy['order_heading'], $message['message'], $html, $lines,
             $configuration, $state, $footerLinks);
+        $result['terms_attachment'] = $termsAttachment;
+        return $result;
     }
 
     public static function itemsHtml(array $items, array $copy, bool $invoice = false): string

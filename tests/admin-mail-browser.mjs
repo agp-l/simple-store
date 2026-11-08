@@ -27,6 +27,10 @@ test('customer emails and editable previews on desktop and mobile', async () => 
         await page.goto(url(`${code}-${mode}`));
         assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth+1),false,`${code}/${mode} overflow at ${width}`);
         assert.ok(await page.locator('h1').isVisible());
+        if (code === 'order' && mode === 'mixed') {
+          assert.match(await page.locator('body').innerText(), /Podmínky a potvrzení sjednaných údajů najdete v příloze/);
+          assert.doesNotMatch(await page.locator('body').innerText(), /Vaše žádost o dřívější|po uplynutí lhůty pro odstoupení/);
+        }
         assert.ok(await page.getByText('dobrodruzi.cz',{exact:true}).first().isVisible());
         if(width===390 || width===1440) await page.screenshot({fullPage:true,path:`/tmp/admin-mail-screenshots/${code}-${mode}-${width}.png`});
       }
@@ -39,7 +43,7 @@ test('customer emails and editable previews on desktop and mobile', async () => 
       const preview=await page.locator('.mail-preview-stage iframe').boundingBox();
       assert.ok(preview.width<=390 && preview.width<=width);
       const emailFrame=page.frameLocator('iframe[title="Náhled e-mailu"]');
-      await emailFrame.getByText('Dodání od partnera',{exact:false}).first().waitFor();
+      await emailFrame.getByText('Po přijetí platby zajistíme nákup u partnera bez zbytečného odkladu.',{exact:false}).first().waitFor();
       if(width===390 || width===1440) { await page.evaluate(()=>scrollTo({top:0,behavior:'instant'})); await page.screenshot({path:`/tmp/admin-mail-screenshots/settings-${width}.png`}); }
       const search=page.locator('[data-mail-search]');
       await search.fill('bezpecnost');
