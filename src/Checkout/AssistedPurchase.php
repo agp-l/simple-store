@@ -11,7 +11,7 @@ final class AssistedPurchase
     public const TERMS_SLUG = 'obchodni-podminky-asistovaneho-nakupu';
     // Shared mandate for new purchases; copied into each order, never read live for old orders.
     public const DELIVERY_POLICY = 'Zboží dodává uvedený prodávající v termínu podle svých podmínek, nejpozději však do 30 dnů od uzavření kupní smlouvy s ním. Jinou dodací lhůtu sjednáme pouze s vaším předchozím souhlasem.';
-    public const EARLY_REQUEST = 'Žádám o zahájení asistovaného nákupu ihned po zaplacení, ještě během lhůty pro odstoupení. Beru na vědomí, že po úplném poskytnutí služby právo od ní odstoupit zaniká; při dřívějším odstoupení uhradím přiměřenou cenu provedené části. Práva ke zboží zůstávají zachována.';
+    public const EARLY_REQUEST = 'Žádám o zahájení asistence po zaplacení, před koncem lhůty pro odstoupení. Po úplném poskytnutí služby ztrácím právo od ní odstoupit; jinak hradím poměrnou cenu provedené části. Práva ke zboží se nemění.';
 
     public static function has(array $items): bool
     {
