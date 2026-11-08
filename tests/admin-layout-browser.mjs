@@ -72,6 +72,10 @@ test('admin workspace: equal widths, accessible mobile navigation and customer i
           assert.equal(await retry.isChecked(), false, 'Retry must never be confirmed by default.');
           await page.getByText('Opakovat odeslání', { exact: true }).click();
         }
+        if (name === 'notifications') {
+          await page.evaluate(() => scrollTo({ top: 0, behavior: 'instant' }));
+          await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+        }
         if ([390, 1440].includes(width)) {
           await page.screenshot({ animations: 'disabled', fullPage: name === 'notifications', path: `/tmp/admin-layout-screenshots/${name}-${width}.png` });
         }

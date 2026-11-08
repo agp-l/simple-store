@@ -1,25 +1,25 @@
 /* Scoped to ntfy: other settings and storefront forms keep their existing layout. */
-.ntfy-settings { --ntfy-border:#d8dfd8; display:grid; gap:24px; color:#243329; }
-.ntfy-settings :is(h2,h3,p) { margin:0; }
-.ntfy-settings h2 { font-size:25px; line-height:1.25; }
-.ntfy-settings h3 { font-size:18px; line-height:1.4; }
+.admin-page .ntfy-settings { --ntfy-border:#d8dfd8; display:grid; gap:24px; color:#243329; }
+.admin-page .ntfy-settings :is(h2,h3,p) { margin:0; }
+.admin-page .ntfy-settings h2 { font-size:25px; line-height:1.25; }
+.admin-page .ntfy-settings h3 { font-size:18px; line-height:1.4; }
 .ntfy-heading { display:flex; align-items:center; justify-content:space-between; gap:16px; }
 .ntfy-heading > div { display:grid; gap:7px; }
-.ntfy-settings .ntfy-eyebrow { color:#617061; font-size:11px; font-weight:750; text-transform:uppercase; letter-spacing:.1em; }
+.admin-page .ntfy-settings .ntfy-eyebrow { color:#617061; font-size:11px; font-weight:750; text-transform:uppercase; letter-spacing:.1em; }
 .ntfy-columns { display:grid; grid-template-columns:minmax(0,1.45fr) minmax(280px,1fr); align-items:start; gap:24px; }
 .ntfy-card { min-width:0; background:#fff; border:1px solid var(--ntfy-border); border-radius:6px; padding:24px; }
 .ntfy-card-heading { display:grid; gap:6px; }
 .ntfy-card-heading > p, .ntfy-heading p { color:#59675d; font-size:14px; line-height:1.6; }
-.ntfy-settings .ntfy-form { margin:0; display:grid; gap:18px; }
-.ntfy-settings .ntfy-form label { gap:7px; }
-.ntfy-settings .panel-check { display:flex; align-items:flex-start; gap:10px; cursor:pointer; line-height:1.5; }
-.ntfy-settings .panel-check input[type=checkbox] { flex:0 0 18px; width:18px; height:18px; margin:2px 0 0; }
-.ntfy-settings .panel-check small { display:block; color:#617061; font-size:12px; font-weight:400; margin-top:3px; }
+.admin-page .ntfy-settings .ntfy-form { margin:0; display:grid; gap:18px; }
+.admin-page .ntfy-settings .ntfy-form label { gap:7px; }
+.admin-page .ntfy-settings .panel-check { display:flex; align-items:flex-start; gap:10px; cursor:pointer; line-height:1.5; }
+.admin-page .ntfy-settings .panel-check input[type=checkbox] { flex:0 0 18px; width:18px; height:18px; margin:2px 0 0; }
+.admin-page .ntfy-settings .panel-check small { display:block; color:#617061; font-size:12px; font-weight:400; margin-top:3px; }
 .ntfy-enable { padding:15px; background:#f1f6ef; border:1px solid #d4e3cf; border-radius:4px; }
-.ntfy-settings .ntfy-help { color:#617061; font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
+.admin-page .ntfy-settings .ntfy-help { color:#617061; font-size:12px; line-height:1.6; overflow-wrap:anywhere; }
 .ntfy-form > .ntfy-help { margin-top:-12px; }
 .ntfy-optional { color:#617061; font-size:12px; font-weight:400; }
-.ntfy-settings .ntfy-clear { font-size:12px; font-weight:400; }
+.admin-page .ntfy-settings .ntfy-clear { font-size:12px; font-weight:400; }
 .ntfy-form-footer { padding-top:18px; border-top:1px solid var(--ntfy-border); display:flex; flex-wrap:wrap; align-items:center; gap:12px; }
 .ntfy-form-footer > span { color:#617061; font-size:12px; }
 .ntfy-aside { min-width:0; display:grid; gap:16px; }
@@ -27,14 +27,14 @@
 .ntfy-aside .ntfy-guide { display:block; }
 .ntfy-aside p, .ntfy-guide { font-size:13px; line-height:1.7; }
 .ntfy-test { border-top:3px solid #5d8658; }
-.ntfy-settings button { max-width:100%; white-space:normal; }
-.ntfy-settings button:disabled { cursor:not-allowed; opacity:.55; }
+.admin-page .ntfy-settings button { max-width:100%; white-space:normal; }
+.admin-page .ntfy-settings button:disabled { cursor:not-allowed; opacity:.55; }
 .ntfy-content-list { display:grid; gap:8px; padding-left:19px; margin:0; font-size:13px; line-height:1.6; }
 .ntfy-guide summary, .ntfy-retry summary { cursor:pointer; font-size:14px; font-weight:650; }
 .ntfy-guide[open] summary, .ntfy-retry[open] summary { margin-bottom:14px; }
 .ntfy-guide ol { padding-left:20px; margin:0; }
 .ntfy-guide li + li { margin-top:10px; }
-.ntfy-settings .ntfy-privacy { color:#617061; font-size:12px; padding:0 4px; }
+.admin-page .ntfy-settings .ntfy-privacy { color:#617061; font-size:12px; padding:0 4px; }
 .ntfy-badge { display:inline-flex; flex-shrink:0; align-items:center; padding:5px 10px; border-radius:4px; font-size:12px; font-weight:700; background:#edf0ed; color:#526056; }
 .ntfy-badge--sent { background:#e7f3e6; color:#2b6538; }
 .ntfy-badge--pending, .ntfy-badge--sending { background:#e9f0fc; color:#345d90; }
@@ -45,13 +45,18 @@
 .ntfy-delivery { min-width:0; display:grid; gap:9px; padding:18px 0; border-top:1px solid var(--ntfy-border); }
 .ntfy-delivery-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .ntfy-delivery-heading > a { min-width:0; font-weight:700; overflow-wrap:anywhere; }
-.ntfy-settings .ntfy-delivery-meta { display:flex; flex-wrap:wrap; gap:4px 8px; font-size:12px; color:#617061; line-height:1.6; }
+.admin-page .ntfy-settings .ntfy-delivery-meta { display:flex; flex-wrap:wrap; gap:4px 8px; font-size:12px; color:#617061; line-height:1.6; }
 .ntfy-delivery-error { font-size:13px; line-height:1.6; overflow-wrap:anywhere; }
 .ntfy-retry form { display:grid; justify-items:start; gap:12px; font-size:13px; }
 .ntfy-delivery-guide { border-top:1px solid var(--ntfy-border); margin-top:8px; padding-top:18px; }
 .ntfy-delivery-guide p + p { margin-top:10px; }
 .ntfy-empty { background:#f6f8f5; padding:22px; margin-bottom:16px; border-radius:4px; }
 .ntfy-empty p { max-width:650px; margin-top:6px; color:#617061; font-size:13px; line-height:1.6; }
-.ntfy-settings :is(summary,button,input,select,a):focus-visible { outline:3px solid #577eaf; outline-offset:3px; }
+.admin-page .ntfy-settings :is(summary,button,input,select,a):focus-visible { outline:3px solid #577eaf; outline-offset:3px; }
 @media(max-width:1250px) { .ntfy-columns { grid-template-columns:minmax(0,1fr); } .ntfy-aside { grid-template-columns:repeat(2,minmax(0,1fr)); } .ntfy-privacy { align-self:center; } }
-@media(max-width:600px) { .ntfy-settings { gap:18px; } .ntfy-card { padding:18px; } .ntfy-aside { grid-template-columns:minmax(0,1fr); } .ntfy-heading { align-items:flex-start; } .ntfy-settings h2 { font-size:22px; } .ntfy-form-footer { align-items:stretch; flex-direction:column; } .ntfy-delivery-heading { align-items:flex-start; } }
+@media(max-width:600px) { .admin-page .ntfy-settings { gap:18px; } .ntfy-card { padding:18px; } .ntfy-aside { grid-template-columns:minmax(0,1fr); } .ntfy-heading { align-items:flex-start; } .admin-page .ntfy-settings h2 { font-size:22px; } .ntfy-form-footer { align-items:stretch; flex-direction:column; } .ntfy-delivery-heading { align-items:flex-start; } }
+
+.admin-page .ntfy-settings .button { display:inline-flex; justify-content:center; align-items:center; min-height:42px; padding:10px 16px; border:1px solid #376241; border-radius:4px; background:#376241; color:#fff; font-family:inherit; font-size:14px; font-weight:650; line-height:1.4; cursor:pointer; }
+.admin-page .ntfy-settings .button--ghost { background:#fff; color:#376241; border-color:#aabdab; }
+.admin-page .ntfy-settings .button:hover:not(:disabled) { background:#284c31; border-color:#284c31; color:#fff; }
+.admin-page .ntfy-settings .button:disabled { cursor:not-allowed; opacity:.55; }
