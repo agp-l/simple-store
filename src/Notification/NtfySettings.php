@@ -63,6 +63,7 @@ final class NtfySettings
     }
     public function save(array $input): void
     {
+        if(!array_key_exists('address',$input))throw new InvalidArgumentException('Chybí adresa ntfy. Nastavení nebylo změněno.');
         $current=$this->load();$s=self::portable($current);
         foreach(['address','token'] as $field) if (!is_string($input[$field]??'')) throw new InvalidArgumentException('Neplatné nastavení ntfy.');
         $s['enabled']=($input['enabled']??'')==='1';
@@ -78,5 +79,17 @@ final class NtfySettings
         $this->install();
         $this->db->query('INSERT INTO shop_ntfy_settings (id,settings_json) VALUES (1,%s)
             ON DUPLICATE KEY UPDATE settings_json=VALUES(settings_json)',json_encode($s,JSON_THROW_ON_ERROR));
+    }
+
+    /** Preserve a rejected draft without confusing it with the saved configuration. */
+    public static function formValues(array $settings, ?array $draft=null):array
+    {
+        $values=['address'=>$settings['topic']===''?'':'https://ntfy.sh/'.$settings['topic'],
+            'token'=>$settings['token'],'enabled'=>$settings['enabled'],
+            'include_contact'=>$settings['include_contact'],'priority'=>(string)$settings['priority'],'clear_token'=>false];
+        if($draft===null)return $values;
+        foreach(['address','token','priority'] as $key)if(is_string($draft[$key]??null))$values[$key]=$draft[$key];
+        foreach(['enabled','include_contact','clear_token'] as $key)$values[$key]=($draft[$key]??'')==='1';
+        return $values;
     }
 }

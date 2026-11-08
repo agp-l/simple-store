@@ -26,9 +26,15 @@ foreach([[false,0,''],[true,200,'bad'],[true,200,'{}']] as $result)$check(C::res
 $check(C::result(true,403,'secret response')['state']==='failed','HTTP denial');
 $check(!str_contains(json_encode(C::result(true,500,'secret response')),'secret response'),'Raw remote response leaked');
 $reject(fn()=>(new C())->send([],"bad\r\nheader"));
-$ntfy=$settings;$ntfyNotice='';$ntfyRows=[['order_id'=>42,'order_number'=>'<script>alert(1)</script>','created_at'=>'2026-11-06 12:30:00','state'=>'uncertain','attempts'=>1,'last_error'=>'<b>failure</b>']];
+$settings['enabled']=true;$ntfy=$settings;$ntfyNotice='';$ntfyRows=[['order_id'=>42,'order_number'=>'<script>alert(1)</script>','created_at'=>'2026-11-06 12:30:00','state'=>'uncertain','attempts'=>1,'last_error'=>'<b>failure</b>']];
 $csrf='fixture';$adminUrl='/admin/';$escape=static fn($s)=>htmlspecialchars((string)$s,ENT_QUOTES|ENT_SUBSTITUTE,'UTF-8');
 ob_start();require dirname(__DIR__).'/view/admin/settings-notifications.php';$html=ob_get_clean();
 foreach(['name="address"','https://ntfy.sh/private-fixture','name="enabled"','name="csrf"','name="confirm_retry"','ntfy-test'] as $part)$check(str_contains($html,$part),'Missing settings control');
 $check(!str_contains($html,'<script>alert(1)</script>') && !str_contains($html,'<b>failure</b>'),'Unescaped queue values');
+$draft=S::formValues($settings,['address'=>'https://bad.test/input','token'=>'draft-token','priority'=>'5','clear_token'=>'1']);
+$check($draft['address']==='https://bad.test/input' && $draft['token']==='draft-token' && $draft['priority']==='5' && $draft['clear_token'] && !$draft['enabled'],'Rejected draft lost input');
+$check(S::formValues($settings)['enabled']===true,'Draft mutated saved settings');
+$ntfy['enabled']=false;$ntfy['topic']='';
+ob_start();require dirname(__DIR__).'/view/admin/settings-notifications.php';$disabledHtml=ob_get_clean();
+$check(!str_contains($disabledHtml,'name="confirm_retry"') && str_contains($disabledHtml,'disabled'),'Disabled module offers delivery actions');
 echo "ntfy: safe full URLs, strict settings, order details, Unicode, privacy, delivery responses and UI passed.\n";

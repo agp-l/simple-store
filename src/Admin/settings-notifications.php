@@ -5,7 +5,8 @@ use SimpleStore\Notification\NtfySettings;
 use SimpleStore\Notification\NtfyQueue;
 use SimpleStore\Notification\NtfyClient;
 
-$form=[];$ntfyNotice='';$ntfyRows=[];$ntfy=null;
+$form=[];$ntfyNotice=is_string($_SESSION['ntfy_notice']??null)?$_SESSION['ntfy_notice']:'';$ntfyRows=[];$ntfy=null;$ntfyDraft=null;
+unset($_SESSION['ntfy_notice']);
 try {
     $store=new NtfySettings($db);
     if($method==='POST') {
@@ -25,12 +26,23 @@ try {
             $state=(new NtfyQueue($db))->dispatch($id,true);
             $ntfyNotice='Výsledek opakování: '.(['sent'=>'odesláno','failed'=>'chyba — podrobnosti v přehledu','uncertain'=>'nepotvrzeno — zkontroluj telefon','disabled'=>'oznámení jsou vypnutá','skipped'=>'vynecháno'][$state]??$state).'.';
         } else throw new InvalidArgumentException('Neplatná akce oznámení.');
+        // Refreshing the result page must not publish another test or retry.
+        $_SESSION['ntfy_notice']=$ntfyNotice;
+        header('Location: '.\SimpleStore\Navigation\PanelUrl::pretty($adminUrl.'?section=settings&tab=notifications'),true,303);exit;
     }
     $ntfy=NtfySettings::portable($store->load());
     $ntfyRows=(new NtfyQueue($db))->recent();
-} catch(InvalidArgumentException $e) { $settingsError=$e->getMessage();http_response_code(422); }
+} catch(InvalidArgumentException $e) {
+    $settingsError=$e->getMessage();http_response_code(422);
+    if($method==='POST' && $action==='ntfy-save')$ntfyDraft=$_POST;
+}
 catch(Throwable $e) { $settingsError='Nastavení nebo přehled ntfy nelze načíst. Zkontroluj databázi a šifrovací klíč instalace.';http_response_code(503); }
 if($ntfy===null) {
     try {$ntfy=NtfySettings::portable((new NtfySettings($db))->load());}
     catch(Throwable $e) { /* Never replace unreadable saved credentials with blank defaults. */ }
+}
+// Keep delivery diagnostics visible even after a validation or credential error.
+if($ntfyRows===[]) {
+    try {$ntfyRows=(new NtfyQueue($db))->recent();}
+    catch(Throwable $e) { /* The existing error banner remains authoritative. */ }
 }
