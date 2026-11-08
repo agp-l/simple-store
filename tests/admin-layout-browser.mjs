@@ -57,7 +57,7 @@ test('admin workspace: equal widths, accessible mobile navigation and customer i
           assert.ok(geometry.width > width * .75, 'Desktop content must use available space.');
         }
         if ([390, 1440].includes(width)) {
-          await page.screenshot({ animations: 'disabled', path: `/tmp/admin-layout-screenshots/${name}-${width}.png` });
+          await page.screenshot({ animations: 'disabled', fullPage: name === 'notifications', path: `/tmp/admin-layout-screenshots/${name}-${width}.png` });
         }
       }
       await page.goto(url('users'));

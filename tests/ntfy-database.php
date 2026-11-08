@@ -85,6 +85,25 @@ try {
     $check($calls===$previousCalls && (int)$row((int)$order['id'])['attempts']===5,'Retry ceiling failed');
     $store->save(['address'=>'https://ntfy.sh/fixture-private','token'=>'','clear_token'=>'1','priority'=>'3']);
     $check($store->load()['token_encrypted']==='','Explicit token removal failed');
+    // Missing encryption key / unreadable token must not discard the notification.
+    $save(true,'fixture-private','fixture-token');
+    $stored=$store->load();$broken=$stored;$broken['token_encrypted']='invalid';
+    $db->query('UPDATE shop_ntfy_settings SET settings_json=%s WHERE id=1',json_encode($broken));
+    $order=$newOrder();$check($queue->enqueue($order),'Unreadable token discarded the queue entry');
+    try {$queue->dispatch((int)$order['id']);throw new LogicException('Unreadable credential accepted');}
+    catch(RuntimeException $e) { $check(!$e instanceof LogicException,'Unreadable credential accepted'); }
+    $check($row((int)$order['id'])['state']==='pending' && (int)$row((int)$order['id'])['attempts']===0,'Credential failure consumed delivery attempt');
+    $db->query('UPDATE shop_ntfy_settings SET settings_json=%s WHERE id=1',json_encode($stored));
+    $mode='sent';$check($queue->dispatch((int)$order['id'])==='sent','Restored credentials did not recover delivery');
+    $order=$newOrder();$queue->enqueue($order);
+    $stale=new Q($db,static function()use($db,$order):array {
+        $db->query("UPDATE shop_ntfy_outbox SET attempts=attempts+1,state='sending' WHERE order_id=%i",$order['id']);
+        return ['state'=>'sent','error'=>''];
+    });
+    $check($stale->dispatch((int)$order['id'])==='uncertain','Stale attempt reported success');
+    $check($row((int)$order['id'])['state']==='sending' && (int)$row((int)$order['id'])['attempts']===2,'Late response overwrote newer attempt');
+    $oldSettings=$store->load();$reject(fn()=>$store->save(['priority'=>'3']));
+    $check($store->load()===$oldSettings,'Incomplete form erased settings');
     // Corrupt notification configuration must not undo a real checkout commit.
     $db->query('UPDATE shop_ntfy_settings SET settings_json=%s WHERE id=1','{"enabled":true,"token_encrypted":"invalid"}');
     $items=[['product_key'=>bin2hex(random_bytes(16)),'language'=>'cs','slug'=>'ntfy-fixture','name'=>'Test checkout','quantity'=>1,'unit_price_czk'=>1000]];

@@ -23,8 +23,11 @@ final class NtfyQueue
     public function enqueue(array $order):bool
     {
         $settings=(new NtfySettings($this->db))->load();
-        if(!$settings['enabled'])return false;
-        NtfySettings::validate(NtfySettings::portable($settings));
+        if($settings['enabled']!==true)return false;
+        // Queue even when the encryption key is temporarily unavailable.
+        // Credentials are needed only for dispatch, after this durable record exists.
+        $validation=$settings;$validation['token']='';
+        NtfySettings::validate($validation);
         $this->db->query('INSERT IGNORE INTO shop_ntfy_outbox (order_id,order_number,topic_hash) VALUES (%i,%s,%s)',
             (int)$order['id'],$order['order_number'],hash('sha256',$settings['topic']));
         return $this->db->affectedRows()===1;
@@ -32,14 +35,16 @@ final class NtfyQueue
     public function dispatch(int $id,bool $manual=false):string
     {
         $store=new NtfySettings($this->db);$s=$store->load();
-        if(!$s['enabled'])return 'disabled';
+        if($s['enabled']!==true)return 'disabled';
         $s=NtfySettings::portable($s);NtfySettings::validate($s);
         $this->recover();
         // An atomic claim prevents two workers sending the same order. No network inside a transaction.
         $allowed=$manual ? "state IN ('pending','failed','uncertain')" : "state IN ('pending','failed') AND attempts<5 AND (next_attempt_at IS NULL OR next_attempt_at<=NOW())";
-        $this->db->query("UPDATE shop_ntfy_outbox SET state='sending',attempts=attempts+1,attempted_at=NOW(),last_error='' WHERE order_id=%i AND ".$allowed,$id);
-        if($this->db->affectedRows()!==1)return 'skipped';
         $row=$this->db->queryFirstRow('SELECT * FROM shop_ntfy_outbox WHERE order_id=%i',$id);
+        if($row===null)return 'skipped';
+        $attempt=(int)$row['attempts']+1;
+        $this->db->query("UPDATE shop_ntfy_outbox SET state='sending',attempts=attempts+1,attempted_at=NOW(),last_error='' WHERE order_id=%i AND attempts=%i AND ".$allowed,$id,$attempt-1);
+        if($this->db->affectedRows()!==1)return 'skipped';
         try {
             $order=(new OrderRepository($this->db))->findById($id);
             if($order===null || $order['order_number']!==$row['order_number'] || !hash_equals($row['topic_hash'],hash('sha256',$s['topic']))) {
@@ -49,9 +54,10 @@ final class NtfyQueue
                 if(!in_array($result['state']??null,['sent','failed','uncertain'],true))throw new \RuntimeException('Invalid result');
             }
         } catch(Throwable $e) { $result=['state'=>'uncertain','error'=>'Odeslání nelze potvrdit. Před opakováním zkontroluj telefon.']; }
-        $this->db->query("UPDATE shop_ntfy_outbox SET state=%s,last_error=%s,next_attempt_at=DATE_ADD(NOW(),INTERVAL 15 MINUTE),sent_at=IF(%s='sent',NOW(),NULL) WHERE order_id=%i AND state='sending'",
-            $result['state'],$result['error'],$result['state'],$id);
-        return $result['state'];
+        $this->db->query("UPDATE shop_ntfy_outbox SET state=%s,last_error=%s,next_attempt_at=DATE_ADD(NOW(),INTERVAL 15 MINUTE),sent_at=IF(%s='sent',NOW(),NULL) WHERE order_id=%i AND state='sending' AND attempts=%i",
+            $result['state'],$result['error'],$result['state'],$id,$attempt);
+        // A late response must never overwrite a newer attempt's result.
+        return $this->db->affectedRows()===1 ? $result['state'] : 'uncertain';
     }
     public function dispatchDue(int $limit=3):void
     {
