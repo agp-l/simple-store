@@ -132,10 +132,10 @@ $own = \SimpleStore\Accounting\MailPreview::compose('order', 'own', $config);
 $mixed = \SimpleStore\Accounting\MailPreview::compose('order', 'mixed', $config);
 if (str_contains($own['text'], 'Partnerský outdoorový obchod') ||
     !str_contains($mixed['text'], '1 678 Kč + zajištění nákupu 122 Kč') ||
-    !str_contains($mixed['text'], 'Horská 3, 602 00 Brno') ||
+    !str_contains($mixed['terms_attachment'], 'Horská 3, 602 00 Brno') ||
     !str_contains($mixed['html'], 'https://example.com/cs/obchodni-podminky-asistovaneho-nakupu') ||
-    !str_contains($mixed['text'], \SimpleStore\Checkout\AssistedPurchase::EARLY_REQUEST) ||
-    !str_contains($mixed['text'], \SimpleStore\Checkout\AssistedPurchase::DELIVERY_POLICY) ||
+    !str_contains($mixed['terms_attachment'], \SimpleStore\Checkout\AssistedPurchase::EARLY_REQUEST) ||
+    !str_contains($mixed['terms_attachment'], \SimpleStore\Checkout\AssistedPurchase::DELIVERY_POLICY) ||
     !str_contains($mixed['text'], 'Náš bankovní účet: 123456789/2010') ||
     !str_contains($mixed['text'], '31. 10. 2026 13:00') ||
     str_contains($mixed['text'], 'neměli skladem') || str_contains($mixed['text'], 'UTC')) {
