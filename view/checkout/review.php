@@ -34,13 +34,15 @@ require __DIR__ . '/common.php';
       <form class="checkout-place" method="post" action="<?= $checkoutEscape($checkoutUrl) ?>">
         <input type="hidden" name="csrf" value="<?= $checkoutEscape($cartToken) ?>"><input type="hidden" name="action" value="place">
         <input type="hidden" name="review_token" value="<?= $checkoutEscape($reviewToken ?? '') ?>">
-        <?php if (($hasOwnSale ?? true) && ($termsUrl ?? '') !== ''): ?><label><input type="checkbox" name="terms" value="1" required> Souhlasím s <a href="<?= $checkoutEscape($termsUrl) ?>" target="_blank" rel="noopener">obchodními podmínkami pro zboží prodávané přímo obchodem</a>.</label><?php endif; ?>
-        <?php if ($hasAssisted ?? false): ?>
-          <label><input type="checkbox" name="assisted_terms" value="1" required> Souhlasím s <a href="<?= $checkoutEscape($assistedTermsUrl) ?>" target="_blank" rel="noopener">podmínkami asistovaného nákupu</a> a pověřuji vás nákupem označených položek mým jménem u uvedených prodávajících za zobrazených podmínek.</label>
-          <label><input type="checkbox" name="early_start" value="1"> <?= $checkoutEscape(\SimpleStore\Checkout\AssistedPurchase::EARLY_REQUEST) ?></label>
-          <p class="checkout-fineprint">Bez této žádosti nákup u partnera zahájíme až po uplynutí lhůty pro odstoupení. Smlouva o asistenci vzniká odesláním této objednávky.</p>
+        <?php if (($hasAssisted ?? false) || ($termsUrl ?? '') !== ''): ?>
+          <label><input type="checkbox" name="terms" value="1" required> Souhlasím s <a href="<?= $checkoutEscape(($hasAssisted ?? false) ? $assistedTermsUrl : $termsUrl) ?>" target="_blank" rel="noopener">podmínkami</a><?php if (($hasAssisted ?? false) && ($hasOwnSale ?? false) && ($termsUrl ?? '') !== ''): ?> a <a href="<?= $checkoutEscape($termsUrl) ?>" target="_blank" rel="noopener">podmínkami přímého prodeje</a><?php endif; ?>.</label>
         <?php endif; ?>
-        <button type="submit" class="checkout-primary">Objednat s povinností platby</button>
+        <?php if ($hasAssisted ?? false): ?>
+          <p class="checkout-fineprint" id="checkout-start-notice"><?= $checkoutEscape(\SimpleStore\Checkout\AssistedPurchase::EARLY_REQUEST) ?></p>
+          <button type="submit" name="early_start" value="1" class="checkout-primary" aria-describedby="checkout-start-notice">Objednat s povinností platby<span class="checkout-start-label">a zahájit vyřízení ihned</span></button>
+        <?php else: ?>
+          <button type="submit" class="checkout-primary">Objednat s povinností platby</button>
+        <?php endif; ?>
       </form>
       <?php else: ?><p class="checkout-alert" role="alert">Objednávku nyní nelze vytvořit. Vraťte se do košíku a zkontrolujte údaje.</p><?php endif; ?>
       <p class="checkout-fineprint"><?= match ($paymentMethod ?? '') { 'comgate' => 'Objednávka vznikne po potvrzení. Poté vás přesměrujeme k online platbě Comgate.', 'gopay' => 'Objednávka vznikne po potvrzení. Poté vás přesměrujeme k online platbě GoPay.', 'btcpay' => 'Objednávka vznikne po potvrzení. Poté otevřete BTCPay a zaplatíte bitcoinem.', default => 'Objednávka vznikne po potvrzení. K zaplacení pak použijete údaje na další stránce.' } ?></p>

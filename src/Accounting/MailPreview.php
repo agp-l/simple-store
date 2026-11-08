@@ -24,7 +24,7 @@ final class MailPreview
                 ['number' => 'UKAZKA-123456', 'url' => 'https://example.com/sledovani'],
                 'https://example.com/cs/objednavka/ukazka', 'https://example.com',
                 array_merge($mode !== 'assisted' ? ['obchodni-podminky', 'reklamacni-rad'] : [],
-                    $mode !== 'own' ? [AssistedPurchase::TERMS_SLUG] : []), 'cs', $configuration);
+                    $mode !== 'own' ? [AssistedPurchase::TERMS_SLUG] : []), 'cs', $configuration, in_array($code, ['order', 'paid', 'late_paid'], true) ? 'Ukázka přílohy obchodních podmínek.' : '');
         }
         if ($code === 'invoice') {
             $invoice = ['id' => 0, 'document_number' => 'FA-2026-0042', 'order_number' => $order['order_number'],

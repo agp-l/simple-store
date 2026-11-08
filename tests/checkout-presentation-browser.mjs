@@ -56,6 +56,11 @@ test('checkout: readable secondary BTC, compact assisted disclosure and historic
         if (['cart','shipping','review'].includes(mode)) assert.equal(await page.locator('.checkout-partner-plan').count(), 0);
         if (mode === 'review') {
           assert.ok(await page.getByRole('button', { name: 'Objednat s povinností platby' }).isVisible());
+          assert.equal(await page.locator('.checkout-place input[type=checkbox]').count(), 1);
+          assert.equal(await page.locator('.checkout-place input[name=early_start]').count(), 0);
+          assert.ok(await page.getByRole('button', { name: /zahájit vyřízení ihned/ }).isVisible());
+          assert.ok(await page.locator('#checkout-start-notice').isVisible());
+          assert.doesNotMatch(await page.locator('.checkout-place').innerText(), /Bez této žádosti|14 dnů/);
           assert.equal(await page.locator('.checkout-summary-total .money-main').textContent(), '3 884 Kč');
         }
         await page.screenshot({ path: `/tmp/checkout-presentation/${mode}-${width}.png`, fullPage: true });

@@ -52,7 +52,7 @@ final class OrderMailQueue
             (string) $config['settings']['public_base_url'] !== '');
         $message = OrderEmailComposer::compose('order', $order, $config['templates']['order'], [],
             $this->orderUrl($order, $config['settings'], $orderUrl),
-            (string) $config['settings']['public_base_url'], $legal['slugs'], $legal['language'], $config);
+            (string) $config['settings']['public_base_url'], $legal['slugs'], $legal['language'], $config, $legal['terms']);
         $orderId = (int) ($order['id'] ?? 0);
         if ($orderId < 1) throw new InvalidArgumentException('Neplatná objednávka pro potvrzení e-mailem.');
         // Checkout and cancellation both lock the order before its outbox row. A delayed
@@ -69,7 +69,7 @@ final class OrderMailQueue
             }
             $id = $this->enqueue('order:' . $orderId, $orderId,
                 (string) $order['customer_email'], $message['subject'], $message['text'], $message['html'],
-                $legal['terms']);
+                $message['terms_attachment']);
             if (!$withinOrderTransaction) $this->db->commit();
             return $id;
         } catch (Throwable $error) {
@@ -103,10 +103,10 @@ final class OrderMailQueue
             : ['slugs' => [], 'terms' => '', 'language' => 'cs'];
         $message = OrderEmailComposer::compose($stage, $order, $config['templates'][$stage], $tracking,
             $this->orderUrl($order, $config['settings']), (string) $config['settings']['public_base_url'],
-            $legal['slugs'], $legal['language'], $config);
+            $legal['slugs'], $legal['language'], $config, $legal['terms']);
         $key = $eventKey !== '' ? $eventKey : $stage . ':' . (int) $order['id'];
         return $this->enqueue($key, (int) $order['id'], (string) $order['customer_email'],
-            $message['subject'], $message['text'], $message['html'], $legal['terms']);
+            $message['subject'], $message['text'], $message['html'], $message['terms_attachment']);
     }
 
     public function notifyStage(int $orderId, string $stage, string $legacySender = '', string $key = ''): void

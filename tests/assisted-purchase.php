@@ -44,6 +44,19 @@ $mail = OrderEmailComposer::compose('order', $order, MailSettingsRepository::EVE
 $check(str_contains($mail['text'], '1 678 Kč + zajištění nákupu 122 Kč') &&
     str_contains($mail['html'], 'Partner &lt;test&gt;') && str_contains($mail['text'], A::EARLY_REQUEST),
     'Confirmation lost breakdown, seller, escaping or explicit request.');
+foreach (['order', 'paid'] as $event) {
+    $compact = OrderEmailComposer::compose($event, $order, MailSettingsRepository::EVENTS[$event], [], '', '', [], 'cs', [], 'Saved terms');
+    $check(!str_contains($compact['text'], A::EARLY_REQUEST) && str_contains($compact['terms_attachment'], A::EARLY_REQUEST) &&
+        str_contains($compact['terms_attachment'], 'Do 5 pracovních dnů') && str_contains($compact['text'], 'bez zbytečného odkladu'), 'Compact confirmation lost contract or immediate start.');
+    $historic = $order; $historic['shipping']['assisted_purchase']['early_start'] = false;
+    $waiting = OrderEmailComposer::compose($event, $historic, MailSettingsRepository::EVENTS[$event], [], '', '', [], 'cs', [], 'Saved terms');
+    $check(str_contains($waiting['text'], 'nepožádali') && !str_contains($waiting['text'], 'bez zbytečného odkladu'), 'Historic order acquired consent.');
+    $cancelled = $order; $cancelled['status'] = 'cancelled';
+    $late = OrderEmailComposer::compose($event, $cancelled, MailSettingsRepository::EVENTS[$event], [], '', '', [], 'cs', [], 'Saved terms');
+    $check(!str_contains($late['text'], 'bez zbytečného odkladu'), 'Cancelled order promises procurement.');
+}
+$oversized = OrderEmailComposer::compose('order', $order, MailSettingsRepository::EVENTS['order'], [], '', '', [], 'cs', [], str_repeat('x', 63999));
+$check(str_contains($oversized['text'], A::EARLY_REQUEST) && strlen($oversized['terms_attachment']) === 63999, 'Large attachment silently lost consent.');
 $item = $assisted; $checkoutEscape = static fn ($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
 $checkoutMoney = static fn (int $v) => number_format($v, 0, ',', ' ') . ' Kč';
 ob_start(); require dirname(__DIR__) . '/view/checkout/assisted-item.php'; $html = ob_get_clean();

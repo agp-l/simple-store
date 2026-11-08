@@ -264,7 +264,8 @@ final class CheckoutController
             throw new InvalidArgumentException('Cena, doprava, způsob prodeje nebo údaje objednávky se změnily, případně platnost souhrnu vypršela. Zkontrolujte souhrn a objednejte znovu.');
         }
         if ($assisted) {
-            if (($_POST['assisted_terms'] ?? '') !== '1') throw new InvalidArgumentException('Potvrďte podmínky asistovaného nákupu.');
+            if (($_POST['terms'] ?? '') !== '1') throw new InvalidArgumentException('Potvrďte podmínky asistovaného nákupu.');
+            if (($_POST['early_start'] ?? '') !== '1') throw new InvalidArgumentException('Potvrďte objednávku tlačítkem pro okamžité zahájení vyřízení.');
             $shipping['assisted_purchase'] = ['early_start' => ($_POST['early_start'] ?? '') === '1',
                 'early_request_text' => AssistedPurchase::EARLY_REQUEST, 'terms_hash' => $bundle['hash']];
         }
@@ -461,7 +462,7 @@ final class CheckoutController
         // checkoutKey stays server-side and rotates with cart/contact/payment edits and successful checkout.
         // The CSRF token is public form data and must not be the HMAC secret.
         return CheckoutReview::token($summary, $delivery, $shipping['price_czk'] ?? null, $paymentMethod,
-            json_encode([$this->termsUrl, $legalHash], JSON_THROW_ON_ERROR), $this->cart->checkoutKey(), $shipping['label'] ?? '');
+            json_encode([$this->termsUrl, $legalHash, 'immediate-v1', AssistedPurchase::EARLY_REQUEST], JSON_THROW_ON_ERROR), $this->cart->checkoutKey(), $shipping['label'] ?? '');
     }
 
     private function assistanceBundle(array $items): array
