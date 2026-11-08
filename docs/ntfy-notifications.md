@@ -10,9 +10,13 @@ V administraci otevři **Nastavení → Oznámení**. Modul je ve výchozím sta
 
 Název nechráněného tématu není přístupové oprávnění: kdo jej zná, může zprávy číst i publikovat. Pro zákaznické údaje používej soukromé téma s řízeným přístupem. Volitelně lze přidat e-mail a telefon; standardně se posílá jméno příjemce, číslo a čas objednávky (Praha), položky, varianty, počty a ceny, doprava, celková částka a aktuální stav platby. Kliknutí vede do administrace vyžadující přihlášení, nikoli na zákaznický odkaz s přístupovým tokenem. Velmi dlouhé seznamy se zkrátí s odkazem na detail.
 
+Po chybě formuláře zůstanou rozepsané hodnoty viditelné; stav Zapnuto/Vypnuto ukazuje naposledy uložené nastavení. Po úspěšném testu nebo ručním opakování se stránka přesměruje, aby její obnovení neposlalo zprávu znovu. Podrobný návod a pravidla opakování najdeš v rozbalovacích sekcích.
+
 ## Doručování a opakování
 
 Nová objednávka se nejprve uloží a potvrdí v databázi, teprve potom se připraví a odešle oznámení. Okamžitý HTTP pokus má časový limit 4 sekundy; selhání ntfy nemění objednávku ani platbu. Při havárii procesu mezi potvrzením objednávky a vložením do fronty nemusí oznámení vzniknout; zdrojem pravdy je vždy přehled objednávek.
+
+Při dočasně nečitelném přístupovém tokenu zůstane oznámení ve frontě a nespotřebuje pokus o odeslání. Po obnovení klíče je lze odeslat cronem nebo ručně. Pozdní výsledek staršího pokusu nesmí přepsat novější pokus.
 
 Fronta ukládá jen číslo a ID objednávky, otisk tématu a stav doručení, nikoli druhou kopii osobních údajů. Jedna objednávka má jeden záznam. Atomické převzetí brání souběžnému odeslání dvěma pracovníky.
 

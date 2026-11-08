@@ -56,6 +56,22 @@ test('admin workspace: equal widths, accessible mobile navigation and customer i
           assert.equal(geometry.sidebarLeft, 0, 'Desktop menu must touch the left edge.');
           assert.ok(geometry.width > width * .75, 'Desktop content must use available space.');
         }
+        if (name === 'notifications') {
+          const enabled = page.getByRole('checkbox', { name: 'Zapnout oznámení nových objednávek', exact: false });
+          const checkbox = await enabled.boundingBox();
+          const label = await enabled.locator('..').boundingBox();
+          assert.ok(checkbox.width >= 16 && checkbox.x - label.x < 20, 'Notification switch must stay beside its label.');
+          const guide = page.locator('details').filter({ has: page.locator('summary', { hasText: 'Jak nastavit telefon' }) });
+          assert.equal(await guide.evaluate(el => el.open), false, 'Setup guide starts collapsed.');
+          await guide.locator('summary').click();
+          assert.equal(await guide.evaluate(el => el.open), true, 'Setup guide is operable.');
+          await guide.locator('summary').click();
+          await page.getByText('Opakovat odeslání', { exact: true }).click();
+          const retry = page.getByRole('checkbox', { name: 'Zkontroloval jsem telefon.', exact: false });
+          assert.equal(await retry.isVisible(), true, 'Retry requires a visible confirmation.');
+          assert.equal(await retry.isChecked(), false, 'Retry must never be confirmed by default.');
+          await page.getByText('Opakovat odeslání', { exact: true }).click();
+        }
         if ([390, 1440].includes(width)) {
           await page.screenshot({ animations: 'disabled', fullPage: name === 'notifications', path: `/tmp/admin-layout-screenshots/${name}-${width}.png` });
         }
